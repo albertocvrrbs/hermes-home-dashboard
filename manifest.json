@@ -1,0 +1,14 @@
+{
+  "name": "home-dashboard",
+  "label": "Home",
+  "description": "Personalizable rice-style home page with draggable, resizable glass widgets.",
+  "icon": "House",
+  "version": "1.0.0",
+  "tab": {
+    "path": "/home",
+    "position": "before:sessions"
+  },
+  "entry": "dist/index.js",
+  "css": "dist/style.css",
+  "api": "plugin_api.py"
+}
