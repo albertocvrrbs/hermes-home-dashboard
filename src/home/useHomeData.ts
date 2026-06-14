@@ -30,7 +30,7 @@ const SOURCES = {
   system: () => api.getSystemStats(),
   analytics: () => api.getAnalytics(1),
   cron: () => api.getCronJobs(),
-  sessions: () => api.getSessions(5),
+  sessions: () => api.getSessions(9),
   logs: () => api.getLogs({ lines: 50, level: "ERROR" }),
 } as const;
 

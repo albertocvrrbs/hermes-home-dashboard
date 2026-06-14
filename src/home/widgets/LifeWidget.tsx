@@ -1,4 +1,5 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import { HoverCtl } from "./HoverArrows";
 
 const CELL = 7;
 const STEP_MS = 160;
@@ -6,9 +7,36 @@ const SEED_DENSITY = 0.22;
 const RESEED_STEPS = 400;
 
 /** Conway's Game of Life in the theme accent — the matrix rain's quieter
- *  cousin. Reseeds itself when the colony dies out or goes stale. */
-export function LifeWidget() {
+ *  cousin. Reseeds itself when the colony dies out or goes stale.
+ *  Draw on it: in rest mode, click/drag paints live cells into the running
+ *  colony (pause first to compose a precise pattern). Drawing is disabled in
+ *  edit mode so it never fights drag/resize. The board is ephemeral — a reload
+ *  reseeds. */
+export function LifeWidget({ editing }: { editing: boolean }) {
   const ref = useRef<HTMLCanvasElement>(null);
+  const gridRef = useRef<Uint8Array>(new Uint8Array(0));
+  const dimsRef = useRef({ cols: 0, rows: 0 });
+  const stepsRef = useRef(0);
+  const pausedRef = useRef(false);
+  const editingRef = useRef(editing);
+  const [paused, setPaused] = useState(false);
+
+  // Keep the loop/handler closure in sync with the latest props/state.
+  editingRef.current = editing;
+  pausedRef.current = paused;
+
+  const seedGrid = () => {
+    const { cols, rows } = dimsRef.current;
+    const g = new Uint8Array(cols * rows);
+    for (let i = 0; i < g.length; i++) g[i] = Math.random() < SEED_DENSITY ? 1 : 0;
+    gridRef.current = g;
+    stepsRef.current = 0;
+  };
+  const clearGrid = () => {
+    const { cols, rows } = dimsRef.current;
+    gridRef.current = new Uint8Array(cols * rows);
+    stepsRef.current = 0;
+  };
 
   useEffect(() => {
     const cv = ref.current;
@@ -16,70 +44,112 @@ export function LifeWidget() {
     const ctx = cv.getContext("2d");
     if (!ctx) return;
 
-    let cols = 0, rows = 0;
-    let grid: Uint8Array = new Uint8Array(0);
-    let steps = 0;
     let accent = "#d4af37";
-
-    const seed = () => {
-      grid = new Uint8Array(cols * rows);
-      for (let i = 0; i < grid.length; i++) {
-        grid[i] = Math.random() < SEED_DENSITY ? 1 : 0;
-      }
-      steps = 0;
-    };
     const fit = () => {
       const rect = cv.getBoundingClientRect();
       cv.width = Math.max(10, rect.width);
       cv.height = Math.max(10, rect.height);
       accent = getComputedStyle(cv).getPropertyValue("--home-accent").trim() || accent;
-      cols = Math.max(4, Math.floor(cv.width / CELL));
-      rows = Math.max(4, Math.floor(cv.height / CELL));
-      seed();
+      dimsRef.current = {
+        cols: Math.max(4, Math.floor(cv.width / CELL)),
+        rows: Math.max(4, Math.floor(cv.height / CELL)),
+      };
+      seedGrid();
     };
     fit();
     const ro = new ResizeObserver(fit);
     ro.observe(cv);
 
-    const t = setInterval(() => {
-      if (document.hidden || grid.length === 0) return;
-      const next = new Uint8Array(grid.length);
-      let alive = 0;
-      for (let y = 0; y < rows; y++) {
-        for (let x = 0; x < cols; x++) {
-          let n = 0;
-          for (let dy = -1; dy <= 1; dy++) {
-            for (let dx = -1; dx <= 1; dx++) {
-              if (dx === 0 && dy === 0) continue;
-              const yy = (y + dy + rows) % rows;
-              const xx = (x + dx + cols) % cols;
-              n += grid[yy * cols + xx];
-            }
-          }
-          const i = y * cols + x;
-          next[i] = grid[i] ? (n === 2 || n === 3 ? 1 : 0) : (n === 3 ? 1 : 0);
-          alive += next[i];
-        }
-      }
-      grid = next;
-      steps++;
-      if (alive < grid.length * 0.02 || steps > RESEED_STEPS) seed();
-
+    const render = () => {
+      const { cols, rows } = dimsRef.current;
+      const g = gridRef.current;
       ctx.clearRect(0, 0, cv.width, cv.height);
       ctx.fillStyle = accent;
       ctx.globalAlpha = 0.75;
       for (let y = 0; y < rows; y++) {
         for (let x = 0; x < cols; x++) {
-          if (grid[y * cols + x]) {
-            ctx.fillRect(x * CELL, y * CELL, CELL - 1, CELL - 1);
-          }
+          if (g[y * cols + x]) ctx.fillRect(x * CELL, y * CELL, CELL - 1, CELL - 1);
         }
       }
       ctx.globalAlpha = 1;
+    };
+
+    const t = setInterval(() => {
+      if (document.hidden) return;
+      const g = gridRef.current;
+      if (g.length === 0) return;
+      const { cols, rows } = dimsRef.current;
+      if (!pausedRef.current) {
+        const next = new Uint8Array(g.length);
+        let alive = 0;
+        for (let y = 0; y < rows; y++) {
+          for (let x = 0; x < cols; x++) {
+            let n = 0;
+            for (let dy = -1; dy <= 1; dy++) {
+              for (let dx = -1; dx <= 1; dx++) {
+                if (dx === 0 && dy === 0) continue;
+                const yy = (y + dy + rows) % rows;
+                const xx = (x + dx + cols) % cols;
+                n += g[yy * cols + xx];
+              }
+            }
+            const i = y * cols + x;
+            next[i] = g[i] ? (n === 2 || n === 3 ? 1 : 0) : (n === 3 ? 1 : 0);
+            alive += next[i];
+          }
+        }
+        gridRef.current = next;
+        stepsRef.current++;
+        if (alive < next.length * 0.02 || stepsRef.current > RESEED_STEPS) seedGrid();
+      }
+      render();
     }, STEP_MS);
 
-    return () => { ro.disconnect(); clearInterval(t); };
+    // Pointer drawing (rest mode only).
+    let drawing = false;
+    const paint = (e: PointerEvent) => {
+      const { cols, rows } = dimsRef.current;
+      const rect = cv.getBoundingClientRect();
+      const x = Math.floor((e.clientX - rect.left) / CELL);
+      const y = Math.floor((e.clientY - rect.top) / CELL);
+      if (x < 0 || y < 0 || x >= cols || y >= rows) return;
+      gridRef.current[y * cols + x] = 1;
+      render();
+    };
+    const onDown = (e: PointerEvent) => {
+      if (editingRef.current) return;
+      drawing = true;
+      try { cv.setPointerCapture(e.pointerId); } catch { /* ignore */ }
+      paint(e);
+    };
+    const onMove = (e: PointerEvent) => { if (drawing) paint(e); };
+    const onUp = (e: PointerEvent) => {
+      drawing = false;
+      try { cv.releasePointerCapture(e.pointerId); } catch { /* ignore */ }
+    };
+    cv.addEventListener("pointerdown", onDown);
+    cv.addEventListener("pointermove", onMove);
+    cv.addEventListener("pointerup", onUp);
+
+    return () => {
+      ro.disconnect();
+      clearInterval(t);
+      cv.removeEventListener("pointerdown", onDown);
+      cv.removeEventListener("pointermove", onMove);
+      cv.removeEventListener("pointerup", onUp);
+    };
   }, []);
 
-  return <canvas ref={ref} className="home-canvas" />;
+  return (
+    <>
+      <HoverCtl>
+        <button className="hv-opt" onClick={() => setPaused((p) => !p)}>
+          {paused ? "play" : "pause"}
+        </button>
+        <button className="hv-opt" onClick={seedGrid}>seed</button>
+        <button className="hv-opt" onClick={clearGrid}>clear</button>
+      </HoverCtl>
+      <canvas ref={ref} className="home-canvas home-life" />
+    </>
+  );
 }

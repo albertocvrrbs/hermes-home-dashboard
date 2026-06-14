@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from "react";
+import { HoverArrows } from "./HoverArrows";
 
 const SYNODIC_DAYS = 29.53058867;
 /** Reference new moon: 2000-01-06 18:14 UTC. */
 const NEW_MOON_MS = Date.UTC(2000, 0, 6, 18, 14);
+const DAY_MS = 86_400_000;
 
 const PHASE_NAMES = [
   "new moon", "waxing crescent", "first quarter", "waxing gibbous",
@@ -10,7 +12,7 @@ const PHASE_NAMES = [
 ];
 
 function moonPhase(now: number): number {
-  const days = (now - NEW_MOON_MS) / 86_400_000;
+  const days = (now - NEW_MOON_MS) / DAY_MS;
   return ((days % SYNODIC_DAYS) + SYNODIC_DAYS) % SYNODIC_DAYS / SYNODIC_DAYS;
 }
 
@@ -18,10 +20,21 @@ function phaseName(phase: number): string {
   return PHASE_NAMES[Math.round(phase * 8) % 8];
 }
 
-/** Pure-math moon: disc + terminator ellipse, drawn in the theme accent. */
-export function MoonWidget() {
+interface Props {
+  widgetProps: Record<string, unknown>;
+  onWidgetPropsChange: (next: Record<string, unknown>) => void;
+}
+
+/** Pure-math moon: disc + terminator ellipse, drawn in the theme accent.
+ *  Hover arrows step the preview ±1 day so you can scrub the lunar cycle; the
+ *  offset persists in the widget's layout props. */
+export function MoonWidget({ widgetProps, onWidgetPropsChange }: Props) {
   const ref = useRef<HTMLCanvasElement>(null);
   const [label, setLabel] = useState("");
+  const offset = typeof widgetProps.offsetDays === "number" ? widgetProps.offsetDays : 0;
+
+  const setOffset = (next: number) =>
+    onWidgetPropsChange({ ...widgetProps, offsetDays: next });
 
   useEffect(() => {
     const cv = ref.current;
@@ -35,7 +48,7 @@ export function MoonWidget() {
       cv.height = Math.max(10, rect.height);
       const accent =
         getComputedStyle(cv).getPropertyValue("--home-accent").trim() || "#d4af37";
-      const phase = moonPhase(Date.now());
+      const phase = moonPhase(Date.now() + offset * DAY_MS);
       setLabel(`${phaseName(phase)} · ${Math.round(
         ((1 - Math.cos(2 * Math.PI * phase)) / 2) * 100,
       )}%`);
@@ -68,10 +81,18 @@ export function MoonWidget() {
     ro.observe(cv);
     const t = setInterval(draw, 3_600_000); // phase barely moves; hourly is plenty
     return () => { ro.disconnect(); clearInterval(t); };
-  }, []);
+  }, [offset]);
+
+  const offLabel = offset === 0 ? undefined : offset > 0 ? `+${offset}d` : `${offset}d`;
 
   return (
     <div className="home-moon-wrap">
+      <HoverArrows
+        onPrev={() => setOffset(offset - 1)}
+        onNext={() => setOffset(offset + 1)}
+        label={offLabel}
+        onLabelClick={offset === 0 ? undefined : () => setOffset(0)}
+      />
       <canvas ref={ref} className="home-moon-c" />
       <div className="home-moon-label">{label}</div>
     </div>

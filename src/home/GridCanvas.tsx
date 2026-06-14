@@ -319,6 +319,8 @@ export const GridCanvas = forwardRef<GridCanvasHandle, Props>(function GridCanva
               data={data}
               widgetProps={item.props ?? {}}
               onWidgetPropsChange={(p) => onWidgetPropsChange(item.id, p)}
+              editing={editing}
+              gridSize={{ gw: box.gw, gh: box.gh }}
             />
           </WidgetShell>
         );

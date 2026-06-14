@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
+import { HoverCtl } from "./HoverArrows";
 
 interface PomoState {
   mode: "work" | "break";
@@ -30,17 +31,18 @@ function readState(p: Record<string, unknown>): PomoState {
   return { mode: "work", endsAt: null, remaining: workMin * 60, workMin, breakMin };
 }
 
-/** Buttonless pomodoro:
+const clampMin = (n: number) => Math.max(1, Math.min(180, Math.round(n)));
+
+/** Pomodoro:
  *  · click the time → start / pause
- *  · double-click the time (while paused) → set the work length in minutes
+ *  · hover → step the work / break lengths in minutes
  *  · click the label → name the timer
  *  Auto-switches work ↔ break. Everything persists in the widget props. */
 export function PomodoroWidget({ widgetProps, onWidgetPropsChange }: Props) {
   const state = readState(widgetProps);
   const label = typeof widgetProps.label === "string" ? widgetProps.label : "";
   const [now, setNow] = useState(() => Date.now());
-  const [editing, setEditing] = useState<"name" | "minutes" | null>(null);
-  const clickTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [editing, setEditing] = useState(false); // naming the timer
 
   const commit = (next: PomoState) =>
     onWidgetPropsChange({ ...widgetProps, pomodoro: next });
@@ -65,10 +67,6 @@ export function PomodoroWidget({ widgetProps, onWidgetPropsChange }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.endsAt, state.mode]);
 
-  useEffect(() => () => {
-    if (clickTimer.current) clearTimeout(clickTimer.current);
-  }, []);
-
   const toggle = () => {
     setNow(Date.now());
     if (state.endsAt === null) {
@@ -78,32 +76,16 @@ export function PomodoroWidget({ widgetProps, onWidgetPropsChange }: Props) {
     }
   };
 
-  // Distinguish a single click (toggle) from a double click (edit minutes)
-  // on the same element by deferring the single-click action briefly.
-  const onTimeClick = () => {
-    if (clickTimer.current) return;
-    clickTimer.current = setTimeout(() => {
-      clickTimer.current = null;
-      toggle();
-    }, 230);
-  };
-  const onTimeDouble = () => {
-    if (clickTimer.current) {
-      clearTimeout(clickTimer.current);
-      clickTimer.current = null;
-    }
-    if (!running) setEditing("minutes");
-  };
+  // Setting the work length also resets the (paused) timer to that fresh
+  // length; the break length just stores.
+  const setWork = (n: number) =>
+    commit({ ...state, workMin: clampMin(n), mode: "work", endsAt: null, remaining: clampMin(n) * 60 });
+  const setBreak = (n: number) =>
+    commit({ ...state, breakMin: clampMin(n) });
 
   const saveName = (value: string) => {
-    setEditing(null);
+    setEditing(false);
     onWidgetPropsChange({ ...widgetProps, label: value.trim() });
-  };
-  const saveMinutes = (value: string) => {
-    setEditing(null);
-    const n = Math.max(1, Math.min(180, Math.round(Number(value) || state.workMin)));
-    // Setting the length also resets the (paused) timer to that fresh length.
-    commit({ ...state, workMin: n, mode: "work", endsAt: null, remaining: n * 60 });
   };
 
   const mm = String(Math.floor(secondsLeft / 60)).padStart(2, "0");
@@ -111,31 +93,28 @@ export function PomodoroWidget({ widgetProps, onWidgetPropsChange }: Props) {
 
   return (
     <div className="home-clock-wrap home-pomo">
-      {editing === "minutes" ? (
-        <input
-          className="note-input count-input pomo-min"
-          type="number"
-          min={1}
-          max={180}
-          autoFocus
-          defaultValue={state.workMin}
-          onBlur={(e) => saveMinutes(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") saveMinutes(e.currentTarget.value);
-            if (e.key === "Escape") setEditing(null);
-          }}
-        />
-      ) : (
-        <div
-          className={`home-clock${running ? "" : " paused"}`}
-          onClick={onTimeClick}
-          onDoubleClick={onTimeDouble}
-          title="click: start/pause · double-click while paused: set minutes"
-        >
-          {mm}:{ss}
+      <HoverCtl className="pomo-set">
+        <div className="pomo-stepper">
+          <span className="hv-label">work</span>
+          <button className="hv-arrow" disabled={running} onClick={() => setWork(state.workMin - 1)}>‹</button>
+          <span className="hv-label">{state.workMin}</span>
+          <button className="hv-arrow" disabled={running} onClick={() => setWork(state.workMin + 1)}>›</button>
         </div>
-      )}
-      {editing === "name" ? (
+        <div className="pomo-stepper">
+          <span className="hv-label">break</span>
+          <button className="hv-arrow" onClick={() => setBreak(state.breakMin - 1)}>‹</button>
+          <span className="hv-label">{state.breakMin}</span>
+          <button className="hv-arrow" onClick={() => setBreak(state.breakMin + 1)}>›</button>
+        </div>
+      </HoverCtl>
+      <div
+        className={`home-clock${running ? "" : " paused"}`}
+        onClick={toggle}
+        title="click: start / pause"
+      >
+        {mm}:{ss}
+      </div>
+      {editing ? (
         <input
           className="note-input count-input"
           autoFocus
@@ -143,13 +122,13 @@ export function PomodoroWidget({ widgetProps, onWidgetPropsChange }: Props) {
           onBlur={(e) => saveName(e.target.value)}
           onKeyDown={(e) => {
             if (e.key === "Enter") saveName(e.currentTarget.value);
-            if (e.key === "Escape") setEditing(null);
+            if (e.key === "Escape") setEditing(false);
           }}
         />
       ) : (
         <div
           className="home-clock-sub pomo-sub"
-          onClick={() => setEditing("name")}
+          onClick={() => setEditing(true)}
           title="click to name this timer"
         >
           {label ? `${label} · ` : ""}{state.mode} {running ? "· running" : "· paused"}

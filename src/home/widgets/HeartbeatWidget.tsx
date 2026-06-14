@@ -1,9 +1,11 @@
 import { useEffect, useRef } from "react";
 import type { StatusResponse } from "../../api-types";
+import { HoverArrows } from "./HoverArrows";
 
 const SPEED_PX = 2;
 const TICK_MS = 33;
 const BEAT_S = 1.0;
+const SPEEDS = [0.5, 1, 1.5, 2];
 
 /** ECG-style waveform: 0 at rest, P bump, QRS spike, T bump. t in [0,1). */
 function beatY(t: number): number {
@@ -15,14 +17,29 @@ function beatY(t: number): number {
   return 0;
 }
 
+interface Props {
+  status: StatusResponse | null;
+  widgetProps: Record<string, unknown>;
+  onWidgetPropsChange: (next: Record<string, unknown>) => void;
+}
+
 /** Scrolling heartbeat trace: beats while the gateway is online, flatlines
- *  (in the error color) when it goes down. */
-export function HeartbeatWidget({ status }: { status: StatusResponse | null }) {
+ *  (in the error color) when it goes down. Hover arrows tune the trace speed
+ *  (beat rate + scroll together); the choice persists in the layout props. */
+export function HeartbeatWidget({ status, widgetProps, onWidgetPropsChange }: Props) {
   const ref = useRef<HTMLCanvasElement>(null);
   const online = useRef(false);
+  const speedRef = useRef(1);
   useEffect(() => {
     online.current = status?.gateway_running ?? false;
   }, [status]);
+
+  const speed = typeof widgetProps.speed === "number" ? widgetProps.speed : 1;
+  speedRef.current = speed;
+  const stepSpeed = (dir: 1 | -1) => {
+    const i = (SPEEDS.indexOf(speed) + dir + SPEEDS.length) % SPEEDS.length;
+    onWidgetPropsChange({ ...widgetProps, speed: SPEEDS[i] });
+  };
 
   useEffect(() => {
     const cv = ref.current;
@@ -53,7 +70,9 @@ export function HeartbeatWidget({ status }: { status: StatusResponse | null }) {
 
     const t = setInterval(() => {
       if (document.hidden || cv.width < 20) return;
-      clock += TICK_MS / 1000;
+      const mult = speedRef.current;
+      const px = SPEED_PX * mult;
+      clock += (TICK_MS / 1000) * mult;
       const base = cv.height * 0.62;
       const amp = cv.height * 0.42;
       const y = online.current
@@ -66,17 +85,26 @@ export function HeartbeatWidget({ status }: { status: StatusResponse | null }) {
         ctx.strokeStyle = online.current ? accent : errColor;
         ctx.lineWidth = 1.6;
         ctx.beginPath();
-        ctx.moveTo(x - SPEED_PX, prevY);
+        ctx.moveTo(x - px, prevY);
         ctx.lineTo(x, y);
         ctx.stroke();
       }
       prevY = y;
-      x += SPEED_PX;
+      x += px;
       if (x > cv.width) { x = 0; prevY = null; }
     }, TICK_MS);
 
     return () => { ro.disconnect(); clearInterval(t); };
   }, []);
 
-  return <canvas ref={ref} className="home-canvas" />;
+  return (
+    <>
+      <HoverArrows
+        onPrev={() => stepSpeed(-1)}
+        onNext={() => stepSpeed(1)}
+        label={`${speed}×`}
+      />
+      <canvas ref={ref} className="home-canvas" />
+    </>
+  );
 }

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { HoverCtl } from "./HoverArrows";
 
 interface Note { id: string; text: string; done: boolean; }
 
@@ -47,8 +48,17 @@ export function NotesWidget({ widgetProps, onWidgetPropsChange }: Props) {
       : notes.map((n) => (n.id === id ? { ...n, text } : n)));
   };
 
+  const doneCount = notes.filter((n) => n.done).length;
+
   return (
     <div className="home-notes">
+      {doneCount > 0 && (
+        <HoverCtl>
+          <button className="hv-opt" onClick={() => commit(notes.filter((n) => !n.done))}>
+            clear done
+          </button>
+        </HoverCtl>
+      )}
       {notes.length === 0 && editingId === null && (
         <span className="dim">no notes — add one with +</span>
       )}

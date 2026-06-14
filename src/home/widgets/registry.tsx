@@ -22,6 +22,13 @@ export interface WidgetRenderProps {
   /** Per-widget persisted props (stored in the layout document). */
   widgetProps: Record<string, unknown>;
   onWidgetPropsChange: (next: Record<string, unknown>) => void;
+  /** True while the home is in edit mode (lock open). Widgets use it to
+   *  hard-disable in-widget interaction (e.g. drawing on the Life canvas)
+   *  so it doesn't fight drag/resize. Hover controls themselves hide via CSS. */
+  editing: boolean;
+  /** The widget's current size in grid cells, live-updated during a resize.
+   *  Lets a widget pick a discrete layout tier (e.g. the calendar). */
+  gridSize: { gw: number; gh: number };
 }
 
 export interface WidgetDef {
@@ -41,19 +48,29 @@ export interface WidgetDef {
 export const WIDGET_REGISTRY: Record<string, WidgetDef> = {
   ascii: {
     title: "hermes",
-    component: ({ data }) => <AsciiWidget status={data.status} />,
+    component: ({ data, widgetProps, onWidgetPropsChange }) => (
+      <AsciiWidget
+        status={data.status}
+        widgetProps={widgetProps}
+        onWidgetPropsChange={onWidgetPropsChange}
+      />
+    ),
     defaultSize: { gw: 3, gh: 6 }, minSize: { gw: 2, gh: 4 },
     navigateTo: null, dataSource: null,
   },
   clock: {
     title: "clock",
-    component: () => <ClockWidget />,
+    component: ({ widgetProps, onWidgetPropsChange }) => (
+      <ClockWidget widgetProps={widgetProps} onWidgetPropsChange={onWidgetPropsChange} />
+    ),
     defaultSize: { gw: 5, gh: 3 }, minSize: { gw: 2, gh: 2 },
     navigateTo: null, dataSource: null,
   },
   matrix: {
     title: "matrix",
-    component: () => <MatrixWidget />,
+    component: ({ widgetProps, onWidgetPropsChange }) => (
+      <MatrixWidget widgetProps={widgetProps} onWidgetPropsChange={onWidgetPropsChange} />
+    ),
     defaultSize: { gw: 3, gh: 4 }, minSize: { gw: 2, gh: 2 },
     navigateTo: null, dataSource: null,
   },
@@ -72,14 +89,26 @@ export const WIDGET_REGISTRY: Record<string, WidgetDef> = {
     navigateTo: "/sessions", dataSource: "sessions",
   },
   tokens: {
-    title: "tokens · today",
-    component: ({ data }) => <TokensWidget analytics={data.analytics} />,
+    title: "tokens",
+    component: ({ data, widgetProps, onWidgetPropsChange }) => (
+      <TokensWidget
+        analytics={data.analytics}
+        widgetProps={widgetProps}
+        onWidgetPropsChange={onWidgetPropsChange}
+      />
+    ),
     defaultSize: { gw: 5, gh: 4 }, minSize: { gw: 3, gh: 3 },
     navigateTo: "/analytics", dataSource: "analytics",
   },
   host: {
     title: "host",
-    component: ({ data }) => <HostWidget system={data.system} />,
+    component: ({ data, widgetProps, onWidgetPropsChange }) => (
+      <HostWidget
+        system={data.system}
+        widgetProps={widgetProps}
+        onWidgetPropsChange={onWidgetPropsChange}
+      />
+    ),
     defaultSize: { gw: 4, gh: 4 }, minSize: { gw: 3, gh: 3 },
     navigateTo: "/system", dataSource: "system",
   },
@@ -105,19 +134,27 @@ export const WIDGET_REGISTRY: Record<string, WidgetDef> = {
   },
   moon: {
     title: "moon",
-    component: () => <MoonWidget />,
+    component: ({ widgetProps, onWidgetPropsChange }) => (
+      <MoonWidget widgetProps={widgetProps} onWidgetPropsChange={onWidgetPropsChange} />
+    ),
     defaultSize: { gw: 2, gh: 3 }, minSize: { gw: 2, gh: 2 },
     navigateTo: null, dataSource: null,
   },
   heartbeat: {
     title: "heartbeat",
-    component: ({ data }) => <HeartbeatWidget status={data.status} />,
+    component: ({ data, widgetProps, onWidgetPropsChange }) => (
+      <HeartbeatWidget
+        status={data.status}
+        widgetProps={widgetProps}
+        onWidgetPropsChange={onWidgetPropsChange}
+      />
+    ),
     defaultSize: { gw: 4, gh: 2 }, minSize: { gw: 2, gh: 2 },
     navigateTo: null, dataSource: null,
   },
   life: {
     title: "life",
-    component: () => <LifeWidget />,
+    component: ({ editing }) => <LifeWidget editing={editing} />,
     defaultSize: { gw: 3, gh: 3 }, minSize: { gw: 2, gh: 2 },
     navigateTo: null, dataSource: null,
   },
@@ -139,7 +176,7 @@ export const WIDGET_REGISTRY: Record<string, WidgetDef> = {
   },
   calendar: {
     title: "calendar",
-    component: () => <CalendarWidget />,
+    component: ({ gridSize }) => <CalendarWidget gridSize={gridSize} />,
     defaultSize: { gw: 3, gh: 4 }, minSize: { gw: 2, gh: 3 },
     navigateTo: null, dataSource: null,
   },

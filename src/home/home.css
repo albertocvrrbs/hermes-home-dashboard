@@ -123,6 +123,91 @@
 }
 .home-widget .werr { color: var(--home-error); }
 
+/* ── hover controls (contextual chrome, rest mode only) ──
+ * Reusable floating control rendered inside a widget body. Hidden by default,
+ * fades in while hovering the widget, and fully suppressed in edit mode so it
+ * never fights drag/resize. Widgets opt in by rendering <HoverCtl>/<HoverArrows>. */
+.hover-ctl {
+  position: absolute;
+  top: 4px;
+  right: 6px;
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.18s ease;
+  /* Sits on the glass without a hard edge. */
+  padding: 1px 3px;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--home-surface) 80%, transparent);
+}
+.home-widget:hover .hover-ctl,
+.hover-ctl:focus-within { opacity: 1; pointer-events: auto; }
+.home-root.editing .hover-ctl { display: none; }
+@media (hover: none) {
+  /* Touch: no hover, so keep controls reachable but understated. */
+  .hover-ctl { opacity: 0.5; pointer-events: auto; }
+}
+
+.hv-arrow {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0 3px;
+  color: var(--home-accent-dim);
+  font-size: 14px;
+  line-height: 1;
+  font-family: inherit;
+}
+.hv-arrow:hover:not(:disabled) { color: var(--home-accent); }
+.hv-arrow:disabled { opacity: 0.3; cursor: default; }
+.hv-label {
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--home-accent-dim);
+  white-space: nowrap;
+}
+.hv-label-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font: inherit;
+  letter-spacing: 0.1em;
+  padding: 0;
+}
+.hv-label-btn:hover { color: var(--home-accent); }
+
+/* Toggle/option buttons inside a hover control (clock format, host view…). */
+.hv-opt {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font: inherit;
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--home-accent-dim);
+  padding: 0 4px;
+  border-radius: 4px;
+}
+.hv-opt:hover { color: var(--home-accent); }
+.hv-opt.on { color: #000; background: var(--home-accent); }
+
+/* Extra detail that smoothly expands on widget hover (rest mode only). Uses
+ * the 0fr→1fr grid trick so it animates real height without a fixed value. */
+.hover-reveal {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transition: grid-template-rows 0.25s ease, opacity 0.2s ease, margin-top 0.25s ease;
+}
+.home-widget:hover .hover-reveal { grid-template-rows: 1fr; opacity: 1; margin-top: 4px; }
+.home-root.editing .hover-reveal { grid-template-rows: 0fr; opacity: 0; margin-top: 0; }
+.hover-reveal > * { overflow: hidden; min-height: 0; }
+
 .home-ghost {
   position: absolute;
   border: 1.5px dashed color-mix(in srgb, var(--home-accent) 70%, transparent);
@@ -205,6 +290,13 @@
   letter-spacing: 0.02em;
   text-shadow: 0 0 24px color-mix(in srgb, var(--home-accent) 35%, transparent);
   line-height: 1;
+}
+.home-clock-ampm {
+  font-size: 0.32em;
+  vertical-align: 0.9em;
+  margin-left: 0.2em;
+  letter-spacing: 0.05em;
+  color: var(--home-accent-dim);
 }
 .home-clock-sub {
   color: var(--home-accent-dim);
@@ -323,6 +415,8 @@
   width: 100%;
   height: calc(100% - 24px);
 }
+/* Life is drawable in rest mode — signal it with a crosshair. */
+.home-root:not(.editing) .home-life { cursor: crosshair; }
 
 /* ── moon ── */
 .home-moon-wrap {
@@ -347,12 +441,72 @@
 .home-count .count-label { cursor: pointer; }
 .home-count .count-input,
 .home-pomo .count-input { max-width: 92%; text-align: center; color-scheme: dark; }
+
+/* ── countdown segment editor (alarm-style spinners) ── */
+.count-edit {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  height: calc(100% - 18px);
+}
+.count-edit-row { display: flex; align-items: center; gap: 5px; }
+.count-seg { display: flex; flex-direction: column; align-items: center; }
+.count-seg .seg-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  line-height: 0.6;
+  font-size: 8px;
+  color: var(--home-accent-dim);
+}
+.count-seg .seg-btn:hover { color: var(--home-accent); }
+.count-seg .seg-val {
+  background: none;
+  border: none;
+  outline: none;
+  text-align: center;
+  color: var(--home-accent);
+  font: inherit;
+  font-weight: 800;
+  font-size: max(12px, min(7cqw, 15cqh));
+  padding: 1px 0;
+  border-bottom: 1px solid transparent;
+  letter-spacing: 0.02em;
+}
+.count-seg input.seg-val:focus { border-bottom-color: var(--home-accent); }
+.count-seg .seg-static { cursor: default; }
+.count-colon {
+  font-weight: 800;
+  color: var(--home-accent-dim);
+  font-size: max(12px, min(7cqw, 15cqh));
+}
+.count-done {
+  margin-top: 3px;
+  background: none;
+  border: 1px solid var(--home-border);
+  border-radius: 6px;
+  color: var(--home-accent);
+  cursor: pointer;
+  font: inherit;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 2px 12px;
+}
+.count-done:hover { border-color: var(--home-accent); }
 .home-pomo .pomo-min {
   font-size: min(20cqw, 40cqh);
   font-weight: 800;
   color: var(--home-accent);
   max-width: 70%;
 }
+/* Hover steppers for the pomodoro work/break lengths. */
+.hover-ctl.pomo-set { flex-direction: column; align-items: flex-end; gap: 1px; }
+.pomo-stepper { display: flex; align-items: center; gap: 3px; }
+.pomo-stepper .hv-label:nth-child(3) { min-width: 16px; text-align: center; color: var(--home-accent); }
 
 /* ── calendar ── */
 .home-cal { height: calc(100% - 18px); display: flex; flex-direction: column; }
@@ -381,6 +535,19 @@
   padding: 0 4px;
   font-weight: 700;
 }
+/* Density tiers, chosen from the widget's cell width (see CalendarWidget). */
+.home-cal.tier-mini .home-cal-month {
+  font-size: max(8px, min(4cqw, 8cqh));
+  margin-bottom: 2px;
+}
+.home-cal.tier-mini .home-cal-grid { font-size: max(9px, min(4cqw, 8cqh)); }
+.home-cal.tier-large .home-cal-month {
+  font-size: max(11px, min(3cqw, 7cqh));
+  margin-bottom: 7px;
+}
+.home-cal.tier-large .home-cal-grid { row-gap: 3px; }
+.home-cal.tier-large .home-cal-h { font-weight: 700; opacity: 0.8; }
+.home-cal.tier-large .home-cal-today { padding: 1px 6px; }
 
 /* ── page chrome ── */
 /* Edit affordance lives BELOW the grid, centered. It fades in once the user
