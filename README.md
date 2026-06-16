@@ -1,5 +1,7 @@
 # Hermes Home Dashboard
 
+[![Follow @albertocvrrbs on X](https://img.shields.io/badge/Follow%20@albertocvrrbs-on%20X-000000?logo=x&logoColor=white&style=for-the-badge)](https://x.com/albertocvrrbs)
+
 A customizable, *rice*-style **Home page** for the [Hermes Agent](https://github.com/NousResearch/hermes-agent) dashboard.
 
 It adds a `Home` tab: a grid of glass widgets you can drag, resize, add and
@@ -8,9 +10,7 @@ mode) — arrows, toggles, steppers — so the glass stays clean until you reach
 it. Your layout persists, and because the plugin lives under `~/.hermes/plugins/`,
 it survives Hermes updates.
 
-<!-- Add a demo GIF here once recorded, e.g.:
-![demo](docs/demo.gif)
--->
+https://github.com/user-attachments/assets/10069980-bbb3-4d85-9e29-6069b643ce6b
 
 ---
 
@@ -76,12 +76,12 @@ they never fight drag/resize.
 | **Clock** | toggle 12/24h and seconds |
 | **Calendar** | page months · 3 responsive sizes |
 | **Moon** | scrub the phase ±1 day |
-| **Tokens** | switch range: day / week / month |
+| **Tokens** | switch range (7 days / 1 month / 6 months) · line ↔ bars chart · show/hide totals · hover a point for an animated tooltip |
 | **Host** | flip meters ↔ numeric detail (load, mem, disk, proc) |
 | **Gateway** | hover expands read-only detail (pid, health, config) |
 | **Sessions** | paginate recent sessions |
 | **Cron** | paginate upcoming jobs |
-| **Errors** | walk the error history |
+| **Logs** | switch log file: agent / errors / gateway (multi-line records grouped, level-colored) |
 | **Notes** | quick to-dos · clear completed |
 | **Pomodoro** | step work / break lengths |
 | **Countdown** | alarm-style date+time picker (wheel, arrows, typing) |
@@ -98,8 +98,9 @@ transient state (current page, browsed month) resets on reload.
 - Ships as a self-contained **dashboard plugin** (React + Vite), registered via
   Hermes' plugin SDK (`window.__HERMES_PLUGINS__` / `window.__HERMES_PLUGIN_SDK__`).
 - All data comes from the host's existing API (status, system, analytics,
-  sessions, cron, logs) through one polling loop — widgets don't fetch on their own
-  (the token range selector is the one on-demand exception).
+  sessions, cron, logs) through one polling loop. A couple of widgets fetch on
+  demand for their own controls — the Tokens range selector and the Logs file
+  selector.
 - The Python side (`dashboard/plugin_api.py`) only persists the widget layout to
   `~/.hermes/plugins/home-dashboard/layout.json`, so it survives Hermes updates.
 - Hover controls are pure CSS reveal (`:hover`), suppressed in edit mode — no
@@ -150,6 +151,14 @@ control.
 - Requires a Hermes Agent install with the web dashboard.
 - Tested on Hermes Agent v0.16.x. Uses only documented host endpoints, but Hermes
   is young — if a widget shows `no data`, that source may have changed upstream.
+
+## Stay updated
+
+Follow me on X for new versions of this plugin and other projects:
+
+[![Follow @albertocvrrbs on X](https://img.shields.io/badge/Follow%20@albertocvrrbs-on%20X-000000?logo=x&logoColor=white&style=for-the-badge)](https://x.com/albertocvrrbs)
+
+→ [x.com/albertocvrrbs](https://x.com/albertocvrrbs)
 
 ## License
 
