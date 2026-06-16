@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { api } from "../../sdk";
-import type { AnalyticsResponse, AnalyticsDailyEntry } from "../../api-types";
+import type { AnalyticsResponse } from "../../api-types";
 import { formatTokenCount } from "../format";
 import { HoverCtl } from "./HoverArrows";
+import { toBars, type Bar } from "./tokenSeries";
 
 const RANGES = [
   { key: "week", label: "7 days", days: 7, byMonth: false },
@@ -10,40 +11,6 @@ const RANGES = [
   { key: "halfyear", label: "6 months", days: 180, byMonth: true },
 ] as const;
 type RangeKey = (typeof RANGES)[number]["key"];
-
-interface Bar {
-  key: string;
-  label: string;
-  tokens: number;
-  cost: number;
-}
-
-/** One chart point per day, or one per calendar month when the range groups
- *  (the 6-month view). `label` is what the hover tooltip shows. */
-function toBars(daily: AnalyticsDailyEntry[], byMonth: boolean): Bar[] {
-  if (!byMonth) {
-    return daily.map((d) => {
-      const date = new Date(d.day);
-      const label = isNaN(date.getTime())
-        ? d.day
-        : date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
-      return { key: d.day, label, tokens: d.input_tokens + d.output_tokens, cost: d.estimated_cost };
-    });
-  }
-  const months = new Map<string, Bar & { sort: number }>();
-  for (const d of daily) {
-    const date = new Date(d.day);
-    const valid = !isNaN(date.getTime());
-    const key = valid ? `${date.getFullYear()}-${date.getMonth()}` : d.day.slice(0, 7);
-    const label = valid ? date.toLocaleDateString(undefined, { month: "short" }) : key;
-    const sort = valid ? date.getFullYear() * 12 + date.getMonth() : 0;
-    const cur = months.get(key) ?? { key, label, tokens: 0, cost: 0, sort };
-    cur.tokens += d.input_tokens + d.output_tokens;
-    cur.cost += d.estimated_cost;
-    months.set(key, cur);
-  }
-  return [...months.values()].sort((a, b) => a.sort - b.sort).map(({ sort, ...b }) => b);
-}
 
 // Per-instance gradient id, so two tokens widgets never share a <defs> id (the
 // shim'd React build has no useId, so this stays self-contained).

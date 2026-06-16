@@ -127,7 +127,7 @@ export const WIDGET_REGISTRY: Record<string, WidgetDef> = {
     navigateTo: null, dataSource: null,
   },
   errors: {
-    title: "logs",
+    title: "Logs",
     component: ({ data, widgetProps, onWidgetPropsChange }) => (
       <ErrorsWidget
         logs={data.logs}

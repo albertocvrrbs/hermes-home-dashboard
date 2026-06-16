@@ -412,13 +412,24 @@
 .tok-stats > span { white-space: nowrap; }
 .tok-stats .dim { margin-right: 2px; }
 
-/* ── logs widget (level-filtered record list) ── */
-.logs-ctl { gap: 2px; }
+/* ── logs widget (per-file record list) ── */
+.logs-sub {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+}
+.logs-file {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: var(--home-accent);
+}
 .home-logs {
   display: flex;
   flex-direction: column;
   gap: 1px;
-  height: calc(100% - 44px);
+  height: calc(100% - 40px);
   overflow-y: auto;
   margin-top: 3px;
 }
