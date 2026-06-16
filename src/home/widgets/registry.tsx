@@ -98,7 +98,7 @@ export const WIDGET_REGISTRY: Record<string, WidgetDef> = {
       />
     ),
     defaultSize: { gw: 5, gh: 4 }, minSize: { gw: 3, gh: 3 },
-    navigateTo: "/analytics", dataSource: "analytics",
+    navigateTo: null, dataSource: "analytics",
   },
   host: {
     title: "host",
@@ -127,8 +127,14 @@ export const WIDGET_REGISTRY: Record<string, WidgetDef> = {
     navigateTo: null, dataSource: null,
   },
   errors: {
-    title: "errors",
-    component: ({ data }) => <ErrorsWidget logs={data.logs} />,
+    title: "logs",
+    component: ({ data, widgetProps, onWidgetPropsChange }) => (
+      <ErrorsWidget
+        logs={data.logs}
+        widgetProps={widgetProps}
+        onWidgetPropsChange={onWidgetPropsChange}
+      />
+    ),
     defaultSize: { gw: 3, gh: 3 }, minSize: { gw: 2, gh: 2 },
     navigateTo: "/logs", dataSource: "logs",
   },

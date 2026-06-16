@@ -14,41 +14,44 @@ it survives Hermes updates.
 
 ---
 
-## Quick install
+## Install
 
-No build step — a prebuilt bundle ships in the repo.
+### From the dashboard (recommended)
 
-```bash
-# 1. Clone into Hermes' plugin folder.
-#    The inner folder MUST be named `dashboard`, and the outer one `home-dashboard`.
-git clone https://github.com/<your-username>/hermes-home-dashboard.git \
-  ~/.hermes/plugins/home-dashboard/dashboard
+In the Hermes web dashboard, open the **Plugins** page → **Install from GitHub /
+Git URL** and paste:
 
-# 2. Restart the dashboard so Hermes discovers the new plugin.
-systemctl --user restart hermes-dashboard
-#   (or stop/start `hermes dashboard` however you run it)
-
-# 3. Open the dashboard and click the "Home" tab. That's it.
+```
+albertocvrrbs/hermes-home-dashboard
 ```
 
-> **Why those folder names?** Hermes discovers dashboard plugins at
-> `~/.hermes/plugins/<name>/dashboard/manifest.json`, and this plugin's backend
-> stores its layout at `~/.hermes/plugins/home-dashboard/layout.json`. Keeping the
-> outer folder named `home-dashboard` keeps both in sync.
+Leave **"Enable after install"** on, then click **Install**. Hermes clones the
+repo into `~/.hermes/plugins/home-dashboard/`, discovers
+`dashboard/manifest.json`, and the **Home** tab shows up. (If it doesn't appear,
+hit **Re-scan** on the same page.)
+
+No build step is needed — a prebuilt bundle (`dashboard/dist/`) ships in the repo.
+
+### From the CLI
+
+```bash
+hermes plugins install albertocvrrbs/hermes-home-dashboard
+```
 
 ### Update
 
-```bash
-cd ~/.hermes/plugins/home-dashboard/dashboard
-git pull
-# hard-refresh the dashboard tab (Ctrl+Shift+R) — no restart needed for updates
-```
+Because the plugin is a normal git checkout, updates are a pull:
+
+- **Dashboard:** the plugin's **Update** button (runs `git pull --ff-only`), then
+  hard-refresh the `Home` tab (Ctrl+Shift+R).
+- **CLI:** `hermes plugins update home-dashboard`.
 
 ### Uninstall
 
+Use the plugin's **Remove** button in the dashboard, or:
+
 ```bash
 rm -rf ~/.hermes/plugins/home-dashboard
-systemctl --user restart hermes-dashboard
 ```
 
 ---
@@ -97,26 +100,44 @@ transient state (current page, browsed month) resets on reload.
 - All data comes from the host's existing API (status, system, analytics,
   sessions, cron, logs) through one polling loop — widgets don't fetch on their own
   (the token range selector is the one on-demand exception).
-- The Python side (`plugin_api.py`) only persists the widget layout to
-  `layout.json`, so it survives Hermes updates.
+- The Python side (`dashboard/plugin_api.py`) only persists the widget layout to
+  `~/.hermes/plugins/home-dashboard/layout.json`, so it survives Hermes updates.
 - Hover controls are pure CSS reveal (`:hover`), suppressed in edit mode — no
   per-widget hover state, which keeps the canvas widgets flicker-free.
+
+## Repo layout
+
+```
+hermes-home-dashboard/
+├── plugin.yaml              # pins the install folder name (home-dashboard)
+├── dashboard/               # everything the Hermes host consumes
+│   ├── manifest.json        # tab/entry/css/api the dashboard reads
+│   ├── plugin_api.py        # FastAPI router that persists layout.json
+│   └── dist/                # prebuilt bundle (committed — installer doesn't build)
+│       ├── index.js
+│       └── style.css
+├── src/                     # widget source (only needed to modify the plugin)
+├── vite.config.ts           # builds src/ → dashboard/dist/
+├── package.json
+└── tsconfig.json
+```
 
 ## Development
 
 Only needed if you want to modify the widgets.
 
 ```bash
-git clone https://github.com/<your-username>/hermes-home-dashboard.git
+git clone https://github.com/albertocvrrbs/hermes-home-dashboard.git
 cd hermes-home-dashboard
 npm install
 npm run typecheck     # tsc --noEmit
-npm run build         # vite -> dist/index.js + dist/style.css
-
-# install your build into the running plugin:
-cp dist/index.js dist/style.css ~/.hermes/plugins/home-dashboard/dashboard/dist/
-# then hard-refresh the dashboard tab
+npm run build         # vite -> dashboard/dist/{index.js,style.css}
 ```
+
+Commit the regenerated `dashboard/dist/` so installs pick up your changes (the
+installer clones, it never builds). To preview a build on a live install, copy
+`dashboard/dist/*` into `~/.hermes/plugins/home-dashboard/dashboard/dist/` and
+hard-refresh the tab.
 
 Add a new widget: create `src/home/widgets/MyWidget.tsx` and register it in
 `src/home/widgets/registry.tsx`. Widgets receive `{ data, widgetProps,

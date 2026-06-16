@@ -350,7 +350,104 @@
   background: linear-gradient(180deg, var(--home-accent), var(--home-accent-dim));
   border-radius: 1px 1px 0 0;
   opacity: 0.85;
-  transition: height 0.6s ease;
+  transition: height 0.6s ease, opacity 0.15s ease;
+  cursor: default;
+}
+.home-spark i:hover { opacity: 1; }
+
+/* Hover tooltip over a bar (tokens widget). Anchored to the bar via inline
+ * `left` + `translateX`, which clamps it inside the clipped widget; the appear/
+ * disappear slide+fade runs on the independent `translate` property so it never
+ * fights the positioning transform. */
+.home-spark-wrap { position: relative; }
+.home-spark-tip {
+  position: absolute;
+  bottom: 100%;
+  margin-bottom: 6px;
+  padding: 3px 7px;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--home-accent) 10%, rgb(8 8 12 / 0.96));
+  border: 1px solid var(--home-border);
+  color: rgb(236 236 242);
+  font-size: 10px;
+  line-height: 1.3;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  translate: 0 4px;
+  transition: opacity 0.18s ease, translate 0.18s ease, transform 0.18s ease;
+  z-index: 6;
+}
+.home-spark-tip.show { opacity: 1; translate: 0 0; }
+.home-spark-tip b { color: var(--home-accent); font-weight: 600; }
+
+/* Line/area chart (tokens widget, alternative to the bars). Stretched to fill
+ * via preserveAspectRatio=none; the stroke stays crisp with non-scaling-stroke. */
+.home-area {
+  display: block;
+  width: 100%;
+  height: max(18px, 22cqh);
+  margin: 6px 0 4px;
+  overflow: visible;
+}
+.home-area rect { cursor: default; }
+
+/* Small vertical divider between the range arrows and the toggles. */
+.tok-div {
+  width: 1px;
+  align-self: stretch;
+  margin: 2px 2px;
+  background: var(--home-border);
+}
+
+/* Totals line, regrouped: each label sticks to its value, groups spaced evenly
+ * (the old `.row` space-between scattered the six tokens across the full width). */
+.tok-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 14px;
+  padding: 3px 0 1px;
+  font-variant-numeric: tabular-nums;
+}
+.tok-stats > span { white-space: nowrap; }
+.tok-stats .dim { margin-right: 2px; }
+
+/* ── logs widget (level-filtered record list) ── */
+.logs-ctl { gap: 2px; }
+.home-logs {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  height: calc(100% - 44px);
+  overflow-y: auto;
+  margin-top: 3px;
+}
+.log-row {
+  display: flex;
+  gap: 6px;
+  align-items: baseline;
+  padding: 1px 0;
+  border-bottom: 1px solid rgb(255 255 255 / 0.04);
+  cursor: default;
+}
+.log-row:last-child { border-bottom: none; }
+.log-lvl {
+  flex: none;
+  width: 32px;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+}
+.log-lvl.lvl-error { color: var(--home-error); }
+.log-lvl.lvl-warn { color: #f5b945; }
+.log-lvl.lvl-info { color: var(--color-muted-foreground, #6b7387); }
+.log-msg {
+  flex: 1;
+  min-width: 0;
+  font-size: 10px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .home-matrix-c {

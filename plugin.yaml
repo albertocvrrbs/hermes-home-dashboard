@@ -1,0 +1,13 @@
+# Hermes agent-plugin manifest.
+#
+# The web dashboard discovers this plugin via dashboard/manifest.json; this
+# file exists so the panel's "Install from GitHub" pins the install folder
+# name. The layout backend (dashboard/plugin_api.py) persists to
+# ~/.hermes/plugins/home-dashboard/layout.json, so the folder MUST be named
+# "home-dashboard" regardless of the GitHub repo name — that's what `name`
+# below guarantees.
+name: home-dashboard
+label: Home
+description: Personalizable rice-style home page with draggable, resizable glass widgets for the Hermes Agent dashboard.
+version: 1.0.0
+manifest_version: 1

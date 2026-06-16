@@ -16,7 +16,9 @@ export default defineConfig({
     ],
   },
   build: {
-    outDir: "dist",
+    // Output inside dashboard/ so the bundle ships where Hermes' plugin
+    // discovery expects it: <plugin>/dashboard/dist/{index.js,style.css}.
+    outDir: "dashboard/dist",
     emptyOutDir: true,
     cssCodeSplit: false,
     lib: {

@@ -18,6 +18,10 @@ export function LifeWidget({ editing }: { editing: boolean }) {
   const dimsRef = useRef({ cols: 0, rows: 0 });
   const stepsRef = useRef(0);
   const pausedRef = useRef(false);
+  // True once you've taken manual control (cleared or drawn): suppresses ALL
+  // auto-reseed — an empty board stays empty, a dying drawn pattern isn't
+  // replaced. The board is yours until you press `seed` to return to ambient.
+  const userComposedRef = useRef(false);
   const editingRef = useRef(editing);
   const [paused, setPaused] = useState(false);
 
@@ -31,11 +35,16 @@ export function LifeWidget({ editing }: { editing: boolean }) {
     for (let i = 0; i < g.length; i++) g[i] = Math.random() < SEED_DENSITY ? 1 : 0;
     gridRef.current = g;
     stepsRef.current = 0;
+    userComposedRef.current = false; // a random seed is ambient, not composed
   };
   const clearGrid = () => {
     const { cols, rows } = dimsRef.current;
     gridRef.current = new Uint8Array(cols * rows);
     stepsRef.current = 0;
+    // Manual mode: the empty board stays empty (no auto-reseed) and keeps
+    // whatever play/pause state you had — draw straight onto it to bring it to
+    // life, or pause first to compose. `seed` returns to ambient.
+    userComposedRef.current = true;
   };
 
   useEffect(() => {
@@ -100,7 +109,12 @@ export function LifeWidget({ editing }: { editing: boolean }) {
         }
         gridRef.current = next;
         stepsRef.current++;
-        if (alive < next.length * 0.02 || stepsRef.current > RESEED_STEPS) seedGrid();
+        // Auto-reseed only in ambient mode. In manual mode (you cleared or
+        // drew) the board is yours: an empty board stays empty and a dying
+        // pattern isn't replaced — press `seed` to return to ambient.
+        if (!userComposedRef.current &&
+            (alive === 0 || alive < next.length * 0.02 ||
+             stepsRef.current > RESEED_STEPS)) seedGrid();
       }
       render();
     }, STEP_MS);
@@ -114,6 +128,7 @@ export function LifeWidget({ editing }: { editing: boolean }) {
       const y = Math.floor((e.clientY - rect.top) / CELL);
       if (x < 0 || y < 0 || x >= cols || y >= rows) return;
       gridRef.current[y * cols + x] = 1;
+      userComposedRef.current = true; // hand-drawn — protect it from the sparse reseed
       render();
     };
     const onDown = (e: PointerEvent) => {
