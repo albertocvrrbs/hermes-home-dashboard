@@ -41,29 +41,24 @@ hermes plugins install albertocvrrbs/hermes-home-dashboard
 ### Hermes Desktop
 
 Desktop has its own native plugin runtime, separate from the web dashboard.
-Install the main plugin first, then link its prebuilt Desktop bundle into the
-runtime plugin directory. Both directories live under `HERMES_HOME`, so Hermes
-application updates do not remove them.
+Install the main plugin on the Hermes backend that Desktop connects to, then run
+the included installer on the computer where Hermes Desktop runs. It links the
+prebuilt bundle into `desktop-plugins/home-dashboard`; both locations live under
+`HERMES_HOME`, so Hermes application updates do not remove them.
 
 **Linux / macOS:**
 
 ```bash
-hermes plugins install albertocvrrbs/hermes-home-dashboard
-HERMES_HOME="${HERMES_HOME:-$HOME/.hermes}"
-mkdir -p "$HERMES_HOME/desktop-plugins"
-ln -sfn "$HERMES_HOME/plugins/home-dashboard/desktop" \
-  "$HERMES_HOME/desktop-plugins/home-dashboard"
+hermes plugins install albertocvrrbs/hermes-home-dashboard --enable
+node "${HERMES_HOME:-$HOME/.hermes}/plugins/home-dashboard/scripts/install-desktop.mjs"
 ```
 
 **Windows PowerShell:**
 
 ```powershell
-hermes plugins install albertocvrrbs/hermes-home-dashboard
+hermes plugins install albertocvrrbs/hermes-home-dashboard --enable
 $HermesHome = if ($env:HERMES_HOME) { $env:HERMES_HOME } else { Join-Path $env:LOCALAPPDATA "hermes" }
-New-Item -ItemType Directory -Force (Join-Path $HermesHome "desktop-plugins") | Out-Null
-New-Item -ItemType Junction -Force `
-  -Path (Join-Path $HermesHome "desktop-plugins\home-dashboard") `
-  -Target (Join-Path $HermesHome "plugins\home-dashboard\desktop") | Out-Null
+node (Join-Path $HermesHome "plugins\home-dashboard\scripts\install-desktop.mjs")
 ```
 
 Open Hermes Desktop. It detects the plugin automatically within a few seconds;
@@ -74,6 +69,21 @@ when each Desktop window starts. It can be enabled or disabled under
 
 The link/junction points at the checked-out bundle, so `hermes plugins update
 home-dashboard` updates both Web and Desktop without another copy step.
+
+If a manually copied `home-dashboard` directory already exists, the installer
+preserves it beside the new link as `home-dashboard.backup-<timestamp>`.
+
+When Desktop connects to a remote Hermes backend, the split is intentional:
+`desktop/plugin.js` runs on the personal computer, while the full plugin must be
+installed and enabled on the remote backend so `/api/plugins/home-dashboard/*`
+can serve layout, system, analytics, cron and session data. If the UI loads but
+every widget says `no data` or `offline`, repair the remote side with:
+
+```bash
+hermes plugins install albertocvrrbs/hermes-home-dashboard --force --enable
+```
+
+Then restart or reconnect that backend and reload Desktop plugins.
 
 ### Update
 
