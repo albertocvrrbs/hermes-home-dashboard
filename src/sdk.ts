@@ -22,6 +22,10 @@ interface HermesPluginSDK {
   fetchJSON: <T = unknown>(url: string, init?: RequestInit) => Promise<T>;
 }
 
+export interface HermesHomeHost extends HermesPluginSDK {
+  navigateTo: (routePath: string) => void;
+}
+
 declare global {
   interface Window {
     __HERMES_PLUGIN_SDK__?: Record<string, unknown>;
@@ -31,18 +35,42 @@ declare global {
   }
 }
 
-function getSDK(): HermesPluginSDK {
+function getDashboardHost(): HermesHomeHost {
   const sdk = window.__HERMES_PLUGIN_SDK__;
   if (!sdk) throw new Error("Hermes plugin SDK not available");
-  return sdk as unknown as HermesPluginSDK;
+  const dashboard = sdk as unknown as HermesPluginSDK;
+  return {
+    ...dashboard,
+    navigateTo: (routePath) => window.location.assign(routePath),
+  };
 }
 
-export const api: HermesApi = getSDK().api;
-export const fetchJSON = getSDK().fetchJSON;
+let configuredHost: HermesHomeHost | null = null;
+
+export function configureHomeHost(host: HermesHomeHost): void {
+  configuredHost = host;
+}
+
+function getHost(): HermesHomeHost {
+  return configuredHost ?? getDashboardHost();
+}
+
+export const api: HermesApi = {
+  getStatus: () => getHost().api.getStatus(),
+  getSystemStats: () => getHost().api.getSystemStats(),
+  getAnalytics: (days) => getHost().api.getAnalytics(days),
+  getCronJobs: (profile) => getHost().api.getCronJobs(profile),
+  getSessions: (limit, offset) => getHost().api.getSessions(limit, offset),
+  getLogs: (params) => getHost().api.getLogs(params),
+};
+
+export function fetchJSON<T = unknown>(url: string, init?: RequestInit): Promise<T> {
+  return getHost().fetchJSON<T>(url, init);
+}
 
 /** Navigate to a core dashboard route. The SDK doesn't expose the host
  *  router, so this is a full-page navigation (fine for an occasional
  *  widget click-through). */
 export function navigateTo(routePath: string): void {
-  window.location.assign(routePath);
+  getHost().navigateTo(routePath);
 }

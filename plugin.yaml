@@ -8,6 +8,6 @@
 # below guarantees.
 name: home-dashboard
 label: Home
-description: Personalizable rice-style home page with draggable, resizable glass widgets for the Hermes Agent dashboard.
-version: 1.0.0
+description: Personalizable rice-style Home page with draggable, resizable glass widgets for Hermes Web and Desktop.
+version: 1.1.0
 manifest_version: 1

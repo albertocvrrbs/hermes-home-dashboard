@@ -1,8 +1,8 @@
-# Hermes Home Dashboard
+# Hermes Home Dashboard + Desktop
 
 [![Follow @albertocvrrbs on X](https://img.shields.io/badge/Follow%20@albertocvrrbs-on%20X-000000?logo=x&logoColor=white&style=for-the-badge)](https://x.com/albertocvrrbs)
 
-A customizable, *rice*-style **Home page** for the [Hermes Agent](https://github.com/NousResearch/hermes-agent) dashboard.
+A customizable, *rice*-style **Home page** for the [Hermes Agent](https://github.com/NousResearch/hermes-agent) web dashboard and native Desktop app.
 
 It adds a `Home` tab: a grid of glass widgets you can drag, resize, add and
 remove. Each widget reveals **contextual controls on hover** (only outside edit
@@ -38,6 +38,43 @@ No build step is needed — a prebuilt bundle (`dashboard/dist/`) ships in the r
 hermes plugins install albertocvrrbs/hermes-home-dashboard
 ```
 
+### Hermes Desktop
+
+Desktop has its own native plugin runtime, separate from the web dashboard.
+Install the main plugin first, then link its prebuilt Desktop bundle into the
+runtime plugin directory. Both directories live under `HERMES_HOME`, so Hermes
+application updates do not remove them.
+
+**Linux / macOS:**
+
+```bash
+hermes plugins install albertocvrrbs/hermes-home-dashboard
+HERMES_HOME="${HERMES_HOME:-$HOME/.hermes}"
+mkdir -p "$HERMES_HOME/desktop-plugins"
+ln -sfn "$HERMES_HOME/plugins/home-dashboard/desktop" \
+  "$HERMES_HOME/desktop-plugins/home-dashboard"
+```
+
+**Windows PowerShell:**
+
+```powershell
+hermes plugins install albertocvrrbs/hermes-home-dashboard
+$HermesHome = if ($env:HERMES_HOME) { $env:HERMES_HOME } else { Join-Path $env:LOCALAPPDATA "hermes" }
+New-Item -ItemType Directory -Force (Join-Path $HermesHome "desktop-plugins") | Out-Null
+New-Item -ItemType Junction -Force `
+  -Path (Join-Path $HermesHome "desktop-plugins\home-dashboard") `
+  -Target (Join-Path $HermesHome "plugins\home-dashboard\desktop") | Out-Null
+```
+
+Open Hermes Desktop. It detects the plugin automatically within a few seconds;
+the fallback is **Ctrl/Cmd+K → Reload desktop plugins**. Home registers as a
+full native page, adds a sidebar entry and command-palette action, and opens once
+when each Desktop window starts. It can be enabled or disabled under
+**Settings → Plugins**.
+
+The link/junction points at the checked-out bundle, so `hermes plugins update
+home-dashboard` updates both Web and Desktop without another copy step.
+
 ### Update
 
 Because the plugin is a normal git checkout, updates are a pull:
@@ -45,6 +82,9 @@ Because the plugin is a normal git checkout, updates are a pull:
 - **Dashboard:** the plugin's **Update** button (runs `git pull --ff-only`), then
   hard-refresh the `Home` tab (Ctrl+Shift+R).
 - **CLI:** `hermes plugins update home-dashboard`.
+
+The Desktop link/junction continues pointing at the updated bundle; no Desktop
+reinstallation is required.
 
 ### Uninstall
 
@@ -95,14 +135,16 @@ transient state (current page, browsed month) resets on reload.
 
 ## How it works
 
-- Ships as a self-contained **dashboard plugin** (React + Vite), registered via
-  Hermes' plugin SDK (`window.__HERMES_PLUGINS__` / `window.__HERMES_PLUGIN_SDK__`).
+- Ships two self-contained React + Vite bundles: a **dashboard plugin**
+  registered through `window.__HERMES_PLUGINS__`, and a native **Desktop
+  runtime plugin** registered through `@hermes/plugin-sdk`.
 - All data comes from the host's existing API (status, system, analytics,
   sessions, cron, logs) through one polling loop. A couple of widgets fetch on
   demand for their own controls — the Tokens range selector and the Logs file
   selector.
-- The Python side (`dashboard/plugin_api.py`) only persists the widget layout to
-  `~/.hermes/plugins/home-dashboard/layout.json`, so it survives Hermes updates.
+- The Python side (`dashboard/plugin_api.py`) persists the widget layout to
+  `~/.hermes/plugins/home-dashboard/layout.json` and exposes plugin-scoped,
+  read-only adapters for Desktop's widgets.
 - Hover controls are pure CSS reveal (`:hover`), suppressed in edit mode — no
   per-widget hover state, which keeps the canvas widgets flicker-free.
 
@@ -117,8 +159,11 @@ hermes-home-dashboard/
 │   └── dist/                # prebuilt bundle (committed — installer doesn't build)
 │       ├── index.js
 │       └── style.css
+├── desktop/
+│   └── plugin.js            # prebuilt native Desktop runtime plugin
 ├── src/                     # widget source (only needed to modify the plugin)
 ├── vite.config.ts           # builds src/ → dashboard/dist/
+├── vite.desktop.config.ts   # builds src/ → desktop/plugin.js
 ├── package.json
 └── tsconfig.json
 ```
@@ -132,13 +177,15 @@ git clone https://github.com/albertocvrrbs/hermes-home-dashboard.git
 cd hermes-home-dashboard
 npm install
 npm run typecheck     # tsc --noEmit
-npm run build         # vite -> dashboard/dist/{index.js,style.css}
+npm test              # Desktop registration + host adapter contracts
+npm run build         # Web bundle + Desktop plugin.js
 ```
 
-Commit the regenerated `dashboard/dist/` so installs pick up your changes (the
-installer clones, it never builds). To preview a build on a live install, copy
-`dashboard/dist/*` into `~/.hermes/plugins/home-dashboard/dashboard/dist/` and
-hard-refresh the tab.
+Commit the regenerated `dashboard/dist/` and `desktop/plugin.js` so installs
+pick up your changes (the installer clones, it never builds). To preview a web
+build on a live install, copy `dashboard/dist/*` into
+`~/.hermes/plugins/home-dashboard/dashboard/dist/` and hard-refresh the tab.
+Desktop watches `desktop-plugins/home-dashboard/plugin.js` and hot-reloads it.
 
 Add a new widget: create `src/home/widgets/MyWidget.tsx` and register it in
 `src/home/widgets/registry.tsx`. Widgets receive `{ data, widgetProps,
@@ -148,9 +195,11 @@ control.
 
 ## Compatibility
 
-- Requires a Hermes Agent install with the web dashboard.
-- Tested on Hermes Agent v0.16.x. Uses only documented host endpoints, but Hermes
-  is young — if a widget shows `no data`, that source may have changed upstream.
+- Web: requires a Hermes Agent install with the web dashboard.
+- Desktop: requires a recent Hermes Desktop with the `desktop-plugins` runtime;
+  verified against Hermes Agent v0.18.2.
+- Uses supported plugin SDK doors and current host services, but Hermes is young
+  — if a widget shows `no data`, that source may have changed upstream.
 
 ## Stay updated
 

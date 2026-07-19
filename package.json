@@ -1,10 +1,13 @@
 {
   "name": "hermes-home-plugin",
   "private": true,
-  "version": "1.0.0",
+  "version": "1.1.0",
   "type": "module",
   "scripts": {
-    "build": "vite build",
+    "build": "npm run build:dashboard && npm run build:desktop",
+    "build:dashboard": "vite build",
+    "build:desktop": "vite build --config vite.desktop.config.ts",
+    "test": "node --experimental-strip-types --test",
     "typecheck": "tsc -p . --noEmit"
   },
   "devDependencies": {

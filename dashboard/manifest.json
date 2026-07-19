@@ -3,10 +3,10 @@
   "label": "Home",
   "description": "Personalizable rice-style home page with draggable, resizable glass widgets.",
   "icon": "House",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "tab": {
     "path": "/home",
-    "position": "before:sessions"
+    "position": "before:chat"
   },
   "entry": "dist/index.js",
   "css": "dist/style.css",

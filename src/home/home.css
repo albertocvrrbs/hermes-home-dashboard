@@ -4,16 +4,20 @@
  * Swap teal (#2dd4bf) stays fixed: it is interaction semantics, not theme. */
 
 .home-root {
-  --home-accent: var(--color-primary, #ffd700);
+  --home-accent: var(--color-primary, var(--ui-accent, #ffd700));
   --home-accent-dim: color-mix(in srgb, var(--home-accent) 55%, #000);
-  --home-surface: color-mix(in srgb, var(--home-accent) 6%, rgb(10 10 14 / 0.55));
+  --home-surface: color-mix(
+    in srgb,
+    var(--home-accent) 6%,
+    var(--ui-editor-surface-background, rgb(10 10 14 / 0.55))
+  );
   --home-border: color-mix(in srgb, var(--home-accent) 18%, transparent);
   --home-error: var(--color-destructive, #e25555);
   position: relative;
   height: 100%;
   overflow: auto;
   font-family: var(--theme-font-mono, ui-monospace, monospace);
-  color: var(--color-foreground, #d8dce6);
+  color: var(--color-foreground, var(--ui-text-primary, #d8dce6));
 }
 
 .home-stage {

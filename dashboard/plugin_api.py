@@ -7,6 +7,7 @@ outside the repo that `git reset --hard` touches).
 """
 from __future__ import annotations
 
+import asyncio
 import json
 from pathlib import Path
 from typing import Any, Dict
@@ -85,3 +86,45 @@ async def set_layout(body: "LayoutBody") -> Dict[str, Any]:
     LAYOUT_FILE.parent.mkdir(parents=True, exist_ok=True)
     LAYOUT_FILE.write_text(json.dumps(body.layout), encoding="utf-8")
     return {"ok": True}
+
+
+# Hermes Desktop deliberately exposes plugin-scoped REST instead of a generic
+# core-API escape hatch.  These read-only routes adapt the same current Hermes
+# services the web dashboard uses, keeping the Desktop bundle inside its public
+# ``ctx.rest`` boundary while preserving the richer Home widgets.
+@router.get("/system")
+async def get_desktop_system() -> Dict[str, Any]:
+    from hermes_cli.web_server import get_system_stats
+
+    return await get_system_stats()
+
+
+@router.get("/analytics")
+async def get_desktop_analytics(days: int = 30, profile: str | None = None) -> Dict[str, Any]:
+    from hermes_cli.web_server import get_usage_analytics
+
+    return await get_usage_analytics(days=max(1, min(366, days)), profile=profile)
+
+
+@router.get("/cron")
+async def get_desktop_cron(profile: str = "all") -> list[Dict[str, Any]]:
+    from hermes_cli.web_server import list_cron_jobs
+
+    return await list_cron_jobs(profile=profile or "all")
+
+
+@router.get("/sessions")
+async def get_desktop_sessions(
+    limit: int = 20,
+    offset: int = 0,
+    profile: str | None = None,
+) -> Dict[str, Any]:
+    from hermes_cli.web_server import get_sessions
+
+    return await asyncio.to_thread(
+        get_sessions,
+        limit=max(1, min(100, limit)),
+        offset=max(0, offset),
+        order="recent",
+        profile=profile,
+    )
