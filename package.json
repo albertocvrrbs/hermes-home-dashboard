@@ -1,7 +1,7 @@
 {
   "name": "hermes-home-plugin",
   "private": true,
-  "version": "1.2.0",
+  "version": "1.2.1",
   "type": "module",
   "scripts": {
     "build": "npm run build:dashboard && npm run build:desktop",

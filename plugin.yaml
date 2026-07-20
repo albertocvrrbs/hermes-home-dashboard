@@ -9,5 +9,5 @@
 name: home-dashboard
 label: Home
 description: Personalizable rice-style Home page with draggable, resizable glass widgets for Hermes Web and Desktop.
-version: 1.2.0
+version: 1.2.1
 manifest_version: 1

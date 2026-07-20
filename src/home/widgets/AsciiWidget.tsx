@@ -1,4 +1,5 @@
 import type { StatusResponse } from "../../api-types";
+import { asciiArtClass } from "./ascii-presentation";
 import { HoverArrows } from "./HoverArrows";
 
 /** The official Hermes caduceus from hermes_cli/banner.py (HERMES_CADUCEUS),
@@ -58,7 +59,7 @@ export function AsciiWidget({ status, widgetProps, onWidgetPropsChange }: Props)
   return (
     <div className="home-ascii-wrap">
       <HoverArrows onPrev={() => cycle(-1)} onNext={() => cycle(1)} label={ARTS[idx].name} />
-      <div className="home-ascii">{ARTS[idx].art}</div>
+      <div className={asciiArtClass(ARTS[idx].name)}>{ARTS[idx].art}</div>
       <div className="home-ascii-ver">
         HERMES-AGENT{version ? ` · v${version}` : ""}
       </div>
