@@ -20,10 +20,25 @@ export interface HomeData {
   cron: CronJob[] | null;
   sessions: PaginatedSessions | null;
   logs: LogsResponse | null;
+  projects: ProjectStatus[] | null;
   errors: Set<HomeDataSource>;
 }
 
-export type HomeDataSource = "status" | "system" | "analytics" | "cron" | "sessions" | "logs";
+export type HomeDataSource = "status" | "system" | "analytics" | "cron" | "sessions" | "logs" | "projects";
+
+export interface ProjectStatus {
+  id: string;
+  project: string;
+  status: string;
+  lastUpdated: string;
+  stats: {
+    inbox: number;
+    inProgress: number;
+    completed: number;
+  };
+  alerts: string[];
+  nextAction: string;
+}
 
 const SOURCES = {
   status: () => api.getStatus(),
@@ -32,6 +47,7 @@ const SOURCES = {
   cron: () => api.getCronJobs(),
   sessions: () => api.getSessions(9),
   logs: () => api.getLogs({ lines: 50, level: "ERROR" }),
+  projects: () => api.getProjects(),
 } as const;
 
 export function useHomeData(): HomeData {
@@ -53,7 +69,12 @@ export function useHomeData(): HomeData {
         keys.forEach((key, i) => {
           const r = results[i];
           if (r.status === "fulfilled") {
-            (next as unknown as Record<string, unknown>)[key] = r.value;
+            if (key === "projects") {
+              const val = r.value as { projects?: ProjectStatus[] };
+              next.projects = val.projects ?? null;
+            } else {
+              (next as unknown as Record<string, unknown>)[key] = r.value;
+            }
             next.errors.delete(key);
           } else {
             next.errors.add(key);

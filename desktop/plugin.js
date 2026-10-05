@@ -23,7 +23,8 @@ const api = {
   getAnalytics: (days) => getHost().api.getAnalytics(days),
   getCronJobs: (profile) => getHost().api.getCronJobs(profile),
   getSessions: (limit, offset) => getHost().api.getSessions(limit, offset),
-  getLogs: (params) => getHost().api.getLogs(params)
+  getLogs: (params) => getHost().api.getLogs(params),
+  getProjects: () => fetchJSON("/api/plugins/home-dashboard/projects")
 };
 function fetchJSON(url, init) {
   return getHost().fetchJSON(url, init);
@@ -2164,6 +2165,89 @@ function AgentWidget({ data }) {
     !live.live && /* @__PURE__ */ jsx("div", { className: "home-agent-dim", children: "polling mode · no live channel" })
   ] });
 }
+function statusColor(status) {
+  const s = status.toLowerCase();
+  if (s === "active" || s === "healthy" || s === "online") return "ok";
+  if (s === "warning" || s === "degraded") return "warn";
+  if (s === "blocked" || s === "error" || s === "failed") return "err";
+  return "dim";
+}
+function statusIcon(status) {
+  const s = status.toLowerCase();
+  if (s === "active" || s === "healthy" || s === "online") return "●";
+  if (s === "warning" || s === "degraded") return "▲";
+  if (s === "blocked" || s === "error" || s === "failed") return "✕";
+  return "○";
+}
+function timeAgo$1(iso) {
+  try {
+    const then = new Date(iso).getTime();
+    const now = Date.now();
+    const diff = Math.max(0, now - then);
+    const mins = Math.floor(diff / 6e4);
+    if (mins < 1) return "just now";
+    if (mins < 60) return `${mins}m ago`;
+    const hours = Math.floor(mins / 60);
+    if (hours < 24) return `${hours}h ago`;
+    const days = Math.floor(hours / 24);
+    return `${days}d ago`;
+  } catch {
+    return "unknown";
+  }
+}
+function ProjectsWidget({ data }) {
+  const projects = data.projects;
+  const [openId, setOpenId] = useState(null);
+  if (!projects) {
+    return /* @__PURE__ */ jsx("div", { className: "home-projects", children: /* @__PURE__ */ jsx("span", { className: "dim", children: "loading..." }) });
+  }
+  if (projects.length === 0) {
+    return /* @__PURE__ */ jsx("div", { className: "home-projects", children: /* @__PURE__ */ jsx("span", { className: "dim", children: "no projects — create ~/projects/<name>/status.json" }) });
+  }
+  return /* @__PURE__ */ jsx("div", { className: "home-projects", children: projects.map((p) => {
+    const open = openId === p.id;
+    return /* @__PURE__ */ jsxs("div", { className: `project-item${open ? " open" : ""}`, children: [
+      /* @__PURE__ */ jsxs(
+        "div",
+        {
+          className: `project-row ${statusColor(p.status)}`,
+          onClick: () => setOpenId(open ? null : p.id),
+          role: "button",
+          tabIndex: 0,
+          children: [
+            /* @__PURE__ */ jsx("span", { className: "project-icon", children: statusIcon(p.status) }),
+            /* @__PURE__ */ jsx("span", { className: "project-name", children: p.project }),
+            /* @__PURE__ */ jsxs("span", { className: "project-stats", children: [
+              p.stats.inbox,
+              "📥 ",
+              p.stats.inProgress,
+              "🔄 ",
+              p.stats.completed,
+              "✅"
+            ] }),
+            /* @__PURE__ */ jsx("span", { className: "project-time", children: timeAgo$1(p.lastUpdated) }),
+            /* @__PURE__ */ jsx("span", { className: "project-caret", children: open ? "▾" : "▸" })
+          ]
+        }
+      ),
+      open && /* @__PURE__ */ jsxs("div", { className: "project-detail", children: [
+        /* @__PURE__ */ jsxs("div", { className: "project-detail-row", children: [
+          /* @__PURE__ */ jsx("span", { className: "dim", children: "next:" }),
+          " ",
+          p.nextAction || "—"
+        ] }),
+        p.alerts.length > 0 && /* @__PURE__ */ jsxs("div", { className: "project-detail-row project-alerts", children: [
+          /* @__PURE__ */ jsx("span", { className: "dim", children: "alerts:" }),
+          /* @__PURE__ */ jsx("ul", { children: p.alerts.map((a, i) => /* @__PURE__ */ jsx("li", { children: a }, i)) })
+        ] }),
+        /* @__PURE__ */ jsxs("div", { className: "project-detail-row dim", children: [
+          "updated ",
+          p.lastUpdated
+        ] })
+      ] })
+    ] }, p.id);
+  }) });
+}
 const WIDGET_REGISTRY = {
   ascii: {
     title: "hermes",
@@ -2335,6 +2419,14 @@ const WIDGET_REGISTRY = {
     minSize: { gw: 3, gh: 2 },
     navigateTo: null,
     dataSource: null
+  },
+  projects: {
+    title: "projects",
+    component: ({ data }) => /* @__PURE__ */ jsx(ProjectsWidget, { data }),
+    defaultSize: { gw: 4, gh: 3 },
+    minSize: { gw: 3, gh: 2 },
+    navigateTo: null,
+    dataSource: "projects"
   }
 };
 const STATE_COPY = {
@@ -2695,7 +2787,8 @@ const SOURCES = {
   analytics: () => api.getAnalytics(1),
   cron: () => api.getCronJobs(),
   sessions: () => api.getSessions(9),
-  logs: () => api.getLogs({ lines: 50, level: "ERROR" })
+  logs: () => api.getLogs({ lines: 50, level: "ERROR" }),
+  projects: () => api.getProjects()
 };
 function useHomeData() {
   const [data, setData] = useState({
@@ -2720,7 +2813,12 @@ function useHomeData() {
         keys.forEach((key, i) => {
           const r = results[i];
           if (r.status === "fulfilled") {
-            next[key] = r.value;
+            if (key === "projects") {
+              const val = r.value;
+              next.projects = val.projects ?? null;
+            } else {
+              next[key] = r.value;
+            }
             next.errors.delete(key);
           } else {
             next.errors.add(key);
@@ -3313,1822 +3411,1867 @@ function HomePage() {
     }
   );
 }
-const homeCss = `/* Home page — rice-style widget grid.\r
- * Every color routes through --home-accent (the active theme's primary),\r
- * so switching themes recolors the whole page with zero widget changes.\r
- * Swap teal (#2dd4bf) stays fixed: it is interaction semantics, not theme. */\r
-\r
-.home-root {\r
-  --home-accent: var(--color-primary, var(--ui-accent, #ffd700));\r
-  --home-accent-dim: color-mix(in srgb, var(--home-accent) 55%, #000);\r
-  /* Readable secondary text (headers, captions): dim was ~3:1 on the glass. */\r
-  --home-accent-soft: color-mix(in srgb, var(--home-accent) 82%, #9aa3b5);\r
-  --home-surface: color-mix(\r
-    in srgb,\r
-    var(--home-accent) 6%,\r
-    var(--ui-editor-surface-background, rgb(10 10 14 / 0.55))\r
-  );\r
-  --home-border: color-mix(in srgb, var(--home-accent) 18%, transparent);\r
-  --home-error: var(--color-destructive, #e25555);\r
-  position: relative;\r
-  height: 100%;\r
-  overflow: auto;\r
-  font-family: var(--theme-font-mono, ui-monospace, monospace);\r
-  color: var(--color-foreground, var(--ui-text-primary, #d8dce6));\r
-}\r
-\r
-.home-stage {\r
-  position: relative;\r
-  min-height: 60vh;\r
-  touch-action: none;\r
-}\r
-\r
-.home-widget {\r
-  position: absolute;\r
-  border-radius: 8px;\r
-  padding: 10px 12px;\r
-  background: var(--home-surface);\r
-  border: 1px solid var(--home-border);\r
-  backdrop-filter: blur(12px);\r
-  -webkit-backdrop-filter: blur(12px);\r
-  box-shadow: 0 10px 30px rgb(0 0 0 / 0.5);\r
-  overflow: hidden;\r
-  transition: left 0.18s ease, top 0.18s ease;\r
-  container-type: size;\r
-  font-size: 11px;\r
-  line-height: 1.5;\r
-  /* Promote each widget to its own compositor layer so the constantly\r
-   * repainting matrix canvas doesn't force the neighbours' backdrop-filter\r
-   * to recompose every frame — that recomposition is what produced the\r
-   * horizontal flicker sweeping across the glass panels. */\r
-  transform: translateZ(0);\r
-  contain: paint;\r
-}\r
-.home-root.editing .home-widget { user-select: none; }\r
-.home-widget.dragging {\r
-  transition: none;\r
-  opacity: 0.9;\r
-  border-color: var(--home-accent);\r
-  z-index: 50;\r
-  cursor: grabbing;\r
-}\r
-.home-widget.swap-target {\r
-  border-color: #2dd4bf;\r
-  box-shadow: 0 0 0 1px rgb(45 212 191 / 0.5), 0 10px 30px rgb(0 0 0 / 0.5);\r
-}\r
-/* Over the trash zone — about to be deleted. */\r
-.home-widget.trashing {\r
-  opacity: 0.45;\r
-  border-color: var(--home-error);\r
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--home-error) 60%, transparent),\r
-    0 10px 30px rgb(0 0 0 / 0.5);\r
-}\r
-\r
-/* Floating label that follows the pointer while dragging a new widget in. */\r
-.home-add-ghost {\r
-  position: fixed;\r
-  z-index: 70;\r
-  transform: translate(-50%, -140%);\r
-  padding: 4px 10px;\r
-  border-radius: 6px;\r
-  font-size: 11px;\r
-  white-space: nowrap;\r
-  pointer-events: none;\r
-  color: var(--home-accent);\r
-  background: var(--home-surface);\r
-  border: 1px solid var(--home-accent);\r
-  backdrop-filter: blur(12px);\r
-  -webkit-backdrop-filter: blur(12px);\r
-  box-shadow: 0 8px 24px rgb(0 0 0 / 0.45);\r
-}\r
-\r
-.home-widget .hd {\r
-  display: block;\r
-  font-size: 9.5px;\r
-  letter-spacing: 0.18em;\r
-  margin-bottom: 6px;\r
-  font-weight: 700;\r
-  text-transform: uppercase;\r
-  color: var(--home-accent-soft);\r
-  white-space: nowrap;\r
-  overflow: hidden;\r
-}\r
-.home-widget .hd::before { content: "── "; opacity: 0.5; }\r
-.home-widget .hd::after { content: " ─────────────────────────────────"; opacity: 0.3; }\r
-.home-root.editing .home-widget .hd { cursor: grab; }\r
-\r
-.home-widget .rs {\r
-  position: absolute;\r
-  right: 2px;\r
-  bottom: 2px;\r
-  width: 13px;\r
-  height: 13px;\r
-  cursor: nwse-resize;\r
-  border-right: 2px solid color-mix(in srgb, var(--home-accent) 45%, transparent);\r
-  border-bottom: 2px solid color-mix(in srgb, var(--home-accent) 45%, transparent);\r
-  border-radius: 2px;\r
-  z-index: 3;\r
-}\r
-.home-widget .wremove {\r
-  position: absolute;\r
-  top: 4px;\r
-  right: 6px;\r
-  z-index: 3;\r
-  background: none;\r
-  border: none;\r
-  color: var(--home-error);\r
-  font-size: 13px;\r
-  line-height: 1;\r
-  cursor: pointer;\r
-  padding: 2px 4px;\r
-}\r
-.home-widget .werr { color: var(--home-error); }\r
-/* Data-source states (widget-state.ts): honest copy per failure kind. */\r
-.home-widget .wstate { display: block; font-size: 10px; letter-spacing: 0.04em; }\r
-.home-widget .wstate::before { content: "● "; }\r
-.home-widget .wstate-offline { color: var(--home-error); }\r
-.home-widget .wstate-unavailable { color: #f5b945; }\r
-.home-widget .hd .hd-stale { color: #f5b945; letter-spacing: 0.1em; opacity: 0.8; }\r
-\r
-/* ── hover controls (contextual chrome, rest mode only) ──\r
- * Reusable floating control rendered inside a widget body. Hidden by default,\r
- * fades in while hovering the widget, and fully suppressed in edit mode so it\r
- * never fights drag/resize. Widgets opt in by rendering <HoverCtl>/<HoverArrows>. */\r
-.hover-ctl {\r
-  position: absolute;\r
-  top: 4px;\r
-  right: 6px;\r
-  z-index: 4;\r
-  display: flex;\r
-  align-items: center;\r
-  gap: 4px;\r
-  opacity: 0;\r
-  pointer-events: none;\r
-  transition: opacity 0.18s ease;\r
-  /* Sits on the glass without a hard edge. */\r
-  padding: 1px 3px;\r
-  border-radius: 6px;\r
-  background: color-mix(in srgb, var(--home-surface) 80%, transparent);\r
-}\r
-.home-widget:hover .hover-ctl,\r
-.hover-ctl:focus-within { opacity: 1; pointer-events: auto; }\r
-.home-root.editing .hover-ctl { display: none; }\r
-@media (hover: none) {\r
-  /* Touch: no hover, so keep controls reachable but understated. */\r
-  .hover-ctl { opacity: 0.5; pointer-events: auto; }\r
-}\r
-\r
-.hv-arrow {\r
-  background: none;\r
-  border: none;\r
-  cursor: pointer;\r
-  padding: 0 3px;\r
-  color: var(--home-accent-dim);\r
-  font-size: 14px;\r
-  line-height: 1;\r
-  font-family: inherit;\r
-}\r
-.hv-arrow:hover:not(:disabled) { color: var(--home-accent); }\r
-.hv-arrow:disabled { opacity: 0.3; cursor: default; }\r
-.hv-label {\r
-  font-size: 9px;\r
-  letter-spacing: 0.1em;\r
-  text-transform: uppercase;\r
-  color: var(--home-accent-dim);\r
-  white-space: nowrap;\r
-}\r
-.hv-label-btn {\r
-  background: none;\r
-  border: none;\r
-  cursor: pointer;\r
-  font: inherit;\r
-  letter-spacing: 0.1em;\r
-  padding: 0;\r
-}\r
-.hv-label-btn:hover { color: var(--home-accent); }\r
-\r
-/* Toggle/option buttons inside a hover control (clock format, host view…). */\r
-.hv-opt {\r
-  background: none;\r
-  border: none;\r
-  cursor: pointer;\r
-  font: inherit;\r
-  font-size: 9px;\r
-  letter-spacing: 0.08em;\r
-  text-transform: uppercase;\r
-  color: var(--home-accent-dim);\r
-  padding: 0 4px;\r
-  border-radius: 4px;\r
-}\r
-.hv-opt:hover { color: var(--home-accent); }\r
-.hv-opt.on { color: #000; background: var(--home-accent); }\r
-\r
-/* Extra detail that smoothly expands on widget hover (rest mode only). Uses\r
- * the 0fr→1fr grid trick so it animates real height without a fixed value. */\r
-.hover-reveal {\r
-  display: grid;\r
-  grid-template-rows: 0fr;\r
-  opacity: 0;\r
-  transition: grid-template-rows 0.25s ease, opacity 0.2s ease, margin-top 0.25s ease;\r
-}\r
-.home-widget:hover .hover-reveal { grid-template-rows: 1fr; opacity: 1; margin-top: 4px; }\r
-.home-root.editing .hover-reveal { grid-template-rows: 0fr; opacity: 0; margin-top: 0; }\r
-.hover-reveal > * { overflow: hidden; min-height: 0; }\r
-\r
-.home-ghost {\r
-  position: absolute;\r
-  border: 1.5px dashed color-mix(in srgb, var(--home-accent) 70%, transparent);\r
-  border-radius: 8px;\r
-  background: color-mix(in srgb, var(--home-accent) 7%, transparent);\r
-  display: none;\r
-  z-index: 5;\r
-  pointer-events: none;\r
-  transition: left 0.18s ease, top 0.18s ease, width 0.18s ease, height 0.18s ease;\r
-}\r
-.home-ghost.visible { display: block; }\r
-.home-ghost.swap {\r
-  border-color: rgb(45 212 191 / 0.85);\r
-  background: rgb(45 212 191 / 0.08);\r
-}\r
-\r
-/* ── widget content primitives (responsive to the widget's own size) ── */\r
-.home-widget .rows { column-gap: 18px; }\r
-@container (min-width: 380px) {\r
-  .home-widget .rows { columns: 2; column-rule: 1px solid rgb(255 255 255 / 0.06); }\r
-}\r
-@container (min-width: 600px) {\r
-  .home-widget .rows { columns: 3; }\r
-}\r
-.home-widget .row {\r
-  display: flex;\r
-  justify-content: space-between;\r
-  gap: 6px;\r
-  padding: 1px 0;\r
-  border-bottom: 1px solid rgb(255 255 255 / 0.04);\r
-  break-inside: avoid;\r
-}\r
-.home-widget .row:last-child { border-bottom: none; }\r
-/* Names flex and ellipsize at the real column width instead of a fixed\r
- * character slice that cut words mid-glyph ("bitacoras-guayab"). */\r
-.home-widget .row > * { flex: none; }\r
-.home-widget .row > .row-name {\r
-  flex: 1 1 auto;\r
-  min-width: 0;\r
-  overflow: hidden;\r
-  white-space: nowrap;\r
-  text-overflow: ellipsis;\r
-}\r
-\r
-.home-widget .meters { column-gap: 18px; }\r
-@container (min-width: 380px) {\r
-  .home-widget .meters { columns: 2; }\r
-}\r
-.home-widget .meter {\r
-  display: flex;\r
-  align-items: center;\r
-  gap: 6px;\r
-  margin: 3px 0;\r
-  break-inside: avoid;\r
-}\r
-.home-widget .meter .lbl { width: 34px; color: var(--color-muted-foreground, #7d8496); font-size: 10px; }\r
-.home-widget .meter .track {\r
-  flex: 1;\r
-  height: 7px;\r
-  border-radius: 2px;\r
-  background: rgb(255 255 255 / 0.07);\r
-  overflow: hidden;\r
-}\r
-.home-widget .meter .fill {\r
-  height: 100%;\r
-  background: linear-gradient(90deg, var(--home-accent-dim), var(--home-accent));\r
-  transition: width 0.6s ease;\r
-}\r
-.home-widget .meter .val { width: 44px; text-align: right; font-size: 10px; }\r
-\r
-.home-widget .ok { color: var(--home-accent); }\r
-.home-widget .dim { color: var(--color-muted-foreground, #6b7387); }\r
-.home-widget .bigval {\r
-  font-size: min(9cqw, 18cqh);\r
-  font-weight: 700;\r
-  color: var(--home-accent);\r
-}\r
-\r
-.home-clock-wrap {\r
-  display: flex;\r
-  flex-direction: column;\r
-  align-items: center;\r
-  justify-content: center;\r
-  height: calc(100% - 18px);\r
-}\r
-.home-clock {\r
-  font-size: min(26cqw, 52cqh);\r
-  font-weight: 800;\r
-  color: var(--home-accent);\r
-  letter-spacing: 0.02em;\r
-  text-shadow: 0 0 24px color-mix(in srgb, var(--home-accent) 35%, transparent);\r
-  line-height: 1;\r
-}\r
-.home-clock-ampm {\r
-  font-size: 0.32em;\r
-  vertical-align: 0.9em;\r
-  margin-left: 0.2em;\r
-  letter-spacing: 0.05em;\r
-  color: var(--home-accent-dim);\r
-}\r
-.home-clock-sub {\r
-  color: var(--home-accent-dim);\r
-  font-size: max(9px, min(3.4cqw, 8cqh));\r
-  letter-spacing: 0.14em;\r
-  text-transform: uppercase;\r
-  margin-top: 1cqh;\r
-}\r
-\r
-.home-ascii-wrap {\r
-  display: flex;\r
-  flex-direction: column;\r
-  align-items: center;\r
-  justify-content: center;\r
-  height: calc(100% - 18px);\r
-}\r
-.home-ascii {\r
-  font-size: min(5.6cqw, 5.4cqh);\r
-  line-height: 1.05;\r
-  white-space: pre;\r
-  text-align: center;\r
-  background: linear-gradient(\r
-    180deg,\r
-    var(--home-accent-dim),\r
-    var(--home-accent) 40%,\r
-    var(--home-accent) 60%,\r
-    var(--home-accent-dim)\r
-  );\r
-  -webkit-background-clip: text;\r
-  background-clip: text;\r
-  color: transparent;\r
-  filter: drop-shadow(0 0 10px color-mix(in srgb, var(--home-accent) 25%, transparent));\r
-}\r
-.home-ascii-caduceus {\r
-  transform: scaleX(0.88);\r
-  transform-origin: center;\r
-}\r
-.home-ascii-ver {\r
-  text-align: center;\r
-  color: var(--home-accent-soft);\r
-  font-size: max(8px, min(2.6cqw, 5cqh));\r
-  letter-spacing: 0.22em;\r
-  margin-top: 1.5cqh;\r
-}\r
-\r
-.home-spark {\r
-  display: flex;\r
-  align-items: flex-end;\r
-  gap: 2px;\r
-  height: max(18px, 22cqh);\r
-  margin: 6px 0 4px;\r
-}\r
-.home-spark i {\r
-  flex: 1;\r
-  background: linear-gradient(180deg, var(--home-accent), var(--home-accent-dim));\r
-  border-radius: 1px 1px 0 0;\r
-  opacity: 0.85;\r
-  transition: height 0.6s ease, opacity 0.15s ease;\r
-  cursor: default;\r
-}\r
-.home-spark i:hover { opacity: 1; }\r
-\r
-/* Hover tooltip over a bar (tokens widget). Anchored to the bar via inline\r
- * \`left\` + \`translateX\`, which clamps it inside the clipped widget; the appear/\r
- * disappear slide+fade runs on the independent \`translate\` property so it never\r
- * fights the positioning transform. */\r
-.home-spark-wrap { position: relative; }\r
-.home-spark-tip {\r
-  position: absolute;\r
-  bottom: 100%;\r
-  margin-bottom: 6px;\r
-  padding: 3px 7px;\r
-  border-radius: 6px;\r
-  background: color-mix(in srgb, var(--home-accent) 10%, rgb(8 8 12 / 0.96));\r
-  border: 1px solid var(--home-border);\r
-  color: rgb(236 236 242);\r
-  font-size: 10px;\r
-  line-height: 1.3;\r
-  white-space: nowrap;\r
-  pointer-events: none;\r
-  opacity: 0;\r
-  translate: 0 4px;\r
-  transition: opacity 0.18s ease, translate 0.18s ease, transform 0.18s ease;\r
-  z-index: 6;\r
-}\r
-.home-spark-tip.show { opacity: 1; translate: 0 0; }\r
-.home-spark-tip b { color: var(--home-accent); font-weight: 600; }\r
-\r
-/* Line/area chart (tokens widget, alternative to the bars). Stretched to fill\r
- * via preserveAspectRatio=none; the stroke stays crisp with non-scaling-stroke. */\r
-.home-area {\r
-  display: block;\r
-  width: 100%;\r
-  height: max(18px, 22cqh);\r
-  margin: 6px 0 4px;\r
-  overflow: visible;\r
-}\r
-.home-area rect { cursor: default; }\r
-\r
-/* Host graphs view: four live sparklines (cpu / ram / load / proc) in a 2×2\r
- * grid over a rolling one-minute window. Fills the widget below the header\r
- * (same absolute pattern as the canvas widgets); cells reuse .home-area but\r
- * stretch to their cell height instead of the tokens widget's fixed band. */\r
-.host-sparks {\r
-  position: absolute;\r
-  inset: 30px 12px 10px;\r
-  display: grid;\r
-  grid-template-columns: 1fr 1fr;\r
-  grid-template-rows: 1fr 1fr;\r
-  gap: 4px 12px;\r
-  min-height: 0;\r
-}\r
-.host-spark {\r
-  display: flex;\r
-  flex-direction: column;\r
-  min-height: 0;\r
-  min-width: 0;\r
-}\r
-.host-spark-head {\r
-  display: flex;\r
-  justify-content: space-between;\r
-  align-items: baseline;\r
-  font-size: max(8px, min(3.2cqw, 6cqh));\r
-  letter-spacing: 0.14em;\r
-  text-transform: uppercase;\r
-}\r
-.host-spark-head .val {\r
-  font-variant-numeric: tabular-nums;\r
-  color: var(--home-accent);\r
-}\r
-.host-spark .home-area {\r
-  flex: 1;\r
-  height: auto;\r
-  min-height: 12px;\r
-  margin: 2px 0 0;\r
-}\r
-\r
-/* Small vertical divider between the range arrows and the toggles. */\r
-.tok-div {\r
-  width: 1px;\r
-  align-self: stretch;\r
-  margin: 2px 2px;\r
-  background: var(--home-border);\r
-}\r
-\r
-/* Totals line, regrouped: each label sticks to its value, groups spaced evenly\r
- * (the old \`.row\` space-between scattered the six tokens across the full width). */\r
-.tok-stats {\r
-  display: flex;\r
-  flex-wrap: wrap;\r
-  gap: 2px 14px;\r
-  padding: 3px 0 1px;\r
-  font-variant-numeric: tabular-nums;\r
-}\r
-.tok-stats > span { white-space: nowrap; }\r
-.tok-stats .dim { margin-right: 2px; }\r
-\r
-/* ── logs widget (per-file record list) ── */\r
-.logs-sub {\r
-  display: flex;\r
-  justify-content: space-between;\r
-  align-items: baseline;\r
-  gap: 8px;\r
-}\r
-.logs-file {\r
-  font-size: 11px;\r
-  font-weight: 600;\r
-  letter-spacing: 0.06em;\r
-  color: var(--home-accent);\r
-}\r
-/* The wrapper owns the widget's remaining height so the list scrolls inside it\r
- * instead of growing past the bottom edge (the old calc() resolved against an\r
- * auto-height parent and never clamped). */\r
-.home-logs-wrap {\r
-  display: flex;\r
-  flex-direction: column;\r
-  height: calc(100% - 21px);\r
-  min-height: 0;\r
-}\r
-.home-logs {\r
-  display: flex;\r
-  flex-direction: column;\r
-  gap: 1px;\r
-  flex: 1 1 0;\r
-  min-height: 0;\r
-  overflow-y: auto;\r
-  margin-top: 3px;\r
-  /* Rows that don't fit fade out instead of being sliced by the edge. */\r
-  mask-image: linear-gradient(180deg, #000 calc(100% - 14px), transparent);\r
-}\r
-.log-row {\r
-  display: flex;\r
-  gap: 6px;\r
-  align-items: baseline;\r
-  padding: 1px 0;\r
-  border-bottom: 1px solid rgb(255 255 255 / 0.04);\r
-  cursor: default;\r
-}\r
-.log-row:last-child { border-bottom: none; }\r
-.log-lvl {\r
-  flex: none;\r
-  width: 32px;\r
-  font-size: 9px;\r
-  font-weight: 600;\r
-  letter-spacing: 0.03em;\r
-}\r
-.log-lvl.lvl-error { color: var(--home-error); }\r
-.log-lvl.lvl-warn { color: #f5b945; }\r
-.log-lvl.lvl-info { color: var(--color-muted-foreground, #6b7387); }\r
-.log-time {\r
-  flex: none;\r
-  font-size: 9px;\r
-  color: var(--color-muted-foreground, #6b7387);\r
-  font-variant-numeric: tabular-nums;\r
-}\r
-.log-msg {\r
-  flex: 1;\r
-  min-width: 0;\r
-  font-size: 10px;\r
-  white-space: nowrap;\r
-  overflow: hidden;\r
-  text-overflow: ellipsis;\r
-}\r
-\r
-.home-matrix-c {\r
-  position: absolute;\r
-  inset: 0;\r
-  top: 24px;\r
-  width: 100%;\r
-  height: calc(100% - 24px);\r
-}\r
-\r
-/* ── notes widget ── */\r
-.home-notes { display: flex; flex-direction: column; gap: 1px; height: calc(100% - 18px); overflow-y: auto; }\r
-.home-notes .note-row {\r
-  display: flex;\r
-  align-items: baseline;\r
-  gap: 7px;\r
-  padding: 1px 0;\r
-  border-bottom: 1px solid rgb(255 255 255 / 0.04);\r
-}\r
-.home-notes .note-mark {\r
-  cursor: pointer;\r
-  width: 12px;\r
-  text-align: center;\r
-  color: var(--home-accent);\r
-  flex-shrink: 0;\r
-}\r
-.home-notes .note-mark.done { color: var(--color-muted-foreground, #6b7387); }\r
-.home-notes .note-text { cursor: text; flex: 1; min-width: 0; overflow-wrap: anywhere; }\r
-.home-notes .note-text.done {\r
-  text-decoration: line-through;\r
-  color: var(--color-muted-foreground, #6b7387);\r
-}\r
-.home-notes .note-input {\r
-  flex: 1;\r
-  min-width: 0;\r
-  background: none;\r
-  border: none;\r
-  border-bottom: 1px dashed var(--home-border);\r
-  outline: none;\r
-  color: inherit;\r
-  font: inherit;\r
-  padding: 0;\r
-}\r
-.home-notes .note-add {\r
-  align-self: flex-start;\r
-  margin-top: 4px;\r
-  background: none;\r
-  border: none;\r
-  cursor: pointer;\r
-  color: var(--home-accent-dim);\r
-  font-size: 14px;\r
-  line-height: 1;\r
-  padding: 2px 6px 2px 2px;\r
-}\r
-.home-notes .note-add:hover { color: var(--home-accent); }\r
-\r
-/* ── canvas widgets (heartbeat, life) ── */\r
-.home-canvas {\r
-  position: absolute;\r
-  inset: 0;\r
-  top: 24px;\r
-  width: 100%;\r
-  height: calc(100% - 24px);\r
-}\r
-/* Life is drawable in rest mode — signal it with a crosshair. */\r
-.home-root:not(.editing) .home-life { cursor: crosshair; }\r
-\r
-/* ── moon ── */\r
-.home-moon-wrap {\r
-  display: flex;\r
-  flex-direction: column;\r
-  align-items: center;\r
-  height: calc(100% - 18px);\r
-}\r
-.home-moon-c { flex: 1; width: 100%; min-height: 0; }\r
-.home-moon-label {\r
-  color: var(--home-accent-dim);\r
-  font-size: max(8px, min(3cqw, 6cqh));\r
-  letter-spacing: 0.14em;\r
-  text-transform: uppercase;\r
-}\r
-\r
-/* ── pomodoro / countdown ── */\r
-.home-pomo .home-clock,\r
-.home-count .home-clock { cursor: pointer; }\r
-.home-pomo .home-clock.paused { opacity: 0.55; }\r
-.home-pomo .pomo-sub { cursor: pointer; }\r
-.home-count .count-label { cursor: pointer; }\r
-.home-count .count-input,\r
-.home-pomo .count-input { max-width: 92%; text-align: center; color-scheme: dark; }\r
-\r
-/* ── countdown segment editor (alarm-style spinners) ── */\r
-.count-edit {\r
-  display: flex;\r
-  flex-direction: column;\r
-  align-items: center;\r
-  justify-content: center;\r
-  gap: 3px;\r
-  height: calc(100% - 18px);\r
-}\r
-.count-edit-row { display: flex; align-items: center; gap: 5px; }\r
-.count-seg { display: flex; flex-direction: column; align-items: center; }\r
-.count-seg .seg-btn {\r
-  background: none;\r
-  border: none;\r
-  cursor: pointer;\r
-  padding: 0;\r
-  line-height: 0.6;\r
-  font-size: 8px;\r
-  color: var(--home-accent-dim);\r
-}\r
-.count-seg .seg-btn:hover { color: var(--home-accent); }\r
-.count-seg .seg-val {\r
-  background: none;\r
-  border: none;\r
-  outline: none;\r
-  text-align: center;\r
-  color: var(--home-accent);\r
-  font: inherit;\r
-  font-weight: 800;\r
-  font-size: max(12px, min(7cqw, 15cqh));\r
-  padding: 1px 0;\r
-  border-bottom: 1px solid transparent;\r
-  letter-spacing: 0.02em;\r
-}\r
-.count-seg input.seg-val:focus { border-bottom-color: var(--home-accent); }\r
-.count-seg .seg-static { cursor: default; }\r
-.count-colon {\r
-  font-weight: 800;\r
-  color: var(--home-accent-dim);\r
-  font-size: max(12px, min(7cqw, 15cqh));\r
-}\r
-.count-done {\r
-  margin-top: 3px;\r
-  background: none;\r
-  border: 1px solid var(--home-border);\r
-  border-radius: 6px;\r
-  color: var(--home-accent);\r
-  cursor: pointer;\r
-  font: inherit;\r
-  font-size: 10px;\r
-  letter-spacing: 0.08em;\r
-  text-transform: uppercase;\r
-  padding: 2px 12px;\r
-}\r
-.count-done:hover { border-color: var(--home-accent); }\r
-.home-pomo .pomo-min {\r
-  font-size: min(20cqw, 40cqh);\r
-  font-weight: 800;\r
-  color: var(--home-accent);\r
-  max-width: 70%;\r
-}\r
-/* Hover steppers for the pomodoro work/break lengths. */\r
-.hover-ctl.pomo-set { flex-direction: column; align-items: flex-end; gap: 1px; }\r
-.pomo-stepper { display: flex; align-items: center; gap: 3px; }\r
-.pomo-stepper .hv-label:nth-child(3) { min-width: 16px; text-align: center; color: var(--home-accent); }\r
-\r
-/* ── calendar ── */\r
-.home-cal { height: calc(100% - 18px); display: flex; flex-direction: column; }\r
-.home-cal-month {\r
-  text-align: center;\r
-  color: var(--home-accent-dim);\r
-  font-size: max(9px, min(3.2cqw, 7cqh));\r
-  letter-spacing: 0.14em;\r
-  text-transform: uppercase;\r
-  margin-bottom: 4px;\r
-}\r
-.home-cal-grid {\r
-  flex: 1;\r
-  display: grid;\r
-  grid-template-columns: repeat(7, 1fr);\r
-  align-content: space-evenly;\r
-  justify-items: center;\r
-  font-size: max(8px, min(3cqw, 6.5cqh));\r
-}\r
-.home-cal-h { color: var(--color-muted-foreground, #6b7387); }\r
-.home-cal-d { color: var(--color-foreground, #d8dce6); opacity: 0.75; }\r
-.home-cal-today {\r
-  color: #000;\r
-  background: var(--home-accent);\r
-  border-radius: 4px;\r
-  padding: 0 4px;\r
-  font-weight: 700;\r
-}\r
-/* Density tiers, chosen from the widget's cell width (see CalendarWidget). */\r
-.home-cal.tier-mini .home-cal-month {\r
-  font-size: max(8px, min(4cqw, 8cqh));\r
-  margin-bottom: 2px;\r
-}\r
-.home-cal.tier-mini .home-cal-grid { font-size: max(9px, min(4cqw, 8cqh)); }\r
-.home-cal.tier-large .home-cal-month {\r
-  font-size: max(11px, min(3cqw, 7cqh));\r
-  margin-bottom: 7px;\r
-}\r
-.home-cal.tier-large .home-cal-grid { row-gap: 3px; }\r
-.home-cal.tier-large .home-cal-h { font-weight: 700; opacity: 0.8; }\r
-.home-cal.tier-large .home-cal-today { padding: 1px 6px; }\r
-\r
-/* ── page chrome ── */\r
-/* Edit affordance lives BELOW the grid, centered. It fades in once the user\r
- * starts scrolling down (or immediately when the grid is short enough that\r
- * there's nothing to scroll), keeping the home clean on first paint. While\r
- * editing it sticks to the bottom of the viewport so it stays reachable. */\r
-.home-editbar {\r
-  display: flex;\r
-  justify-content: center;\r
-  gap: 10px;\r
-  padding: 22px 12px 30px;\r
-  opacity: 0;\r
-  transition: opacity 0.25s ease;\r
-  pointer-events: none;\r
-}\r
-.home-editbar.visible {\r
-  opacity: 1;\r
-  pointer-events: auto;\r
-}\r
-.home-root.editing .home-editbar {\r
-  position: sticky;\r
-  bottom: 0;\r
-}\r
-.home-fab {\r
-  position: relative;\r
-  width: 38px;\r
-  height: 38px;\r
-  border-radius: 50%;\r
-  display: flex;\r
-  align-items: center;\r
-  justify-content: center;\r
-  font-size: 15px;\r
-  cursor: pointer;\r
-  color: var(--home-accent);\r
-  background: var(--home-surface);\r
-  border: 1px solid var(--home-border);\r
-  backdrop-filter: blur(12px);\r
-  -webkit-backdrop-filter: blur(12px);\r
-  transition:\r
-    border-color 0.25s ease,\r
-    background 0.35s ease,\r
-    box-shadow 0.45s ease,\r
-    transform 0.4s cubic-bezier(0.34, 1.4, 0.64, 1);\r
-}\r
-.home-fab:hover {\r
-  border-color: var(--home-accent);\r
-  transform: scale(1.06);\r
-}\r
-.home-fab:active { transform: scale(0.94); }\r
-.home-fab.active {\r
-  background: color-mix(in srgb, var(--home-accent) 22%, transparent);\r
-  /* Warm Hermes glow ring when edit mode engages. */\r
-  animation: home-fab-glow 0.55s ease-out;\r
-}\r
-\r
-/* Crossfading edit ✎ ↔ done ✓ glyphs — each rotates and scales through the\r
- * swap with a gentle overshoot, matching the dashboard's soft motion. */\r
-.home-fab-ico {\r
-  position: absolute;\r
-  inset: 0;\r
-  display: flex;\r
-  align-items: center;\r
-  justify-content: center;\r
-  transition:\r
-    opacity 0.3s ease,\r
-    transform 0.45s cubic-bezier(0.34, 1.45, 0.64, 1);\r
-}\r
-.ico-edit { opacity: 1; transform: rotate(0) scale(1); }\r
-.ico-done { opacity: 0; transform: rotate(-120deg) scale(0.3); }\r
-.home-fab.active .ico-edit { opacity: 0; transform: rotate(120deg) scale(0.3); }\r
-.home-fab.active .ico-done { opacity: 1; transform: rotate(0) scale(1); }\r
-\r
-.home-fab-spin {\r
-  display: inline-block;\r
-  animation: home-fab-spin-in 0.5s cubic-bezier(0.34, 1.4, 0.64, 1);\r
-}\r
-\r
-/* The restore-default button slides up into place, like the dashboard's\r
- * dialog-in entrance. */\r
-.home-fab-enter {\r
-  animation: home-fab-enter 0.32s cubic-bezier(0.34, 1.3, 0.64, 1);\r
-}\r
-\r
-@keyframes home-fab-glow {\r
-  0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--home-accent) 55%, transparent); }\r
-  100% { box-shadow: 0 0 0 13px transparent; }\r
-}\r
-@keyframes home-fab-spin-in {\r
-  from { transform: rotate(-150deg); opacity: 0.3; }\r
-  to   { transform: rotate(0); opacity: 1; }\r
-}\r
-@keyframes home-fab-enter {\r
-  from { opacity: 0; transform: translateY(6px) scale(0.9); }\r
-  to   { opacity: 1; transform: translateY(0) scale(1); }\r
-}\r
-\r
-@media (prefers-reduced-motion: reduce) {\r
-  .home-fab,\r
-  .home-fab-ico,\r
-  .home-fab-spin,\r
-  .home-fab-enter { animation: none; transition: opacity 0.2s ease; }\r
-}\r
-\r
-/* ── toast (plugin-local; the host toast isn't exposed in the SDK) ── */\r
-.home-toast {\r
-  position: fixed;\r
-  bottom: 18px;\r
-  left: 50%;\r
-  transform: translateX(-50%);\r
-  z-index: 80;\r
-  padding: 8px 16px;\r
-  border-radius: 8px;\r
-  font-size: 12px;\r
-  color: var(--home-error, #e25555);\r
-  background: var(--home-surface);\r
-  border: 1px solid var(--home-error, #e25555);\r
-  backdrop-filter: blur(12px);\r
-  -webkit-backdrop-filter: blur(12px);\r
-  box-shadow: 0 8px 24px rgb(0 0 0 / 0.45);\r
-  animation: home-toast-in 0.25s ease;\r
-}\r
-@keyframes home-toast-in {\r
-  from { opacity: 0; transform: translateX(-50%) translateY(8px); }\r
-  to { opacity: 1; transform: translateX(-50%) translateY(0); }\r
-}\r
-\r
-/* Catalog reveal: the wrapper animates its row track 0fr → 1fr so the panel\r
- * grows/collapses its real height smoothly (no grid jump), with a matching\r
- * fade. Kept mounted so the exit animates too. */\r
-.home-catalog-wrap {\r
-  display: grid;\r
-  grid-template-rows: 0fr;\r
-  margin: 0 12px;\r
-  opacity: 0;\r
-  pointer-events: none;\r
-  transition:\r
-    grid-template-rows 0.34s cubic-bezier(0.34, 1.2, 0.64, 1),\r
-    opacity 0.28s ease,\r
-    margin-bottom 0.34s ease;\r
-}\r
-.home-catalog-wrap.open {\r
-  grid-template-rows: 1fr;\r
-  opacity: 1;\r
-  pointer-events: auto;\r
-  margin-bottom: 8px;\r
-}\r
-.home-catalog {\r
-  overflow: hidden;\r
-  min-height: 0;\r
-  border-radius: 8px;\r
-  background: var(--home-surface);\r
-  border: 1px solid var(--home-border);\r
-  backdrop-filter: blur(12px);\r
-  -webkit-backdrop-filter: blur(12px);\r
-  transition: border-color 0.2s ease, background 0.2s ease;\r
-}\r
-/* Highlighted as a delete target while a widget is dragged over it. */\r
-.home-catalog-wrap.trash-active .home-catalog {\r
-  border-color: var(--home-error);\r
-  border-style: dashed;\r
-  background: color-mix(in srgb, var(--home-error) 10%, var(--home-surface));\r
-}\r
-.home-catalog-inner {\r
-  display: flex;\r
-  flex-wrap: wrap;\r
-  align-items: center;\r
-  gap: 8px;\r
-  padding: 10px;\r
-}\r
-.home-catalog-hint {\r
-  font-size: 10px;\r
-  letter-spacing: 0.04em;\r
-  color: var(--color-muted-foreground, #6b7387);\r
-  margin-right: 4px;\r
-}\r
-.home-catalog-wrap.trash-active .home-catalog-hint { color: var(--home-error); }\r
-.home-catalog-chip { touch-action: none; }\r
-.home-catalog-chip {\r
-  font-family: inherit;\r
-  font-size: 11px;\r
-  padding: 4px 10px;\r
-  border-radius: 6px;\r
-  cursor: pointer;\r
-  background: none;\r
-  border: 1px dashed var(--home-border);\r
-  color: var(--color-foreground, #d8dce6);\r
-  transition: border-color 0.2s ease, color 0.2s ease, transform 0.2s ease;\r
-}\r
-.home-catalog-chip:hover {\r
-  border-color: var(--home-accent);\r
-  color: var(--home-accent);\r
-  transform: translateY(-1px);\r
-}\r
-.home-catalog-chip:active { transform: scale(0.95); }\r
-.home-catalog .empty { color: var(--color-muted-foreground, #6b7387); font-size: 11px; }\r
-\r
-@media (prefers-reduced-motion: reduce) {\r
-  .home-catalog-wrap { transition: opacity 0.2s ease; }\r
-}\r
-\r
-/* ── Agent widget (the eye) ─────────────────────────────────────────── */\r
-\r
-.home-agent {\r
-  display: flex;\r
-  flex-direction: column;\r
-  gap: 6px;\r
-  /* The .hd header sits above in the same content box (same as the other\r
-   * widgets' calc) — 100% pushed the stats row 8px past the bottom edge. */\r
-  height: calc(100% - 21px);\r
-  min-height: 0;\r
-  overflow: hidden;\r
-  font-size: 11px;\r
-  box-sizing: border-box;\r
-}\r
-\r
-/* The animated scene owns the leftover space and centers its content\r
- * vertically; head/stats/history are fixed rows that never move or\r
- * overflow. flex-basis: 0 — the scene shrinks to zero before the fixed\r
- * rows are ever pushed out. */\r
-.home-agent-scene {\r
-  flex: 1 1 0;\r
-  min-height: 0;\r
-  display: flex;\r
-  align-items: center;\r
-  overflow: hidden;\r
-}\r
-\r
-.home-agent-head {\r
-  display: flex;\r
-  align-items: center;\r
-  gap: 6px;\r
-  flex-wrap: wrap;\r
-  min-height: 18px;\r
-  flex: none;\r
-}\r
-\r
-.home-agent-dot {\r
-  width: 8px;\r
-  height: 8px;\r
-  border-radius: 50%;\r
-  background: var(--home-accent);\r
-  opacity: 0.45;\r
-  flex: none;\r
-  box-shadow: 0 0 6px var(--home-accent);\r
-}\r
-.home-agent-dot.busy {\r
-  opacity: 1;\r
-  animation: home-agent-pulse 1.2s ease-in-out infinite;\r
-}\r
-@keyframes home-agent-pulse {\r
-  0%, 100% { opacity: 1; transform: scale(1); }\r
-  50% { opacity: 0.35; transform: scale(0.8); }\r
-}\r
-\r
-.home-agent-status {\r
-  text-transform: uppercase;\r
-  letter-spacing: 0.08em;\r
-  font-size: 10px;\r
-  color: var(--color-foreground, #d8dce6);\r
-}\r
-\r
-.home-agent-take {\r
-  background: none;\r
-  border: none;\r
-  cursor: pointer;\r
-  font-family: inherit;\r
-  font-size: 9px;\r
-  letter-spacing: 0.08em;\r
-  text-transform: uppercase;\r
-  color: var(--home-accent-dim);\r
-  display: inline-flex;\r
-  align-items: center;\r
-  gap: 5px;\r
-  padding: 1px 5px;\r
-  border-radius: 4px;\r
-  white-space: nowrap;\r
-}\r
-.home-agent-take:hover { color: var(--home-accent); background: color-mix(in srgb, var(--home-accent) 10%, transparent); }\r
-.home-agent-take:active { transform: scale(0.95); }\r
-\r
-/* Play triangle, pure CSS — no emoji. */\r
-.home-agent-take-ico {\r
-  width: 0;\r
-  height: 0;\r
-  border-left: 4.5px solid currentColor;\r
-  border-top: 3px solid transparent;\r
-  border-bottom: 3px solid transparent;\r
-}\r
-\r
-.home-agent-line {\r
-  overflow: hidden;\r
-  text-overflow: ellipsis;\r
-  white-space: nowrap;\r
-  min-width: 0;\r
-}\r
-\r
-.home-agent-toolbox {\r
-  display: flex;\r
-  gap: 6px;\r
-  align-items: baseline;\r
-}\r
-.home-agent-k {\r
-  color: var(--home-accent);\r
-  flex: none;\r
-}\r
-.home-agent-dim { color: var(--color-muted-foreground, #6b7387); }\r
-\r
-.home-agent-msg {\r
-  color: var(--color-muted-foreground, #8b93a7);\r
-  font-style: italic;\r
-  max-height: 42px;\r
-  white-space: normal;\r
-  overflow: hidden;\r
-  display: -webkit-box;\r
-  -webkit-line-clamp: 2;\r
-  -webkit-box-orient: vertical;\r
-}\r
-\r
-.home-agent-stats {\r
-  display: flex;\r
-  gap: 10px;\r
-  flex-wrap: wrap;\r
-  font-size: 10px;\r
-  color: var(--color-foreground, #d8dce6);\r
-  border-top: 1px solid var(--home-border);\r
-  padding-top: 5px;\r
-  /* Shrinkable last: the scene compresses first (flex-basis 0), then this\r
-     row and the history may compress instead of overflowing the widget. */\r
-  flex: 0 1 auto;\r
-  min-height: 0;\r
-  overflow: hidden;\r
-}\r
-.home-agent-stats span {\r
-  white-space: nowrap;\r
-  overflow: hidden;\r
-  text-overflow: ellipsis;\r
-  min-width: 0;\r
-}\r
-.home-agent-stats i {\r
-  font-style: normal;\r
-  color: var(--color-muted-foreground, #6b7387);\r
-  font-size: 9px;\r
-}\r
-\r
-.home-agent-history {\r
-  display: flex;\r
-  flex-wrap: wrap;\r
-  gap: 4px 10px;\r
-  max-height: 40px;\r
-  overflow: hidden;\r
-  flex: 0 1 auto;\r
-  min-height: 0;\r
-}\r
-.home-agent-hist {\r
-  font-size: 10px;\r
-  color: var(--color-muted-foreground, #8b93a7);\r
-  display: inline-flex;\r
-  gap: 4px;\r
-  align-items: center;\r
-}\r
-.home-agent-hist-dot {\r
-  width: 5px;\r
-  height: 5px;\r
-  border-radius: 50%;\r
-  flex: none;\r
-}\r
-.home-agent-hist-dot.ok { background: #2dd4bf; }\r
-.home-agent-hist-dot.bad { background: var(--home-error); }\r
-.home-agent-hist i {\r
-  font-style: normal;\r
-  font-size: 9px;\r
-  color: var(--color-muted-foreground, #6b7387);\r
-}\r
-\r
-/* ── Agent theater (take-control fullscreen) ───────────────────────── */\r
-\r
-.home-theater {\r
-  position: fixed;\r
-  inset: 0;\r
-  z-index: 1000;\r
-  background: color-mix(in srgb, var(--ui-editor-surface-background, rgb(8 8 12 / 1)) 92%, #000);\r
-  backdrop-filter: blur(18px);\r
-  -webkit-backdrop-filter: blur(18px);\r
-  display: flex;\r
-  flex-direction: column;\r
-  padding: 18px 22px 22px;\r
-  gap: 14px;\r
-  overflow: auto;\r
-  font-family: var(--theme-font-mono, ui-monospace, monospace);\r
-  color: var(--color-foreground, #d8dce6);\r
-  animation: home-theater-in 0.22s ease;\r
-}\r
-@keyframes home-theater-in {\r
-  from { opacity: 0; transform: scale(0.985); }\r
-  to { opacity: 1; transform: scale(1); }\r
-}\r
-\r
-.home-theater-head {\r
-  display: flex;\r
-  align-items: center;\r
-  gap: 10px;\r
-  border-bottom: 1px solid var(--home-border);\r
-  padding-bottom: 10px;\r
-  flex: none;\r
-}\r
-\r
-.home-theater-title {\r
-  font-size: 13px;\r
-  letter-spacing: 0.14em;\r
-  color: var(--home-accent);\r
-}\r
-\r
-.home-theater-sub {\r
-  font-size: 10px;\r
-  color: var(--color-muted-foreground, #6b7387);\r
-  text-transform: uppercase;\r
-  letter-spacing: 0.06em;\r
-}\r
-\r
-.home-theater-release {\r
-  margin-left: auto;\r
-  background: transparent;\r
-  border: 1px solid var(--home-border);\r
-  color: var(--color-foreground, #d8dce6);\r
-  border-radius: 6px;\r
-  font-size: 11px;\r
-  font-family: inherit;\r
-  padding: 4px 12px;\r
-  cursor: pointer;\r
-  transition: border-color 0.15s ease, color 0.15s ease;\r
-}\r
-.home-theater-release:hover {\r
-  border-color: var(--home-error);\r
-  color: var(--home-error);\r
-}\r
-\r
-.home-theater-grid {\r
-  display: grid;\r
-  grid-template-columns: repeat(12, 1fr);\r
-  gap: 12px;\r
-  flex: 1;\r
-  min-height: 0;\r
-  align-content: start;\r
-}\r
-.home-theater-span-5 { grid-column: span 5; }\r
-.home-theater-span-7 { grid-column: span 7; }\r
-.home-theater-span-12 { grid-column: span 12; }\r
-@media (max-width: 900px) {\r
-  .home-theater-span-5, .home-theater-span-7, .home-theater-span-12 { grid-column: span 12; }\r
-}\r
-\r
-.home-theater-panel {\r
-  background: var(--home-surface);\r
-  border: 1px solid var(--home-border);\r
-  border-radius: 10px;\r
-  padding: 12px 14px;\r
-  display: flex;\r
-  flex-direction: column;\r
-  gap: 8px;\r
-  min-height: 160px;\r
-  max-height: 420px;\r
-  overflow: hidden;\r
-  box-shadow: 0 10px 30px rgb(0 0 0 / 0.35);\r
-}\r
-\r
-.home-theater-panel-title {\r
-  font-size: 10px;\r
-  letter-spacing: 0.12em;\r
-  color: var(--color-muted-foreground, #6b7387);\r
-  display: flex;\r
-  align-items: center;\r
-  gap: 7px;\r
-  flex: none;\r
-  text-transform: uppercase;\r
-}\r
-.home-theater-dim {\r
-  color: var(--color-muted-foreground, #6b7387);\r
-  font-size: 10px;\r
-  font-style: italic;\r
-}\r
-\r
-/* NOW panel */\r
-.home-theater-current-tool {\r
-  display: flex;\r
-  flex-direction: column;\r
-  gap: 3px;\r
-  background: color-mix(in srgb, var(--home-accent) 8%, transparent);\r
-  border: 1px solid var(--home-border);\r
-  border-radius: 8px;\r
-  padding: 8px 10px;\r
-  flex: none;\r
-}\r
-.home-theater-ct-name {\r
-  color: var(--home-accent);\r
-  font-size: 12px;\r
-}\r
-.home-theater-ct-args {\r
-  font-size: 10px;\r
-  color: var(--color-muted-foreground, #8b93a7);\r
-  overflow: hidden;\r
-  text-overflow: ellipsis;\r
-  white-space: nowrap;\r
-}\r
-\r
-.home-theater-stream {\r
-  font-size: 11px;\r
-  line-height: 1.55;\r
-  color: var(--color-foreground, #d8dce6);\r
-  background: color-mix(in srgb, var(--home-accent) 4%, transparent);\r
-  border-left: 2px solid var(--home-accent);\r
-  padding: 6px 10px;\r
-  border-radius: 0 6px 6px 0;\r
-  max-height: 110px;\r
-  overflow: auto;\r
-  flex: none;\r
-  white-space: pre-wrap;\r
-  word-break: break-word;\r
-}\r
-\r
-.home-theater-feed {\r
-  flex: 1;\r
-  min-height: 0;\r
-  overflow: auto;\r
-  display: flex;\r
-  flex-direction: column;\r
-  gap: 2px;\r
-  font-size: 10.5px;\r
-}\r
-.home-theater-feed-row {\r
-  display: flex;\r
-  gap: 8px;\r
-  align-items: baseline;\r
-  padding: 1px 0;\r
-  border-bottom: 1px solid color-mix(in srgb, var(--home-border) 40%, transparent);\r
-  animation: home-feed-in 0.32s ease-out both;\r
-}\r
-.home-theater-feed-time {\r
-  color: var(--color-muted-foreground, #555d70);\r
-  flex: none;\r
-  font-size: 9.5px;\r
-}\r
-/* Kind dot, pure CSS — no emoji. */\r
-.home-theater-feed-kind {\r
-  flex: none;\r
-  width: 6px;\r
-  height: 6px;\r
-  border-radius: 50%;\r
-  align-self: center;\r
-}\r
-.home-theater-feed-kind.tool { background: var(--home-accent); }\r
-.home-theater-feed-kind.message { background: #2dd4bf; }\r
-.home-theater-feed-kind.subagent { background: #a78bfa; }\r
-.home-theater-feed-kind.system { background: var(--color-muted-foreground, #6b7387); }\r
-.home-theater-feed-kind.bad { background: var(--home-error); }\r
-.home-theater-feed-label {\r
-  color: var(--color-foreground, #d8dce6);\r
-  flex: none;\r
-}\r
-.home-theater-feed-detail {\r
-  color: var(--color-muted-foreground, #8b93a7);\r
-  overflow: hidden;\r
-  text-overflow: ellipsis;\r
-  white-space: nowrap;\r
-  min-width: 0;\r
-}\r
-\r
-.home-theater-foot {\r
-  display: flex;\r
-  gap: 14px;\r
-  font-size: 9.5px;\r
-  color: var(--color-muted-foreground, #555d70);\r
-  text-transform: uppercase;\r
-  letter-spacing: 0.06em;\r
-  flex: none;\r
-  border-top: 1px solid var(--home-border);\r
-  padding-top: 6px;\r
-}\r
-\r
-/* FUNCTION panel */\r
-.home-theater-fn-current {\r
-  background: color-mix(in srgb, var(--home-accent) 8%, transparent);\r
-  border: 1px solid var(--home-border);\r
-  border-radius: 8px;\r
-  padding: 8px 10px;\r
-  display: flex;\r
-  flex-direction: column;\r
-  gap: 6px;\r
-  flex: none;\r
-}\r
-.home-theater-fn-name {\r
-  display: flex;\r
-  align-items: center;\r
-  gap: 8px;\r
-  font-size: 12px;\r
-  color: var(--home-accent);\r
-}\r
-.home-theater-fn-dot {\r
-  width: 6px;\r
-  height: 6px;\r
-  border-radius: 50%;\r
-  flex: none;\r
-}\r
-.home-theater-fn-dot.running {\r
-  background: var(--home-accent);\r
-  animation: home-agent-pulse 1.2s ease-in-out infinite;\r
-}\r
-.home-theater-fn-dot.ok { background: #2dd4bf; }\r
-.home-theater-fn-dot.bad { background: var(--home-error); }\r
-.home-theater-fn-state {\r
-  margin-left: auto;\r
-  font-size: 9px;\r
-  text-transform: uppercase;\r
-  letter-spacing: 0.08em;\r
-  padding: 1px 8px;\r
-  border-radius: 20px;\r
-  border: 1px solid;\r
-}\r
-.home-theater-fn-state.running {\r
-  color: var(--home-accent);\r
-  border-color: var(--home-accent);\r
-}\r
-.home-theater-fn-args {\r
-  font-size: 10px;\r
-  color: var(--color-muted-foreground, #8b93a7);\r
-  white-space: pre-wrap;\r
-  word-break: break-word;\r
-  max-height: 120px;\r
-  overflow: auto;\r
-  margin: 0;\r
-  font-family: inherit;\r
-}\r
-\r
-.home-theater-fn-history {\r
-  flex: 1;\r
-  min-height: 0;\r
-  overflow: auto;\r
-  display: flex;\r
-  flex-direction: column;\r
-  gap: 2px;\r
-  font-size: 10.5px;\r
-}\r
-.home-theater-fn-row {\r
-  display: flex;\r
-  gap: 8px;\r
-  align-items: baseline;\r
-  border-bottom: 1px solid color-mix(in srgb, var(--home-border) 40%, transparent);\r
-  padding: 2px 0;\r
-}\r
-.home-theater-fn-hname { color: var(--color-foreground, #d8dce6); flex: none; }\r
-.home-theater-fn-hargs {\r
-  color: var(--color-muted-foreground, #8b93a7);\r
-  overflow: hidden;\r
-  text-overflow: ellipsis;\r
-  white-space: nowrap;\r
-  min-width: 0;\r
-}\r
-.home-theater-fn-hdur {\r
-  margin-left: auto;\r
-  color: var(--color-muted-foreground, #6b7387);\r
-  flex: none;\r
-  font-size: 9.5px;\r
-}\r
-\r
-/* TOKENS & COST panel */\r
-.home-theater-tok-grid {\r
-  display: grid;\r
-  grid-template-columns: repeat(2, 1fr);\r
-  gap: 8px;\r
-}\r
-.home-theater-tok-cell {\r
-  background: color-mix(in srgb, var(--home-accent) 5%, transparent);\r
-  border: 1px solid var(--home-border);\r
-  border-radius: 8px;\r
-  padding: 8px 10px;\r
-  display: flex;\r
-  flex-direction: column;\r
-  gap: 2px;\r
-  min-width: 0;\r
-  overflow: hidden;\r
-}\r
-.home-theater-tok-num {\r
-  font-size: 15px;\r
-  color: var(--color-foreground, #d8dce6);\r
-  white-space: nowrap;\r
-  overflow: hidden;\r
-  text-overflow: ellipsis;\r
-}\r
-.home-theater-tok-num.home-theater-money { color: var(--home-accent); }\r
-.home-theater-tok-lbl {\r
-  font-size: 9px;\r
-  text-transform: uppercase;\r
-  letter-spacing: 0.07em;\r
-  color: var(--color-muted-foreground, #6b7387);\r
-}\r
-\r
-.home-theater-tok-models {\r
-  display: flex;\r
-  flex-direction: column;\r
-  gap: 3px;\r
-  font-size: 10px;\r
-  border-top: 1px solid var(--home-border);\r
-  padding-top: 6px;\r
-}\r
-.home-theater-tok-model {\r
-  display: flex;\r
-  gap: 10px;\r
-  align-items: baseline;\r
-}\r
-.home-theater-tok-mname { color: var(--color-foreground, #d8dce6); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }\r
-.home-theater-tok-mtok { color: var(--color-muted-foreground, #8b93a7); margin-left: auto; }\r
-.home-theater-tok-mcost { color: var(--home-accent); flex: none; }\r
-\r
-.home-theater-tok-session {\r
-  border-top: 1px solid var(--home-border);\r
-  padding-top: 6px;\r
-  font-size: 10px;\r
-  display: flex;\r
-  flex-direction: column;\r
-  gap: 2px;\r
-  min-width: 0;\r
-}\r
-.home-theater-tok-slbl {\r
-  font-size: 9px;\r
-  text-transform: uppercase;\r
-  letter-spacing: 0.07em;\r
-  color: var(--color-muted-foreground, #6b7387);\r
-}\r
-.home-theater-tok-stitle {\r
-  overflow: hidden;\r
-  text-overflow: ellipsis;\r
-  white-space: nowrap;\r
-}\r
-.home-theater-tok-snum {\r
-  color: var(--color-muted-foreground, #8b93a7);\r
-  white-space: nowrap;\r
-  overflow: hidden;\r
-  text-overflow: ellipsis;\r
-}\r
-\r
-/* PROJECT panel */\r
-.home-theater-proj-session {\r
-  background: color-mix(in srgb, var(--home-accent) 5%, transparent);\r
-  border: 1px solid var(--home-border);\r
-  border-radius: 8px;\r
-  padding: 8px 10px;\r
-  display: flex;\r
-  flex-direction: column;\r
-  gap: 2px;\r
-}\r
-.home-theater-proj-title { font-size: 12px; color: var(--color-foreground, #d8dce6); }\r
-.home-theater-proj-meta {\r
-  font-size: 9.5px;\r
-  color: var(--color-muted-foreground, #6b7387);\r
-}\r
-\r
-.home-theater-proj-files {\r
-  flex: 1;\r
-  min-height: 0;\r
-  overflow: auto;\r
-  display: flex;\r
-  flex-direction: column;\r
-  gap: 2px;\r
-  font-size: 10.5px;\r
-}\r
-.home-theater-proj-file {\r
-  display: flex;\r
-  gap: 8px;\r
-  align-items: baseline;\r
-  border-bottom: 1px solid color-mix(in srgb, var(--home-border) 40%, transparent);\r
-  padding: 2px 0;\r
-}\r
-.home-theater-proj-glyph {\r
-  color: var(--home-accent);\r
-  flex: none;\r
-  font-size: 9px;\r
-  width: 16px;\r
-  text-align: center;\r
-}\r
-.home-theater-proj-path {\r
-  color: var(--color-muted-foreground, #8b93a7);\r
-  overflow: hidden;\r
-  text-overflow: ellipsis;\r
-  white-space: nowrap;\r
-}\r
-\r
-.home-theater-proj-subagents {\r
-  border-top: 1px solid var(--home-border);\r
-  padding-top: 6px;\r
-  display: flex;\r
-  flex-direction: column;\r
-  gap: 3px;\r
-  font-size: 10px;\r
-}\r
-.home-theater-proj-subagent { display: flex; gap: 8px; align-items: baseline; }\r
-.home-theater-proj-subdot {\r
-  width: 6px;\r
-  height: 6px;\r
-  border-radius: 50%;\r
-  flex: none;\r
-  align-self: center;\r
-}\r
-.home-theater-proj-subdot.run { background: var(--home-accent); animation: home-agent-pulse 1.2s ease-in-out infinite; }\r
-.home-theater-proj-subdot.done { background: #2dd4bf; }\r
-.home-theater-proj-subname { color: var(--color-foreground, #d8dce6); }\r
-.home-theater-proj-subgoal {\r
-  color: var(--color-muted-foreground, #6b7387);\r
-  overflow: hidden;\r
-  text-overflow: ellipsis;\r
-  white-space: nowrap;\r
-}\r
-\r
-/* RECOMMENDATIONS panel */\r
-.home-theater-rec-list {\r
-  flex: 1;\r
-  min-height: 0;\r
-  overflow: auto;\r
-  display: flex;\r
-  flex-direction: column;\r
-  gap: 6px;\r
-}\r
-.home-theater-rec {\r
-  display: flex;\r
-  gap: 10px;\r
-  align-items: flex-start;\r
-  border: 1px solid var(--home-border);\r
-  border-radius: 8px;\r
-  padding: 7px 10px;\r
-  background: color-mix(in srgb, var(--home-surface) 60%, transparent);\r
-}\r
-.home-theater-rec.warn { border-color: color-mix(in srgb, #e8b33c 45%, transparent); }\r
-.home-theater-rec.crit { border-color: color-mix(in srgb, var(--home-error) 55%, transparent); }\r
-.home-theater-rec-tag {\r
-  flex: none;\r
-  width: 18px;\r
-  height: 18px;\r
-  border-radius: 50%;\r
-  display: grid;\r
-  place-items: center;\r
-  font-size: 10px;\r
-  margin-top: 1px;\r
-}\r
-.home-theater-rec.info .home-theater-rec-tag {\r
-  color: var(--home-accent);\r
-  border: 1px solid var(--home-accent);\r
-}\r
-.home-theater-rec.warn .home-theater-rec-tag {\r
-  color: #e8b33c;\r
-  border: 1px solid #e8b33c;\r
-}\r
-.home-theater-rec.crit .home-theater-rec-tag {\r
-  color: var(--home-error);\r
-  border: 1px solid var(--home-error);\r
-}\r
-.home-theater-rec-body { min-width: 0; }\r
-.home-theater-rec-title { font-size: 11px; color: var(--color-foreground, #d8dce6); }\r
-.home-theater-rec-detail {\r
-  font-size: 10px;\r
-  color: var(--color-muted-foreground, #8b93a7);\r
-  margin-top: 1px;\r
-}\r
-\r
-/* ── Live scene — the animated centerpiece ────────────────────────────\r
- * On identity change: the outgoing content slides up while fading, the\r
- * incoming content rises from below with a blur that dissolves as it\r
- * settles. */\r
-\r
-.home-theater-scene {\r
-  flex: 1 1 auto;\r
-  min-height: 0;\r
-  display: flex;\r
-  align-items: center;\r
-  overflow: hidden;\r
-}\r
-\r
-.home-scene {\r
-  position: relative;\r
-  width: 100%;\r
-}\r
-\r
-.home-scene-item {\r
-  animation: home-scene-in 0.42s ease-out both;\r
-}\r
-\r
-.home-scene-item.leaving {\r
-  position: absolute;\r
-  inset-inline: 0;\r
-  top: 0;\r
-  animation: home-scene-out 0.4s ease-in forwards;\r
-  pointer-events: none;\r
-}\r
-\r
-@keyframes home-scene-in {\r
-  from {\r
-    opacity: 0;\r
-    transform: translateY(26px);\r
-    filter: blur(6px);\r
-  }\r
-  to {\r
-    opacity: 1;\r
-    transform: translateY(0);\r
-    filter: blur(0);\r
-  }\r
-}\r
-\r
-@keyframes home-scene-out {\r
-  from {\r
-    opacity: 1;\r
-    transform: translateY(0);\r
-    filter: blur(0);\r
-  }\r
-  to {\r
-    opacity: 0;\r
-    transform: translateY(-26px);\r
-    filter: blur(4px);\r
-  }\r
-}\r
-\r
-@keyframes home-feed-in {\r
-  from { opacity: 0; transform: translateY(7px); }\r
-  to { opacity: 1; transform: translateY(0); }\r
-}\r
-\r
-@keyframes home-caret-blink {\r
-  0%, 45% { opacity: 1; }\r
-  50%, 100% { opacity: 0; }\r
-}\r
-\r
-/* Scene content — tool call */\r
-.home-scene-tool {\r
-  display: flex;\r
-  flex-direction: column;\r
-  gap: 4px;\r
-  min-width: 0;\r
-}\r
-.home-scene-title {\r
-  color: var(--home-accent);\r
-  font-size: 12px;\r
-  font-weight: 600;\r
-  overflow: hidden;\r
-  text-overflow: ellipsis;\r
-  white-space: nowrap;\r
-}\r
-.home-scene-meta {\r
-  font-size: 9px;\r
-  text-transform: uppercase;\r
-  letter-spacing: 0.08em;\r
-  color: var(--color-muted-foreground, #6b7387);\r
-}\r
-.home-scene-args {\r
-  margin: 0;\r
-  font-family: inherit;\r
-  font-size: 10px;\r
-  color: var(--color-muted-foreground, #8b93a7);\r
-  white-space: pre-wrap;\r
-  word-break: break-word;\r
-  max-height: 90px;\r
-  overflow: auto;\r
-}\r
-\r
-/* Scene content — message (markdown-rendered) */\r
-.home-scene-msg {\r
-  font-size: 11.5px;\r
-  line-height: 1.6;\r
-  color: var(--color-foreground, #d8dce6);\r
-  word-break: break-word;\r
-  max-height: 150px;\r
-  overflow: auto;\r
-}\r
-.home-scene-msg strong {\r
-  color: var(--home-accent);\r
-  font-weight: 650;\r
-}\r
-.home-scene-msg em { font-style: italic; }\r
-.home-scene-msg code {\r
-  font-family: var(--theme-font-mono, ui-monospace, monospace);\r
-  font-size: 0.92em;\r
-  color: var(--home-accent);\r
-  background: color-mix(in srgb, var(--home-accent) 10%, transparent);\r
-  padding: 0 4px;\r
-  border-radius: 4px;\r
-  white-space: pre-wrap;\r
-}\r
-.home-scene-msg .home-md-pre {\r
-  margin: 4px 0;\r
-  background: color-mix(in srgb, var(--home-accent) 5%, transparent);\r
-  border: 1px solid var(--home-border);\r
-  border-left: 2px solid var(--home-accent);\r
-  border-radius: 0 6px 6px 0;\r
-  padding: 6px 10px;\r
-  overflow: auto;\r
-  max-height: 120px;\r
-}\r
-.home-scene-msg .home-md-pre code {\r
-  background: none;\r
-  padding: 0;\r
-  color: var(--color-muted-foreground, #9aa3b8);\r
-  font-size: 10px;\r
-  line-height: 1.5;\r
-  white-space: pre;\r
-}\r
-.home-scene-msg .home-md-h {\r
-  color: var(--home-accent);\r
-  font-weight: 650;\r
-  margin: 3px 0 1px;\r
-}\r
-.home-scene-msg .home-md-h.h1 { font-size: 13px; letter-spacing: 0.02em; }\r
-.home-scene-msg .home-md-h.h2 { font-size: 12px; }\r
-.home-scene-msg .home-md-h.h3 { font-size: 11px; }\r
-.home-scene-msg .home-md-p { margin: 2px 0; }\r
-.home-scene-msg .home-md-gap { height: 4px; }\r
-.home-scene-msg .home-md-list { margin: 2px 0; display: flex; flex-direction: column; gap: 1px; }\r
-.home-scene-msg .home-md-li {\r
-  padding-left: 14px;\r
-  position: relative;\r
-}\r
-.home-scene-msg .home-md-li::before {\r
-  content: "";\r
-  position: absolute;\r
-  left: 3px;\r
-  top: 0.62em;\r
-  width: 5px;\r
-  height: 5px;\r
-  border-radius: 50%;\r
-  background: var(--home-accent);\r
-  opacity: 0.8;\r
-}\r
-.home-scene-caret {\r
-  display: inline-block;\r
-  width: 6px;\r
-  height: 13px;\r
-  margin-left: 2px;\r
-  vertical-align: -2px;\r
-  background: var(--home-accent);\r
-  animation: home-caret-blink 1s steps(1) infinite;\r
-}\r
-\r
-/* Scene content — idle */\r
-.home-scene-idle {\r
-  font-size: 10px;\r
-  font-style: italic;\r
-  color: var(--color-muted-foreground, #6b7387);\r
-}\r
-\r
-/* Compact scene (widget body) */\r
-.home-agent-scene .home-scene {\r
-  display: flex;\r
-  min-height: 0;\r
-  overflow: hidden;\r
-}\r
-.home-agent-scene .home-scene-item {\r
-  min-width: 0;\r
-  min-height: 0;\r
-  flex: 1;\r
-}\r
-.home-agent-scene .home-scene-msg {\r
-  font-size: 10.5px;\r
-  max-height: 64px;\r
-  overflow: hidden;\r
-}\r
-.home-agent-scene .home-scene-tool {\r
-  gap: 2px;\r
-}\r
-.home-agent-scene .home-scene-title {\r
-  font-size: 11px;\r
-}\r
-.home-agent-scene .home-scene-args {\r
-  font-size: 10px;\r
-  max-height: 36px;\r
-  white-space: nowrap;\r
-  text-overflow: ellipsis;\r
-  overflow: hidden;\r
-}\r
-.home-agent-scene .home-scene-meta,\r
-.home-agent-scene .home-scene-idle {\r
-  font-size: 9.5px;\r
-}\r
+const homeCss = `/* Home page — rice-style widget grid.
+ * Every color routes through --home-accent (the active theme's primary),
+ * so switching themes recolors the whole page with zero widget changes.
+ * Swap teal (#2dd4bf) stays fixed: it is interaction semantics, not theme. */
+
+.home-root {
+  --home-accent: var(--color-primary, var(--ui-accent, #ffd700));
+  --home-accent-dim: color-mix(in srgb, var(--home-accent) 55%, #000);
+  /* Readable secondary text (headers, captions): dim was ~3:1 on the glass. */
+  --home-accent-soft: color-mix(in srgb, var(--home-accent) 82%, #9aa3b5);
+  --home-surface: color-mix(
+    in srgb,
+    var(--home-accent) 6%,
+    var(--ui-editor-surface-background, rgb(10 10 14 / 0.55))
+  );
+  --home-border: color-mix(in srgb, var(--home-accent) 18%, transparent);
+  --home-error: var(--color-destructive, #e25555);
+  position: relative;
+  height: 100%;
+  overflow: auto;
+  font-family: var(--theme-font-mono, ui-monospace, monospace);
+  color: var(--color-foreground, var(--ui-text-primary, #d8dce6));
+}
+
+.home-stage {
+  position: relative;
+  min-height: 60vh;
+  touch-action: none;
+}
+
+.home-widget {
+  position: absolute;
+  border-radius: 8px;
+  padding: 10px 12px;
+  background: var(--home-surface);
+  border: 1px solid var(--home-border);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: 0 10px 30px rgb(0 0 0 / 0.5);
+  overflow: hidden;
+  transition: left 0.18s ease, top 0.18s ease;
+  container-type: size;
+  font-size: 11px;
+  line-height: 1.5;
+  /* Promote each widget to its own compositor layer so the constantly
+   * repainting matrix canvas doesn't force the neighbours' backdrop-filter
+   * to recompose every frame — that recomposition is what produced the
+   * horizontal flicker sweeping across the glass panels. */
+  transform: translateZ(0);
+  contain: paint;
+}
+.home-root.editing .home-widget { user-select: none; }
+.home-widget.dragging {
+  transition: none;
+  opacity: 0.9;
+  border-color: var(--home-accent);
+  z-index: 50;
+  cursor: grabbing;
+}
+.home-widget.swap-target {
+  border-color: #2dd4bf;
+  box-shadow: 0 0 0 1px rgb(45 212 191 / 0.5), 0 10px 30px rgb(0 0 0 / 0.5);
+}
+/* Over the trash zone — about to be deleted. */
+.home-widget.trashing {
+  opacity: 0.45;
+  border-color: var(--home-error);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--home-error) 60%, transparent),
+    0 10px 30px rgb(0 0 0 / 0.5);
+}
+
+/* Floating label that follows the pointer while dragging a new widget in. */
+.home-add-ghost {
+  position: fixed;
+  z-index: 70;
+  transform: translate(-50%, -140%);
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 11px;
+  white-space: nowrap;
+  pointer-events: none;
+  color: var(--home-accent);
+  background: var(--home-surface);
+  border: 1px solid var(--home-accent);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.45);
+}
+
+.home-widget .hd {
+  display: block;
+  font-size: 9.5px;
+  letter-spacing: 0.18em;
+  margin-bottom: 6px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--home-accent-soft);
+  white-space: nowrap;
+  overflow: hidden;
+}
+.home-widget .hd::before { content: "── "; opacity: 0.5; }
+.home-widget .hd::after { content: " ─────────────────────────────────"; opacity: 0.3; }
+.home-root.editing .home-widget .hd { cursor: grab; }
+
+.home-widget .rs {
+  position: absolute;
+  right: 2px;
+  bottom: 2px;
+  width: 13px;
+  height: 13px;
+  cursor: nwse-resize;
+  border-right: 2px solid color-mix(in srgb, var(--home-accent) 45%, transparent);
+  border-bottom: 2px solid color-mix(in srgb, var(--home-accent) 45%, transparent);
+  border-radius: 2px;
+  z-index: 3;
+}
+.home-widget .wremove {
+  position: absolute;
+  top: 4px;
+  right: 6px;
+  z-index: 3;
+  background: none;
+  border: none;
+  color: var(--home-error);
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 2px 4px;
+}
+.home-widget .werr { color: var(--home-error); }
+/* Data-source states (widget-state.ts): honest copy per failure kind. */
+.home-widget .wstate { display: block; font-size: 10px; letter-spacing: 0.04em; }
+.home-widget .wstate::before { content: "● "; }
+.home-widget .wstate-offline { color: var(--home-error); }
+.home-widget .wstate-unavailable { color: #f5b945; }
+.home-widget .hd .hd-stale { color: #f5b945; letter-spacing: 0.1em; opacity: 0.8; }
+
+/* ── hover controls (contextual chrome, rest mode only) ──
+ * Reusable floating control rendered inside a widget body. Hidden by default,
+ * fades in while hovering the widget, and fully suppressed in edit mode so it
+ * never fights drag/resize. Widgets opt in by rendering <HoverCtl>/<HoverArrows>. */
+.hover-ctl {
+  position: absolute;
+  top: 4px;
+  right: 6px;
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.18s ease;
+  /* Sits on the glass without a hard edge. */
+  padding: 1px 3px;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--home-surface) 80%, transparent);
+}
+.home-widget:hover .hover-ctl,
+.hover-ctl:focus-within { opacity: 1; pointer-events: auto; }
+.home-root.editing .hover-ctl { display: none; }
+@media (hover: none) {
+  /* Touch: no hover, so keep controls reachable but understated. */
+  .hover-ctl { opacity: 0.5; pointer-events: auto; }
+}
+
+.hv-arrow {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0 3px;
+  color: var(--home-accent-dim);
+  font-size: 14px;
+  line-height: 1;
+  font-family: inherit;
+}
+.hv-arrow:hover:not(:disabled) { color: var(--home-accent); }
+.hv-arrow:disabled { opacity: 0.3; cursor: default; }
+.hv-label {
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--home-accent-dim);
+  white-space: nowrap;
+}
+.hv-label-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font: inherit;
+  letter-spacing: 0.1em;
+  padding: 0;
+}
+.hv-label-btn:hover { color: var(--home-accent); }
+
+/* Toggle/option buttons inside a hover control (clock format, host view…). */
+.hv-opt {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font: inherit;
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--home-accent-dim);
+  padding: 0 4px;
+  border-radius: 4px;
+}
+.hv-opt:hover { color: var(--home-accent); }
+.hv-opt.on { color: #000; background: var(--home-accent); }
+
+/* Extra detail that smoothly expands on widget hover (rest mode only). Uses
+ * the 0fr→1fr grid trick so it animates real height without a fixed value. */
+.hover-reveal {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transition: grid-template-rows 0.25s ease, opacity 0.2s ease, margin-top 0.25s ease;
+}
+.home-widget:hover .hover-reveal { grid-template-rows: 1fr; opacity: 1; margin-top: 4px; }
+.home-root.editing .hover-reveal { grid-template-rows: 0fr; opacity: 0; margin-top: 0; }
+.hover-reveal > * { overflow: hidden; min-height: 0; }
+
+.home-ghost {
+  position: absolute;
+  border: 1.5px dashed color-mix(in srgb, var(--home-accent) 70%, transparent);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--home-accent) 7%, transparent);
+  display: none;
+  z-index: 5;
+  pointer-events: none;
+  transition: left 0.18s ease, top 0.18s ease, width 0.18s ease, height 0.18s ease;
+}
+.home-ghost.visible { display: block; }
+.home-ghost.swap {
+  border-color: rgb(45 212 191 / 0.85);
+  background: rgb(45 212 191 / 0.08);
+}
+
+/* ── widget content primitives (responsive to the widget's own size) ── */
+.home-widget .rows { column-gap: 18px; }
+@container (min-width: 380px) {
+  .home-widget .rows { columns: 2; column-rule: 1px solid rgb(255 255 255 / 0.06); }
+}
+@container (min-width: 600px) {
+  .home-widget .rows { columns: 3; }
+}
+.home-widget .row {
+  display: flex;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 1px 0;
+  border-bottom: 1px solid rgb(255 255 255 / 0.04);
+  break-inside: avoid;
+}
+.home-widget .row:last-child { border-bottom: none; }
+/* Names flex and ellipsize at the real column width instead of a fixed
+ * character slice that cut words mid-glyph ("bitacoras-guayab"). */
+.home-widget .row > * { flex: none; }
+.home-widget .row > .row-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.home-widget .meters { column-gap: 18px; }
+@container (min-width: 380px) {
+  .home-widget .meters { columns: 2; }
+}
+.home-widget .meter {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 3px 0;
+  break-inside: avoid;
+}
+.home-widget .meter .lbl { width: 34px; color: var(--color-muted-foreground, #7d8496); font-size: 10px; }
+.home-widget .meter .track {
+  flex: 1;
+  height: 7px;
+  border-radius: 2px;
+  background: rgb(255 255 255 / 0.07);
+  overflow: hidden;
+}
+.home-widget .meter .fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--home-accent-dim), var(--home-accent));
+  transition: width 0.6s ease;
+}
+.home-widget .meter .val { width: 44px; text-align: right; font-size: 10px; }
+
+.home-widget .ok { color: var(--home-accent); }
+.home-widget .dim { color: var(--color-muted-foreground, #6b7387); }
+.home-widget .bigval {
+  font-size: min(9cqw, 18cqh);
+  font-weight: 700;
+  color: var(--home-accent);
+}
+
+.home-clock-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: calc(100% - 18px);
+}
+.home-clock {
+  font-size: min(26cqw, 52cqh);
+  font-weight: 800;
+  color: var(--home-accent);
+  letter-spacing: 0.02em;
+  text-shadow: 0 0 24px color-mix(in srgb, var(--home-accent) 35%, transparent);
+  line-height: 1;
+}
+.home-clock-ampm {
+  font-size: 0.32em;
+  vertical-align: 0.9em;
+  margin-left: 0.2em;
+  letter-spacing: 0.05em;
+  color: var(--home-accent-dim);
+}
+.home-clock-sub {
+  color: var(--home-accent-dim);
+  font-size: max(9px, min(3.4cqw, 8cqh));
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  margin-top: 1cqh;
+}
+
+.home-ascii-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: calc(100% - 18px);
+}
+.home-ascii {
+  font-size: min(5.6cqw, 5.4cqh);
+  line-height: 1.05;
+  white-space: pre;
+  text-align: center;
+  background: linear-gradient(
+    180deg,
+    var(--home-accent-dim),
+    var(--home-accent) 40%,
+    var(--home-accent) 60%,
+    var(--home-accent-dim)
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 0 10px color-mix(in srgb, var(--home-accent) 25%, transparent));
+}
+.home-ascii-caduceus {
+  transform: scaleX(0.88);
+  transform-origin: center;
+}
+.home-ascii-ver {
+  text-align: center;
+  color: var(--home-accent-soft);
+  font-size: max(8px, min(2.6cqw, 5cqh));
+  letter-spacing: 0.22em;
+  margin-top: 1.5cqh;
+}
+
+.home-spark {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: max(18px, 22cqh);
+  margin: 6px 0 4px;
+}
+.home-spark i {
+  flex: 1;
+  background: linear-gradient(180deg, var(--home-accent), var(--home-accent-dim));
+  border-radius: 1px 1px 0 0;
+  opacity: 0.85;
+  transition: height 0.6s ease, opacity 0.15s ease;
+  cursor: default;
+}
+.home-spark i:hover { opacity: 1; }
+
+/* Hover tooltip over a bar (tokens widget). Anchored to the bar via inline
+ * \`left\` + \`translateX\`, which clamps it inside the clipped widget; the appear/
+ * disappear slide+fade runs on the independent \`translate\` property so it never
+ * fights the positioning transform. */
+.home-spark-wrap { position: relative; }
+.home-spark-tip {
+  position: absolute;
+  bottom: 100%;
+  margin-bottom: 6px;
+  padding: 3px 7px;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--home-accent) 10%, rgb(8 8 12 / 0.96));
+  border: 1px solid var(--home-border);
+  color: rgb(236 236 242);
+  font-size: 10px;
+  line-height: 1.3;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  translate: 0 4px;
+  transition: opacity 0.18s ease, translate 0.18s ease, transform 0.18s ease;
+  z-index: 6;
+}
+.home-spark-tip.show { opacity: 1; translate: 0 0; }
+.home-spark-tip b { color: var(--home-accent); font-weight: 600; }
+
+/* Line/area chart (tokens widget, alternative to the bars). Stretched to fill
+ * via preserveAspectRatio=none; the stroke stays crisp with non-scaling-stroke. */
+.home-area {
+  display: block;
+  width: 100%;
+  height: max(18px, 22cqh);
+  margin: 6px 0 4px;
+  overflow: visible;
+}
+.home-area rect { cursor: default; }
+
+/* Host graphs view: four live sparklines (cpu / ram / load / proc) in a 2×2
+ * grid over a rolling one-minute window. Fills the widget below the header
+ * (same absolute pattern as the canvas widgets); cells reuse .home-area but
+ * stretch to their cell height instead of the tokens widget's fixed band. */
+.host-sparks {
+  position: absolute;
+  inset: 30px 12px 10px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  gap: 4px 12px;
+  min-height: 0;
+}
+.host-spark {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+}
+.host-spark-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: max(8px, min(3.2cqw, 6cqh));
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.host-spark-head .val {
+  font-variant-numeric: tabular-nums;
+  color: var(--home-accent);
+}
+.host-spark .home-area {
+  flex: 1;
+  height: auto;
+  min-height: 12px;
+  margin: 2px 0 0;
+}
+
+/* Small vertical divider between the range arrows and the toggles. */
+.tok-div {
+  width: 1px;
+  align-self: stretch;
+  margin: 2px 2px;
+  background: var(--home-border);
+}
+
+/* Totals line, regrouped: each label sticks to its value, groups spaced evenly
+ * (the old \`.row\` space-between scattered the six tokens across the full width). */
+.tok-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 14px;
+  padding: 3px 0 1px;
+  font-variant-numeric: tabular-nums;
+}
+.tok-stats > span { white-space: nowrap; }
+.tok-stats .dim { margin-right: 2px; }
+
+/* ── logs widget (per-file record list) ── */
+.logs-sub {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+}
+.logs-file {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: var(--home-accent);
+}
+/* The wrapper owns the widget's remaining height so the list scrolls inside it
+ * instead of growing past the bottom edge (the old calc() resolved against an
+ * auto-height parent and never clamped). */
+.home-logs-wrap {
+  display: flex;
+  flex-direction: column;
+  height: calc(100% - 21px);
+  min-height: 0;
+}
+.home-logs {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  flex: 1 1 0;
+  min-height: 0;
+  overflow-y: auto;
+  margin-top: 3px;
+  /* Rows that don't fit fade out instead of being sliced by the edge. */
+  mask-image: linear-gradient(180deg, #000 calc(100% - 14px), transparent);
+}
+.log-row {
+  display: flex;
+  gap: 6px;
+  align-items: baseline;
+  padding: 1px 0;
+  border-bottom: 1px solid rgb(255 255 255 / 0.04);
+  cursor: default;
+}
+.log-row:last-child { border-bottom: none; }
+.log-lvl {
+  flex: none;
+  width: 32px;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+}
+.log-lvl.lvl-error { color: var(--home-error); }
+.log-lvl.lvl-warn { color: #f5b945; }
+.log-lvl.lvl-info { color: var(--color-muted-foreground, #6b7387); }
+.log-time {
+  flex: none;
+  font-size: 9px;
+  color: var(--color-muted-foreground, #6b7387);
+  font-variant-numeric: tabular-nums;
+}
+.log-msg {
+  flex: 1;
+  min-width: 0;
+  font-size: 10px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.home-matrix-c {
+  position: absolute;
+  inset: 0;
+  top: 24px;
+  width: 100%;
+  height: calc(100% - 24px);
+}
+
+/* ── notes widget ── */
+.home-notes { display: flex; flex-direction: column; gap: 1px; height: calc(100% - 18px); overflow-y: auto; }
+.home-notes .note-row {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  padding: 1px 0;
+  border-bottom: 1px solid rgb(255 255 255 / 0.04);
+}
+.home-notes .note-mark {
+  cursor: pointer;
+  width: 12px;
+  text-align: center;
+  color: var(--home-accent);
+  flex-shrink: 0;
+}
+.home-notes .note-mark.done { color: var(--color-muted-foreground, #6b7387); }
+.home-notes .note-text { cursor: text; flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.home-notes .note-text.done {
+  text-decoration: line-through;
+  color: var(--color-muted-foreground, #6b7387);
+}
+.home-notes .note-input {
+  flex: 1;
+  min-width: 0;
+  background: none;
+  border: none;
+  border-bottom: 1px dashed var(--home-border);
+  outline: none;
+  color: inherit;
+  font: inherit;
+  padding: 0;
+}
+.home-notes .note-add {
+  align-self: flex-start;
+  margin-top: 4px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--home-accent-dim);
+  font-size: 14px;
+  line-height: 1;
+  padding: 2px 6px 2px 2px;
+}
+.home-notes .note-add:hover { color: var(--home-accent); }
+
+/* ── canvas widgets (heartbeat, life) ── */
+.home-canvas {
+  position: absolute;
+  inset: 0;
+  top: 24px;
+  width: 100%;
+  height: calc(100% - 24px);
+}
+/* Life is drawable in rest mode — signal it with a crosshair. */
+.home-root:not(.editing) .home-life { cursor: crosshair; }
+
+/* ── moon ── */
+.home-moon-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  height: calc(100% - 18px);
+}
+.home-moon-c { flex: 1; width: 100%; min-height: 0; }
+.home-moon-label {
+  color: var(--home-accent-dim);
+  font-size: max(8px, min(3cqw, 6cqh));
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+/* ── pomodoro / countdown ── */
+.home-pomo .home-clock,
+.home-count .home-clock { cursor: pointer; }
+.home-pomo .home-clock.paused { opacity: 0.55; }
+.home-pomo .pomo-sub { cursor: pointer; }
+.home-count .count-label { cursor: pointer; }
+.home-count .count-input,
+.home-pomo .count-input { max-width: 92%; text-align: center; color-scheme: dark; }
+
+/* ── countdown segment editor (alarm-style spinners) ── */
+.count-edit {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  height: calc(100% - 18px);
+}
+.count-edit-row { display: flex; align-items: center; gap: 5px; }
+.count-seg { display: flex; flex-direction: column; align-items: center; }
+.count-seg .seg-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  line-height: 0.6;
+  font-size: 8px;
+  color: var(--home-accent-dim);
+}
+.count-seg .seg-btn:hover { color: var(--home-accent); }
+.count-seg .seg-val {
+  background: none;
+  border: none;
+  outline: none;
+  text-align: center;
+  color: var(--home-accent);
+  font: inherit;
+  font-weight: 800;
+  font-size: max(12px, min(7cqw, 15cqh));
+  padding: 1px 0;
+  border-bottom: 1px solid transparent;
+  letter-spacing: 0.02em;
+}
+.count-seg input.seg-val:focus { border-bottom-color: var(--home-accent); }
+.count-seg .seg-static { cursor: default; }
+.count-colon {
+  font-weight: 800;
+  color: var(--home-accent-dim);
+  font-size: max(12px, min(7cqw, 15cqh));
+}
+.count-done {
+  margin-top: 3px;
+  background: none;
+  border: 1px solid var(--home-border);
+  border-radius: 6px;
+  color: var(--home-accent);
+  cursor: pointer;
+  font: inherit;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 2px 12px;
+}
+.count-done:hover { border-color: var(--home-accent); }
+.home-pomo .pomo-min {
+  font-size: min(20cqw, 40cqh);
+  font-weight: 800;
+  color: var(--home-accent);
+  max-width: 70%;
+}
+/* Hover steppers for the pomodoro work/break lengths. */
+.hover-ctl.pomo-set { flex-direction: column; align-items: flex-end; gap: 1px; }
+.pomo-stepper { display: flex; align-items: center; gap: 3px; }
+.pomo-stepper .hv-label:nth-child(3) { min-width: 16px; text-align: center; color: var(--home-accent); }
+
+/* ── calendar ── */
+.home-cal { height: calc(100% - 18px); display: flex; flex-direction: column; }
+.home-cal-month {
+  text-align: center;
+  color: var(--home-accent-dim);
+  font-size: max(9px, min(3.2cqw, 7cqh));
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+.home-cal-grid {
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  align-content: space-evenly;
+  justify-items: center;
+  font-size: max(8px, min(3cqw, 6.5cqh));
+}
+.home-cal-h { color: var(--color-muted-foreground, #6b7387); }
+.home-cal-d { color: var(--color-foreground, #d8dce6); opacity: 0.75; }
+.home-cal-today {
+  color: #000;
+  background: var(--home-accent);
+  border-radius: 4px;
+  padding: 0 4px;
+  font-weight: 700;
+}
+/* Density tiers, chosen from the widget's cell width (see CalendarWidget). */
+.home-cal.tier-mini .home-cal-month {
+  font-size: max(8px, min(4cqw, 8cqh));
+  margin-bottom: 2px;
+}
+.home-cal.tier-mini .home-cal-grid { font-size: max(9px, min(4cqw, 8cqh)); }
+.home-cal.tier-large .home-cal-month {
+  font-size: max(11px, min(3cqw, 7cqh));
+  margin-bottom: 7px;
+}
+.home-cal.tier-large .home-cal-grid { row-gap: 3px; }
+.home-cal.tier-large .home-cal-h { font-weight: 700; opacity: 0.8; }
+.home-cal.tier-large .home-cal-today { padding: 1px 6px; }
+
+/* ── page chrome ── */
+/* Edit affordance lives BELOW the grid, centered. It fades in once the user
+ * starts scrolling down (or immediately when the grid is short enough that
+ * there's nothing to scroll), keeping the home clean on first paint. While
+ * editing it sticks to the bottom of the viewport so it stays reachable. */
+.home-editbar {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  padding: 22px 12px 30px;
+  opacity: 0;
+  transition: opacity 0.25s ease;
+  pointer-events: none;
+}
+.home-editbar.visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+.home-root.editing .home-editbar {
+  position: sticky;
+  bottom: 0;
+}
+.home-fab {
+  position: relative;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  cursor: pointer;
+  color: var(--home-accent);
+  background: var(--home-surface);
+  border: 1px solid var(--home-border);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  transition:
+    border-color 0.25s ease,
+    background 0.35s ease,
+    box-shadow 0.45s ease,
+    transform 0.4s cubic-bezier(0.34, 1.4, 0.64, 1);
+}
+.home-fab:hover {
+  border-color: var(--home-accent);
+  transform: scale(1.06);
+}
+.home-fab:active { transform: scale(0.94); }
+.home-fab.active {
+  background: color-mix(in srgb, var(--home-accent) 22%, transparent);
+  /* Warm Hermes glow ring when edit mode engages. */
+  animation: home-fab-glow 0.55s ease-out;
+}
+
+/* Crossfading edit ✎ ↔ done ✓ glyphs — each rotates and scales through the
+ * swap with a gentle overshoot, matching the dashboard's soft motion. */
+.home-fab-ico {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition:
+    opacity 0.3s ease,
+    transform 0.45s cubic-bezier(0.34, 1.45, 0.64, 1);
+}
+.ico-edit { opacity: 1; transform: rotate(0) scale(1); }
+.ico-done { opacity: 0; transform: rotate(-120deg) scale(0.3); }
+.home-fab.active .ico-edit { opacity: 0; transform: rotate(120deg) scale(0.3); }
+.home-fab.active .ico-done { opacity: 1; transform: rotate(0) scale(1); }
+
+.home-fab-spin {
+  display: inline-block;
+  animation: home-fab-spin-in 0.5s cubic-bezier(0.34, 1.4, 0.64, 1);
+}
+
+/* The restore-default button slides up into place, like the dashboard's
+ * dialog-in entrance. */
+.home-fab-enter {
+  animation: home-fab-enter 0.32s cubic-bezier(0.34, 1.3, 0.64, 1);
+}
+
+@keyframes home-fab-glow {
+  0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--home-accent) 55%, transparent); }
+  100% { box-shadow: 0 0 0 13px transparent; }
+}
+@keyframes home-fab-spin-in {
+  from { transform: rotate(-150deg); opacity: 0.3; }
+  to   { transform: rotate(0); opacity: 1; }
+}
+@keyframes home-fab-enter {
+  from { opacity: 0; transform: translateY(6px) scale(0.9); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-fab,
+  .home-fab-ico,
+  .home-fab-spin,
+  .home-fab-enter { animation: none; transition: opacity 0.2s ease; }
+}
+
+/* ── toast (plugin-local; the host toast isn't exposed in the SDK) ── */
+.home-toast {
+  position: fixed;
+  bottom: 18px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 80;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 12px;
+  color: var(--home-error, #e25555);
+  background: var(--home-surface);
+  border: 1px solid var(--home-error, #e25555);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.45);
+  animation: home-toast-in 0.25s ease;
+}
+@keyframes home-toast-in {
+  from { opacity: 0; transform: translateX(-50%) translateY(8px); }
+  to { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+/* Catalog reveal: the wrapper animates its row track 0fr → 1fr so the panel
+ * grows/collapses its real height smoothly (no grid jump), with a matching
+ * fade. Kept mounted so the exit animates too. */
+.home-catalog-wrap {
+  display: grid;
+  grid-template-rows: 0fr;
+  margin: 0 12px;
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    grid-template-rows 0.34s cubic-bezier(0.34, 1.2, 0.64, 1),
+    opacity 0.28s ease,
+    margin-bottom 0.34s ease;
+}
+.home-catalog-wrap.open {
+  grid-template-rows: 1fr;
+  opacity: 1;
+  pointer-events: auto;
+  margin-bottom: 8px;
+}
+.home-catalog {
+  overflow: hidden;
+  min-height: 0;
+  border-radius: 8px;
+  background: var(--home-surface);
+  border: 1px solid var(--home-border);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+/* Highlighted as a delete target while a widget is dragged over it. */
+.home-catalog-wrap.trash-active .home-catalog {
+  border-color: var(--home-error);
+  border-style: dashed;
+  background: color-mix(in srgb, var(--home-error) 10%, var(--home-surface));
+}
+.home-catalog-inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 10px;
+}
+.home-catalog-hint {
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  color: var(--color-muted-foreground, #6b7387);
+  margin-right: 4px;
+}
+.home-catalog-wrap.trash-active .home-catalog-hint { color: var(--home-error); }
+.home-catalog-chip { touch-action: none; }
+.home-catalog-chip {
+  font-family: inherit;
+  font-size: 11px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  background: none;
+  border: 1px dashed var(--home-border);
+  color: var(--color-foreground, #d8dce6);
+  transition: border-color 0.2s ease, color 0.2s ease, transform 0.2s ease;
+}
+.home-catalog-chip:hover {
+  border-color: var(--home-accent);
+  color: var(--home-accent);
+  transform: translateY(-1px);
+}
+.home-catalog-chip:active { transform: scale(0.95); }
+.home-catalog .empty { color: var(--color-muted-foreground, #6b7387); font-size: 11px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .home-catalog-wrap { transition: opacity 0.2s ease; }
+}
+
+/* ── Agent widget (the eye) ─────────────────────────────────────────── */
+
+.home-agent {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  /* The .hd header sits above in the same content box (same as the other
+   * widgets' calc) — 100% pushed the stats row 8px past the bottom edge. */
+  height: calc(100% - 21px);
+  min-height: 0;
+  overflow: hidden;
+  font-size: 11px;
+  box-sizing: border-box;
+}
+
+/* The animated scene owns the leftover space and centers its content
+ * vertically; head/stats/history are fixed rows that never move or
+ * overflow. flex-basis: 0 — the scene shrinks to zero before the fixed
+ * rows are ever pushed out. */
+.home-agent-scene {
+  flex: 1 1 0;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+}
+
+.home-agent-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  min-height: 18px;
+  flex: none;
+}
+
+.home-agent-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--home-accent);
+  opacity: 0.45;
+  flex: none;
+  box-shadow: 0 0 6px var(--home-accent);
+}
+.home-agent-dot.busy {
+  opacity: 1;
+  animation: home-agent-pulse 1.2s ease-in-out infinite;
+}
+@keyframes home-agent-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.35; transform: scale(0.8); }
+}
+
+.home-agent-status {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 10px;
+  color: var(--color-foreground, #d8dce6);
+}
+
+.home-agent-take {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--home-accent-dim);
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 1px 5px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+.home-agent-take:hover { color: var(--home-accent); background: color-mix(in srgb, var(--home-accent) 10%, transparent); }
+.home-agent-take:active { transform: scale(0.95); }
+
+/* Play triangle, pure CSS — no emoji. */
+.home-agent-take-ico {
+  width: 0;
+  height: 0;
+  border-left: 4.5px solid currentColor;
+  border-top: 3px solid transparent;
+  border-bottom: 3px solid transparent;
+}
+
+.home-agent-line {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.home-agent-toolbox {
+  display: flex;
+  gap: 6px;
+  align-items: baseline;
+}
+.home-agent-k {
+  color: var(--home-accent);
+  flex: none;
+}
+.home-agent-dim { color: var(--color-muted-foreground, #6b7387); }
+
+.home-agent-msg {
+  color: var(--color-muted-foreground, #8b93a7);
+  font-style: italic;
+  max-height: 42px;
+  white-space: normal;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.home-agent-stats {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  font-size: 10px;
+  color: var(--color-foreground, #d8dce6);
+  border-top: 1px solid var(--home-border);
+  padding-top: 5px;
+  /* Shrinkable last: the scene compresses first (flex-basis 0), then this
+     row and the history may compress instead of overflowing the widget. */
+  flex: 0 1 auto;
+  min-height: 0;
+  overflow: hidden;
+}
+.home-agent-stats span {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+.home-agent-stats i {
+  font-style: normal;
+  color: var(--color-muted-foreground, #6b7387);
+  font-size: 9px;
+}
+
+.home-agent-history {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  max-height: 40px;
+  overflow: hidden;
+  flex: 0 1 auto;
+  min-height: 0;
+}
+.home-agent-hist {
+  font-size: 10px;
+  color: var(--color-muted-foreground, #8b93a7);
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+}
+.home-agent-hist-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  flex: none;
+}
+.home-agent-hist-dot.ok { background: #2dd4bf; }
+.home-agent-hist-dot.bad { background: var(--home-error); }
+.home-agent-hist i {
+  font-style: normal;
+  font-size: 9px;
+  color: var(--color-muted-foreground, #6b7387);
+}
+
+/* ── Agent theater (take-control fullscreen) ───────────────────────── */
+
+.home-theater {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: color-mix(in srgb, var(--ui-editor-surface-background, rgb(8 8 12 / 1)) 92%, #000);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  display: flex;
+  flex-direction: column;
+  padding: 18px 22px 22px;
+  gap: 14px;
+  overflow: auto;
+  font-family: var(--theme-font-mono, ui-monospace, monospace);
+  color: var(--color-foreground, #d8dce6);
+  animation: home-theater-in 0.22s ease;
+}
+@keyframes home-theater-in {
+  from { opacity: 0; transform: scale(0.985); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.home-theater-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border-bottom: 1px solid var(--home-border);
+  padding-bottom: 10px;
+  flex: none;
+}
+
+.home-theater-title {
+  font-size: 13px;
+  letter-spacing: 0.14em;
+  color: var(--home-accent);
+}
+
+.home-theater-sub {
+  font-size: 10px;
+  color: var(--color-muted-foreground, #6b7387);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.home-theater-release {
+  margin-left: auto;
+  background: transparent;
+  border: 1px solid var(--home-border);
+  color: var(--color-foreground, #d8dce6);
+  border-radius: 6px;
+  font-size: 11px;
+  font-family: inherit;
+  padding: 4px 12px;
+  cursor: pointer;
+  transition: border-color 0.15s ease, color 0.15s ease;
+}
+.home-theater-release:hover {
+  border-color: var(--home-error);
+  color: var(--home-error);
+}
+
+.home-theater-grid {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 12px;
+  flex: 1;
+  min-height: 0;
+  align-content: start;
+}
+.home-theater-span-5 { grid-column: span 5; }
+.home-theater-span-7 { grid-column: span 7; }
+.home-theater-span-12 { grid-column: span 12; }
+@media (max-width: 900px) {
+  .home-theater-span-5, .home-theater-span-7, .home-theater-span-12 { grid-column: span 12; }
+}
+
+.home-theater-panel {
+  background: var(--home-surface);
+  border: 1px solid var(--home-border);
+  border-radius: 10px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 160px;
+  max-height: 420px;
+  overflow: hidden;
+  box-shadow: 0 10px 30px rgb(0 0 0 / 0.35);
+}
+
+.home-theater-panel-title {
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  color: var(--color-muted-foreground, #6b7387);
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex: none;
+  text-transform: uppercase;
+}
+.home-theater-dim {
+  color: var(--color-muted-foreground, #6b7387);
+  font-size: 10px;
+  font-style: italic;
+}
+
+/* NOW panel */
+.home-theater-current-tool {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  background: color-mix(in srgb, var(--home-accent) 8%, transparent);
+  border: 1px solid var(--home-border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  flex: none;
+}
+.home-theater-ct-name {
+  color: var(--home-accent);
+  font-size: 12px;
+}
+.home-theater-ct-args {
+  font-size: 10px;
+  color: var(--color-muted-foreground, #8b93a7);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.home-theater-stream {
+  font-size: 11px;
+  line-height: 1.55;
+  color: var(--color-foreground, #d8dce6);
+  background: color-mix(in srgb, var(--home-accent) 4%, transparent);
+  border-left: 2px solid var(--home-accent);
+  padding: 6px 10px;
+  border-radius: 0 6px 6px 0;
+  max-height: 110px;
+  overflow: auto;
+  flex: none;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.home-theater-feed {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 10.5px;
+}
+.home-theater-feed-row {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  padding: 1px 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--home-border) 40%, transparent);
+  animation: home-feed-in 0.32s ease-out both;
+}
+.home-theater-feed-time {
+  color: var(--color-muted-foreground, #555d70);
+  flex: none;
+  font-size: 9.5px;
+}
+/* Kind dot, pure CSS — no emoji. */
+.home-theater-feed-kind {
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  align-self: center;
+}
+.home-theater-feed-kind.tool { background: var(--home-accent); }
+.home-theater-feed-kind.message { background: #2dd4bf; }
+.home-theater-feed-kind.subagent { background: #a78bfa; }
+.home-theater-feed-kind.system { background: var(--color-muted-foreground, #6b7387); }
+.home-theater-feed-kind.bad { background: var(--home-error); }
+.home-theater-feed-label {
+  color: var(--color-foreground, #d8dce6);
+  flex: none;
+}
+.home-theater-feed-detail {
+  color: var(--color-muted-foreground, #8b93a7);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.home-theater-foot {
+  display: flex;
+  gap: 14px;
+  font-size: 9.5px;
+  color: var(--color-muted-foreground, #555d70);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  flex: none;
+  border-top: 1px solid var(--home-border);
+  padding-top: 6px;
+}
+
+/* FUNCTION panel */
+.home-theater-fn-current {
+  background: color-mix(in srgb, var(--home-accent) 8%, transparent);
+  border: 1px solid var(--home-border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: none;
+}
+.home-theater-fn-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--home-accent);
+}
+.home-theater-fn-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex: none;
+}
+.home-theater-fn-dot.running {
+  background: var(--home-accent);
+  animation: home-agent-pulse 1.2s ease-in-out infinite;
+}
+.home-theater-fn-dot.ok { background: #2dd4bf; }
+.home-theater-fn-dot.bad { background: var(--home-error); }
+.home-theater-fn-state {
+  margin-left: auto;
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 1px 8px;
+  border-radius: 20px;
+  border: 1px solid;
+}
+.home-theater-fn-state.running {
+  color: var(--home-accent);
+  border-color: var(--home-accent);
+}
+.home-theater-fn-args {
+  font-size: 10px;
+  color: var(--color-muted-foreground, #8b93a7);
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 120px;
+  overflow: auto;
+  margin: 0;
+  font-family: inherit;
+}
+
+.home-theater-fn-history {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 10.5px;
+}
+.home-theater-fn-row {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  border-bottom: 1px solid color-mix(in srgb, var(--home-border) 40%, transparent);
+  padding: 2px 0;
+}
+.home-theater-fn-hname { color: var(--color-foreground, #d8dce6); flex: none; }
+.home-theater-fn-hargs {
+  color: var(--color-muted-foreground, #8b93a7);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+.home-theater-fn-hdur {
+  margin-left: auto;
+  color: var(--color-muted-foreground, #6b7387);
+  flex: none;
+  font-size: 9.5px;
+}
+
+/* TOKENS & COST panel */
+.home-theater-tok-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+.home-theater-tok-cell {
+  background: color-mix(in srgb, var(--home-accent) 5%, transparent);
+  border: 1px solid var(--home-border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  overflow: hidden;
+}
+.home-theater-tok-num {
+  font-size: 15px;
+  color: var(--color-foreground, #d8dce6);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.home-theater-tok-num.home-theater-money { color: var(--home-accent); }
+.home-theater-tok-lbl {
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--color-muted-foreground, #6b7387);
+}
+
+.home-theater-tok-models {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 10px;
+  border-top: 1px solid var(--home-border);
+  padding-top: 6px;
+}
+.home-theater-tok-model {
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
+}
+.home-theater-tok-mname { color: var(--color-foreground, #d8dce6); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.home-theater-tok-mtok { color: var(--color-muted-foreground, #8b93a7); margin-left: auto; }
+.home-theater-tok-mcost { color: var(--home-accent); flex: none; }
+
+.home-theater-tok-session {
+  border-top: 1px solid var(--home-border);
+  padding-top: 6px;
+  font-size: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.home-theater-tok-slbl {
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--color-muted-foreground, #6b7387);
+}
+.home-theater-tok-stitle {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.home-theater-tok-snum {
+  color: var(--color-muted-foreground, #8b93a7);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* PROJECT panel */
+.home-theater-proj-session {
+  background: color-mix(in srgb, var(--home-accent) 5%, transparent);
+  border: 1px solid var(--home-border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.home-theater-proj-title { font-size: 12px; color: var(--color-foreground, #d8dce6); }
+.home-theater-proj-meta {
+  font-size: 9.5px;
+  color: var(--color-muted-foreground, #6b7387);
+}
+
+.home-theater-proj-files {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 10.5px;
+}
+.home-theater-proj-file {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  border-bottom: 1px solid color-mix(in srgb, var(--home-border) 40%, transparent);
+  padding: 2px 0;
+}
+.home-theater-proj-glyph {
+  color: var(--home-accent);
+  flex: none;
+  font-size: 9px;
+  width: 16px;
+  text-align: center;
+}
+.home-theater-proj-path {
+  color: var(--color-muted-foreground, #8b93a7);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.home-theater-proj-subagents {
+  border-top: 1px solid var(--home-border);
+  padding-top: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 10px;
+}
+.home-theater-proj-subagent { display: flex; gap: 8px; align-items: baseline; }
+.home-theater-proj-subdot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex: none;
+  align-self: center;
+}
+.home-theater-proj-subdot.run { background: var(--home-accent); animation: home-agent-pulse 1.2s ease-in-out infinite; }
+.home-theater-proj-subdot.done { background: #2dd4bf; }
+.home-theater-proj-subname { color: var(--color-foreground, #d8dce6); }
+.home-theater-proj-subgoal {
+  color: var(--color-muted-foreground, #6b7387);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* RECOMMENDATIONS panel */
+.home-theater-rec-list {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.home-theater-rec {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  border: 1px solid var(--home-border);
+  border-radius: 8px;
+  padding: 7px 10px;
+  background: color-mix(in srgb, var(--home-surface) 60%, transparent);
+}
+.home-theater-rec.warn { border-color: color-mix(in srgb, #e8b33c 45%, transparent); }
+.home-theater-rec.crit { border-color: color-mix(in srgb, var(--home-error) 55%, transparent); }
+.home-theater-rec-tag {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 10px;
+  margin-top: 1px;
+}
+.home-theater-rec.info .home-theater-rec-tag {
+  color: var(--home-accent);
+  border: 1px solid var(--home-accent);
+}
+.home-theater-rec.warn .home-theater-rec-tag {
+  color: #e8b33c;
+  border: 1px solid #e8b33c;
+}
+.home-theater-rec.crit .home-theater-rec-tag {
+  color: var(--home-error);
+  border: 1px solid var(--home-error);
+}
+.home-theater-rec-body { min-width: 0; }
+.home-theater-rec-title { font-size: 11px; color: var(--color-foreground, #d8dce6); }
+.home-theater-rec-detail {
+  font-size: 10px;
+  color: var(--color-muted-foreground, #8b93a7);
+  margin-top: 1px;
+}
+
+/* ── Live scene — the animated centerpiece ────────────────────────────
+ * On identity change: the outgoing content slides up while fading, the
+ * incoming content rises from below with a blur that dissolves as it
+ * settles. */
+
+.home-theater-scene {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+}
+
+.home-scene {
+  position: relative;
+  width: 100%;
+}
+
+.home-scene-item {
+  animation: home-scene-in 0.42s ease-out both;
+}
+
+.home-scene-item.leaving {
+  position: absolute;
+  inset-inline: 0;
+  top: 0;
+  animation: home-scene-out 0.4s ease-in forwards;
+  pointer-events: none;
+}
+
+@keyframes home-scene-in {
+  from {
+    opacity: 0;
+    transform: translateY(26px);
+    filter: blur(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+    filter: blur(0);
+  }
+}
+
+@keyframes home-scene-out {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+    filter: blur(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-26px);
+    filter: blur(4px);
+  }
+}
+
+@keyframes home-feed-in {
+  from { opacity: 0; transform: translateY(7px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes home-caret-blink {
+  0%, 45% { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
+
+/* Scene content — tool call */
+.home-scene-tool {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.home-scene-title {
+  color: var(--home-accent);
+  font-size: 12px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.home-scene-meta {
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-muted-foreground, #6b7387);
+}
+.home-scene-args {
+  margin: 0;
+  font-family: inherit;
+  font-size: 10px;
+  color: var(--color-muted-foreground, #8b93a7);
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 90px;
+  overflow: auto;
+}
+
+/* Scene content — message (markdown-rendered) */
+.home-scene-msg {
+  font-size: 11.5px;
+  line-height: 1.6;
+  color: var(--color-foreground, #d8dce6);
+  word-break: break-word;
+  max-height: 150px;
+  overflow: auto;
+}
+.home-scene-msg strong {
+  color: var(--home-accent);
+  font-weight: 650;
+}
+.home-scene-msg em { font-style: italic; }
+.home-scene-msg code {
+  font-family: var(--theme-font-mono, ui-monospace, monospace);
+  font-size: 0.92em;
+  color: var(--home-accent);
+  background: color-mix(in srgb, var(--home-accent) 10%, transparent);
+  padding: 0 4px;
+  border-radius: 4px;
+  white-space: pre-wrap;
+}
+.home-scene-msg .home-md-pre {
+  margin: 4px 0;
+  background: color-mix(in srgb, var(--home-accent) 5%, transparent);
+  border: 1px solid var(--home-border);
+  border-left: 2px solid var(--home-accent);
+  border-radius: 0 6px 6px 0;
+  padding: 6px 10px;
+  overflow: auto;
+  max-height: 120px;
+}
+.home-scene-msg .home-md-pre code {
+  background: none;
+  padding: 0;
+  color: var(--color-muted-foreground, #9aa3b8);
+  font-size: 10px;
+  line-height: 1.5;
+  white-space: pre;
+}
+.home-scene-msg .home-md-h {
+  color: var(--home-accent);
+  font-weight: 650;
+  margin: 3px 0 1px;
+}
+.home-scene-msg .home-md-h.h1 { font-size: 13px; letter-spacing: 0.02em; }
+.home-scene-msg .home-md-h.h2 { font-size: 12px; }
+.home-scene-msg .home-md-h.h3 { font-size: 11px; }
+.home-scene-msg .home-md-p { margin: 2px 0; }
+.home-scene-msg .home-md-gap { height: 4px; }
+.home-scene-msg .home-md-list { margin: 2px 0; display: flex; flex-direction: column; gap: 1px; }
+.home-scene-msg .home-md-li {
+  padding-left: 14px;
+  position: relative;
+}
+.home-scene-msg .home-md-li::before {
+  content: "";
+  position: absolute;
+  left: 3px;
+  top: 0.62em;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--home-accent);
+  opacity: 0.8;
+}
+.home-scene-caret {
+  display: inline-block;
+  width: 6px;
+  height: 13px;
+  margin-left: 2px;
+  vertical-align: -2px;
+  background: var(--home-accent);
+  animation: home-caret-blink 1s steps(1) infinite;
+}
+
+/* Scene content — idle */
+.home-scene-idle {
+  font-size: 10px;
+  font-style: italic;
+  color: var(--color-muted-foreground, #6b7387);
+}
+
+/* Compact scene (widget body) */
+.home-agent-scene .home-scene {
+  display: flex;
+  min-height: 0;
+  overflow: hidden;
+}
+.home-agent-scene .home-scene-item {
+  min-width: 0;
+  min-height: 0;
+  flex: 1;
+}
+.home-agent-scene .home-scene-msg {
+  font-size: 10.5px;
+  max-height: 64px;
+  overflow: hidden;
+}
+.home-agent-scene .home-scene-tool {
+  gap: 2px;
+}
+.home-agent-scene .home-scene-title {
+  font-size: 11px;
+}
+.home-agent-scene .home-scene-args {
+  font-size: 10px;
+  max-height: 36px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+}
+.home-agent-scene .home-agent-scene-meta,
+.home-agent-scene .home-agent-scene-idle {
+  font-size: 9.5px;
+}
+
+/* Projects widget */
+.home-projects {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 10.5px;
+  max-height: 100%;
+  overflow-y: auto;
+}
+.project-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 6px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.03);
+}
+.project-row.ok { border-left: 2px solid #4ade80; }
+.project-row.warn { border-left: 2px solid #fbbf24; }
+.project-row.err { border-left: 2px solid #f87171; }
+.project-row.dim { border-left: 2px solid #6b7280; }
+.project-icon { font-size: 10px; }
+.project-row.ok .project-icon { color: #4ade80; }
+.project-row.warn .project-icon { color: #fbbf24; }
+.project-row.err .project-icon { color: #f87171; }
+.project-name { font-weight: 600; flex: 1; }
+.project-stats { color: var(--ui-text-secondary, #9ca3af); font-size: 9.5px; }
+.project-time { color: var(--ui-text-quaternary, #6b7280); font-size: 9px; }
+.project-row { cursor: pointer; }
+.project-row:hover { background: rgba(255, 255, 255, 0.06); }
+.project-caret { color: var(--ui-text-quaternary, #6b7280); font-size: 9px; width: 10px; text-align: center; }
+.project-item.open .project-row { background: rgba(255, 255, 255, 0.06); }
+.project-detail {
+  margin: 2px 0 4px 14px;
+  padding: 6px 8px;
+  border-left: 1px dashed rgba(255, 255, 255, 0.12);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 9.5px;
+}
+.project-detail-row { line-height: 1.4; }
+.project-alerts ul { margin: 2px 0 0 14px; padding: 0; list-style: disc; }
+.project-alerts li { color: #f87171; }
 `;
 const HOME_DESKTOP_PATH = "/home";
 const DESKTOP_START_KEY = "home-dashboard.opened-this-start";

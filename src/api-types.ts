@@ -59,6 +59,20 @@ export interface PaginatedSessions {
   offset: number;
 }
 
+export interface ProjectStatus {
+  id: string;
+  project: string;
+  status: string;
+  lastUpdated: string;
+  stats: {
+    inbox: number;
+    inProgress: number;
+    completed: number;
+  };
+  alerts: string[];
+  nextAction: string;
+}
+
 export interface SystemStats {
   os: string;
   os_release: string;

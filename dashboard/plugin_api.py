@@ -128,3 +128,28 @@ async def get_desktop_sessions(
         order="recent",
         profile=profile,
     )
+
+
+@router.get("/projects")
+async def get_desktop_projects() -> Dict[str, Any]:
+    """Scan ~/projects/*/status.json for project status summaries."""
+    import os as _os
+
+    home = _os.path.expanduser("~")
+    projects_dir = _os.path.join(home, "projects")
+    projects = []
+    try:
+        entries = sorted(_os.listdir(projects_dir))
+    except FileNotFoundError:
+        entries = []
+    for entry in entries:
+        status_file = _os.path.join(projects_dir, entry, "status.json")
+        if _os.path.isfile(status_file):
+            try:
+                with open(status_file, "r") as f:
+                    data = json.load(f)
+                data["id"] = entry
+                projects.append(data)
+            except (json.JSONDecodeError, OSError):
+                continue
+    return {"projects": projects}

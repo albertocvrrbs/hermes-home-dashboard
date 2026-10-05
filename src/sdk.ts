@@ -3,7 +3,7 @@
 // endpoints, and fetchJSON. We only declare the slice we use.
 import type {
   StatusResponse, SystemStats, AnalyticsResponse,
-  PaginatedSessions, LogsResponse, CronJob,
+  PaginatedSessions, LogsResponse, CronJob, ProjectStatus,
 } from "./api-types";
 
 export interface HermesApi {
@@ -15,6 +15,7 @@ export interface HermesApi {
   getLogs(params: {
     file?: string; lines?: number; level?: string; component?: string;
   }): Promise<LogsResponse>;
+  getProjects(): Promise<{ projects: ProjectStatus[] }>;
 }
 
 interface HermesPluginSDK {
@@ -71,6 +72,7 @@ export const api: HermesApi = {
   getCronJobs: (profile) => getHost().api.getCronJobs(profile),
   getSessions: (limit, offset) => getHost().api.getSessions(limit, offset),
   getLogs: (params) => getHost().api.getLogs(params),
+  getProjects: () => fetchJSON<{ projects: ProjectStatus[] }>("/api/plugins/home-dashboard/projects"),
 };
 
 export function fetchJSON<T = unknown>(url: string, init?: RequestInit): Promise<T> {
