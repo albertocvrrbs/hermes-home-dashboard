@@ -20,6 +20,37 @@ clone, they never build).
 
 ---
 
+## 1.5.1 — 2026-11-26
+
+Bug-fix release: the backend loads and every data route answers on current
+Hermes (verified against Hermes 0.23.4).
+
+- **Fix: plugin loader refused the package** (#5, #6). The repo shipped no
+  root `__init__.py`, so the agent plugin loader logged `No __init__.py in
+  ...` on every reload. A no-op `register(ctx)` root module now ships
+  (approach from PR #4 by @AgJavis-hub).
+- **Fix: Host widget `/system` returned HTTP 500.** `get_system_stats` is a
+  sync function in Hermes, and awaiting its dict raised `TypeError`. Host
+  services are now called correctly whether they are `def` or `async def`,
+  and the Python test fakes mirror the real signatures.
+- **Host compatibility** (#1). Data services resolve from their current
+  `hermes_cli.web_routers.*` owners and fall back to the old
+  `hermes_cli.web_server` facade only on a pre-split host; a missing
+  dependency inside an existing module still raises. New
+  `scripts/check-host-compatibility.py` exercises the real HTTP adapters
+  against an installed Hermes. `npm test` now runs the Python tests too.
+- **Install scanner** (#2). Cross-directory imports in `src/` use an `@/`
+  alias instead of deep relative chains, and the README no longer uses
+  `rm -rf` or a raw `git clone` URL, so `hermes plugins install` scans
+  clean. The built bundles are unchanged in behavior.
+- **Layout validation:** saved layouts with out-of-grid geometry (negative,
+  zero-size, bool or huge coordinates) are rejected instead of breaking the
+  client grid.
+- `package-lock.json` version had drifted to 1.3.0; all four version fields
+  agree again (spotted in forks).
+- README: troubleshooting for the `offline` / `unavailable` state (enable,
+  doctor, restart).
+
 ## 1.5.0 — 2026-09-27
 
 Polish pass, verified in a live Hermes Desktop.
