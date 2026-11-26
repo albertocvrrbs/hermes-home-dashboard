@@ -2,6 +2,8 @@
 
 [![Follow @albertocvrrbs on X](https://img.shields.io/badge/Follow%20@albertocvrrbs-on%20X-000000?logo=x&logoColor=white&style=for-the-badge)](https://x.com/albertocvrrbs)
 
+![Home Dashboard — a rice-style Home page for Hermes Agent](assets/catalog-banner.png)
+
 A customizable, *rice*-style **Home page** for the [Hermes Agent](https://github.com/NousResearch/hermes-agent) web dashboard and native Desktop app.
 
 It adds a `Home` tab: a grid of glass widgets you can drag, resize, add and
