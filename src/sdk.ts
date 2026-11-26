@@ -3,7 +3,7 @@
 // endpoints, and fetchJSON. We only declare the slice we use.
 import type {
   StatusResponse, SystemStats, AnalyticsResponse, ModelsAnalyticsResponse,
-  PaginatedSessions, LogsResponse, CronJob,
+  PaginatedSessions, LogsResponse, CronJob, ProjectsResponse,
 } from "./api-types";
 
 export interface HermesApi {
@@ -83,6 +83,11 @@ export const api: Required<HermesApi> = {
 
 export function fetchJSON<T = unknown>(url: string, init?: RequestInit): Promise<T> {
   return getHost().fetchJSON<T>(url, init);
+}
+
+/** Project status board data, served by this plugin's own backend. */
+export function getProjects(): Promise<ProjectsResponse> {
+  return fetchJSON<ProjectsResponse>("/api/plugins/home-dashboard/projects");
 }
 
 /** Web dashboard only: the language chosen in the dashboard's own picker,

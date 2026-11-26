@@ -18,6 +18,7 @@ import { PomodoroWidget } from "./PomodoroWidget";
 import { CountdownWidget } from "./CountdownWidget";
 import { CalendarWidget } from "./CalendarWidget";
 import { AgentWidget } from "./AgentWidget";
+import { ProjectsWidget } from "./ProjectsWidget";
 
 export interface WidgetRenderProps {
   data: HomeData;
@@ -198,6 +199,12 @@ export const WIDGET_REGISTRY: Record<string, WidgetDef> = {
   agent: {
     titleKey: "widget.agent",
     component: ({ data }) => <AgentWidget data={data} />,
+    defaultSize: { gw: 4, gh: 3 }, minSize: { gw: 3, gh: 2 },
+    navigateTo: null, dataSource: null,
+  },
+  projects: {
+    titleKey: "widget.projects",
+    component: () => <ProjectsWidget />,
     defaultSize: { gw: 4, gh: 3 }, minSize: { gw: 3, gh: 2 },
     navigateTo: null, dataSource: null,
   },

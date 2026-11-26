@@ -130,6 +130,83 @@ class ModelsRouteTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(caught.exception.status_code, 404)
 
 
+class ProjectsScanTest(unittest.TestCase):
+    def _write(self, root: Path, name: str, body) -> Path:
+        d = root / name
+        d.mkdir(parents=True, exist_ok=True)
+        path = d / "status.json"
+        path.write_text(body if isinstance(body, str) else json.dumps(body), encoding="utf-8")
+        return path
+
+    def test_reads_and_normalizes_status_files(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self._write(root, "wiki", {
+                "project": "Wiki-Ingest", "status": "active", "lastUpdated": "2026-10-04T21:30:00+08:00",
+                "stats": {"inbox": 2, "inProgress": 1, "completed": 15},
+                "alerts": ["disk low", 42, None], "nextAction": "Process pending articles",
+                "secret": "not echoed",
+            })
+            self._write(root, "Alpha", {"stats": {"inbox": "x", "completed": -3, "inProgress": True}})
+            (root / "no-status").mkdir()
+            got = plugin_api.scan_projects(root)
+        self.assertEqual([p["id"] for p in got], ["Alpha", "wiki"])  # case-insensitive name order
+        alpha, wiki = got
+        self.assertEqual(alpha["project"], "Alpha")
+        self.assertEqual(alpha["status"], "unknown")
+        self.assertEqual(alpha["stats"], {"inbox": 0, "inProgress": 0, "completed": 0})
+        self.assertEqual(wiki["stats"], {"inbox": 2, "inProgress": 1, "completed": 15})
+        self.assertEqual(wiki["alerts"], ["disk low", "42"])
+        self.assertNotIn("secret", wiki)
+
+    def test_ignores_bad_json_non_objects_and_oversized_files(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self._write(root, "broken", "{not json")
+            self._write(root, "list", [1, 2, 3])
+            self._write(root, "huge", {"project": "x" * (plugin_api._MAX_STATUS_BYTES + 10)})
+            self._write(root, "deep", "[" * 100_000 + "]" * 100_000)
+            self._write(root, "ok", {"project": "fine"})
+            got = plugin_api.scan_projects(root)
+        self.assertEqual([p["id"] for p in got], ["ok"])
+
+    def test_skips_symlinks_that_escape_the_projects_dir(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            outside = Path(tmp) / "outside"
+            self._write(outside, "leak", {"project": "leaked"})
+            root = Path(tmp) / "projects"
+            root.mkdir()
+            (root / "linked-dir").symlink_to(outside / "leak", target_is_directory=True)
+            (root / "linked-file").mkdir()
+            (root / "linked-file" / "status.json").symlink_to(outside / "leak" / "status.json")
+            got = plugin_api.scan_projects(root)
+        self.assertEqual(got, [])
+
+    def test_missing_dir_is_an_empty_board(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            self.assertEqual(plugin_api.scan_projects(Path(tmp) / "nope"), [])
+
+    def test_scan_is_bounded(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            for i in range(plugin_api._MAX_PROJECTS + 5):
+                self._write(root, f"p{i:03d}", {"project": f"p{i}"})
+            self.assertEqual(len(plugin_api.scan_projects(root)), plugin_api._MAX_PROJECTS)
+
+    def test_dir_is_configurable_and_defaults_to_home_projects(self):
+        with patch.dict(plugin_api.os.environ, {plugin_api.PROJECTS_DIR_ENV: "~/somewhere"}):
+            self.assertEqual(plugin_api.projects_dir(), Path("~/somewhere").expanduser())
+        with patch.dict(plugin_api.os.environ, {plugin_api.PROJECTS_DIR_ENV: ""}):
+            self.assertEqual(plugin_api.projects_dir(), Path.home() / "projects")
+
+    def test_route_wraps_the_scan(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            self._write(Path(tmp), "x", {"project": "X"})
+            with patch.dict(plugin_api.os.environ, {plugin_api.PROJECTS_DIR_ENV: tmp}):
+                got = asyncio.run(plugin_api.get_projects())
+        self.assertEqual([p["project"] for p in got["projects"]], ["X"])
+
+
 class LayoutValidationTest(unittest.TestCase):
     @staticmethod
     def _layout(*widgets):

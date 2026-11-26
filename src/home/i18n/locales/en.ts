@@ -49,6 +49,7 @@ const en = {
   "widget.countdown": "countdown",
   "widget.calendar": "calendar",
   "widget.agent": "agent",
+  "widget.projects": "projects",
 
   // ── ascii ──
   "ascii.art.caduceus": "caduceus",
@@ -174,6 +175,14 @@ const en = {
   "sessions.noneMatch": "no sessions above {n} tokens",
   "sessions.tokensTitle": "{input} in · {output} out",
 
+  // ── projects ──
+  "projects.empty": "no projects — add ~/projects/<name>/status.json",
+  "projects.inbox": "inbox",
+  "projects.doing": "doing",
+  "projects.done": "done",
+  "projects.next": "next:",
+  "projects.alerts": "alerts:",
+  "projects.updated": "updated {when}",
 
   // ── agent widget ──
   "agent.working": "working",

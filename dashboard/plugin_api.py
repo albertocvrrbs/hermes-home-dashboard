@@ -11,8 +11,9 @@ import asyncio
 import importlib
 import inspect
 import json
+import os
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any, Dict, List, Optional
 
 try:
     from hermes_constants import get_hermes_home
@@ -192,3 +193,118 @@ async def get_desktop_sessions(
         profile=profile,
     )
 
+
+# ── Project status board (Projects widget) ──────────────────────────────────
+#
+# Reads ``<projects dir>/<name>/status.json`` — read-only, local files only.
+# The directory is ``$HOME_DASHBOARD_PROJECTS_DIR`` or ``~/projects``; when it
+# does not exist the widget simply shows an empty board. Every bound below is
+# there so a huge or hostile directory can't stall or bloat the response.
+PROJECTS_DIR_ENV = "HOME_DASHBOARD_PROJECTS_DIR"
+_MAX_PROJECT_ENTRIES = 500  # directory entries examined
+_MAX_PROJECTS = 50  # projects returned
+_MAX_STATUS_BYTES = 64 * 1024
+_MAX_TEXT = 200
+_MAX_ALERTS = 10
+
+
+def projects_dir() -> Path:
+    raw = (os.environ.get(PROJECTS_DIR_ENV) or "").strip()
+    return Path(raw).expanduser() if raw else Path.home() / "projects"
+
+
+def _text(value: Any, limit: int = _MAX_TEXT) -> str:
+    if isinstance(value, bool) or value is None:
+        return ""
+    if isinstance(value, (int, float)):
+        value = str(value)
+    if not isinstance(value, str):
+        return ""
+    value = " ".join(value.split())
+    return value if len(value) <= limit else value[: limit - 1] + "…"
+
+
+def _count(value: Any) -> int:
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return 0
+    if value != value:  # NaN
+        return 0
+    return max(0, min(10**9, int(value)))
+
+
+def _normalize_project(entry: str, data: Any) -> Optional[Dict[str, Any]]:
+    """Keep only the documented fields, typed and length-bounded."""
+    if not isinstance(data, dict):
+        return None
+    stats = data.get("stats") if isinstance(data.get("stats"), dict) else {}
+    alerts = data.get("alerts") if isinstance(data.get("alerts"), list) else []
+    return {
+        "id": entry,
+        "project": _text(data.get("project")) or entry,
+        "status": _text(data.get("status"), 40) or "unknown",
+        "lastUpdated": _text(data.get("lastUpdated"), 64) or None,
+        "stats": {
+            "inbox": _count(stats.get("inbox")),
+            "inProgress": _count(stats.get("inProgress")),
+            "completed": _count(stats.get("completed")),
+        },
+        "alerts": [a for a in (_text(x) for x in alerts[:_MAX_ALERTS]) if a],
+        "nextAction": _text(data.get("nextAction")),
+    }
+
+
+def _inside(path: Path, root: Path) -> bool:
+    try:
+        path.relative_to(root)
+        return True
+    except ValueError:
+        return False
+
+
+def scan_projects(root: Path) -> List[Dict[str, Any]]:
+    """Collect ``<root>/<name>/status.json`` summaries, sorted by name.
+
+    Names come from the directory listing (never from the request), symlinks
+    that resolve outside ``root`` are skipped, oversized or invalid JSON is
+    ignored, and the scan stops after a fixed number of entries.
+    """
+    try:
+        base = root.resolve(strict=True)
+    except (OSError, RuntimeError):
+        return []
+    if not base.is_dir():
+        return []
+    try:
+        with os.scandir(base) as it:
+            names = []
+            for i, item in enumerate(it):
+                if i >= _MAX_PROJECT_ENTRIES:
+                    break
+                if not item.name.startswith("."):
+                    names.append(item.name)
+    except OSError:
+        return []
+
+    projects: List[Dict[str, Any]] = []
+    for name in sorted(names, key=str.lower):
+        if len(projects) >= _MAX_PROJECTS:
+            break
+        try:
+            status = (base / name / "status.json").resolve(strict=True)
+            if not _inside(status, base) or not status.is_file():
+                continue
+            if status.stat().st_size > _MAX_STATUS_BYTES:
+                continue
+            data = json.loads(status.read_text("utf-8"))
+        except (OSError, RuntimeError, ValueError):
+            continue
+        project = _normalize_project(name, data)
+        if project is not None:
+            projects.append(project)
+    return projects
+
+
+@router.get("/projects")
+async def get_projects() -> Dict[str, Any]:
+    """Project status board for the Projects widget (contributed in #4)."""
+    return {"projects": await asyncio.to_thread(scan_projects, projects_dir())}

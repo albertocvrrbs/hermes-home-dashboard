@@ -50,6 +50,7 @@ const es: Messages = {
   "widget.countdown": "cuenta regresiva",
   "widget.calendar": "calendario",
   "widget.agent": "agente",
+  "widget.projects": "proyectos",
 
   // ── ascii ──
   "ascii.art.caduceus": "caduceo",
@@ -175,6 +176,14 @@ const es: Messages = {
   "sessions.noneMatch": "ninguna sesión supera {n} tokens",
   "sessions.tokensTitle": "{input} de entrada · {output} de salida",
 
+  // ── projects ──
+  "projects.empty": "sin proyectos; agrega ~/projects/<nombre>/status.json",
+  "projects.inbox": "entrada",
+  "projects.doing": "en curso",
+  "projects.done": "hechas",
+  "projects.next": "sigue:",
+  "projects.alerts": "alertas:",
+  "projects.updated": "actualizado {when}",
 
   // ── agent widget ──
   "agent.working": "trabajando",

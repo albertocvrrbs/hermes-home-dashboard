@@ -32,6 +32,9 @@ const api = {
 function fetchJSON(url, init) {
   return getHost().fetchJSON(url, init);
 }
+function getProjects() {
+  return fetchJSON("/api/plugins/home-dashboard/projects");
+}
 function useDashboardLocale() {
   if (configuredHost) return null;
   const sdk = window.__HERMES_PLUGIN_SDK__;
@@ -93,6 +96,7 @@ const en = {
   "widget.countdown": "countdown",
   "widget.calendar": "calendar",
   "widget.agent": "agent",
+  "widget.projects": "projects",
   // ── ascii ──
   "ascii.art.caduceus": "caduceus",
   "ascii.art.pyramid": "pyramid",
@@ -204,6 +208,14 @@ const en = {
   "sessions.filterTitle": "minimum tokens (in + out)",
   "sessions.noneMatch": "no sessions above {n} tokens",
   "sessions.tokensTitle": "{input} in · {output} out",
+  // ── projects ──
+  "projects.empty": "no projects — add ~/projects/<name>/status.json",
+  "projects.inbox": "inbox",
+  "projects.doing": "doing",
+  "projects.done": "done",
+  "projects.next": "next:",
+  "projects.alerts": "alerts:",
+  "projects.updated": "updated {when}",
   // ── agent widget ──
   "agent.working": "working",
   "agent.thinking": "thinking",
@@ -346,6 +358,7 @@ const es = {
   "widget.countdown": "cuenta regresiva",
   "widget.calendar": "calendario",
   "widget.agent": "agente",
+  "widget.projects": "proyectos",
   // ── ascii ──
   "ascii.art.caduceus": "caduceo",
   "ascii.art.pyramid": "pirámide",
@@ -457,6 +470,14 @@ const es = {
   "sessions.filterTitle": "mínimo de tokens (entrada + salida)",
   "sessions.noneMatch": "ninguna sesión supera {n} tokens",
   "sessions.tokensTitle": "{input} de entrada · {output} de salida",
+  // ── projects ──
+  "projects.empty": "sin proyectos; agrega ~/projects/<nombre>/status.json",
+  "projects.inbox": "entrada",
+  "projects.doing": "en curso",
+  "projects.done": "hechas",
+  "projects.next": "sigue:",
+  "projects.alerts": "alertas:",
+  "projects.updated": "actualizado {when}",
   // ── agent widget ──
   "agent.working": "trabajando",
   "agent.thinking": "pensando",
@@ -2955,6 +2976,123 @@ function AgentWidget({ data }) {
     !live.live && /* @__PURE__ */ jsx("div", { className: "home-agent-dim", children: t2("agent.polling") })
   ] });
 }
+const POLL_MS$1 = 3e4;
+function statusTone(status) {
+  const s = status.toLowerCase();
+  if (s === "active" || s === "healthy" || s === "online" || s === "ok") return "ok";
+  if (s === "warning" || s === "warn" || s === "degraded") return "warn";
+  if (s === "blocked" || s === "error" || s === "failed") return "err";
+  return "dim";
+}
+const TONE_ICON = { ok: "●", warn: "▲", err: "✕", dim: "○" };
+function timeAgo$1(iso, t2) {
+  if (!iso) return t2("common.none");
+  const then = new Date(iso).getTime();
+  if (Number.isNaN(then)) return t2("common.none");
+  const mins = Math.floor(Math.max(0, Date.now() - then) / 6e4);
+  if (mins < 1) return t2("time.justNow");
+  if (mins < 60) return t2("time.minutesAgo", { n: mins });
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return t2("time.hoursAgo", { n: hours });
+  return t2("time.daysAgo", { n: Math.floor(hours / 24) });
+}
+function ProjectsWidget() {
+  const t2 = useT();
+  const [projects, setProjects] = useState(null);
+  const [failed, setFailed] = useState(false);
+  const [openId, setOpenId] = useState(null);
+  useEffect(() => {
+    let cancelled = false;
+    const load = () => {
+      getProjects().then((r) => {
+        if (cancelled) return;
+        setProjects(Array.isArray(r?.projects) ? r.projects : []);
+        setFailed(false);
+      }).catch(() => {
+        if (!cancelled) setFailed(true);
+      });
+    };
+    load();
+    const id = setInterval(() => {
+      if (!document.hidden) load();
+    }, POLL_MS$1);
+    return () => {
+      cancelled = true;
+      clearInterval(id);
+    };
+  }, []);
+  if (!projects) {
+    return /* @__PURE__ */ jsx("span", { className: "dim", children: failed ? t2("common.unavailable") : t2("common.loading") });
+  }
+  if (projects.length === 0) {
+    return /* @__PURE__ */ jsx("span", { className: "dim", children: t2("projects.empty") });
+  }
+  return /* @__PURE__ */ jsx("div", { className: "home-projects", children: projects.map((p) => {
+    const open = openId === p.id;
+    const tone = statusTone(p.status);
+    const toggle = () => setOpenId(open ? null : p.id);
+    return /* @__PURE__ */ jsxs("div", { className: `project-item${open ? " open" : ""}`, children: [
+      /* @__PURE__ */ jsxs(
+        "div",
+        {
+          className: `project-row ${tone}`,
+          onClick: (e) => {
+            e.stopPropagation();
+            toggle();
+          },
+          onKeyDown: (e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              toggle();
+            }
+          },
+          role: "button",
+          tabIndex: 0,
+          "aria-expanded": open,
+          title: p.status,
+          children: [
+            /* @__PURE__ */ jsx("span", { className: "project-icon", "aria-hidden": "true", children: TONE_ICON[tone] }),
+            /* @__PURE__ */ jsx("span", { className: "project-name", children: p.project || p.id }),
+            /* @__PURE__ */ jsxs("span", { className: "project-stats", children: [
+              /* @__PURE__ */ jsx("span", { title: t2("projects.inbox"), children: p.stats.inbox }),
+              " · ",
+              /* @__PURE__ */ jsx("span", { title: t2("projects.doing"), children: p.stats.inProgress }),
+              " · ",
+              /* @__PURE__ */ jsx("span", { title: t2("projects.done"), children: p.stats.completed })
+            ] }),
+            /* @__PURE__ */ jsx("span", { className: "project-time", children: timeAgo$1(p.lastUpdated, t2) }),
+            /* @__PURE__ */ jsx("span", { className: "project-caret", "aria-hidden": "true", children: open ? "▾" : "▸" })
+          ]
+        }
+      ),
+      open && /* @__PURE__ */ jsxs("div", { className: "project-detail", children: [
+        /* @__PURE__ */ jsxs("div", { className: "project-detail-row", children: [
+          /* @__PURE__ */ jsx("span", { className: "dim", children: t2("projects.next") }),
+          " ",
+          p.nextAction || t2("common.none")
+        ] }),
+        /* @__PURE__ */ jsxs("div", { className: "project-detail-row dim", children: [
+          t2("projects.inbox"),
+          " ",
+          p.stats.inbox,
+          " · ",
+          t2("projects.doing"),
+          " ",
+          p.stats.inProgress,
+          " · ",
+          t2("projects.done"),
+          " ",
+          p.stats.completed
+        ] }),
+        p.alerts.length > 0 && /* @__PURE__ */ jsxs("div", { className: "project-detail-row project-alerts", children: [
+          /* @__PURE__ */ jsx("span", { className: "dim", children: t2("projects.alerts") }),
+          /* @__PURE__ */ jsx("ul", { children: p.alerts.map((a, i) => /* @__PURE__ */ jsx("li", { children: a }, i)) })
+        ] }),
+        p.lastUpdated && /* @__PURE__ */ jsx("div", { className: "project-detail-row dim", children: t2("projects.updated", { when: new Date(p.lastUpdated).toLocaleString() }) })
+      ] })
+    ] }, p.id);
+  }) });
+}
 const WIDGET_REGISTRY = {
   ascii: {
     titleKey: "widget.ascii",
@@ -3131,6 +3269,14 @@ const WIDGET_REGISTRY = {
   agent: {
     titleKey: "widget.agent",
     component: ({ data }) => /* @__PURE__ */ jsx(AgentWidget, { data }),
+    defaultSize: { gw: 4, gh: 3 },
+    minSize: { gw: 3, gh: 2 },
+    navigateTo: null,
+    dataSource: null
+  },
+  projects: {
+    titleKey: "widget.projects",
+    component: () => /* @__PURE__ */ jsx(ProjectsWidget, {}),
     defaultSize: { gw: 4, gh: 3 },
     minSize: { gw: 3, gh: 2 },
     navigateTo: null,
@@ -5952,6 +6098,56 @@ const homeCss = `/* Home page — rice-style widget grid.
 .home-agent-scene .home-scene-idle {
   font-size: 9.5px;
 }
+
+/* ── projects widget (~/projects/<name>/status.json) ── */
+.home-projects {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  max-height: calc(100% - 18px);
+  overflow-y: auto;
+}
+.project-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  border-left: 2px solid var(--home-border);
+  background: color-mix(in srgb, var(--home-accent) 4%, transparent);
+  cursor: pointer;
+}
+.project-row:hover,
+.project-item.open .project-row { background: color-mix(in srgb, var(--home-accent) 10%, transparent); }
+.project-row.ok { border-left-color: var(--home-accent); }
+.project-row.warn { border-left-color: color-mix(in srgb, var(--home-accent) 50%, var(--home-error)); }
+.project-row.err { border-left-color: var(--home-error); }
+.project-icon { font-size: 9px; color: var(--color-muted-foreground, #6b7387); }
+.project-row.ok .project-icon { color: var(--home-accent); }
+.project-row.warn .project-icon { color: color-mix(in srgb, var(--home-accent) 50%, var(--home-error)); }
+.project-row.err .project-icon { color: var(--home-error); }
+.project-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.project-stats { font-variant-numeric: tabular-nums; color: var(--home-accent-soft); font-size: 10px; }
+.project-time { color: var(--color-muted-foreground, #6b7387); font-size: 9.5px; white-space: nowrap; }
+.project-caret { color: var(--color-muted-foreground, #6b7387); font-size: 9px; width: 10px; text-align: center; }
+.project-detail {
+  margin: 1px 0 3px 12px;
+  padding: 4px 8px;
+  border-left: 1px dashed var(--home-border);
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 10px;
+}
+.project-detail-row { line-height: 1.4; }
+.project-alerts ul { margin: 2px 0 0 14px; padding: 0; list-style: disc; }
+.project-alerts li { color: var(--home-error); }
 `;
 const HOME_DESKTOP_PATH = "/home";
 const DESKTOP_START_KEY = "home-dashboard.opened-this-start";

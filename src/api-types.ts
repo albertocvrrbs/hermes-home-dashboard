@@ -117,6 +117,21 @@ export interface ModelsAnalyticsResponse {
   period_days?: number;
 }
 
+/** One ~/projects/<id>/status.json, normalized by the plugin backend. */
+export interface ProjectStatus {
+  id: string;
+  project: string;
+  status: string;
+  lastUpdated: string | null;
+  stats: { inbox: number; inProgress: number; completed: number };
+  alerts: string[];
+  nextAction: string;
+}
+
+export interface ProjectsResponse {
+  projects: ProjectStatus[];
+}
+
 export interface AnalyticsSkillsSummary {
   total_skill_loads: number;
   total_skill_edits: number;

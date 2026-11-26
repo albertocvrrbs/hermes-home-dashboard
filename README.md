@@ -133,7 +133,7 @@ they never fight drag/resize.
 
 ## Widgets
 
-17 widgets, each with a hover control that fits what it does:
+18 widgets, each with a hover control that fits what it does:
 
 | Widget | Hover control |
 |---|---|
@@ -144,6 +144,7 @@ they never fight drag/resize.
 | **Host** | cycle meters ↔ numeric detail ↔ live graphs (four rolling one-minute sparklines: cpu, ram, load, proc) |
 | **Gateway** | hover expands read-only detail (pid, health, config) |
 | **Sessions** | paginate recent sessions · sort **recent / tokens** · minimum-token filter (all / ≥10K / ≥100K / ≥1M) |
+| **Projects** | status board from `~/projects/<name>/status.json` · click a row for next action + alerts |
 | **Agent** | live agent scene · take control (fullscreen agent theater) |
 | **Cron** | paginate upcoming jobs |
 | **Logs** | switch log file: agent / errors / gateway (multi-line records grouped, level-colored) |
@@ -173,6 +174,29 @@ Hover the widget: the first toggle switches `recent` ↔ `tokens` (heaviest
 first), the second steps a minimum of input + output tokens. Both work over the
 20 most recent sessions the Home already loads, and the token count shows on
 each row while either is active.
+
+### Projects: status board
+
+The Projects widget lists every `~/projects/<name>/status.json` (set
+`HOME_DASHBOARD_PROJECTS_DIR` to read another folder). No folder means an empty
+board. Shape:
+
+```json
+{
+  "project": "Wiki-Ingest",
+  "status": "active",
+  "lastUpdated": "2026-10-04T21:30:00+08:00",
+  "stats": { "inbox": 2, "inProgress": 1, "completed": 15 },
+  "alerts": [],
+  "nextAction": "Process pending articles"
+}
+```
+
+`status` colors the row: `active` / `healthy` / `online` / `ok`, `warning` /
+`degraded`, `blocked` / `error` / `failed`; anything else is neutral. The backend
+reads at most 50 projects, skips files over 64 KB, invalid JSON and symlinks that
+leave the folder, and returns only the fields above. Contributed by
+[@AgJavis-hub](https://github.com/AgJavis-hub) in #4.
 
 ## Languages
 
@@ -211,12 +235,13 @@ two regenerated bundles.
   runtime plugin** registered through `@hermes/plugin-sdk`.
 - All data comes from the host's existing API (status, system, analytics,
   sessions, cron, logs) through one polling loop. A few widgets fetch on
-  demand for their own controls — the Tokens range and grouping and the Logs
-  file selector.
+  demand for their own controls — the Tokens range and grouping, the Logs file
+  selector and the Projects board.
 - The Python side (`dashboard/plugin_api.py`) persists the widget layout to
   `~/.hermes/plugins/home-dashboard/layout.json`, exposes plugin-scoped,
   read-only adapters for Desktop's widgets (`/system`, `/analytics`, `/models`,
-  `/cron`, `/sessions`). It makes no network calls.
+  `/cron`, `/sessions`) and reads the Projects board (`/projects`). It makes no
+  network calls.
 - UI strings go through a small translation layer (`src/home/i18n/`); see
   [Languages](#languages).
 - Hover controls are pure CSS reveal (`:hover`), suppressed in edit mode — no

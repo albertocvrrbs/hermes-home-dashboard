@@ -1833,3 +1833,53 @@
 .home-agent-scene .home-scene-idle {
   font-size: 9.5px;
 }
+
+/* ── projects widget (~/projects/<name>/status.json) ── */
+.home-projects {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  max-height: calc(100% - 18px);
+  overflow-y: auto;
+}
+.project-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  border-left: 2px solid var(--home-border);
+  background: color-mix(in srgb, var(--home-accent) 4%, transparent);
+  cursor: pointer;
+}
+.project-row:hover,
+.project-item.open .project-row { background: color-mix(in srgb, var(--home-accent) 10%, transparent); }
+.project-row.ok { border-left-color: var(--home-accent); }
+.project-row.warn { border-left-color: color-mix(in srgb, var(--home-accent) 50%, var(--home-error)); }
+.project-row.err { border-left-color: var(--home-error); }
+.project-icon { font-size: 9px; color: var(--color-muted-foreground, #6b7387); }
+.project-row.ok .project-icon { color: var(--home-accent); }
+.project-row.warn .project-icon { color: color-mix(in srgb, var(--home-accent) 50%, var(--home-error)); }
+.project-row.err .project-icon { color: var(--home-error); }
+.project-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.project-stats { font-variant-numeric: tabular-nums; color: var(--home-accent-soft); font-size: 10px; }
+.project-time { color: var(--color-muted-foreground, #6b7387); font-size: 9.5px; white-space: nowrap; }
+.project-caret { color: var(--color-muted-foreground, #6b7387); font-size: 9px; width: 10px; text-align: center; }
+.project-detail {
+  margin: 1px 0 3px 12px;
+  padding: 4px 8px;
+  border-left: 1px dashed var(--home-border);
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 10px;
+}
+.project-detail-row { line-height: 1.4; }
+.project-alerts ul { margin: 2px 0 0 14px; padding: 0; list-style: disc; }
+.project-alerts li { color: var(--home-error); }
