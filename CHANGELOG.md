@@ -20,6 +20,33 @@ clone, they never build).
 
 ---
 
+## 1.6.0 — 2026-11-26
+
+Feature release: two ideas from #3, a localized UI, and the Project Status
+widget from #4. Verified against Hermes 0.23.4 (web dashboard + Webapp).
+
+- **Tokens: group by provider or by model.** A new hover toggle (`all` →
+  `provider` → `model`) adds a breakdown under the chart for the selected
+  range: tokens, share and cost per provider or model. Provider identity comes
+  from the host's per-model analytics (the Models page data), through the web
+  SDK and a new read-only `/models` adapter for Desktop; older hosts fall back
+  to the per-model list. Suggested by @Phenix704 in #3.
+- **Sessions: sort and filter by token usage.** Hover toggles switch `recent`
+  ↔ `tokens` (heaviest first) and step a minimum of input + output tokens (all
+  / ≥10K / ≥100K / ≥1M) over the recent sessions already loaded (now 20).
+  Suggested by @Phenix704 in #3.
+- **Localization: English and Spanish.** Every widget, the agent theater and
+  the edit/grid chrome go through a shared translation layer
+  (`src/home/i18n/`). The language follows the host (`display.language` on
+  Desktop / Webapp, the dashboard's own picker on the web), else the browser;
+  missing strings fall back to English. Adding a language is one file — see
+  *Adding a language* in the README. Asked about by @Phenix704 in #3.
+- **New widget: Projects.** A status board for
+  `~/projects/<name>/status.json` (or `$HOME_DASHBOARD_PROJECTS_DIR`), ported
+  from PR #4 by @AgJavis-hub with a bounded, read-only, traversal-safe backend
+  scan.
+- `plugin.yaml` declares `requires_hermes: ">=0.21.5"`.
+
 ## 1.5.1 — 2026-11-26
 
 Bug-fix release: the backend loads and every data route answers on current
