@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { api } from "../../sdk";
-import type { LogsResponse } from "../../api-types";
+import { api } from "@/sdk";
+import type { LogsResponse } from "@/api-types";
 import { HoverArrows } from "./HoverArrows";
 import { FILES, SHORT, levelClass, parseRecords, type FileKey, type LogRecord } from "./logParse";
 

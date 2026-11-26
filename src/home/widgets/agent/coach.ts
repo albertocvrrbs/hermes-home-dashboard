@@ -1,4 +1,4 @@
-import type { HomeData } from "../../useHomeData";
+import type { HomeData } from "@/home/useHomeData";
 import type { AgentLiveState, LiveToolCall } from "./agentLive";
 
 export interface Recommendation {

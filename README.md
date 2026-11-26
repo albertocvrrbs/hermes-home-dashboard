@@ -101,8 +101,22 @@ reinstallation is required.
 Use the plugin's **Remove** button in the dashboard, or:
 
 ```bash
-rm -rf ~/.hermes/plugins/home-dashboard
+hermes plugins remove home-dashboard
 ```
+
+### Troubleshooting: every widget says `offline` / `unavailable`
+
+The UI half loads on its own, so a backend that never mounted looks like a data
+problem. Check, on the machine running the Hermes backend:
+
+1. `hermes plugins list` shows `home-dashboard` as **enabled**. Hermes only
+   imports a user plugin's Python API when it is in `plugins.enabled` (and not
+   in `plugins.disabled`) in `config.yaml`; `hermes plugins enable
+   home-dashboard` fixes both.
+2. `hermes plugins doctor home-dashboard` passes. Versions before 1.5.1 shipped
+   no root `__init__.py`, which the loader refuses (`No __init__.py in ...`);
+   update the plugin.
+3. Restart the backend (or the Desktop connection) after enabling, then reload.
 
 ---
 
@@ -163,6 +177,7 @@ transient state (current page, browsed month) resets on reload.
 ```
 hermes-home-dashboard/
 ├── plugin.yaml              # pins the install folder name (home-dashboard)
+├── __init__.py              # no-op register(ctx); the agent plugin loader requires it
 ├── dashboard/               # everything the Hermes host consumes
 │   ├── manifest.json        # tab/entry/css/api the dashboard reads
 │   ├── plugin_api.py        # FastAPI router that persists layout.json
@@ -182,14 +197,30 @@ hermes-home-dashboard/
 
 Only needed if you want to modify the widgets.
 
+From a clone of this repository:
+
 ```bash
-git clone https://github.com/albertocvrrbs/hermes-home-dashboard.git
-cd hermes-home-dashboard
 npm install
 npm run typecheck     # tsc --noEmit
-npm test              # Desktop registration + host adapter contracts
+npm test              # Node tests + Python backend tests (needs python3)
 npm run build         # Web bundle + Desktop plugin.js
 ```
+
+`npm test` runs `test:frontend` (Node) and `test:backend` (Python `unittest`).
+On Windows, if Python is installed as `py`, run `npm run test:frontend` and
+`py -m unittest discover -s test -p "test_*.py"`.
+
+Before a release, also exercise the real HTTP adapters with the Python of each
+supported Hermes install. It uses a temporary `HERMES_HOME` (no user sessions or
+config are read) and treats host compatibility warnings as errors:
+
+```bash
+/path/to/hermes-agent/venv/bin/python scripts/check-host-compatibility.py
+```
+
+Cross-directory imports in `src/` use the `@/` alias (`@/sdk` = `src/sdk.ts`),
+configured in `tsconfig.json` and both Vite configs; prefer it over deep relative
+chains.
 
 Commit the regenerated `dashboard/dist/` and `desktop/plugin.js` so installs
 pick up your changes (the installer clones, it never builds). To preview a web

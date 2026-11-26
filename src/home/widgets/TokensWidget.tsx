@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { api } from "../../sdk";
-import type { AnalyticsResponse } from "../../api-types";
+import { api } from "@/sdk";
+import type { AnalyticsResponse } from "@/api-types";
 import { formatTokenCount } from "../format";
 import { HoverCtl } from "./HoverArrows";
 import { toBars, type Bar } from "./tokenSeries";

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import type { SystemStats } from "../../api-types";
+import type { SystemStats } from "@/api-types";
 import { HoverArrows } from "./HoverArrows";
 import {
   BUFFER_CAP, HOST_SIGNALS, HOST_VIEWS, SAMPLE_MS,

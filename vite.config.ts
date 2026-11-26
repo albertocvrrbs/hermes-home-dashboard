@@ -9,6 +9,8 @@ import path from "path";
 export default defineConfig({
   resolve: {
     alias: [
+      // "@/x" resolves to "src/x": one root-relative path instead of deep relative chains.
+      { find: /^@\//, replacement: path.resolve(__dirname, "src") + "/" },
       { find: /^react\/jsx-runtime$/, replacement: path.resolve(__dirname, "src/shims/jsx-runtime.js") },
       { find: /^react\/jsx-dev-runtime$/, replacement: path.resolve(__dirname, "src/shims/jsx-runtime.js") },
       { find: /^react-dom$/, replacement: path.resolve(__dirname, "src/shims/react.js") },

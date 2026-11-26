@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { CronJob } from "../../api-types";
+import type { CronJob } from "@/api-types";
 import { HoverArrows } from "./HoverArrows";
 
 const PER_PAGE = 4;

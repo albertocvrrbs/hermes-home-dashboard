@@ -1,5 +1,5 @@
 // Pure series helper for the Tokens widget, kept React-free for unit testing.
-import type { AnalyticsDailyEntry } from "../../api-types";
+import type { AnalyticsDailyEntry } from "@/api-types";
 
 export interface Bar {
   key: string;

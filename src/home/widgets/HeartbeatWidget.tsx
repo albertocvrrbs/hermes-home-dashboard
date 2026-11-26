@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import type { StatusResponse } from "../../api-types";
+import type { StatusResponse } from "@/api-types";
 import { HoverArrows } from "./HoverArrows";
 
 const SPEED_PX = 2;

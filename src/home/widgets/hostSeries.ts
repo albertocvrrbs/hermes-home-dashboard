@@ -1,6 +1,6 @@
 // Pure rolling-series helpers for the Host widget's live "graphs" view,
 // kept React-free for unit testing (same pattern as tokenSeries.ts).
-import type { SystemStats } from "../../api-types";
+import type { SystemStats } from "@/api-types";
 
 const MB = 1024 ** 2;
 

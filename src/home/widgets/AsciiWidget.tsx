@@ -1,4 +1,4 @@
-import type { StatusResponse } from "../../api-types";
+import type { StatusResponse } from "@/api-types";
 import { asciiArtClass } from "./ascii-presentation";
 import { HoverArrows } from "./HoverArrows";
 

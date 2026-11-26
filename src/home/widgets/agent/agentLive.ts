@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { onGatewayEvent, type GatewayRpcEvent } from "../../../sdk";
+import { onGatewayEvent, type GatewayRpcEvent } from "@/sdk";
 
 /** Live tool call (current or recent). */
 export interface LiveToolCall {

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { exitTheater } from "../../theater";
-import type { HomeData } from "../../useHomeData";
+import { exitTheater } from "@/home/theater";
+import type { HomeData } from "@/home/useHomeData";
 import { buildRecommendations, type Recommendation } from "./coach";
 import { argPreview, useAgentLive, type LiveToolCall } from "./agentLive";
 import { LiveScene, useScene } from "./LiveScene";
