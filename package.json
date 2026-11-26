@@ -8,7 +8,9 @@
     "build:dashboard": "vite build",
     "build:desktop": "vite build --config vite.desktop.config.ts",
     "install:desktop": "node scripts/install-desktop.mjs",
-    "test": "node --experimental-strip-types --test",
+    "test": "npm run test:frontend && npm run test:backend",
+    "test:frontend": "node --experimental-strip-types --test",
+    "test:backend": "python3 -m unittest discover -s test -p 'test_*.py'",
     "typecheck": "tsc -p . --noEmit"
   },
   "devDependencies": {
