@@ -1,6 +1,54 @@
 // Pure series helper for the Tokens widget, kept React-free for unit testing.
 import type { AnalyticsDailyEntry } from "@/api-types";
 
+/** How the Tokens widget breaks usage down under the chart. */
+export type GroupBy = "off" | "provider" | "model";
+export const GROUP_MODES: readonly GroupBy[] = ["off", "provider", "model"];
+
+/** Persisted layout props may hold anything — unknowns mean "off". */
+export function coerceGroupBy(value: unknown): GroupBy {
+  return GROUP_MODES.includes(value as GroupBy) ? (value as GroupBy) : "off";
+}
+
+/** Minimal usage row shape shared by /analytics/models (model + provider)
+ *  and the older /analytics `by_model` (model only). */
+export interface UsageRow {
+  model?: string | null;
+  provider?: string | null;
+  input_tokens?: number | null;
+  output_tokens?: number | null;
+  estimated_cost?: number | null;
+}
+
+export interface UsageGroup {
+  /** Grouping key; "" = the row carried no provider/model. */
+  key: string;
+  tokens: number;
+  cost: number;
+  /** Share of the grouped total, 0–100. */
+  share: number;
+}
+
+/** Sum usage rows by provider or by model, largest first. A model served by
+ *  two providers is one row in "model" mode and two in "provider" mode. */
+export function groupUsage(rows: readonly UsageRow[], by: Exclude<GroupBy, "off">): UsageGroup[] {
+  const acc = new Map<string, { tokens: number; cost: number }>();
+  for (const r of rows) {
+    const key = ((by === "provider" ? r.provider : r.model) ?? "").trim();
+    const tokens = (r.input_tokens ?? 0) + (r.output_tokens ?? 0);
+    const cost = r.estimated_cost ?? 0;
+    const cur = acc.get(key) ?? { tokens: 0, cost: 0 };
+    cur.tokens += Number.isFinite(tokens) ? tokens : 0;
+    cur.cost += Number.isFinite(cost) ? cost : 0;
+    acc.set(key, cur);
+  }
+  const total = [...acc.values()].reduce((n, g) => n + g.tokens, 0);
+  return [...acc.entries()]
+    .filter(([, g]) => g.tokens > 0 || g.cost > 0)
+    .map(([key, g]) => ({ key, ...g, share: total > 0 ? (g.tokens / total) * 100 : 0 }))
+    .sort((a, b) => b.tokens - a.tokens || b.cost - a.cost || a.key.localeCompare(b.key));
+}
+
 export interface Bar {
   key: string;
   label: string;

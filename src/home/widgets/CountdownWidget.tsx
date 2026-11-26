@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { HoverArrows } from "./HoverArrows";
+import { useT } from "../i18n";
 
 interface Props {
   widgetProps: Record<string, unknown>;
@@ -7,7 +8,10 @@ interface Props {
 }
 
 const pad = (n: number) => String(n).padStart(2, "0");
-const MONTHS = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
+/** Short month name in the browser's locale (dates follow the locale, like
+ *  every other date label on the Home), upper-cased: "JAN", "ENE". */
+const monthName = (mo: number) =>
+  new Date(2024, mo, 1).toLocaleDateString(undefined, { month: "short" }).replace(/\.$/, "").toUpperCase();
 
 interface Seg { y: number; mo: number; d: number; h: number; mi: number; }
 
@@ -33,10 +37,11 @@ function NumSeg({
   value: number; width: number; label: string;
   onStep: (d: number) => void; onCommit: (n: number) => void;
 }) {
+  const t = useT();
   const [buf, setBuf] = useState<string | null>(null);
   return (
     <div className="count-seg" onWheel={(e) => { e.preventDefault(); onStep(e.deltaY < 0 ? 1 : -1); }}>
-      <button className="seg-btn" tabIndex={-1} aria-label={`${label} up`} onClick={() => { setBuf(null); onStep(1); }}>▲</button>
+      <button className="seg-btn" tabIndex={-1} aria-label={t("count.up", { field: label })} onClick={() => { setBuf(null); onStep(1); }}>▲</button>
       <input
         className="seg-val"
         style={{ width }}
@@ -51,17 +56,19 @@ function NumSeg({
           if (e.key === "ArrowDown") { e.preventDefault(); setBuf(null); onStep(-1); }
         }}
       />
-      <button className="seg-btn" tabIndex={-1} aria-label={`${label} down`} onClick={() => { setBuf(null); onStep(-1); }}>▼</button>
+      <button className="seg-btn" tabIndex={-1} aria-label={t("count.down", { field: label })} onClick={() => { setBuf(null); onStep(-1); }}>▼</button>
     </div>
   );
 }
 
 function MonSeg({ value, onStep }: { value: number; onStep: (d: number) => void }) {
+  const t = useT();
+  const field = t("count.month");
   return (
     <div className="count-seg" onWheel={(e) => { e.preventDefault(); onStep(e.deltaY < 0 ? 1 : -1); }}>
-      <button className="seg-btn" tabIndex={-1} aria-label="month up" onClick={() => onStep(1)}>▲</button>
-      <div className="seg-val seg-static" style={{ width: 36 }}>{MONTHS[value]}</div>
-      <button className="seg-btn" tabIndex={-1} aria-label="month down" onClick={() => onStep(-1)}>▼</button>
+      <button className="seg-btn" tabIndex={-1} aria-label={t("count.up", { field })} onClick={() => onStep(1)}>▲</button>
+      <div className="seg-val seg-static" style={{ width: 36 }}>{monthName(value)}</div>
+      <button className="seg-btn" tabIndex={-1} aria-label={t("count.down", { field })} onClick={() => onStep(-1)}>▼</button>
     </div>
   );
 }
@@ -71,6 +78,7 @@ function MonSeg({ value, onStep }: { value: number; onStep: (d: number) => void 
  *  to name it, or use the hover arrows for a quick ±1 day. Counts up (with +)
  *  once the moment passes. */
 export function CountdownWidget({ widgetProps, onWidgetPropsChange }: Props) {
+  const t = useT();
   const label = typeof widgetProps.label === "string" ? widgetProps.label : "";
   const target = typeof widgetProps.target === "string" ? widgetProps.target : "";
   const [mode, setMode] = useState<"none" | "datetime" | "label">("none");
@@ -143,19 +151,19 @@ export function CountdownWidget({ widgetProps, onWidgetPropsChange }: Props) {
         <div className="count-edit">
           <div className="count-edit-row">
             <MonSeg value={seg.mo} onStep={(d) => stepField("month", d)} />
-            <NumSeg value={seg.d} width={22} label="day"
+            <NumSeg value={seg.d} width={22} label={t("count.day")}
               onStep={(d) => stepField("day", d)} onCommit={(n) => commitField("day", n)} />
-            <NumSeg value={seg.y} width={42} label="year"
+            <NumSeg value={seg.y} width={42} label={t("count.year")}
               onStep={(d) => stepField("year", d)} onCommit={(n) => commitField("year", n)} />
           </div>
           <div className="count-edit-row">
-            <NumSeg value={seg.h} width={22} label="hour"
+            <NumSeg value={seg.h} width={22} label={t("count.hour")}
               onStep={(d) => stepField("hour", d)} onCommit={(n) => commitField("hour", n)} />
             <span className="count-colon">:</span>
-            <NumSeg value={seg.mi} width={22} label="minute"
+            <NumSeg value={seg.mi} width={22} label={t("count.minute")}
               onStep={(d) => stepField("min", d)} onCommit={(n) => commitField("min", n)} />
           </div>
-          <button className="count-done" onClick={() => { setMode("none"); setSeg(null); }}>done</button>
+          <button className="count-done" onClick={() => { setMode("none"); setSeg(null); }}>{t("common.done")}</button>
         </div>
       </div>
     );
@@ -173,7 +181,7 @@ export function CountdownWidget({ widgetProps, onWidgetPropsChange }: Props) {
   }
   const dateLabel = !Number.isNaN(targetMs)
     ? new Date(targetMs).toLocaleDateString(undefined, { month: "short", day: "numeric" })
-    : "set date";
+    : t("count.setDate");
 
   return (
     <div className="home-clock-wrap home-count">
@@ -181,7 +189,7 @@ export function CountdownWidget({ widgetProps, onWidgetPropsChange }: Props) {
       <div
         className="home-clock count-big"
         onClick={openDatetime}
-        title="click to set the date & time"
+        title={t("count.setTitle")}
       >
         {big}
       </div>
@@ -200,9 +208,9 @@ export function CountdownWidget({ widgetProps, onWidgetPropsChange }: Props) {
         <div
           className="home-clock-sub count-label"
           onClick={() => setMode("label")}
-          title="click to edit the label"
+          title={t("count.labelTitle")}
         >
-          {label || "click to name this countdown"}
+          {label || t("count.namePrompt")}
         </div>
       )}
     </div>

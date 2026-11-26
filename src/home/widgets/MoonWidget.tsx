@@ -1,23 +1,20 @@
 import { useEffect, useRef, useState } from "react";
 import { HoverArrows } from "./HoverArrows";
+import { useT, type Translate } from "../i18n";
 
 const SYNODIC_DAYS = 29.53058867;
 /** Reference new moon: 2000-01-06 18:14 UTC. */
 const NEW_MOON_MS = Date.UTC(2000, 0, 6, 18, 14);
 const DAY_MS = 86_400_000;
 
-const PHASE_NAMES = [
-  "new moon", "waxing crescent", "first quarter", "waxing gibbous",
-  "full moon", "waning gibbous", "last quarter", "waning crescent",
-];
-
 function moonPhase(now: number): number {
   const days = (now - NEW_MOON_MS) / DAY_MS;
   return ((days % SYNODIC_DAYS) + SYNODIC_DAYS) % SYNODIC_DAYS / SYNODIC_DAYS;
 }
 
-function phaseName(phase: number): string {
-  return PHASE_NAMES[Math.round(phase * 8) % 8];
+function phaseName(phase: number, t: Translate): string {
+  const i = Math.round(phase * 8) % 8;
+  return t(`moon.phase.${i}` as `moon.phase.${0 | 1 | 2 | 3 | 4 | 5 | 6 | 7}`);
 }
 
 interface Props {
@@ -29,6 +26,7 @@ interface Props {
  *  Hover arrows step the preview ±1 day so you can scrub the lunar cycle; the
  *  offset persists in the widget's layout props. */
 export function MoonWidget({ widgetProps, onWidgetPropsChange }: Props) {
+  const t = useT();
   const ref = useRef<HTMLCanvasElement>(null);
   const [label, setLabel] = useState("");
   const offset = typeof widgetProps.offsetDays === "number" ? widgetProps.offsetDays : 0;
@@ -49,7 +47,7 @@ export function MoonWidget({ widgetProps, onWidgetPropsChange }: Props) {
       const accent =
         getComputedStyle(cv).getPropertyValue("--home-accent").trim() || "#d4af37";
       const phase = moonPhase(Date.now() + offset * DAY_MS);
-      setLabel(`${phaseName(phase)} · ${Math.round(
+      setLabel(`${phaseName(phase, t)} · ${Math.round(
         ((1 - Math.cos(2 * Math.PI * phase)) / 2) * 100,
       )}%`);
 
@@ -79,11 +77,13 @@ export function MoonWidget({ widgetProps, onWidgetPropsChange }: Props) {
     draw();
     const ro = new ResizeObserver(draw);
     ro.observe(cv);
-    const t = setInterval(draw, 3_600_000); // phase barely moves; hourly is plenty
-    return () => { ro.disconnect(); clearInterval(t); };
-  }, [offset]);
+    const timer = setInterval(draw, 3_600_000); // phase barely moves; hourly is plenty
+    return () => { ro.disconnect(); clearInterval(timer); };
+  }, [offset, t]);
 
-  const offLabel = offset === 0 ? undefined : offset > 0 ? `+${offset}d` : `${offset}d`;
+  const offLabel = offset === 0
+    ? undefined
+    : t("moon.offset", { n: offset > 0 ? `+${offset}` : String(offset) });
 
   return (
     <div className="home-moon-wrap">

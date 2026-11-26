@@ -1,5 +1,6 @@
 import type { ComponentType } from "react";
 import type { HomeData, HomeDataSource } from "../useHomeData";
+import type { MessageKey } from "../i18n";
 import { NotesWidget } from "./NotesWidget";
 import { AsciiWidget } from "./AsciiWidget";
 import { ClockWidget } from "./ClockWidget";
@@ -33,7 +34,8 @@ export interface WidgetRenderProps {
 }
 
 export interface WidgetDef {
-  title: string;
+  /** Header + catalog label, translated through the i18n layer. */
+  titleKey: MessageKey;
   /** Renders with the full HomeData; each widget picks its slice. */
   component: ComponentType<WidgetRenderProps>;
   defaultSize: { gw: number; gh: number };
@@ -48,7 +50,7 @@ export interface WidgetDef {
  *  plugs in here — nothing else in the home knows the widget list. */
 export const WIDGET_REGISTRY: Record<string, WidgetDef> = {
   ascii: {
-    title: "hermes",
+    titleKey: "widget.ascii",
     component: ({ data, widgetProps, onWidgetPropsChange }) => (
       <AsciiWidget
         status={data.status}
@@ -60,7 +62,7 @@ export const WIDGET_REGISTRY: Record<string, WidgetDef> = {
     navigateTo: null, dataSource: null,
   },
   clock: {
-    title: "clock",
+    titleKey: "widget.clock",
     component: ({ widgetProps, onWidgetPropsChange }) => (
       <ClockWidget widgetProps={widgetProps} onWidgetPropsChange={onWidgetPropsChange} />
     ),
@@ -68,7 +70,7 @@ export const WIDGET_REGISTRY: Record<string, WidgetDef> = {
     navigateTo: null, dataSource: null,
   },
   matrix: {
-    title: "matrix",
+    titleKey: "widget.matrix",
     component: ({ widgetProps, onWidgetPropsChange }) => (
       <MatrixWidget widgetProps={widgetProps} onWidgetPropsChange={onWidgetPropsChange} />
     ),
@@ -76,33 +78,39 @@ export const WIDGET_REGISTRY: Record<string, WidgetDef> = {
     navigateTo: null, dataSource: null,
   },
   gateway: {
-    title: "gateway",
+    titleKey: "widget.gateway",
     component: ({ data }) => <GatewayWidget status={data.status} />,
     defaultSize: { gw: 4, gh: 3 }, minSize: { gw: 3, gh: 2 },
     navigateTo: "/system", dataSource: "status",
   },
   sessions: {
-    title: "sessions",
-    component: ({ data }) => (
-      <SessionsWidget status={data.status} sessions={data.sessions} />
+    titleKey: "widget.sessions",
+    component: ({ data, widgetProps, onWidgetPropsChange }) => (
+      <SessionsWidget
+        status={data.status}
+        sessions={data.sessions}
+        widgetProps={widgetProps}
+        onWidgetPropsChange={onWidgetPropsChange}
+      />
     ),
     defaultSize: { gw: 3, gh: 3 }, minSize: { gw: 2, gh: 2 },
     navigateTo: "/sessions", dataSource: "sessions",
   },
   tokens: {
-    title: "tokens",
-    component: ({ data, widgetProps, onWidgetPropsChange }) => (
+    titleKey: "widget.tokens",
+    component: ({ data, widgetProps, onWidgetPropsChange, gridSize }) => (
       <TokensWidget
         analytics={data.analytics}
         widgetProps={widgetProps}
         onWidgetPropsChange={onWidgetPropsChange}
+        gridSize={gridSize}
       />
     ),
     defaultSize: { gw: 5, gh: 4 }, minSize: { gw: 3, gh: 3 },
     navigateTo: null, dataSource: "analytics",
   },
   host: {
-    title: "host",
+    titleKey: "widget.host",
     component: ({ data, widgetProps, onWidgetPropsChange }) => (
       <HostWidget
         system={data.system}
@@ -114,13 +122,13 @@ export const WIDGET_REGISTRY: Record<string, WidgetDef> = {
     navigateTo: "/system", dataSource: "system",
   },
   cron: {
-    title: "cron",
+    titleKey: "widget.cron",
     component: ({ data }) => <CronWidget cron={data.cron} />,
     defaultSize: { gw: 3, gh: 3 }, minSize: { gw: 3, gh: 2 },
     navigateTo: "/cron", dataSource: "cron",
   },
   notes: {
-    title: "notes",
+    titleKey: "widget.notes",
     component: ({ widgetProps, onWidgetPropsChange }) => (
       <NotesWidget widgetProps={widgetProps} onWidgetPropsChange={onWidgetPropsChange} />
     ),
@@ -128,7 +136,7 @@ export const WIDGET_REGISTRY: Record<string, WidgetDef> = {
     navigateTo: null, dataSource: null,
   },
   errors: {
-    title: "Logs",
+    titleKey: "widget.errors",
     component: ({ data, widgetProps, onWidgetPropsChange }) => (
       <ErrorsWidget
         logs={data.logs}
@@ -140,7 +148,7 @@ export const WIDGET_REGISTRY: Record<string, WidgetDef> = {
     navigateTo: "/logs", dataSource: "logs",
   },
   moon: {
-    title: "moon",
+    titleKey: "widget.moon",
     component: ({ widgetProps, onWidgetPropsChange }) => (
       <MoonWidget widgetProps={widgetProps} onWidgetPropsChange={onWidgetPropsChange} />
     ),
@@ -148,7 +156,7 @@ export const WIDGET_REGISTRY: Record<string, WidgetDef> = {
     navigateTo: null, dataSource: null,
   },
   heartbeat: {
-    title: "heartbeat",
+    titleKey: "widget.heartbeat",
     component: ({ data, widgetProps, onWidgetPropsChange }) => (
       <HeartbeatWidget
         status={data.status}
@@ -160,13 +168,13 @@ export const WIDGET_REGISTRY: Record<string, WidgetDef> = {
     navigateTo: null, dataSource: null,
   },
   life: {
-    title: "life",
+    titleKey: "widget.life",
     component: ({ editing }) => <LifeWidget editing={editing} />,
     defaultSize: { gw: 3, gh: 3 }, minSize: { gw: 2, gh: 2 },
     navigateTo: null, dataSource: null,
   },
   pomodoro: {
-    title: "pomodoro",
+    titleKey: "widget.pomodoro",
     component: ({ widgetProps, onWidgetPropsChange }) => (
       <PomodoroWidget widgetProps={widgetProps} onWidgetPropsChange={onWidgetPropsChange} />
     ),
@@ -174,7 +182,7 @@ export const WIDGET_REGISTRY: Record<string, WidgetDef> = {
     navigateTo: null, dataSource: null,
   },
   countdown: {
-    title: "countdown",
+    titleKey: "widget.countdown",
     component: ({ widgetProps, onWidgetPropsChange }) => (
       <CountdownWidget widgetProps={widgetProps} onWidgetPropsChange={onWidgetPropsChange} />
     ),
@@ -182,13 +190,13 @@ export const WIDGET_REGISTRY: Record<string, WidgetDef> = {
     navigateTo: null, dataSource: null,
   },
   calendar: {
-    title: "calendar",
+    titleKey: "widget.calendar",
     component: ({ gridSize }) => <CalendarWidget gridSize={gridSize} />,
     defaultSize: { gw: 3, gh: 4 }, minSize: { gw: 2, gh: 3 },
     navigateTo: null, dataSource: null,
   },
   agent: {
-    title: "agent",
+    titleKey: "widget.agent",
     component: ({ data }) => <AgentWidget data={data} />,
     defaultSize: { gw: 4, gh: 3 }, minSize: { gw: 3, gh: 2 },
     navigateTo: null, dataSource: null,

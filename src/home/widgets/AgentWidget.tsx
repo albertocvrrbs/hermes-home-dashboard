@@ -3,6 +3,7 @@ import type { HomeData } from "../useHomeData";
 import { useAgentLive } from "./agent/agentLive";
 import { LiveScene, useScene } from "./agent/LiveScene";
 import { HoverCtl } from "./HoverArrows";
+import { useT } from "../i18n";
 
 interface Props {
   data: HomeData;
@@ -25,13 +26,14 @@ function fmtTok(n: number | undefined): string {
 /** The agent eye — compact live view with the animated scene and the
  *  take-control button. No emoji: pure type + CSS. */
 export function AgentWidget({ data }: Props) {
+  const t = useT();
   const live = useAgentLive();
   const scene = useScene(live);
   const totals = data.analytics?.totals;
 
   const statusLabel = live.busy
-    ? live.currentTool ? "working" : "thinking"
-    : "idle";
+    ? live.currentTool ? t("agent.working") : t("agent.thinking")
+    : t("agent.idle");
 
   return (
     <div className="home-agent">
@@ -50,26 +52,26 @@ export function AgentWidget({ data }: Props) {
         <button
           className="home-agent-take"
           onClick={() => enterTheater()}
-          title="Take control of the screen — live agent theater"
-          aria-label="Take control"
+          title={t("agent.takeTitle")}
+          aria-label={t("agent.takeAria")}
         >
           <span className="home-agent-take-ico" aria-hidden="true" />
-          take control
+          {t("agent.take")}
         </button>
       </HoverCtl>
 
       <div className="home-agent-stats">
-        <span title="Input tokens today">
-          <i>in</i> {fmtTok(totals?.total_input)}
+        <span title={t("agent.inTitle")}>
+          <i>{t("agent.in")}</i> {fmtTok(totals?.total_input)}
         </span>
-        <span title="Output tokens today">
-          <i>out</i> {fmtTok(totals?.total_output)}
+        <span title={t("agent.outTitle")}>
+          <i>{t("agent.out")}</i> {fmtTok(totals?.total_output)}
         </span>
-        <span title="Estimated cost today">
-          <i>est</i> {fmtCost(totals?.total_estimated_cost)}
+        <span title={t("agent.estTitle")}>
+          <i>{t("agent.est")}</i> {fmtCost(totals?.total_estimated_cost)}
         </span>
-        <span title="Sessions today">
-          <i>ses</i> {totals?.total_sessions ?? "—"}
+        <span title={t("agent.sesTitle")}>
+          <i>{t("agent.ses")}</i> {totals?.total_sessions ?? "—"}
         </span>
       </div>
 
@@ -88,7 +90,7 @@ export function AgentWidget({ data }: Props) {
         </div>
       )}
 
-      {!live.live && <div className="home-agent-dim">polling mode · no live channel</div>}
+      {!live.live && <div className="home-agent-dim">{t("agent.polling")}</div>}
     </div>
   );
 }

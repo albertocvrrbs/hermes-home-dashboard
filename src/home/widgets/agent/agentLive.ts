@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { onGatewayEvent, type GatewayRpcEvent } from "@/sdk";
+import type { MessageKey } from "@/home/i18n";
 
 /** Live tool call (current or recent). */
 export interface LiveToolCall {
@@ -17,7 +18,11 @@ export interface LiveFeedEntry {
   at: number;
   kind: "tool" | "message" | "subagent" | "session" | "system";
   label: string;
+  /** Fixed label/detail phrases are stored as keys and translated at render
+   *  time, so a language switch also updates the feed already on screen. */
+  labelKey?: MessageKey;
   detail?: string;
+  detailKey?: MessageKey;
   ok?: boolean;
 }
 
@@ -129,7 +134,7 @@ function handleEvent(event: GatewayRpcEvent): void {
       busy: true,
       currentTool: { name, startedAt: now, status: "running" },
     }));
-    pushFeed({ at: now, kind: "tool", label: name, detail: "generating…" });
+    pushFeed({ at: now, kind: "tool", label: name, detailKey: "feed.generating" });
     return;
   }
 
@@ -142,7 +147,7 @@ function handleEvent(event: GatewayRpcEvent): void {
     }));
     pushFeed({
       at: now, kind: "tool", label: name,
-      detail: type === "tool.progress" ? "progress…" : argPreview(p?.args),
+      ...(type === "tool.progress" ? { detailKey: "feed.progress" as const } : { detail: argPreview(p?.args) }),
     });
     return;
   }
@@ -216,7 +221,7 @@ function handleEvent(event: GatewayRpcEvent): void {
         ...s.subagents.filter((a) => a.name !== name),
       ].slice(0, 6),
     }));
-    pushFeed({ at: now, kind: "subagent", label: name, detail: "spawned" });
+    pushFeed({ at: now, kind: "subagent", label: name, detailKey: "feed.spawned" });
     return;
   }
 
@@ -227,13 +232,13 @@ function handleEvent(event: GatewayRpcEvent): void {
       ...s,
       subagents: s.subagents.map((a) => (a.name === name ? { ...a, status: "done" as const } : a)),
     }));
-    pushFeed({ at: now, kind: "subagent", label: name, ok: true, detail: "done" });
+    pushFeed({ at: now, kind: "subagent", label: name, ok: true, detailKey: "feed.done" });
     return;
   }
 
   if (type === "subagent.thinking") {
     const name = pick(p, "name", "role", "id") ?? "subagent";
-    pushFeed({ at: now, kind: "subagent", label: name, detail: "thinking…" });
+    pushFeed({ at: now, kind: "subagent", label: name, detailKey: "feed.thinking" });
     setLive(bump);
     return;
   }
@@ -246,7 +251,7 @@ function handleEvent(event: GatewayRpcEvent): void {
       activeSessionId: sid,
       activeTitle: pick(p, "title") ?? s.activeTitle,
     }));
-    pushFeed({ at: now, kind: "session", label: "session", detail: "new" });
+    pushFeed({ at: now, kind: "session", label: "session", labelKey: "feed.session", detailKey: "feed.new" });
     return;
   }
 
@@ -269,7 +274,7 @@ function handleEvent(event: GatewayRpcEvent): void {
 
   if (type === "error") {
     pushFeed({
-      at: now, kind: "system", label: "error",
+      at: now, kind: "system", label: "error", labelKey: "feed.error",
       detail: pick(p, "error", "message"),
     });
     setLive(bump);
@@ -292,7 +297,7 @@ function ensureSubscribed(): void {
   const all = onGatewayEvent("*", handleEvent);
   if (all) {
     setLive((s) => (s.live ? s : { ...s, live: true }));
-    pushFeed({ at: Date.now(), kind: "system", label: "live", detail: "gateway channel open" });
+    pushFeed({ at: Date.now(), kind: "system", label: "live", labelKey: "feed.live", detailKey: "feed.channelOpen" });
   }
 }
 

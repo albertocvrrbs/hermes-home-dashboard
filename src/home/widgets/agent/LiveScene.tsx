@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { argPreview, type AgentLiveState } from "./agentLive";
 import { MarkdownText } from "./MarkdownText";
+import { useT, type Translate } from "@/home/i18n";
 
 /** One "scene" of the live agent feed — the thing happening right now. */
 export interface SceneItem {
@@ -17,7 +18,8 @@ export interface SceneItem {
  *  stable identity for the whole stream (no re-animation per delta); a new
  *  tool call or a new message gets a fresh key and animates in. */
 export function useScene(live: AgentLiveState): SceneItem {
-  const [scene, setScene] = useState<SceneItem>(() => sceneFrom(live));
+  const t = useT();
+  const [scene, setScene] = useState<SceneItem>(() => sceneFrom(live, t));
   const wasStreaming = useRef(false);
 
   useEffect(() => {
@@ -35,7 +37,7 @@ export function useScene(live: AgentLiveState): SceneItem {
           key, kind: "tool" as const,
           title: live.currentTool!.name,
           body,
-          meta: "running",
+          meta: t("scene.running"),
         },
       );
       return;
@@ -45,9 +47,9 @@ export function useScene(live: AgentLiveState): SceneItem {
       setScene({
         key: `msg-${Date.now()}`,
         kind: "message",
-        title: "message",
+        title: t("scene.message"),
         body: live.streamText,
-        meta: "streaming",
+        meta: t("scene.streaming"),
         streaming: true,
       });
     } else if (streaming) {
@@ -57,25 +59,25 @@ export function useScene(live: AgentLiveState): SceneItem {
       setScene((s) =>
         s.kind === "message" && !s.streaming && s.body === msg
           ? s
-          : { key: `done-${Date.now()}`, kind: "message", title: "message", body: msg, meta: "complete" },
+          : { key: `done-${Date.now()}`, kind: "message", title: t("scene.message"), body: msg, meta: t("scene.complete") },
       );
     } else {
       setScene((s) =>
-        s.kind === "idle"
+        s.kind === "idle" && s.body === t("scene.resting")
           ? s
-          : { key: "idle", kind: "idle", title: "idle", body: "the agent is resting — new activity will appear here" },
+          : { key: "idle", kind: "idle", title: t("scene.idle"), body: t("scene.resting") },
       );
     }
-  }, [live.streamText, live.currentTool, live.lastMessage]);
+  }, [live.streamText, live.currentTool, live.lastMessage, t]);
 
   return scene;
 }
 
-function sceneFrom(live: AgentLiveState): SceneItem {
+function sceneFrom(live: AgentLiveState, t: Translate): SceneItem {
   if (live.streamText.trim()) {
     return {
-      key: `msg-${Date.now()}`, kind: "message", title: "message",
-      body: live.streamText, meta: "streaming", streaming: true,
+      key: `msg-${Date.now()}`, kind: "message", title: t("scene.message"),
+      body: live.streamText, meta: t("scene.streaming"), streaming: true,
     };
   }
   if (live.currentTool) {
@@ -83,13 +85,13 @@ function sceneFrom(live: AgentLiveState): SceneItem {
       key: `tool-${live.currentTool.name}-${live.currentTool.startedAt}`,
       kind: "tool", title: live.currentTool.name,
       body: argPreview(live.currentTool.args, 500) ?? "",
-      meta: "running",
+      meta: t("scene.running"),
     };
   }
   if (live.lastMessage) {
-    return { key: "done", kind: "message", title: "message", body: live.lastMessage, meta: "complete" };
+    return { key: "done", kind: "message", title: t("scene.message"), body: live.lastMessage, meta: t("scene.complete") };
   }
-  return { key: "idle", kind: "idle", title: "idle", body: "the agent is resting — new activity will appear here" };
+  return { key: "idle", kind: "idle", title: t("scene.idle"), body: t("scene.resting") };
 }
 
 function SceneBody({ scene }: { scene: SceneItem }) {

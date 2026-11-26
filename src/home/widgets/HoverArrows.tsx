@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { useT } from "../i18n";
 
 /** Stops a control's clicks/pointer from bubbling to the WidgetShell, whose
  *  root div navigates on rest-mode click. Without this, tapping an arrow on a
@@ -47,11 +48,12 @@ export function HoverArrows({
   onPrev, onNext, label, onLabelClick,
   prevDisabled, nextDisabled, className,
 }: HoverArrowsProps) {
+  const t = useT();
   return (
     <HoverCtl className={`hover-arrows${className ? ` ${className}` : ""}`}>
       <button
         className="hv-arrow"
-        aria-label="previous"
+        aria-label={t("common.previous")}
         disabled={prevDisabled}
         onClick={(e) => { swallow(e); onPrev(); }}
       >
@@ -71,7 +73,7 @@ export function HoverArrows({
       )}
       <button
         className="hv-arrow"
-        aria-label="next"
+        aria-label={t("common.next")}
         disabled={nextDisabled}
         onClick={(e) => { swallow(e); onNext(); }}
       >

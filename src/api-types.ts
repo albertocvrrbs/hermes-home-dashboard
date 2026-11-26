@@ -100,6 +100,23 @@ export interface AnalyticsModelEntry {
   api_calls: number;
 }
 
+/** One (model, provider) row of /api/analytics/models. `provider` is the
+ *  billing provider and can be "" for sessions that never recorded one. */
+export interface ModelsAnalyticsEntry {
+  model: string;
+  provider: string;
+  input_tokens: number;
+  output_tokens: number;
+  estimated_cost: number;
+  sessions: number;
+  api_calls: number;
+}
+
+export interface ModelsAnalyticsResponse {
+  models: ModelsAnalyticsEntry[];
+  period_days?: number;
+}
+
 export interface AnalyticsSkillsSummary {
   total_skill_loads: number;
   total_skill_edits: number;

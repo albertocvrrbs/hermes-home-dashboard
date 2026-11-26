@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
 import { HoverArrows } from "./HoverArrows";
+import { useT } from "../i18n";
 
 /** Month grid, today highlighted in the accent, weeks Monday-first. Hover
  *  arrows page through months (resets to the current month on reload). Picks a
  *  density tier from the widget's cell size: mini hides the weekday header. */
 export function CalendarWidget({ gridSize }: { gridSize: { gw: number; gh: number } }) {
+  const t = useT();
   const [now, setNow] = useState(() => new Date());
   const [offset, setOffset] = useState(0); // months from the current one
   useEffect(() => {
@@ -34,7 +36,7 @@ export function CalendarWidget({ gridSize }: { gridSize: { gw: number; gh: numbe
       <HoverArrows
         onPrev={() => setOffset(offset - 1)}
         onNext={() => setOffset(offset + 1)}
-        label={offset === 0 ? undefined : "today"}
+        label={offset === 0 ? undefined : t("common.today")}
         onLabelClick={offset === 0 ? undefined : () => setOffset(0)}
       />
       <div className="home-cal-month">{monthLabel}</div>

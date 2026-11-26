@@ -476,6 +476,25 @@
 .tok-stats > span { white-space: nowrap; }
 .tok-stats .dim { margin-right: 2px; }
 
+/* Grouped usage (tokens widget, by provider / by model): one row per group
+ * with a faint share bar behind it, width = --share of the grouped total. */
+.tok-groups { padding-top: 3px; font-variant-numeric: tabular-nums; }
+.home-widget .row.tok-group {
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--home-accent) 16%, transparent) var(--share, 0%),
+    transparent var(--share, 0%)
+  );
+  border-radius: 2px;
+  padding-left: 3px;
+}
+.tok-share { min-width: 3ch; text-align: right; }
+.tok-group-note,
+.tok-group-more { font-size: 9.5px; padding-top: 1px; }
+
+/* Sessions widget: per-row token count (shown while sorting/filtering by it). */
+.ses-tok { font-variant-numeric: tabular-nums; color: var(--home-accent-soft); }
+
 /* ── logs widget (per-file record list) ── */
 .logs-sub {
   display: flex;

@@ -156,6 +156,21 @@ async def get_desktop_analytics(days: int = 30, profile: str | None = None) -> D
     return await _call(get_usage_analytics, days=max(1, min(365, days)), profile=profile)
 
 
+@router.get("/models")
+async def get_desktop_models(days: int = 30, profile: str | None = None) -> Dict[str, Any]:
+    """Per (model, billing provider) usage for the Tokens widget's grouping.
+
+    Adapts the host's ``get_models_analytics`` (the data behind the core
+    Models page). Hosts that predate it answer 404 and the widget falls back
+    to the per-model list inside ``/analytics``.
+    """
+    try:
+        get_models_analytics = _host_service("hermes_cli.web_routers.analytics", "get_models_analytics")
+    except AttributeError:
+        raise HTTPException(status_code=404, detail="model analytics not available on this Hermes")
+    return await _call(get_models_analytics, days=max(1, min(365, days)), profile=profile)
+
+
 @router.get("/cron")
 async def get_desktop_cron(profile: str = "all") -> list[Dict[str, Any]]:
     list_cron_jobs = _host_service("hermes_cli.web_routers.cron", "list_cron_jobs")
@@ -176,3 +191,4 @@ async def get_desktop_sessions(
         order="recent",
         profile=profile,
     )
+

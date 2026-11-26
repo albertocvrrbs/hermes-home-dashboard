@@ -9,6 +9,7 @@ import {
 import type { HomeLayout } from "./layout-schema";
 import { WIDGET_REGISTRY } from "./widgets/registry";
 import { WidgetShell } from "./WidgetShell";
+import { useT } from "./i18n";
 import { widgetState } from "./widget-state";
 import type { HomeData } from "./useHomeData";
 
@@ -58,6 +59,7 @@ export const GridCanvas = forwardRef<GridCanvasHandle, Props>(function GridCanva
   ref,
 ) {
   const stageRef = useRef<HTMLDivElement>(null);
+  const t = useT();
   const [stageW, setStageW] = useState(0);
   const [drag, setDrag] = useState<DragState | null>(null);
   const dragRef = useRef<DragState | null>(null);
@@ -302,7 +304,7 @@ export const GridCanvas = forwardRef<GridCanvasHandle, Props>(function GridCanva
         return (
           <WidgetShell
             key={item.id}
-            title={def.title}
+            title={t(def.titleKey)}
             style={style}
             editing={editing}
             dragging={isDragged}
@@ -331,7 +333,7 @@ export const GridCanvas = forwardRef<GridCanvasHandle, Props>(function GridCanva
           className="home-add-ghost"
           style={{ left: adding.pointer.x, top: adding.pointer.y }}
         >
-          + {addDef.title}
+          + {t(addDef.titleKey)}
         </div>
       )}
     </div>

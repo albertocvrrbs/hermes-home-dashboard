@@ -16,11 +16,21 @@ declare module "@hermes/plugin-sdk" {
     render?: () => ReactNode;
   }
 
+  /** Plugin-scoped i18n (newer Desktop builds). The active locale is always
+   *  the app's `display.language`. */
+  export interface PluginI18n {
+    register(bundles: Record<string, Record<string, string>>): () => void;
+    t(key: string, ...args: unknown[]): string;
+    onLocaleChange?(listener: () => void): () => void;
+  }
+
   export interface PluginContext {
     readonly source: string;
     register(contribution: PluginContribution): () => void;
     registerMany(contributions: PluginContribution[]): () => void;
     rest<T>(path: string, options?: PluginRestOptions): Promise<T>;
+    /** Absent on older Desktop builds — feature-detect. */
+    i18n?: PluginI18n;
   }
 
   export interface HermesPlugin {

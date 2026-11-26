@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { CronJob } from "@/api-types";
 import { HoverArrows } from "./HoverArrows";
+import { useT } from "../i18n";
 
 const PER_PAGE = 4;
 
@@ -14,12 +15,13 @@ function nextRunLabel(job: CronJob): string {
 /** Upcoming enabled cron jobs, soonest first. Hover arrows page through them
  *  4 at a time. */
 export function CronWidget({ cron }: { cron: CronJob[] | null }) {
+  const t = useT();
   const [page, setPage] = useState(0);
-  if (!cron) return <span className="dim">loading…</span>;
+  if (!cron) return <span className="dim">{t("common.loading")}</span>;
   const upcoming = cron
     .filter((j) => j.enabled && j.next_run_at)
     .sort((a, b) => (a.next_run_at ?? "").localeCompare(b.next_run_at ?? ""));
-  if (upcoming.length === 0) return <span className="dim">no scheduled jobs</span>;
+  if (upcoming.length === 0) return <span className="dim">{t("cron.empty")}</span>;
   const pages = Math.max(1, Math.ceil(upcoming.length / PER_PAGE));
   const p = Math.min(page, pages - 1);
   const slice = upcoming.slice(p * PER_PAGE, p * PER_PAGE + PER_PAGE);
@@ -40,7 +42,7 @@ export function CronWidget({ cron }: { cron: CronJob[] | null }) {
             <span className="dim">{nextRunLabel(j)}</span>
             <span className="row-name" title={j.name ?? j.id}>{j.name ?? j.id}</span>
             <span className={j.last_error ? "werr" : "ok"}>
-              {j.last_error ? "err" : "ok"}
+              {j.last_error ? t("cron.err") : t("cron.ok")}
             </span>
           </div>
         ))}

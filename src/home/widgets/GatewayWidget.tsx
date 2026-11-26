@@ -1,4 +1,5 @@
 import type { StatusResponse } from "@/api-types";
+import { useT } from "../i18n";
 
 function hostOf(url: string): string {
   try { return new URL(url).host; } catch { return url; }
@@ -17,7 +18,8 @@ function Row({ label, val }: { label: string; val: string }) {
  *  block (pid, health, config version, exit reason) — no actions, just the
  *  fields the compact view hides. */
 export function GatewayWidget({ status }: { status: StatusResponse | null }) {
-  if (!status) return <span className="dim">loading…</span>;
+  const t = useT();
+  if (!status) return <span className="dim">{t("common.loading")}</span>;
   const platforms = Object.entries(status.gateway_platforms ?? {});
   const configStr = `v${status.config_version}${
     status.config_version !== status.latest_config_version ? ` → v${status.latest_config_version}` : ""
@@ -26,13 +28,13 @@ export function GatewayWidget({ status }: { status: StatusResponse | null }) {
     <div>
       <div className="rows">
         <div className="row">
-          <span className="dim">status</span>
+          <span className="dim">{t("gateway.status")}</span>
           <span className={status.gateway_running ? "ok" : "werr"}>
-            {status.gateway_running ? "● online" : "● offline"}
+            {status.gateway_running ? t("gateway.online") : t("gateway.offline")}
           </span>
         </div>
         <div className="row">
-          <span className="dim">state</span>
+          <span className="dim">{t("gateway.state")}</span>
           <span>{status.gateway_state ?? "—"}</span>
         </div>
         {platforms.map(([name, p]) => (
@@ -44,15 +46,15 @@ export function GatewayWidget({ status }: { status: StatusResponse | null }) {
       </div>
       <div className="hover-reveal">
         <div className="rows">
-          {status.gateway_pid != null && <Row label="pid" val={String(status.gateway_pid)} />}
+          {status.gateway_pid != null && <Row label={t("gateway.pid")} val={String(status.gateway_pid)} />}
           {status.gateway_exit_reason && (
-            <Row label="exit" val={status.gateway_exit_reason.slice(0, 28)} />
+            <Row label={t("gateway.exit")} val={status.gateway_exit_reason.slice(0, 28)} />
           )}
           {status.gateway_health_url && (
-            <Row label="health" val={hostOf(status.gateway_health_url)} />
+            <Row label={t("gateway.health")} val={hostOf(status.gateway_health_url)} />
           )}
-          <Row label="config" val={configStr} />
-          <Row label="version" val={`v${status.version}`} />
+          <Row label={t("gateway.config")} val={configStr} />
+          <Row label={t("gateway.version")} val={`v${status.version}`} />
         </div>
       </div>
     </div>

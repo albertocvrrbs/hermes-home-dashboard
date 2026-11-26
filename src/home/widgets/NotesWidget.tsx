@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { HoverCtl } from "./HoverArrows";
+import { useT } from "../i18n";
 
 interface Note { id: string; text: string; done: boolean; }
 
@@ -24,6 +25,7 @@ function readNotes(p: Record<string, unknown>): Note[] {
  *  Only chrome is the minimal "+" to add. Notes persist inside the
  *  widget's layout props (no dedicated backend). */
 export function NotesWidget({ widgetProps, onWidgetPropsChange }: Props) {
+  const t = useT();
   const notes = readNotes(widgetProps);
   const [editingId, setEditingId] = useState<string | null>(null);
 
@@ -55,12 +57,12 @@ export function NotesWidget({ widgetProps, onWidgetPropsChange }: Props) {
       {doneCount > 0 && (
         <HoverCtl>
           <button className="hv-opt" onClick={() => commit(notes.filter((n) => !n.done))}>
-            clear done
+            {t("notes.clearDone")}
           </button>
         </HoverCtl>
       )}
       {notes.length === 0 && editingId === null && (
-        <span className="dim">no notes — add one with +</span>
+        <span className="dim">{t("notes.empty")}</span>
       )}
       {notes.map((n) =>
         editingId === n.id ? (
@@ -82,7 +84,7 @@ export function NotesWidget({ widgetProps, onWidgetPropsChange }: Props) {
             <span
               className={`note-mark${n.done ? " done" : ""}`}
               onClick={() => toggle(n.id)}
-              title={n.done ? "restore" : "strike through"}
+              title={n.done ? t("notes.restore") : t("notes.strike")}
             >
               {n.done ? "✕" : "·"}
             </span>
@@ -95,7 +97,7 @@ export function NotesWidget({ widgetProps, onWidgetPropsChange }: Props) {
           </div>
         ),
       )}
-      <button className="note-add" onClick={add} aria-label="Add note">+</button>
+      <button className="note-add" onClick={add} aria-label={t("notes.add")}>+</button>
     </div>
   );
 }

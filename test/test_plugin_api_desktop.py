@@ -111,6 +111,25 @@ class DesktopDataApiTest(unittest.IsolatedAsyncioTestCase):
         load.assert_called_once_with("hermes_cli.web_routers.status")
 
 
+class ModelsRouteTest(unittest.IsolatedAsyncioTestCase):
+    async def test_models_adapts_the_host_models_analytics(self):
+        def models(days=30, profile=None):  # sync in Hermes (runs on a thread)
+            return {"models": [{"model": "m", "provider": "p"}], "period_days": days, "profile": profile}
+
+        fake = {"hermes_cli.web_routers.analytics": types.SimpleNamespace(get_models_analytics=models)}
+        with patch.dict(sys.modules, fake):
+            got = await plugin_api.get_desktop_models(days=999, profile="default")
+        self.assertEqual(got["period_days"], 365)
+        self.assertEqual(got["models"][0]["provider"], "p")
+
+    async def test_models_is_404_on_a_host_without_it(self):
+        fake = {"hermes_cli.web_routers.analytics": types.SimpleNamespace()}
+        with patch.dict(sys.modules, fake):
+            with self.assertRaises(plugin_api.HTTPException) as caught:
+                await plugin_api.get_desktop_models(days=7)
+        self.assertEqual(caught.exception.status_code, 404)
+
+
 class LayoutValidationTest(unittest.TestCase):
     @staticmethod
     def _layout(*widgets):

@@ -4,6 +4,7 @@ import type { HomeData } from "@/home/useHomeData";
 import { buildRecommendations, type Recommendation } from "./coach";
 import { argPreview, useAgentLive, type LiveToolCall } from "./agentLive";
 import { LiveScene, useScene } from "./LiveScene";
+import { useT, type Translate } from "@/home/i18n";
 
 interface Props {
   data: HomeData;
@@ -23,13 +24,13 @@ function fmtTok(n: number | undefined): string {
   return String(n);
 }
 
-function timeAgo(at: number): string {
+function timeAgo(at: number, t: Translate): string {
   const s = Math.max(0, Math.round((Date.now() - at) / 1000));
-  if (s < 5) return "now";
-  if (s < 60) return `${s}s ago`;
+  if (s < 5) return t("time.now");
+  if (s < 60) return t("time.secondsAgo", { n: s });
   const m = Math.round(s / 60);
-  if (m < 60) return `${m}m ago`;
-  return `${Math.round(m / 60)}h ago`;
+  if (m < 60) return t("time.minutesAgo", { n: m });
+  return t("time.hoursAgo", { n: Math.round(m / 60) });
 }
 
 function hhmm(at: number): string {
@@ -76,22 +77,23 @@ function PanelTitle({ children }: { children: React.ReactNode }) {
 // ── AHORA: animated scene + live process feed ─────────────────────────
 
 function NowPanel({ data, live }: { data: HomeData; live: ReturnType<typeof useAgentLive> }) {
+  const t = useT();
   const scene = useScene(live);
   const [now, setNow] = useState(Date.now());
   useEffect(() => {
-    const t = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(t);
+    const timer = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(timer);
   }, []);
 
   const status = live.busy
-    ? live.currentTool ? "working" : "thinking"
-    : data.status?.gateway_running ? "idle" : "gateway down";
+    ? live.currentTool ? t("agent.working") : t("agent.thinking")
+    : data.status?.gateway_running ? t("agent.idle") : t("theater.gatewayDown");
 
   return (
     <section className="home-theater-panel home-theater-now">
       <PanelTitle>
         <span className={`home-agent-dot ${live.busy ? "busy" : ""}`} aria-hidden="true" />
-        NOW · {status.toUpperCase()}
+        {t("theater.now", { status: status.toUpperCase() })}
         {live.activeTitle && <span className="home-theater-sub">— {live.activeTitle}</span>}
       </PanelTitle>
 
@@ -101,7 +103,7 @@ function NowPanel({ data, live }: { data: HomeData; live: ReturnType<typeof useA
 
       <div className="home-theater-feed">
         {live.feed.length === 0 && (
-          <div className="home-theater-dim">no live activity yet — the feed fills as the agent works</div>
+          <div className="home-theater-dim">{t("theater.feedEmpty")}</div>
         )}
         {live.feed.slice(0, 40).map((e) => (
           <div key={e.id} className="home-theater-feed-row">
@@ -110,16 +112,18 @@ function NowPanel({ data, live }: { data: HomeData; live: ReturnType<typeof useA
               className={`home-theater-feed-kind ${e.kind}${e.ok === false ? " bad" : ""}`}
               aria-hidden="true"
             />
-            <span className="home-theater-feed-label">{e.label}</span>
-            {e.detail && <span className="home-theater-feed-detail">{e.detail}</span>}
+            <span className="home-theater-feed-label">{e.labelKey ? t(e.labelKey) : e.label}</span>
+            {(e.detailKey || e.detail) && (
+              <span className="home-theater-feed-detail">{e.detailKey ? t(e.detailKey) : e.detail}</span>
+            )}
           </div>
         ))}
       </div>
 
       <div className="home-theater-foot">
-        <span>last event {live.lastEventAt ? timeAgo(live.lastEventAt) : "—"}</span>
-        <span>{live.live ? "live" : "polling"}</span>
-        <span>updated {timeAgo(now)}</span>
+        <span>{t("theater.lastEvent", { when: live.lastEventAt ? timeAgo(live.lastEventAt, t) : "—" })}</span>
+        <span>{live.live ? t("theater.live") : t("theater.polling")}</span>
+        <span>{t("theater.updated", { when: timeAgo(now, t) })}</span>
       </div>
     </section>
   );
@@ -128,23 +132,24 @@ function NowPanel({ data, live }: { data: HomeData; live: ReturnType<typeof useA
 // ── FUNCIÓN: current + recent tool calls ──────────────────────────────
 
 function ToolPanel({ live }: { live: ReturnType<typeof useAgentLive> }) {
+  const t = useT();
   return (
     <section className="home-theater-panel">
-      <PanelTitle>FUNCTION</PanelTitle>
+      <PanelTitle>{t("theater.function")}</PanelTitle>
 
       {live.currentTool ? (
         <div className="home-theater-fn-current">
           <div className="home-theater-fn-name">
             <span className="home-theater-fn-dot running" aria-hidden="true" />
             {live.currentTool.name}
-            <span className="home-theater-fn-state running">running</span>
+            <span className="home-theater-fn-state running">{t("scene.running")}</span>
           </div>
           <pre className="home-theater-fn-args">
-            {argPreview(live.currentTool.args, 600) ?? "awaiting args…"}
+            {argPreview(live.currentTool.args, 600) ?? t("theater.awaitingArgs")}
           </pre>
         </div>
       ) : (
-        <div className="home-theater-dim">no tool running</div>
+        <div className="home-theater-dim">{t("theater.noTool")}</div>
       )}
 
       {live.toolHistory.length > 0 && (
@@ -171,30 +176,31 @@ function ToolPanel({ live }: { live: ReturnType<typeof useAgentLive> }) {
 // ── TOKENS & COSTO ────────────────────────────────────────────────────
 
 function TokenPanel({ data }: { data: HomeData }) {
+  const t = useT();
   const totals = data.analytics?.totals;
   const byModel = data.analytics?.by_model ?? [];
   const active = (data.sessions?.sessions ?? []).find((s) => s.is_active);
 
   return (
     <section className="home-theater-panel">
-      <PanelTitle>TOKENS & COST</PanelTitle>
+      <PanelTitle>{t("theater.tokensCost")}</PanelTitle>
 
       <div className="home-theater-tok-grid">
         <div className="home-theater-tok-cell">
           <span className="home-theater-tok-num">{fmtTok(totals?.total_input)}</span>
-          <span className="home-theater-tok-lbl">input today</span>
+          <span className="home-theater-tok-lbl">{t("theater.inputToday")}</span>
         </div>
         <div className="home-theater-tok-cell">
           <span className="home-theater-tok-num">{fmtTok(totals?.total_output)}</span>
-          <span className="home-theater-tok-lbl">output today</span>
+          <span className="home-theater-tok-lbl">{t("theater.outputToday")}</span>
         </div>
         <div className="home-theater-tok-cell">
           <span className="home-theater-tok-num">{fmtTok(totals?.total_cache_read)}</span>
-          <span className="home-theater-tok-lbl">cache read</span>
+          <span className="home-theater-tok-lbl">{t("theater.cacheRead")}</span>
         </div>
         <div className="home-theater-tok-cell">
           <span className="home-theater-tok-num home-theater-money">{fmtCost(totals?.total_estimated_cost)}</span>
-          <span className="home-theater-tok-lbl">est. cost today</span>
+          <span className="home-theater-tok-lbl">{t("theater.costToday")}</span>
         </div>
       </div>
 
@@ -204,7 +210,7 @@ function TokenPanel({ data }: { data: HomeData }) {
             <div key={m.model} className="home-theater-tok-model">
               <span className="home-theater-tok-mname">{m.model}</span>
               <span className="home-theater-tok-mtok">
-                {fmtTok(m.input_tokens + m.output_tokens)} tok
+                {t("theater.tok", { n: fmtTok(m.input_tokens + m.output_tokens) })}
               </span>
               <span className="home-theater-tok-mcost">{fmtCost(m.estimated_cost)}</span>
             </div>
@@ -214,11 +220,14 @@ function TokenPanel({ data }: { data: HomeData }) {
 
       {active && (
         <div className="home-theater-tok-session">
-          <span className="home-theater-tok-slbl">active session</span>
+          <span className="home-theater-tok-slbl">{t("theater.activeSession")}</span>
           <span className="home-theater-tok-stitle">{active.title ?? active.id}</span>
           <span className="home-theater-tok-snum">
-            {fmtTok((active.input_tokens ?? 0) + (active.output_tokens ?? 0))} tok ·{" "}
-            {active.message_count ?? 0} msg · {active.tool_call_count ?? 0} tools
+            {t("theater.sessionNums", {
+              tok: fmtTok((active.input_tokens ?? 0) + (active.output_tokens ?? 0)),
+              msg: active.message_count ?? 0,
+              tools: active.tool_call_count ?? 0,
+            })}
           </span>
         </div>
       )}
@@ -229,6 +238,7 @@ function TokenPanel({ data }: { data: HomeData }) {
 // ── PROYECTO ─────────────────────────────────────────────────────────
 
 function ProjectPanel({ data, live }: { data: HomeData; live: ReturnType<typeof useAgentLive> }) {
+  const t = useT();
   const active = (data.sessions?.sessions ?? []).find((s) => s.is_active);
   const paths = useMemo(
     () => extractPaths([...(live.currentTool ? [live.currentTool] : []), ...live.toolHistory]),
@@ -237,17 +247,17 @@ function ProjectPanel({ data, live }: { data: HomeData; live: ReturnType<typeof 
 
   return (
     <section className="home-theater-panel">
-      <PanelTitle>PROJECT</PanelTitle>
+      <PanelTitle>{t("theater.project")}</PanelTitle>
 
       {active ? (
         <div className="home-theater-proj-session">
-          <div className="home-theater-proj-title">{active.title ?? "(untitled session)"}</div>
+          <div className="home-theater-proj-title">{active.title ?? t("theater.untitled")}</div>
           <div className="home-theater-proj-meta">
-            {active.model ?? "—"} · {active.source ?? "—"} · started {timeAgo(active.started_at * 1000)}
+            {active.model ?? "—"} · {active.source ?? "—"} · {t("theater.started", { when: timeAgo(active.started_at * 1000, t) })}
           </div>
         </div>
       ) : (
-        <div className="home-theater-dim">no active session</div>
+        <div className="home-theater-dim">{t("theater.noSession")}</div>
       )}
 
       {paths.length > 0 ? (
@@ -261,7 +271,7 @@ function ProjectPanel({ data, live }: { data: HomeData; live: ReturnType<typeof 
         </div>
       ) : (
         <div className="home-theater-dim">
-          files touched by the agent will appear here as it works
+          {t("theater.filesEmpty")}
         </div>
       )}
 
@@ -286,13 +296,14 @@ function ProjectPanel({ data, live }: { data: HomeData; live: ReturnType<typeof 
 // ── RECOMENDACIONES ──────────────────────────────────────────────────
 
 function CoachPanel({ data, live }: { data: HomeData; live: ReturnType<typeof useAgentLive> }) {
+  const t = useT();
   const recs: Recommendation[] = useMemo(
-    () => buildRecommendations(data, live),
-    [data, live],
+    () => buildRecommendations(data, live, t),
+    [data, live, t],
   );
   return (
     <section className="home-theater-panel">
-      <PanelTitle>RECOMMENDATIONS</PanelTitle>
+      <PanelTitle>{t("theater.recommendations")}</PanelTitle>
       <div className="home-theater-rec-list">
         {recs.map((r, i) => (
           <div key={i} className={`home-theater-rec ${r.severity}`}>
@@ -313,6 +324,7 @@ function CoachPanel({ data, live }: { data: HomeData; live: ReturnType<typeof us
 // ── THEATER ──────────────────────────────────────────────────────────
 
 export function AgentTheater({ data }: Props) {
+  const t = useT();
   const live = useAgentLive();
 
   useEffect(() => {
@@ -324,19 +336,19 @@ export function AgentTheater({ data }: Props) {
   }, []);
 
   return (
-    <div className="home-theater" role="dialog" aria-label="Agent theater">
+    <div className="home-theater" role="dialog" aria-label={t("theater.aria")}>
       <header className="home-theater-head">
         <span className={`home-agent-dot ${live.busy ? "busy" : ""}`} aria-hidden="true" />
-        <span className="home-theater-title">AGENT THEATER</span>
+        <span className="home-theater-title">{t("theater.title")}</span>
         <span className="home-theater-sub">
-          {live.busy ? "the agent is working" : "the agent is idle"} · {live.live ? "live feed" : "polling"}
+          {live.busy ? t("theater.working") : t("theater.idle")} · {live.live ? t("theater.liveFeed") : t("theater.polling")}
         </span>
         <button
           className="home-theater-release"
           onClick={() => exitTheater()}
-          title="Release control (Esc)"
+          title={t("theater.releaseTitle")}
         >
-          release control
+          {t("theater.release")}
         </button>
       </header>
 

@@ -18,15 +18,23 @@ interface HomeContribution {
   render?: () => ReactNode;
 }
 
+export interface HomeLabels {
+  home: string;
+  open: string;
+}
+
+const ENGLISH_LABELS: HomeLabels = { home: "Home", open: "Open Home" };
+
 export function createHomeContributions(
   render: () => ReactNode,
   navigate: (path: string) => void = () => undefined,
+  labels: HomeLabels = ENGLISH_LABELS,
 ): HomeContribution[] {
   return [
     {
       id: "page",
       area: "routes",
-      title: "Home",
+      title: labels.home,
       order: -1000,
       data: { path: HOME_DESKTOP_PATH },
       render,
@@ -35,7 +43,7 @@ export function createHomeContributions(
       id: "nav",
       area: "sidebar.nav",
       order: -1000,
-      data: { path: HOME_DESKTOP_PATH, label: "Home", codicon: "home" },
+      data: { path: HOME_DESKTOP_PATH, label: labels.home, codicon: "home" },
     },
     {
       id: "open",
@@ -43,8 +51,8 @@ export function createHomeContributions(
       order: -1000,
       data: {
         id: "home.open",
-        label: "Open Home",
-        keywords: ["home", "dashboard", "widgets"],
+        label: labels.open,
+        keywords: ["home", "dashboard", "widgets", labels.home.toLowerCase()],
         run: () => navigate(HOME_DESKTOP_PATH),
       },
     },

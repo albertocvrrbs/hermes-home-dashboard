@@ -133,17 +133,18 @@ they never fight drag/resize.
 
 ## Widgets
 
-16 widgets, each with a hover control that fits what it does:
+17 widgets, each with a hover control that fits what it does:
 
 | Widget | Hover control |
 |---|---|
 | **Clock** | toggle 12/24h and seconds |
 | **Calendar** | page months · 3 responsive sizes |
 | **Moon** | scrub the phase ±1 day |
-| **Tokens** | switch range (7 days / 1 month / 6 months) · line ↔ bars chart · show/hide totals · hover a point for an animated tooltip |
+| **Tokens** | switch range (7 days / 1 month / 6 months) · line ↔ bars chart · show/hide totals · group usage **all / by provider / by model** · hover a point for an animated tooltip |
 | **Host** | cycle meters ↔ numeric detail ↔ live graphs (four rolling one-minute sparklines: cpu, ram, load, proc) |
 | **Gateway** | hover expands read-only detail (pid, health, config) |
-| **Sessions** | paginate recent sessions |
+| **Sessions** | paginate recent sessions · sort **recent / tokens** · minimum-token filter (all / ≥10K / ≥100K / ≥1M) |
+| **Agent** | live agent scene · take control (fullscreen agent theater) |
 | **Cron** | paginate upcoming jobs |
 | **Logs** | switch log file: agent / errors / gateway (multi-line records grouped, level-colored) |
 | **Notes** | quick to-dos · clear completed |
@@ -154,8 +155,54 @@ they never fight drag/resize.
 | **Heartbeat** | ECG trace · tune speed |
 | **Life** | Conway's Game of Life — draw live cells, pause / seed / clear |
 
-State that should stick (ranges, formats, timer lengths…) is saved to the layout;
-transient state (current page, browsed month) resets on reload.
+State that should stick (ranges, formats, timer lengths, grouping, sort…) is
+saved to the layout; transient state (current page, browsed month) resets on
+reload.
+
+### Tokens: group by provider or model
+
+Hover the widget and click the last toggle (`all` → `provider` → `model`). Under
+the chart you get one row per provider or model for the selected range, with its
+tokens, share and (on hover) cost. Provider identity comes from the host's
+per-model analytics (`/api/analytics/models`, the data behind the Models page);
+on a Hermes without it, the widget falls back to the per-model list and says so.
+
+### Sessions: sort and filter by tokens
+
+Hover the widget: the first toggle switches `recent` ↔ `tokens` (heaviest
+first), the second steps a minimum of input + output tokens. Both work over the
+20 most recent sessions the Home already loads, and the token count shows on
+each row while either is active.
+
+## Languages
+
+The UI ships in **English** and **Spanish**. It follows the host's language:
+Hermes Desktop and the Webapp use `display.language`, the web dashboard uses its
+own language picker; when the host exposes neither, the browser's language
+decides. Anything not translated falls back to English, string by string. Dates
+and month names follow your locale.
+
+### Adding a language
+
+One file. Copy `src/home/i18n/locales/en.ts` to
+`src/home/i18n/locales/<id>.ts` (`<id>` = the language id Hermes uses, e.g. `fr`,
+`de`, `pt-br`), translate the values and keep every key and `{placeholder}`:
+
+```ts
+import type { Messages } from "./en";
+
+const fr: Messages = {
+  "common.loading": "chargement…",
+  // …every key from en.ts
+};
+
+export default fr;
+```
+
+The build picks it up automatically (no registration anywhere else). Run
+`npm test`: it fails if a locale is missing a key, has an extra one, or drops a
+placeholder. Rebuild (`npm run build`) and open a PR with the locale file and the
+two regenerated bundles.
 
 ## How it works
 
@@ -163,12 +210,15 @@ transient state (current page, browsed month) resets on reload.
   registered through `window.__HERMES_PLUGINS__`, and a native **Desktop
   runtime plugin** registered through `@hermes/plugin-sdk`.
 - All data comes from the host's existing API (status, system, analytics,
-  sessions, cron, logs) through one polling loop. A couple of widgets fetch on
-  demand for their own controls — the Tokens range selector and the Logs file
-  selector.
+  sessions, cron, logs) through one polling loop. A few widgets fetch on
+  demand for their own controls — the Tokens range and grouping and the Logs
+  file selector.
 - The Python side (`dashboard/plugin_api.py`) persists the widget layout to
-  `~/.hermes/plugins/home-dashboard/layout.json` and exposes plugin-scoped,
-  read-only adapters for Desktop's widgets.
+  `~/.hermes/plugins/home-dashboard/layout.json`, exposes plugin-scoped,
+  read-only adapters for Desktop's widgets (`/system`, `/analytics`, `/models`,
+  `/cron`, `/sessions`). It makes no network calls.
+- UI strings go through a small translation layer (`src/home/i18n/`); see
+  [Languages](#languages).
 - Hover controls are pure CSS reveal (`:hover`), suppressed in edit mode — no
   per-widget hover state, which keeps the canvas widgets flicker-free.
 
@@ -180,13 +230,14 @@ hermes-home-dashboard/
 ├── __init__.py              # no-op register(ctx); the agent plugin loader requires it
 ├── dashboard/               # everything the Hermes host consumes
 │   ├── manifest.json        # tab/entry/css/api the dashboard reads
-│   ├── plugin_api.py        # FastAPI router that persists layout.json
+│   ├── plugin_api.py        # layout.json + read-only data routes
 │   └── dist/                # prebuilt bundle (committed — installer doesn't build)
 │       ├── index.js
 │       └── style.css
 ├── desktop/
 │   └── plugin.js            # prebuilt native Desktop runtime plugin
 ├── src/                     # widget source (only needed to modify the plugin)
+│   └── home/i18n/locales/   # one file per UI language (en.ts, es.ts)
 ├── vite.config.ts           # builds src/ → dashboard/dist/
 ├── vite.desktop.config.ts   # builds src/ → desktop/plugin.js
 ├── package.json

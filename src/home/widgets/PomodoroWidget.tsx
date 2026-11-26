@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { HoverCtl } from "./HoverArrows";
+import { useT } from "../i18n";
 
 interface PomoState {
   mode: "work" | "break";
@@ -39,6 +40,7 @@ const clampMin = (n: number) => Math.max(1, Math.min(180, Math.round(n)));
  *  · click the label → name the timer
  *  Auto-switches work ↔ break. Everything persists in the widget props. */
 export function PomodoroWidget({ widgetProps, onWidgetPropsChange }: Props) {
+  const t = useT();
   const state = readState(widgetProps);
   const label = typeof widgetProps.label === "string" ? widgetProps.label : "";
   const [now, setNow] = useState(() => Date.now());
@@ -95,13 +97,13 @@ export function PomodoroWidget({ widgetProps, onWidgetPropsChange }: Props) {
     <div className="home-clock-wrap home-pomo">
       <HoverCtl className="pomo-set">
         <div className="pomo-stepper">
-          <span className="hv-label">work</span>
+          <span className="hv-label">{t("pomo.work")}</span>
           <button className="hv-arrow" disabled={running} onClick={() => setWork(state.workMin - 1)}>‹</button>
           <span className="hv-label">{state.workMin}</span>
           <button className="hv-arrow" disabled={running} onClick={() => setWork(state.workMin + 1)}>›</button>
         </div>
         <div className="pomo-stepper">
-          <span className="hv-label">break</span>
+          <span className="hv-label">{t("pomo.break")}</span>
           <button className="hv-arrow" onClick={() => setBreak(state.breakMin - 1)}>‹</button>
           <span className="hv-label">{state.breakMin}</span>
           <button className="hv-arrow" onClick={() => setBreak(state.breakMin + 1)}>›</button>
@@ -110,7 +112,7 @@ export function PomodoroWidget({ widgetProps, onWidgetPropsChange }: Props) {
       <div
         className={`home-clock${running ? "" : " paused"}`}
         onClick={toggle}
-        title="click: start / pause"
+        title={t("pomo.toggleTitle")}
       >
         {mm}:{ss}
       </div>
@@ -129,9 +131,9 @@ export function PomodoroWidget({ widgetProps, onWidgetPropsChange }: Props) {
         <div
           className="home-clock-sub pomo-sub"
           onClick={() => setEditing(true)}
-          title="click to name this timer"
+          title={t("pomo.nameTitle")}
         >
-          {label ? `${label} · ` : ""}{state.mode} {running ? "· running" : "· paused"}
+          {label ? `${label} · ` : ""}{t(state.mode === "work" ? "pomo.work" : "pomo.break")} · {running ? t("pomo.running") : t("pomo.paused")}
         </div>
       )}
     </div>

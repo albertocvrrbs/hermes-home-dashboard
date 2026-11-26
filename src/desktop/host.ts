@@ -45,6 +45,7 @@ export function createDesktopHomeHost(
     getStatus: () => desktop.status() as ReturnType<HermesApi["getStatus"]>,
     getSystemStats: () => ctx.rest("/system"),
     getAnalytics: (days) => ctx.rest(query("/analytics", { days })),
+    getModelsAnalytics: (days) => ctx.rest(query("/models", { days })),
     getCronJobs: (profile) => ctx.rest(query("/cron", { profile })),
     getSessions: (limit, offset) => ctx.rest(query("/sessions", { limit, offset })),
     getLogs: (params) => desktop.logs(params) as ReturnType<HermesApi["getLogs"]>,

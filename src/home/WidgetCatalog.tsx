@@ -1,5 +1,6 @@
 import { WIDGET_REGISTRY } from "./widgets/registry";
 import type { HomeLayout } from "./layout-schema";
+import { useT } from "./i18n";
 
 interface Props {
   layout: HomeLayout;
@@ -12,19 +13,20 @@ interface Props {
  *  zone for deleting widgets dragged off the grid. The outer collapse/fade
  *  animation is driven by `.home-catalog-wrap` in HomePage. */
 export function WidgetCatalog({ layout, onChipPointerDown }: Props) {
+  const t = useT();
   const placed = new Set(layout.widgets.map((w) => w.id));
   const available = Object.entries(WIDGET_REGISTRY).filter(([id]) => !placed.has(id));
   return (
     <div className="home-catalog">
       <div className="home-catalog-inner">
-        <span className="home-catalog-hint">drag a widget here to remove it</span>
+        <span className="home-catalog-hint">{t("catalog.hint")}</span>
         {available.map(([id, def]) => (
           <button
             key={id}
             className="home-catalog-chip"
             onPointerDown={(e) => onChipPointerDown(id, e)}
           >
-            + {def.title}
+            + {t(def.titleKey)}
           </button>
         ))}
       </div>

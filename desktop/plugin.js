@@ -21,12 +21,23 @@ const api = {
   getStatus: () => getHost().api.getStatus(),
   getSystemStats: () => getHost().api.getSystemStats(),
   getAnalytics: (days) => getHost().api.getAnalytics(days),
+  getModelsAnalytics: (days) => {
+    const host2 = getHost().api;
+    return host2.getModelsAnalytics ? host2.getModelsAnalytics(days) : Promise.reject(new Error("model analytics not available on this Hermes"));
+  },
   getCronJobs: (profile) => getHost().api.getCronJobs(profile),
   getSessions: (limit, offset) => getHost().api.getSessions(limit, offset),
   getLogs: (params) => getHost().api.getLogs(params)
 };
 function fetchJSON(url, init) {
   return getHost().fetchJSON(url, init);
+}
+function useDashboardLocale() {
+  if (configuredHost) return null;
+  const sdk = window.__HERMES_PLUGIN_SDK__;
+  if (typeof sdk?.useI18n !== "function") return null;
+  const value = sdk.useI18n();
+  return typeof value?.locale === "string" ? value.locale : null;
 }
 function navigateTo(routePath) {
   getHost().navigateTo(routePath);
@@ -35,6 +46,586 @@ function onGatewayEvent(type, listener) {
   const h = getHost();
   if (!h.onEvent) return null;
   return h.onEvent(type, listener);
+}
+const en = {
+  // ── shared ──
+  "common.loading": "loading…",
+  "common.unavailable": "unavailable",
+  "common.previous": "previous",
+  "common.next": "next",
+  "common.today": "today",
+  "common.done": "done",
+  "common.none": "—",
+  "time.now": "now",
+  "time.justNow": "just now",
+  "time.secondsAgo": "{n}s ago",
+  "time.minutesAgo": "{n}m ago",
+  "time.hoursAgo": "{n}h ago",
+  "time.daysAgo": "{n}d ago",
+  // ── home chrome: edit mode, catalog, widget shell ──
+  "nav.home": "Home",
+  "nav.open": "Open Home",
+  "home.saveFailed": "Could not save the layout — it is kept for this session",
+  "home.restoreDefault": "Restore default layout",
+  "home.editLayout": "Edit layout",
+  "home.doneEditing": "Done editing",
+  "catalog.hint": "drag a widget here to remove it",
+  "shell.offline": "offline · Hermes backend unreachable",
+  "shell.unavailable": "unavailable · this source is not responding",
+  "shell.stale": "stale",
+  "shell.staleTitle": "Last update failed — showing previous data",
+  "shell.remove": "Remove {title}",
+  // ── widget titles (header + catalog chip) ──
+  "widget.ascii": "hermes",
+  "widget.clock": "clock",
+  "widget.matrix": "matrix",
+  "widget.gateway": "gateway",
+  "widget.sessions": "sessions",
+  "widget.tokens": "tokens",
+  "widget.host": "host",
+  "widget.cron": "cron",
+  "widget.notes": "notes",
+  "widget.errors": "logs",
+  "widget.moon": "moon",
+  "widget.heartbeat": "heartbeat",
+  "widget.life": "life",
+  "widget.pomodoro": "pomodoro",
+  "widget.countdown": "countdown",
+  "widget.calendar": "calendar",
+  "widget.agent": "agent",
+  // ── ascii ──
+  "ascii.art.caduceus": "caduceus",
+  "ascii.art.pyramid": "pyramid",
+  "ascii.art.diamond": "diamond",
+  // ── clock ──
+  "clock.seconds": "s",
+  "clock.secondsTitle": "show / hide seconds",
+  "clock.formatTitle": "12 / 24 hour clock",
+  // ── cron ──
+  "cron.empty": "no scheduled jobs",
+  "cron.ok": "ok",
+  "cron.err": "err",
+  // ── logs ──
+  "logs.record": "{n} record",
+  "logs.records": "{n} records",
+  "logs.empty": "no records",
+  // ── gateway ──
+  "gateway.status": "status",
+  "gateway.state": "state",
+  "gateway.online": "● online",
+  "gateway.offline": "● offline",
+  "gateway.pid": "pid",
+  "gateway.exit": "exit",
+  "gateway.health": "health",
+  "gateway.config": "config",
+  "gateway.version": "version",
+  // ── host ──
+  "host.view.meters": "meters",
+  "host.view.detail": "detail",
+  "host.view.graphs": "graphs",
+  "host.cpu": "cpu",
+  "host.ram": "ram",
+  "host.disk": "disk",
+  "host.load": "load",
+  "host.cores": "cores",
+  "host.proc": "proc",
+  "host.os": "os",
+  "host.diskFree": "{n}G free",
+  "host.procValue": "{mb}M · {threads} thr",
+  // ── moon ──
+  "moon.phase.0": "new moon",
+  "moon.phase.1": "waxing crescent",
+  "moon.phase.2": "first quarter",
+  "moon.phase.3": "waxing gibbous",
+  "moon.phase.4": "full moon",
+  "moon.phase.5": "waning gibbous",
+  "moon.phase.6": "last quarter",
+  "moon.phase.7": "waning crescent",
+  "moon.offset": "{n}d",
+  // ── notes ──
+  "notes.clearDone": "clear done",
+  "notes.empty": "no notes — add one with +",
+  "notes.restore": "restore",
+  "notes.strike": "strike through",
+  "notes.add": "Add note",
+  // ── pomodoro ──
+  "pomo.work": "work",
+  "pomo.break": "break",
+  "pomo.running": "running",
+  "pomo.paused": "paused",
+  "pomo.toggleTitle": "click: start / pause",
+  "pomo.nameTitle": "click to name this timer",
+  // ── countdown ──
+  "count.month": "month",
+  "count.day": "day",
+  "count.year": "year",
+  "count.hour": "hour",
+  "count.minute": "minute",
+  "count.up": "{field} up",
+  "count.down": "{field} down",
+  "count.setDate": "set date",
+  "count.setTitle": "click to set the date & time",
+  "count.labelTitle": "click to edit the label",
+  "count.namePrompt": "click to name this countdown",
+  // ── life ──
+  "life.play": "play",
+  "life.pause": "pause",
+  "life.seed": "seed",
+  "life.clear": "clear",
+  // ── tokens ──
+  "tokens.range.week": "7 days",
+  "tokens.range.month": "1 month",
+  "tokens.range.halfyear": "6 months",
+  "tokens.line": "line",
+  "tokens.lineTitle": "line / bars view",
+  "tokens.totals": "totals",
+  "tokens.totalsTitle": "show / hide totals",
+  "tokens.in": "in",
+  "tokens.out": "out",
+  "tokens.cost": "cost",
+  "tokens.dayFallback": "day*",
+  "tokens.group.off": "all",
+  "tokens.group.provider": "provider",
+  "tokens.group.model": "model",
+  "tokens.groupTitle": "group usage: all / by provider / by model",
+  "tokens.groupEmpty": "no usage in this range",
+  "tokens.groupMore": "+{n} more",
+  "tokens.unknownProvider": "unknown",
+  "tokens.providerFallback": "provider data unavailable — showing models",
+  "tokens.rowTitle": "{name} · {tokens} tokens · ${cost} · {share}%",
+  // ── sessions ──
+  "sessions.active": "active",
+  "sessions.live": "live",
+  "sessions.idle": "idle",
+  "sessions.sort.recent": "recent",
+  "sessions.sort.tokens": "tokens",
+  "sessions.sortTitle": "sort: most recent / most tokens",
+  "sessions.filter.all": "all",
+  "sessions.filterTitle": "minimum tokens (in + out)",
+  "sessions.noneMatch": "no sessions above {n} tokens",
+  "sessions.tokensTitle": "{input} in · {output} out",
+  // ── agent widget ──
+  "agent.working": "working",
+  "agent.thinking": "thinking",
+  "agent.idle": "idle",
+  "agent.take": "take control",
+  "agent.takeAria": "Take control",
+  "agent.takeTitle": "Take control of the screen — live agent theater",
+  "agent.in": "in",
+  "agent.out": "out",
+  "agent.est": "est",
+  "agent.ses": "ses",
+  "agent.inTitle": "Input tokens today",
+  "agent.outTitle": "Output tokens today",
+  "agent.estTitle": "Estimated cost today",
+  "agent.sesTitle": "Sessions today",
+  "agent.polling": "polling mode · no live channel",
+  // ── live scene + feed ──
+  "scene.running": "running",
+  "scene.message": "message",
+  "scene.streaming": "streaming",
+  "scene.complete": "complete",
+  "scene.idle": "idle",
+  "scene.resting": "the agent is resting — new activity will appear here",
+  "feed.generating": "generating…",
+  "feed.progress": "progress…",
+  "feed.spawned": "spawned",
+  "feed.done": "done",
+  "feed.thinking": "thinking…",
+  "feed.session": "session",
+  "feed.new": "new",
+  "feed.error": "error",
+  "feed.live": "live",
+  "feed.channelOpen": "gateway channel open",
+  // ── agent theater ──
+  "theater.aria": "Agent theater",
+  "theater.title": "AGENT THEATER",
+  "theater.working": "the agent is working",
+  "theater.idle": "the agent is idle",
+  "theater.liveFeed": "live feed",
+  "theater.polling": "polling",
+  "theater.live": "live",
+  "theater.release": "release control",
+  "theater.releaseTitle": "Release control (Esc)",
+  "theater.now": "NOW · {status}",
+  "theater.gatewayDown": "gateway down",
+  "theater.feedEmpty": "no live activity yet — the feed fills as the agent works",
+  "theater.lastEvent": "last event {when}",
+  "theater.updated": "updated {when}",
+  "theater.function": "FUNCTION",
+  "theater.awaitingArgs": "awaiting args…",
+  "theater.noTool": "no tool running",
+  "theater.tokensCost": "TOKENS & COST",
+  "theater.inputToday": "input today",
+  "theater.outputToday": "output today",
+  "theater.cacheRead": "cache read",
+  "theater.costToday": "est. cost today",
+  "theater.tok": "{n} tok",
+  "theater.activeSession": "active session",
+  "theater.sessionNums": "{tok} tok · {msg} msg · {tools} tools",
+  "theater.project": "PROJECT",
+  "theater.untitled": "(untitled session)",
+  "theater.started": "started {when}",
+  "theater.noSession": "no active session",
+  "theater.filesEmpty": "files touched by the agent will appear here as it works",
+  "theater.recommendations": "RECOMMENDATIONS",
+  // ── coach (recommendations) ──
+  "coach.sourcesFailing.title": "{n} data source(s) failing",
+  "coach.sourcesFailing.detail": "Polling errors on: {sources}. Check the gateway and plugin API.",
+  "coach.errorLines.title": "{n} error line(s) in the gateway log",
+  "coach.errorLines.detail": "Tail the log to see if a platform or plugin is throwing repeatedly.",
+  "coach.cost.title": "≈${cost} estimated today",
+  "coach.cost.high": "Cost is climbing. Consider a cheaper model, context compression, or capping long sessions.",
+  "coach.cost.moderate": "Spend is moderate — keep an eye on it if you're mid-migration.",
+  "coach.tokens.title": "{n}M tokens today",
+  "coach.tokens.detail": "Heavy usage. /compact long sessions and reuse cached context to cut input tokens.",
+  "coach.repeated.title": '"{name}" called {n}× recently',
+  "coach.repeated.detail": "A repeated tool sequence is a skill in disguise — consider saving it with skill_manage.",
+  "coach.parallel.title": "{n} sessions active at once",
+  "coach.parallel.detail": "Parallel work is running — delegate_task fans out well, but watch for tool conflicts on shared files.",
+  "coach.subagents.title": "{n} subagent(s) working",
+  "coach.subagents.detail": "Orchestration in flight. Check back for their consolidated reports.",
+  "coach.slow.title": '"{name}" running >2min',
+  "coach.slow.detail": "Long tool call — it may be a build, a big search, or a hung process. Watch it.",
+  "coach.longSession.title": "Active session at {n} messages",
+  "coach.longSession.detail": "Long context costs more per turn and degrades focus. A fresh session or /compact resets the cache.",
+  "coach.toolChurn.title": "{n} tool calls in the active session",
+  "coach.toolChurn.detail": "High tool churn — the task may benefit from a dedicated skill or a subagent.",
+  "coach.skill.title": 'Top skill "{name}" only {n}% of loads',
+  "coach.skill.detail": "Your most-used skill is still under-leveraged — consider bundling related skills.",
+  "coach.quiet.title": "All quiet on the home front",
+  "coach.quiet.detail": "No anomalies right now. The coach stays silent until there's something worth saying."
+};
+const __vite_glob_0_0 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  default: en
+}, Symbol.toStringTag, { value: "Module" }));
+const es = {
+  // ── shared ──
+  "common.loading": "cargando…",
+  "common.unavailable": "no disponible",
+  "common.previous": "anterior",
+  "common.next": "siguiente",
+  "common.today": "hoy",
+  "common.done": "listo",
+  "common.none": "—",
+  "time.now": "ahora",
+  "time.justNow": "justo ahora",
+  "time.secondsAgo": "hace {n} s",
+  "time.minutesAgo": "hace {n} min",
+  "time.hoursAgo": "hace {n} h",
+  "time.daysAgo": "hace {n} d",
+  // ── home chrome: edit mode, catalog, widget shell ──
+  "nav.home": "Inicio",
+  "nav.open": "Abrir Inicio",
+  "home.saveFailed": "No se pudo guardar el diseño; se conserva durante esta sesión",
+  "home.restoreDefault": "Restaurar el diseño predeterminado",
+  "home.editLayout": "Editar diseño",
+  "home.doneEditing": "Terminar de editar",
+  "catalog.hint": "arrastra un widget aquí para quitarlo",
+  "shell.offline": "sin conexión · no se alcanza el backend de Hermes",
+  "shell.unavailable": "no disponible · esta fuente no responde",
+  "shell.stale": "desactualizado",
+  "shell.staleTitle": "Falló la última actualización; se muestran los datos anteriores",
+  "shell.remove": "Quitar {title}",
+  // ── widget titles (header + catalog chip) ──
+  "widget.ascii": "hermes",
+  "widget.clock": "reloj",
+  "widget.matrix": "matrix",
+  "widget.gateway": "gateway",
+  "widget.sessions": "sesiones",
+  "widget.tokens": "tokens",
+  "widget.host": "servidor",
+  "widget.cron": "cron",
+  "widget.notes": "notas",
+  "widget.errors": "registros",
+  "widget.moon": "luna",
+  "widget.heartbeat": "latido",
+  "widget.life": "vida",
+  "widget.pomodoro": "pomodoro",
+  "widget.countdown": "cuenta regresiva",
+  "widget.calendar": "calendario",
+  "widget.agent": "agente",
+  // ── ascii ──
+  "ascii.art.caduceus": "caduceo",
+  "ascii.art.pyramid": "pirámide",
+  "ascii.art.diamond": "diamante",
+  // ── clock ──
+  "clock.seconds": "s",
+  "clock.secondsTitle": "mostrar / ocultar segundos",
+  "clock.formatTitle": "reloj de 12 / 24 horas",
+  // ── cron ──
+  "cron.empty": "no hay tareas programadas",
+  "cron.ok": "ok",
+  "cron.err": "error",
+  // ── logs ──
+  "logs.record": "{n} registro",
+  "logs.records": "{n} registros",
+  "logs.empty": "sin registros",
+  // ── gateway ──
+  "gateway.status": "estado",
+  "gateway.state": "fase",
+  "gateway.online": "● en línea",
+  "gateway.offline": "● sin conexión",
+  "gateway.pid": "pid",
+  "gateway.exit": "salida",
+  "gateway.health": "salud",
+  "gateway.config": "config",
+  "gateway.version": "versión",
+  // ── host ──
+  "host.view.meters": "medidores",
+  "host.view.detail": "detalle",
+  "host.view.graphs": "gráficas",
+  "host.cpu": "cpu",
+  "host.ram": "ram",
+  "host.disk": "disco",
+  "host.load": "carga",
+  "host.cores": "núcleos",
+  "host.proc": "proceso",
+  "host.os": "so",
+  "host.diskFree": "{n}G libres",
+  "host.procValue": "{mb}M · {threads} hilos",
+  // ── moon ──
+  "moon.phase.0": "luna nueva",
+  "moon.phase.1": "luna creciente",
+  "moon.phase.2": "cuarto creciente",
+  "moon.phase.3": "gibosa creciente",
+  "moon.phase.4": "luna llena",
+  "moon.phase.5": "gibosa menguante",
+  "moon.phase.6": "cuarto menguante",
+  "moon.phase.7": "luna menguante",
+  "moon.offset": "{n} d",
+  // ── notes ──
+  "notes.clearDone": "borrar hechas",
+  "notes.empty": "sin notas; agrega una con +",
+  "notes.restore": "restaurar",
+  "notes.strike": "tachar",
+  "notes.add": "Agregar nota",
+  // ── pomodoro ──
+  "pomo.work": "trabajo",
+  "pomo.break": "descanso",
+  "pomo.running": "en marcha",
+  "pomo.paused": "en pausa",
+  "pomo.toggleTitle": "clic: iniciar / pausar",
+  "pomo.nameTitle": "haz clic para nombrar este temporizador",
+  // ── countdown ──
+  "count.month": "mes",
+  "count.day": "día",
+  "count.year": "año",
+  "count.hour": "hora",
+  "count.minute": "minuto",
+  "count.up": "subir {field}",
+  "count.down": "bajar {field}",
+  "count.setDate": "elegir fecha",
+  "count.setTitle": "haz clic para elegir la fecha y la hora",
+  "count.labelTitle": "haz clic para editar la etiqueta",
+  "count.namePrompt": "haz clic para nombrar esta cuenta regresiva",
+  // ── life ──
+  "life.play": "reanudar",
+  "life.pause": "pausa",
+  "life.seed": "sembrar",
+  "life.clear": "limpiar",
+  // ── tokens ──
+  "tokens.range.week": "7 días",
+  "tokens.range.month": "1 mes",
+  "tokens.range.halfyear": "6 meses",
+  "tokens.line": "línea",
+  "tokens.lineTitle": "vista de línea / barras",
+  "tokens.totals": "totales",
+  "tokens.totalsTitle": "mostrar / ocultar totales",
+  "tokens.in": "ent",
+  "tokens.out": "sal",
+  "tokens.cost": "costo",
+  "tokens.dayFallback": "día*",
+  "tokens.group.off": "todo",
+  "tokens.group.provider": "proveedor",
+  "tokens.group.model": "modelo",
+  "tokens.groupTitle": "agrupar uso: todo / por proveedor / por modelo",
+  "tokens.groupEmpty": "sin uso en este periodo",
+  "tokens.groupMore": "+{n} más",
+  "tokens.unknownProvider": "desconocido",
+  "tokens.providerFallback": "sin datos de proveedor; se muestran modelos",
+  "tokens.rowTitle": "{name} · {tokens} tokens · ${cost} · {share} %",
+  // ── sessions ──
+  "sessions.active": "activas",
+  "sessions.live": "en vivo",
+  "sessions.idle": "inactiva",
+  "sessions.sort.recent": "recientes",
+  "sessions.sort.tokens": "tokens",
+  "sessions.sortTitle": "ordenar: más recientes / más tokens",
+  "sessions.filter.all": "todas",
+  "sessions.filterTitle": "mínimo de tokens (entrada + salida)",
+  "sessions.noneMatch": "ninguna sesión supera {n} tokens",
+  "sessions.tokensTitle": "{input} de entrada · {output} de salida",
+  // ── agent widget ──
+  "agent.working": "trabajando",
+  "agent.thinking": "pensando",
+  "agent.idle": "en reposo",
+  "agent.take": "tomar el control",
+  "agent.takeAria": "Tomar el control",
+  "agent.takeTitle": "Toma el control de la pantalla: teatro del agente en vivo",
+  "agent.in": "ent",
+  "agent.out": "sal",
+  "agent.est": "est",
+  "agent.ses": "ses",
+  "agent.inTitle": "Tokens de entrada de hoy",
+  "agent.outTitle": "Tokens de salida de hoy",
+  "agent.estTitle": "Costo estimado de hoy",
+  "agent.sesTitle": "Sesiones de hoy",
+  "agent.polling": "modo de consulta · sin canal en vivo",
+  // ── live scene + feed ──
+  "scene.running": "en ejecución",
+  "scene.message": "mensaje",
+  "scene.streaming": "escribiendo",
+  "scene.complete": "completo",
+  "scene.idle": "en reposo",
+  "scene.resting": "el agente descansa; aquí aparecerá la nueva actividad",
+  "feed.generating": "generando…",
+  "feed.progress": "avanzando…",
+  "feed.spawned": "iniciado",
+  "feed.done": "terminado",
+  "feed.thinking": "pensando…",
+  "feed.session": "sesión",
+  "feed.new": "nueva",
+  "feed.error": "error",
+  "feed.live": "en vivo",
+  "feed.channelOpen": "canal del gateway abierto",
+  // ── agent theater ──
+  "theater.aria": "Teatro del agente",
+  "theater.title": "TEATRO DEL AGENTE",
+  "theater.working": "el agente está trabajando",
+  "theater.idle": "el agente está en reposo",
+  "theater.liveFeed": "transmisión en vivo",
+  "theater.polling": "consulta periódica",
+  "theater.live": "en vivo",
+  "theater.release": "soltar el control",
+  "theater.releaseTitle": "Soltar el control (Esc)",
+  "theater.now": "AHORA · {status}",
+  "theater.gatewayDown": "gateway caído",
+  "theater.feedEmpty": "todavía no hay actividad; se irá llenando mientras el agente trabaja",
+  "theater.lastEvent": "último evento {when}",
+  "theater.updated": "actualizado {when}",
+  "theater.function": "FUNCIÓN",
+  "theater.awaitingArgs": "esperando argumentos…",
+  "theater.noTool": "ninguna herramienta en ejecución",
+  "theater.tokensCost": "TOKENS Y COSTO",
+  "theater.inputToday": "entrada hoy",
+  "theater.outputToday": "salida hoy",
+  "theater.cacheRead": "lectura de caché",
+  "theater.costToday": "costo est. hoy",
+  "theater.tok": "{n} tok",
+  "theater.activeSession": "sesión activa",
+  "theater.sessionNums": "{tok} tok · {msg} mensajes · {tools} herramientas",
+  "theater.project": "PROYECTO",
+  "theater.untitled": "(sesión sin título)",
+  "theater.started": "iniciada {when}",
+  "theater.noSession": "no hay una sesión activa",
+  "theater.filesEmpty": "aquí aparecerán los archivos que toque el agente mientras trabaja",
+  "theater.recommendations": "RECOMENDACIONES",
+  // ── coach (recommendations) ──
+  "coach.sourcesFailing.title": "{n} fuente(s) de datos con fallas",
+  "coach.sourcesFailing.detail": "Errores de consulta en: {sources}. Revisa el gateway y la API del plugin.",
+  "coach.errorLines.title": "{n} línea(s) de error en el registro del gateway",
+  "coach.errorLines.detail": "Sigue el registro para ver si una plataforma o un plugin falla una y otra vez.",
+  "coach.cost.title": "≈${cost} estimados hoy",
+  "coach.cost.high": "El costo va en aumento. Considera un modelo más barato, comprimir el contexto o acotar las sesiones largas.",
+  "coach.cost.moderate": "El gasto es moderado; vigílalo si estás a mitad de una migración.",
+  "coach.tokens.title": "{n}M tokens hoy",
+  "coach.tokens.detail": "Uso intenso. Usa /compact en sesiones largas y reutiliza el contexto en caché para bajar los tokens de entrada.",
+  "coach.repeated.title": '"{name}" se llamó {n} veces hace poco',
+  "coach.repeated.detail": "Una secuencia de herramientas repetida es una skill disfrazada; considera guardarla con skill_manage.",
+  "coach.parallel.title": "{n} sesiones activas a la vez",
+  "coach.parallel.detail": "Hay trabajo en paralelo; delegate_task reparte bien, pero cuida los choques de herramientas sobre archivos compartidos.",
+  "coach.subagents.title": "{n} subagente(s) trabajando",
+  "coach.subagents.detail": "Orquestación en curso. Vuelve luego por sus reportes consolidados.",
+  "coach.slow.title": '"{name}" lleva más de 2 min',
+  "coach.slow.detail": "Llamada larga: puede ser una compilación, una búsqueda grande o un proceso colgado. Vigílala.",
+  "coach.longSession.title": "La sesión activa va en {n} mensajes",
+  "coach.longSession.detail": "Un contexto largo cuesta más por turno y dispersa el foco. Una sesión nueva o /compact reinicia la caché.",
+  "coach.toolChurn.title": "{n} llamadas a herramientas en la sesión activa",
+  "coach.toolChurn.detail": "Mucho movimiento de herramientas; a la tarea le convendría una skill dedicada o un subagente.",
+  "coach.skill.title": 'La skill principal "{name}" es solo el {n} % de las cargas',
+  "coach.skill.detail": "Tu skill más usada sigue desaprovechada; considera agrupar skills relacionadas.",
+  "coach.quiet.title": "Todo en calma por aquí",
+  "coach.quiet.detail": "Sin anomalías por ahora. El coach guarda silencio hasta que haya algo que valga la pena decir."
+};
+const __vite_glob_0_1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  default: es
+}, Symbol.toStringTag, { value: "Module" }));
+const FALLBACK_LANGUAGE = "en";
+function interpolate(text, vars) {
+  if (!vars) return text;
+  return text.replace(
+    /\{(\w+)\}/g,
+    (slot, name) => Object.prototype.hasOwnProperty.call(vars, name) ? String(vars[name]) : slot
+  );
+}
+function translate(dictionaries, language, key, vars) {
+  const text = dictionaries[language]?.[key] ?? dictionaries[FALLBACK_LANGUAGE]?.[key] ?? key;
+  return interpolate(text, vars);
+}
+function resolveLanguage(candidates, available) {
+  const have = new Set(available.map((a) => a.toLowerCase()));
+  for (const raw of candidates) {
+    if (!raw) continue;
+    const tag = raw.trim().toLowerCase().replace(/_/g, "-");
+    if (!tag) continue;
+    if (have.has(tag)) return tag;
+    const base = tag.split("-")[0];
+    if (have.has(base)) return base;
+  }
+  return FALLBACK_LANGUAGE;
+}
+const modules = /* @__PURE__ */ Object.assign({
+  "./locales/en.ts": __vite_glob_0_0,
+  "./locales/es.ts": __vite_glob_0_1
+});
+const DICTIONARIES = Object.fromEntries(
+  Object.entries(modules).map(([path, mod]) => [
+    path.replace(/^.*\//, "").replace(/\.ts$/, "").toLowerCase(),
+    mod.default
+  ])
+);
+const LANGUAGES = Object.keys(DICTIONARIES);
+let hostLanguage = null;
+const listeners$2 = /* @__PURE__ */ new Set();
+function browserLanguages() {
+  if (typeof navigator === "undefined") return [];
+  return navigator.languages?.length ? navigator.languages : [navigator.language];
+}
+function computeLanguage() {
+  return resolveLanguage([hostLanguage, ...browserLanguages()], LANGUAGES);
+}
+let current = computeLanguage();
+function setHostLanguage(language) {
+  hostLanguage = language ?? null;
+  const next = computeLanguage();
+  if (next === current) return;
+  current = next;
+  listeners$2.forEach((l) => l());
+}
+const translators = /* @__PURE__ */ new Map();
+function translatorFor(language) {
+  let fn = translators.get(language);
+  if (!fn) {
+    fn = (key, vars) => translate(DICTIONARIES, language, key, vars);
+    translators.set(language, fn);
+  }
+  return fn;
+}
+const t = (key, vars) => translatorFor(current)(key, vars);
+function useT() {
+  const [language, setLanguage] = useState(current);
+  useEffect(() => {
+    const onChange = () => setLanguage(current);
+    listeners$2.add(onChange);
+    onChange();
+    return () => {
+      listeners$2.delete(onChange);
+    };
+  }, []);
+  return translatorFor(language);
 }
 const GRID_COLS = 12;
 function collide(a, b) {
@@ -57,10 +648,10 @@ function reflow(box, others) {
   return moved;
 }
 function findSwapTarget(pgx, pgy, dragged, others) {
-  for (const t of others) {
-    if (t.id === dragged.id || t.gw !== dragged.gw || t.gh !== dragged.gh) continue;
-    if (pgx >= t.gx && pgx < t.gx + t.gw && pgy >= t.gy && pgy < t.gy + t.gh) {
-      return t;
+  for (const t2 of others) {
+    if (t2.id === dragged.id || t2.gw !== dragged.gw || t2.gh !== dragged.gh) continue;
+    if (pgx >= t2.gx && pgx < t2.gx + t2.gw && pgy >= t2.gy && pgy < t2.gy + t2.gh) {
+      return t2;
     }
   }
   return null;
@@ -104,12 +695,13 @@ function HoverArrows({
   nextDisabled,
   className
 }) {
+  const t2 = useT();
   return /* @__PURE__ */ jsxs(HoverCtl, { className: `hover-arrows${className ? ` ${className}` : ""}`, children: [
     /* @__PURE__ */ jsx(
       "button",
       {
         className: "hv-arrow",
-        "aria-label": "previous",
+        "aria-label": t2("common.previous"),
         disabled: prevDisabled,
         onClick: (e) => {
           swallow(e);
@@ -133,7 +725,7 @@ function HoverArrows({
       "button",
       {
         className: "hv-arrow",
-        "aria-label": "next",
+        "aria-label": t2("common.next"),
         disabled: nextDisabled,
         onClick: (e) => {
           swallow(e);
@@ -151,6 +743,7 @@ function readNotes(p) {
   );
 }
 function NotesWidget({ widgetProps, onWidgetPropsChange }) {
+  const t2 = useT();
   const notes = readNotes(widgetProps);
   const [editingId, setEditingId] = useState(null);
   const commit = (next) => onWidgetPropsChange({ ...widgetProps, notes: next });
@@ -167,8 +760,8 @@ function NotesWidget({ widgetProps, onWidgetPropsChange }) {
   };
   const doneCount = notes.filter((n) => n.done).length;
   return /* @__PURE__ */ jsxs("div", { className: "home-notes", children: [
-    doneCount > 0 && /* @__PURE__ */ jsx(HoverCtl, { children: /* @__PURE__ */ jsx("button", { className: "hv-opt", onClick: () => commit(notes.filter((n) => !n.done)), children: "clear done" }) }),
-    notes.length === 0 && editingId === null && /* @__PURE__ */ jsx("span", { className: "dim", children: "no notes — add one with +" }),
+    doneCount > 0 && /* @__PURE__ */ jsx(HoverCtl, { children: /* @__PURE__ */ jsx("button", { className: "hv-opt", onClick: () => commit(notes.filter((n) => !n.done)), children: t2("notes.clearDone") }) }),
+    notes.length === 0 && editingId === null && /* @__PURE__ */ jsx("span", { className: "dim", children: t2("notes.empty") }),
     notes.map(
       (n) => editingId === n.id ? /* @__PURE__ */ jsxs("div", { className: "note-row", children: [
         /* @__PURE__ */ jsx("span", { className: "note-mark dim", children: "·" }),
@@ -191,7 +784,7 @@ function NotesWidget({ widgetProps, onWidgetPropsChange }) {
           {
             className: `note-mark${n.done ? " done" : ""}`,
             onClick: () => toggle(n.id),
-            title: n.done ? "restore" : "strike through",
+            title: n.done ? t2("notes.restore") : t2("notes.strike"),
             children: n.done ? "✕" : "·"
           }
         ),
@@ -205,7 +798,7 @@ function NotesWidget({ widgetProps, onWidgetPropsChange }) {
         )
       ] }, n.id)
     ),
-    /* @__PURE__ */ jsx("button", { className: "note-add", onClick: add, "aria-label": "Add note", children: "+" })
+    /* @__PURE__ */ jsx("button", { className: "note-add", onClick: add, "aria-label": t2("notes.add"), children: "+" })
   ] });
 }
 function asciiArtClass(name) {
@@ -238,17 +831,18 @@ const diamond = Array.from({ length: 15 }, (_, r) => {
   return row(14 - k, 2 * k + 1);
 }).join("\n");
 const ARTS = [
-  { name: "caduceus", art: CADUCEUS },
-  { name: "pyramid", art: pyramid },
-  { name: "diamond", art: diamond }
+  { name: "caduceus", label: "ascii.art.caduceus", art: CADUCEUS },
+  { name: "pyramid", label: "ascii.art.pyramid", art: pyramid },
+  { name: "diamond", label: "ascii.art.diamond", art: diamond }
 ];
 function AsciiWidget({ status, widgetProps, onWidgetPropsChange }) {
+  const t2 = useT();
   const version = status?.version;
   const raw = typeof widgetProps.artIndex === "number" ? widgetProps.artIndex : 0;
   const idx = (raw % ARTS.length + ARTS.length) % ARTS.length;
   const cycle = (dir) => onWidgetPropsChange({ ...widgetProps, artIndex: (idx + dir + ARTS.length) % ARTS.length });
   return /* @__PURE__ */ jsxs("div", { className: "home-ascii-wrap", children: [
-    /* @__PURE__ */ jsx(HoverArrows, { onPrev: () => cycle(-1), onNext: () => cycle(1), label: ARTS[idx].name }),
+    /* @__PURE__ */ jsx(HoverArrows, { onPrev: () => cycle(-1), onNext: () => cycle(1), label: t2(ARTS[idx].label) }),
     /* @__PURE__ */ jsx("div", { className: asciiArtClass(ARTS[idx].name), children: ARTS[idx].art }),
     /* @__PURE__ */ jsxs("div", { className: "home-ascii-ver", children: [
       "HERMES-AGENT",
@@ -257,12 +851,13 @@ function AsciiWidget({ status, widgetProps, onWidgetPropsChange }) {
   ] });
 }
 function ClockWidget({ widgetProps, onWidgetPropsChange }) {
+  const t2 = useT();
   const is12 = widgetProps.format === "12";
   const showSeconds = widgetProps.showSeconds === true;
   const [now, setNow] = useState(() => /* @__PURE__ */ new Date());
   useEffect(() => {
-    const t = setInterval(() => setNow(/* @__PURE__ */ new Date()), showSeconds ? 1e3 : 5e3);
-    return () => clearInterval(t);
+    const t22 = setInterval(() => setNow(/* @__PURE__ */ new Date()), showSeconds ? 1e3 : 5e3);
+    return () => clearInterval(t22);
   }, [showSeconds]);
   const set = (patch) => onWidgetPropsChange({ ...widgetProps, ...patch });
   let h = now.getHours();
@@ -275,13 +870,22 @@ function ClockWidget({ widgetProps, onWidgetPropsChange }) {
   const ss = String(now.getSeconds()).padStart(2, "0");
   return /* @__PURE__ */ jsxs("div", { className: "home-clock-wrap", children: [
     /* @__PURE__ */ jsxs(HoverCtl, { children: [
-      /* @__PURE__ */ jsx("button", { className: "hv-opt", onClick: () => set({ format: is12 ? "24" : "12" }), children: is12 ? "12h" : "24h" }),
+      /* @__PURE__ */ jsx(
+        "button",
+        {
+          className: "hv-opt",
+          onClick: () => set({ format: is12 ? "24" : "12" }),
+          title: t2("clock.formatTitle"),
+          children: is12 ? "12h" : "24h"
+        }
+      ),
       /* @__PURE__ */ jsx(
         "button",
         {
           className: `hv-opt${showSeconds ? " on" : ""}`,
           onClick: () => set({ showSeconds: !showSeconds }),
-          children: "s"
+          title: t2("clock.secondsTitle"),
+          children: t2("clock.seconds")
         }
       )
     ] }),
@@ -339,7 +943,7 @@ function MatrixWidget({ widgetProps, onWidgetPropsChange }) {
     fit();
     const ro = new ResizeObserver(fit);
     ro.observe(cv.parentElement);
-    const t = setInterval(() => {
+    const t2 = setInterval(() => {
       if (document.hidden) return;
       const step = speedRef.current;
       ctx.globalCompositeOperation = "destination-out";
@@ -359,7 +963,7 @@ function MatrixWidget({ widgetProps, onWidgetPropsChange }) {
     }, TICK_MS$1);
     return () => {
       ro.disconnect();
-      clearInterval(t);
+      clearInterval(t2);
     };
   }, []);
   return /* @__PURE__ */ jsxs(Fragment, { children: [
@@ -388,17 +992,18 @@ function Row$1({ label, val }) {
   ] });
 }
 function GatewayWidget({ status }) {
-  if (!status) return /* @__PURE__ */ jsx("span", { className: "dim", children: "loading…" });
+  const t2 = useT();
+  if (!status) return /* @__PURE__ */ jsx("span", { className: "dim", children: t2("common.loading") });
   const platforms = Object.entries(status.gateway_platforms ?? {});
   const configStr = `v${status.config_version}${status.config_version !== status.latest_config_version ? ` → v${status.latest_config_version}` : ""}`;
   return /* @__PURE__ */ jsxs("div", { children: [
     /* @__PURE__ */ jsxs("div", { className: "rows", children: [
       /* @__PURE__ */ jsxs("div", { className: "row", children: [
-        /* @__PURE__ */ jsx("span", { className: "dim", children: "status" }),
-        /* @__PURE__ */ jsx("span", { className: status.gateway_running ? "ok" : "werr", children: status.gateway_running ? "● online" : "● offline" })
+        /* @__PURE__ */ jsx("span", { className: "dim", children: t2("gateway.status") }),
+        /* @__PURE__ */ jsx("span", { className: status.gateway_running ? "ok" : "werr", children: status.gateway_running ? t2("gateway.online") : t2("gateway.offline") })
       ] }),
       /* @__PURE__ */ jsxs("div", { className: "row", children: [
-        /* @__PURE__ */ jsx("span", { className: "dim", children: "state" }),
+        /* @__PURE__ */ jsx("span", { className: "dim", children: t2("gateway.state") }),
         /* @__PURE__ */ jsx("span", { children: status.gateway_state ?? "—" })
       ] }),
       platforms.map(([name, p]) => /* @__PURE__ */ jsxs("div", { className: "row", children: [
@@ -407,48 +1012,148 @@ function GatewayWidget({ status }) {
       ] }, name))
     ] }),
     /* @__PURE__ */ jsx("div", { className: "hover-reveal", children: /* @__PURE__ */ jsxs("div", { className: "rows", children: [
-      status.gateway_pid != null && /* @__PURE__ */ jsx(Row$1, { label: "pid", val: String(status.gateway_pid) }),
-      status.gateway_exit_reason && /* @__PURE__ */ jsx(Row$1, { label: "exit", val: status.gateway_exit_reason.slice(0, 28) }),
-      status.gateway_health_url && /* @__PURE__ */ jsx(Row$1, { label: "health", val: hostOf(status.gateway_health_url) }),
-      /* @__PURE__ */ jsx(Row$1, { label: "config", val: configStr }),
-      /* @__PURE__ */ jsx(Row$1, { label: "version", val: `v${status.version}` })
+      status.gateway_pid != null && /* @__PURE__ */ jsx(Row$1, { label: t2("gateway.pid"), val: String(status.gateway_pid) }),
+      status.gateway_exit_reason && /* @__PURE__ */ jsx(Row$1, { label: t2("gateway.exit"), val: status.gateway_exit_reason.slice(0, 28) }),
+      status.gateway_health_url && /* @__PURE__ */ jsx(Row$1, { label: t2("gateway.health"), val: hostOf(status.gateway_health_url) }),
+      /* @__PURE__ */ jsx(Row$1, { label: t2("gateway.config"), val: configStr }),
+      /* @__PURE__ */ jsx(Row$1, { label: t2("gateway.version"), val: `v${status.version}` })
     ] }) })
-  ] });
-}
-const PER_PAGE$1 = 3;
-function SessionsWidget({
-  status,
-  sessions
-}) {
-  const [page, setPage] = useState(0);
-  if (!status && !sessions) return /* @__PURE__ */ jsx("span", { className: "dim", children: "loading…" });
-  const all = sessions?.sessions ?? [];
-  const pages = Math.max(1, Math.ceil(all.length / PER_PAGE$1));
-  const p = Math.min(page, pages - 1);
-  const slice = all.slice(p * PER_PAGE$1, p * PER_PAGE$1 + PER_PAGE$1);
-  return /* @__PURE__ */ jsxs("div", { children: [
-    pages > 1 && /* @__PURE__ */ jsx(
-      HoverArrows,
-      {
-        onPrev: () => setPage(Math.max(0, p - 1)),
-        onNext: () => setPage(Math.min(pages - 1, p + 1)),
-        label: `${p + 1}/${pages}`,
-        prevDisabled: p <= 0,
-        nextDisabled: p >= pages - 1
-      }
-    ),
-    /* @__PURE__ */ jsx("span", { className: "bigval", children: status?.active_sessions ?? "—" }),
-    /* @__PURE__ */ jsx("span", { className: "dim", children: " active" }),
-    /* @__PURE__ */ jsx("div", { className: "rows", children: slice.map((s) => /* @__PURE__ */ jsxs("div", { className: "row", children: [
-      /* @__PURE__ */ jsx("span", { className: "dim row-name", title: s.title ?? s.source ?? s.id, children: s.title ?? s.source ?? s.id }),
-      /* @__PURE__ */ jsx("span", { className: s.is_active ? "ok" : "dim", children: s.is_active ? "live" : "idle" })
-    ] }, s.id)) })
   ] });
 }
 function formatTokenCount(n) {
   if (n >= 1e6) return `${(n / 1e6).toFixed(n % 1e6 === 0 ? 0 : 1)}M`;
   if (n >= 1e3) return `${(n / 1e3).toFixed(n % 1e3 === 0 ? 0 : 1)}K`;
   return String(n);
+}
+const SESSION_SORTS = ["recent", "tokens"];
+const TOKEN_FLOORS = [0, 1e4, 1e5, 1e6];
+function coerceSessionSort(value) {
+  return SESSION_SORTS.includes(value) ? value : "recent";
+}
+function coerceTokenFloor(value) {
+  return TOKEN_FLOORS.includes(value) ? value : 0;
+}
+function sessionTokens(s) {
+  return (s.input_tokens ?? 0) + (s.output_tokens ?? 0);
+}
+function arrangeSessions(sessions, sort, minTokens) {
+  const kept = sessions.map((s, i) => ({ s, i })).filter(({ s }) => sessionTokens(s) >= minTokens);
+  if (sort === "tokens") {
+    kept.sort((a, b) => sessionTokens(b.s) - sessionTokens(a.s) || a.i - b.i);
+  }
+  return kept.map(({ s }) => s);
+}
+const PER_PAGE$1 = 3;
+function SessionsWidget({ status, sessions, widgetProps, onWidgetPropsChange }) {
+  const t2 = useT();
+  const [page, setPage] = useState(0);
+  if (!status && !sessions) return /* @__PURE__ */ jsx("span", { className: "dim", children: t2("common.loading") });
+  const sort = coerceSessionSort(widgetProps.sort);
+  const minTokens = coerceTokenFloor(widgetProps.minTokens);
+  const setProp = (patch) => {
+    setPage(0);
+    onWidgetPropsChange({ ...widgetProps, ...patch });
+  };
+  const nextSort = () => setProp({ sort: SESSION_SORTS[(SESSION_SORTS.indexOf(sort) + 1) % SESSION_SORTS.length] });
+  const nextFloor = () => setProp({ minTokens: TOKEN_FLOORS[(TOKEN_FLOORS.indexOf(minTokens) + 1) % TOKEN_FLOORS.length] });
+  const all = arrangeSessions(sessions?.sessions ?? [], sort, minTokens);
+  const pages = Math.max(1, Math.ceil(all.length / PER_PAGE$1));
+  const p = Math.min(page, pages - 1);
+  const slice = all.slice(p * PER_PAGE$1, p * PER_PAGE$1 + PER_PAGE$1);
+  const showTokens = sort === "tokens" || minTokens > 0;
+  return /* @__PURE__ */ jsxs("div", { children: [
+    /* @__PURE__ */ jsxs(HoverCtl, { className: "tok-ctl", children: [
+      pages > 1 && /* @__PURE__ */ jsxs(Fragment, { children: [
+        /* @__PURE__ */ jsx(
+          "button",
+          {
+            className: "hv-arrow",
+            "aria-label": t2("common.previous"),
+            disabled: p <= 0,
+            onClick: () => setPage(Math.max(0, p - 1)),
+            children: "‹"
+          }
+        ),
+        /* @__PURE__ */ jsxs("span", { className: "hv-label", children: [
+          p + 1,
+          "/",
+          pages
+        ] }),
+        /* @__PURE__ */ jsx(
+          "button",
+          {
+            className: "hv-arrow",
+            "aria-label": t2("common.next"),
+            disabled: p >= pages - 1,
+            onClick: () => setPage(Math.min(pages - 1, p + 1)),
+            children: "›"
+          }
+        ),
+        /* @__PURE__ */ jsx("span", { className: "tok-div" })
+      ] }),
+      /* @__PURE__ */ jsx(
+        "button",
+        {
+          className: `hv-opt${sort === "tokens" ? " on" : ""}`,
+          onClick: nextSort,
+          title: t2("sessions.sortTitle"),
+          "data-sort": sort,
+          children: t2(`sessions.sort.${sort}`)
+        }
+      ),
+      /* @__PURE__ */ jsx(
+        "button",
+        {
+          className: `hv-opt${minTokens > 0 ? " on" : ""}`,
+          onClick: nextFloor,
+          title: t2("sessions.filterTitle"),
+          "data-min-tokens": minTokens,
+          children: minTokens > 0 ? `≥${formatTokenCount(minTokens)}` : t2("sessions.filter.all")
+        }
+      )
+    ] }),
+    /* @__PURE__ */ jsx("span", { className: "bigval", children: status?.active_sessions ?? "—" }),
+    /* @__PURE__ */ jsxs("span", { className: "dim", children: [
+      " ",
+      t2("sessions.active")
+    ] }),
+    /* @__PURE__ */ jsxs("div", { className: "rows", children: [
+      slice.length === 0 && minTokens > 0 && /* @__PURE__ */ jsx("span", { className: "dim", children: t2("sessions.noneMatch", { n: formatTokenCount(minTokens) }) }),
+      slice.map((s) => /* @__PURE__ */ jsxs("div", { className: "row", children: [
+        /* @__PURE__ */ jsx("span", { className: "dim row-name", title: s.title ?? s.source ?? s.id, children: s.title ?? s.source ?? s.id }),
+        showTokens && /* @__PURE__ */ jsx(
+          "span",
+          {
+            className: "ses-tok",
+            title: t2("sessions.tokensTitle", {
+              input: formatTokenCount(s.input_tokens ?? 0),
+              output: formatTokenCount(s.output_tokens ?? 0)
+            }),
+            children: formatTokenCount(sessionTokens(s))
+          }
+        ),
+        /* @__PURE__ */ jsx("span", { className: s.is_active ? "ok" : "dim", children: s.is_active ? t2("sessions.live") : t2("sessions.idle") })
+      ] }, s.id))
+    ] })
+  ] });
+}
+const GROUP_MODES = ["off", "provider", "model"];
+function coerceGroupBy(value) {
+  return GROUP_MODES.includes(value) ? value : "off";
+}
+function groupUsage(rows, by) {
+  const acc = /* @__PURE__ */ new Map();
+  for (const r of rows) {
+    const key = ((by === "provider" ? r.provider : r.model) ?? "").trim();
+    const tokens = (r.input_tokens ?? 0) + (r.output_tokens ?? 0);
+    const cost = r.estimated_cost ?? 0;
+    const cur = acc.get(key) ?? { tokens: 0, cost: 0 };
+    cur.tokens += Number.isFinite(tokens) ? tokens : 0;
+    cur.cost += Number.isFinite(cost) ? cost : 0;
+    acc.set(key, cur);
+  }
+  const total = [...acc.values()].reduce((n, g) => n + g.tokens, 0);
+  return [...acc.entries()].filter(([, g]) => g.tokens > 0 || g.cost > 0).map(([key, g]) => ({ key, ...g, share: total > 0 ? g.tokens / total * 100 : 0 })).sort((a, b) => b.tokens - a.tokens || b.cost - a.cost || a.key.localeCompare(b.key));
 }
 function parseDay(day) {
   const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(day);
@@ -477,22 +1182,43 @@ function toBars(daily, byMonth) {
   return [...months.values()].sort((a, b) => a.sort - b.sort).map(({ sort, ...b }) => b);
 }
 const RANGES = [
-  { key: "week", label: "7 days", days: 7, byMonth: false },
-  { key: "month", label: "1 month", days: 30, byMonth: false },
-  { key: "halfyear", label: "6 months", days: 180, byMonth: true }
+  { key: "week", label: "tokens.range.week", days: 7, byMonth: false },
+  { key: "month", label: "tokens.range.month", days: 30, byMonth: false },
+  { key: "halfyear", label: "tokens.range.halfyear", days: 180, byMonth: true }
 ];
 let gradSeq$1 = 0;
-function TokensWidget({ analytics, widgetProps, onWidgetPropsChange }) {
+function breakdownCap(gh) {
+  return Math.max(2, Math.min(8, gh * 2 - 5));
+}
+function TokensWidget({ analytics, widgetProps, onWidgetPropsChange, gridSize }) {
+  const t2 = useT();
   const rangeKey = RANGES.find((r) => r.key === widgetProps.range)?.key ?? "week";
   const range = RANGES.find((r) => r.key === rangeKey);
   const idx = RANGES.findIndex((r) => r.key === rangeKey);
   const chart = widgetProps.chart === "bars" ? "bars" : "line";
   const statsOn = widgetProps.stats !== false;
+  const group = coerceGroupBy(widgetProps.group);
   const [gid] = useState(() => `tok-grad-${gradSeq$1++}`);
   const [fetched, setFetched] = useState(null);
   const [failed, setFailed] = useState(false);
   const [tip, setTip] = useState(null);
   const [show, setShow] = useState(false);
+  const [models, setModels] = useState(null);
+  const [modelsFailed, setModelsFailed] = useState(false);
+  useEffect(() => {
+    if (group === "off") return;
+    let cancelled = false;
+    setModels(null);
+    setModelsFailed(false);
+    api.getModelsAnalytics(range.days).then((r) => {
+      if (!cancelled) setModels(Array.isArray(r?.models) ? r.models : []);
+    }).catch(() => {
+      if (!cancelled) setModelsFailed(true);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [group, range.days]);
   useEffect(() => {
     let cancelled = false;
     setFetched(null);
@@ -508,18 +1234,19 @@ function TokensWidget({ analytics, widgetProps, onWidgetPropsChange }) {
   }, [range.days]);
   const setProp = (patch) => onWidgetPropsChange({ ...widgetProps, ...patch });
   const cycle = (dir) => setProp({ range: RANGES[(idx + dir + RANGES.length) % RANGES.length].key });
+  const cycleGroup = () => setProp({ group: GROUP_MODES[(GROUP_MODES.indexOf(group) + 1) % GROUP_MODES.length] });
   const controls = /* @__PURE__ */ jsxs(HoverCtl, { className: "tok-ctl", children: [
-    /* @__PURE__ */ jsx("button", { className: "hv-arrow", "aria-label": "previous", onClick: () => cycle(-1), children: "‹" }),
-    /* @__PURE__ */ jsx("span", { className: "hv-label", children: range.label }),
-    /* @__PURE__ */ jsx("button", { className: "hv-arrow", "aria-label": "next", onClick: () => cycle(1), children: "›" }),
+    /* @__PURE__ */ jsx("button", { className: "hv-arrow", "aria-label": t2("common.previous"), onClick: () => cycle(-1), children: "‹" }),
+    /* @__PURE__ */ jsx("span", { className: "hv-label", children: t2(range.label) }),
+    /* @__PURE__ */ jsx("button", { className: "hv-arrow", "aria-label": t2("common.next"), onClick: () => cycle(1), children: "›" }),
     /* @__PURE__ */ jsx("span", { className: "tok-div" }),
     /* @__PURE__ */ jsx(
       "button",
       {
         className: `hv-opt${chart === "line" ? " on" : ""}`,
         onClick: () => setProp({ chart: chart === "line" ? "bars" : "line" }),
-        title: "line / bars view",
-        children: "line"
+        title: t2("tokens.lineTitle"),
+        children: t2("tokens.line")
       }
     ),
     /* @__PURE__ */ jsx(
@@ -527,8 +1254,19 @@ function TokensWidget({ analytics, widgetProps, onWidgetPropsChange }) {
       {
         className: `hv-opt${statsOn ? " on" : ""}`,
         onClick: () => setProp({ stats: !statsOn }),
-        title: "show / hide totals",
-        children: "totals"
+        title: t2("tokens.totalsTitle"),
+        children: t2("tokens.totals")
+      }
+    ),
+    /* @__PURE__ */ jsx("span", { className: "tok-div" }),
+    /* @__PURE__ */ jsx(
+      "button",
+      {
+        className: `hv-opt${group !== "off" ? " on" : ""}`,
+        onClick: cycleGroup,
+        title: t2("tokens.groupTitle"),
+        "data-group": group,
+        children: t2(`tokens.group.${group}`)
       }
     )
   ] });
@@ -537,14 +1275,21 @@ function TokensWidget({ analytics, widgetProps, onWidgetPropsChange }) {
     () => toBars(view?.daily ?? [], range.byMonth),
     [view, range.byMonth]
   );
+  const fallback = group !== "off" && modelsFailed;
+  const groups = useMemo(() => {
+    if (group === "off") return null;
+    if (models) return groupUsage(models, group);
+    if (modelsFailed && view) return groupUsage(view.by_model ?? [], "model");
+    return null;
+  }, [group, models, modelsFailed, view]);
   if (!view) {
     return /* @__PURE__ */ jsxs("div", { children: [
       controls,
-      /* @__PURE__ */ jsx("span", { className: "dim", children: failed ? "unavailable" : "loading…" })
+      /* @__PURE__ */ jsx("span", { className: "dim", children: failed ? t2("common.unavailable") : t2("common.loading") })
     ] });
   }
-  const t = view.totals;
-  const total = t.total_input + t.total_output;
+  const tot = view.totals;
+  const total = tot.total_input + tot.total_output;
   const n = bars.length;
   const max = Math.max(1, ...bars.map((b) => b.tokens));
   const H = 100, W2 = 100, PAD2 = 3;
@@ -559,8 +1304,8 @@ function TokensWidget({ analytics, widgetProps, onWidgetPropsChange }) {
     /* @__PURE__ */ jsx("span", { className: "bigval", children: formatTokenCount(total) }),
     /* @__PURE__ */ jsxs("span", { className: "dim", children: [
       " ",
-      range.label,
-      failed ? " · day*" : ""
+      t2(range.label),
+      failed ? ` · ${t2("tokens.dayFallback")}` : ""
     ] }),
     /* @__PURE__ */ jsxs("div", { className: "home-spark-wrap", onMouseLeave: () => setShow(false), children: [
       tip && /* @__PURE__ */ jsxs(
@@ -625,24 +1370,69 @@ function TokensWidget({ analytics, widgetProps, onWidgetPropsChange }) {
     ] }),
     statsOn && /* @__PURE__ */ jsxs("div", { className: "tok-stats", children: [
       /* @__PURE__ */ jsxs("span", { children: [
-        /* @__PURE__ */ jsx("span", { className: "dim", children: "in" }),
+        /* @__PURE__ */ jsx("span", { className: "dim", children: t2("tokens.in") }),
         " ",
-        formatTokenCount(t.total_input)
+        formatTokenCount(tot.total_input)
       ] }),
       /* @__PURE__ */ jsxs("span", { children: [
-        /* @__PURE__ */ jsx("span", { className: "dim", children: "out" }),
+        /* @__PURE__ */ jsx("span", { className: "dim", children: t2("tokens.out") }),
         " ",
-        formatTokenCount(t.total_output)
+        formatTokenCount(tot.total_output)
       ] }),
       /* @__PURE__ */ jsxs("span", { children: [
-        /* @__PURE__ */ jsx("span", { className: "dim", children: "cost" }),
+        /* @__PURE__ */ jsx("span", { className: "dim", children: t2("tokens.cost") }),
         " ",
         /* @__PURE__ */ jsxs("span", { className: "ok", children: [
           "$",
-          t.total_estimated_cost.toFixed(2)
+          tot.total_estimated_cost.toFixed(2)
         ] })
       ] })
-    ] })
+    ] }),
+    group !== "off" && /* @__PURE__ */ jsx(
+      TokenBreakdown,
+      {
+        groups,
+        cap: breakdownCap(gridSize.gh),
+        note: fallback && group === "provider" ? t2("tokens.providerFallback") : null
+      }
+    )
+  ] });
+}
+function TokenBreakdown({ groups, cap, note }) {
+  const t2 = useT();
+  if (!groups) return /* @__PURE__ */ jsx("div", { className: "tok-groups", children: /* @__PURE__ */ jsx("span", { className: "dim", children: t2("common.loading") }) });
+  if (groups.length === 0) return /* @__PURE__ */ jsx("div", { className: "tok-groups", children: /* @__PURE__ */ jsx("span", { className: "dim", children: t2("tokens.groupEmpty") }) });
+  const overflow = groups.length > cap;
+  const shown = overflow ? groups.slice(0, cap - 1) : groups;
+  return /* @__PURE__ */ jsxs("div", { className: "tok-groups", children: [
+    note && /* @__PURE__ */ jsx("div", { className: "tok-group-note dim", children: note }),
+    /* @__PURE__ */ jsx("div", { className: "rows", children: shown.map((g) => {
+      const name = g.key || t2("tokens.unknownProvider");
+      const share = Math.round(g.share);
+      return /* @__PURE__ */ jsxs(
+        "div",
+        {
+          className: "row tok-group",
+          style: { "--share": `${Math.max(1, Math.min(100, g.share))}%` },
+          title: t2("tokens.rowTitle", {
+            name,
+            tokens: formatTokenCount(g.tokens),
+            cost: g.cost.toFixed(2),
+            share
+          }),
+          children: [
+            /* @__PURE__ */ jsx("span", { className: "row-name", children: name }),
+            /* @__PURE__ */ jsx("span", { children: formatTokenCount(g.tokens) }),
+            /* @__PURE__ */ jsxs("span", { className: "dim tok-share", children: [
+              share,
+              "%"
+            ] })
+          ]
+        },
+        g.key || "\0"
+      );
+    }) }),
+    overflow && /* @__PURE__ */ jsx("div", { className: "dim tok-group-more", children: t2("tokens.groupMore", { n: groups.length - shown.length }) })
   ] });
 }
 const MB$1 = 1024 ** 2;
@@ -658,9 +1448,9 @@ const HOST_VIEWS = ["meters", "detail", "graphs"];
 function coerceHostView(value) {
   return HOST_VIEWS.includes(value) ? value : "meters";
 }
-function toSample(system, t) {
+function toSample(system, t2) {
   return {
-    t,
+    t: t2,
     cpu: system.cpu_percent ?? null,
     ram: system.memory ? system.memory.percent : null,
     load: system.load_avg && system.load_avg.length > 0 ? system.load_avg[0] : null,
@@ -757,6 +1547,7 @@ function Spark({ values, fixedMax, label, readout, gid }) {
   ] });
 }
 function HostWidget({ system, widgetProps, onWidgetPropsChange }) {
+  const t2 = useT();
   const view = coerceHostView(widgetProps.view);
   const [buf, setBuf] = useState([]);
   const latest = useRef(null);
@@ -774,18 +1565,18 @@ function HostWidget({ system, widgetProps, onWidgetPropsChange }) {
     const id = setInterval(tick, SAMPLE_MS);
     return () => clearInterval(id);
   }, [view]);
-  if (!system) return /* @__PURE__ */ jsx("span", { className: "dim", children: "loading…" });
+  if (!system) return /* @__PURE__ */ jsx("span", { className: "dim", children: t2("common.loading") });
   const cycle = (dir) => {
     const i = (HOST_VIEWS.indexOf(view) + dir + HOST_VIEWS.length) % HOST_VIEWS.length;
     onWidgetPropsChange({ ...widgetProps, view: HOST_VIEWS[i] });
   };
   return /* @__PURE__ */ jsxs("div", { children: [
-    /* @__PURE__ */ jsx(HoverArrows, { onPrev: () => cycle(-1), onNext: () => cycle(1), label: view }),
+    /* @__PURE__ */ jsx(HoverArrows, { onPrev: () => cycle(-1), onNext: () => cycle(1), label: t2(`host.view.${view}`) }),
     view === "meters" && /* @__PURE__ */ jsxs(Fragment, { children: [
       /* @__PURE__ */ jsxs("div", { className: "meters", children: [
-        system.cpu_percent !== void 0 && /* @__PURE__ */ jsx(Meter, { label: "cpu", pct: system.cpu_percent, val: `${Math.round(system.cpu_percent)}%` }),
-        system.memory && /* @__PURE__ */ jsx(Meter, { label: "ram", pct: system.memory.percent, val: `${(system.memory.used / GB).toFixed(1)}G` }),
-        system.disk && /* @__PURE__ */ jsx(Meter, { label: "disk", pct: system.disk.percent, val: `${Math.round(system.disk.percent)}%` })
+        system.cpu_percent !== void 0 && /* @__PURE__ */ jsx(Meter, { label: t2("host.cpu"), pct: system.cpu_percent, val: `${Math.round(system.cpu_percent)}%` }),
+        system.memory && /* @__PURE__ */ jsx(Meter, { label: t2("host.ram"), pct: system.memory.percent, val: `${(system.memory.used / GB).toFixed(1)}G` }),
+        system.disk && /* @__PURE__ */ jsx(Meter, { label: t2("host.disk"), pct: system.disk.percent, val: `${Math.round(system.disk.percent)}%` })
       ] }),
       /* @__PURE__ */ jsxs("div", { className: "row", children: [
         /* @__PURE__ */ jsx("span", { className: "dim", children: system.hostname }),
@@ -793,12 +1584,12 @@ function HostWidget({ system, widgetProps, onWidgetPropsChange }) {
       ] })
     ] }),
     view === "detail" && /* @__PURE__ */ jsxs("div", { className: "rows", children: [
-      system.load_avg && system.load_avg.length >= 3 && /* @__PURE__ */ jsx(Row, { label: "load", val: system.load_avg.slice(0, 3).map((n) => n.toFixed(2)).join(" ") }),
-      system.cpu_count !== null && /* @__PURE__ */ jsx(Row, { label: "cores", val: String(system.cpu_count) }),
-      system.memory && /* @__PURE__ */ jsx(Row, { label: "ram", val: `${(system.memory.used / GB).toFixed(1)} / ${(system.memory.total / GB).toFixed(1)}G` }),
-      system.disk && /* @__PURE__ */ jsx(Row, { label: "disk", val: `${(system.disk.free / GB).toFixed(0)}G free` }),
-      system.process && /* @__PURE__ */ jsx(Row, { label: "proc", val: `${(system.process.rss / MB).toFixed(0)}M · ${system.process.num_threads} thr` }),
-      /* @__PURE__ */ jsx(Row, { label: "os", val: `${system.platform} ${system.arch}` })
+      system.load_avg && system.load_avg.length >= 3 && /* @__PURE__ */ jsx(Row, { label: t2("host.load"), val: system.load_avg.slice(0, 3).map((n) => n.toFixed(2)).join(" ") }),
+      system.cpu_count !== null && /* @__PURE__ */ jsx(Row, { label: t2("host.cores"), val: String(system.cpu_count) }),
+      system.memory && /* @__PURE__ */ jsx(Row, { label: t2("host.ram"), val: `${(system.memory.used / GB).toFixed(1)} / ${(system.memory.total / GB).toFixed(1)}G` }),
+      system.disk && /* @__PURE__ */ jsx(Row, { label: t2("host.disk"), val: t2("host.diskFree", { n: (system.disk.free / GB).toFixed(0) }) }),
+      system.process && /* @__PURE__ */ jsx(Row, { label: t2("host.proc"), val: t2("host.procValue", { mb: (system.process.rss / MB).toFixed(0), threads: system.process.num_threads }) }),
+      /* @__PURE__ */ jsx(Row, { label: t2("host.os"), val: `${system.platform} ${system.arch}` })
     ] }),
     view === "graphs" && /* @__PURE__ */ jsx("div", { className: "host-sparks", children: HOST_SIGNALS.map((sig) => {
       const values = seriesOf(buf, sig.key);
@@ -808,7 +1599,7 @@ function HostWidget({ system, widgetProps, onWidgetPropsChange }) {
         {
           values,
           fixedMax: sig.fixedMax,
-          label: sig.label,
+          label: t2(`host.${sig.key}`),
           readout: last === void 0 || last === null ? "—" : sig.format(last),
           gid: `${gidBase}-${sig.key}`
         },
@@ -825,10 +1616,11 @@ function nextRunLabel(job) {
   return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
 }
 function CronWidget({ cron }) {
+  const t2 = useT();
   const [page, setPage] = useState(0);
-  if (!cron) return /* @__PURE__ */ jsx("span", { className: "dim", children: "loading…" });
+  if (!cron) return /* @__PURE__ */ jsx("span", { className: "dim", children: t2("common.loading") });
   const upcoming = cron.filter((j) => j.enabled && j.next_run_at).sort((a, b) => (a.next_run_at ?? "").localeCompare(b.next_run_at ?? ""));
-  if (upcoming.length === 0) return /* @__PURE__ */ jsx("span", { className: "dim", children: "no scheduled jobs" });
+  if (upcoming.length === 0) return /* @__PURE__ */ jsx("span", { className: "dim", children: t2("cron.empty") });
   const pages = Math.max(1, Math.ceil(upcoming.length / PER_PAGE));
   const p = Math.min(page, pages - 1);
   const slice = upcoming.slice(p * PER_PAGE, p * PER_PAGE + PER_PAGE);
@@ -846,7 +1638,7 @@ function CronWidget({ cron }) {
     /* @__PURE__ */ jsx("div", { className: "rows", children: slice.map((j) => /* @__PURE__ */ jsxs("div", { className: "row", children: [
       /* @__PURE__ */ jsx("span", { className: "dim", children: nextRunLabel(j) }),
       /* @__PURE__ */ jsx("span", { className: "row-name", title: j.name ?? j.id, children: j.name ?? j.id }),
-      /* @__PURE__ */ jsx("span", { className: j.last_error ? "werr" : "ok", children: j.last_error ? "err" : "ok" })
+      /* @__PURE__ */ jsx("span", { className: j.last_error ? "werr" : "ok", children: j.last_error ? t2("cron.err") : t2("cron.ok") })
     ] }, j.id)) })
   ] });
 }
@@ -891,6 +1683,7 @@ function parseRecords(lines) {
   return out;
 }
 function ErrorsWidget({ logs, widgetProps, onWidgetPropsChange }) {
+  const t2 = useT();
   const fileKey = FILES.find((f) => f === widgetProps.file) ?? "agent";
   const idx = FILES.indexOf(fileKey);
   const [recs, setRecs] = useState(null);
@@ -924,7 +1717,7 @@ function ErrorsWidget({ logs, widgetProps, onWidgetPropsChange }) {
   if (!all) {
     return /* @__PURE__ */ jsxs("div", { children: [
       arrows,
-      /* @__PURE__ */ jsx("span", { className: "dim", children: failed ? "unavailable" : "loading…" })
+      /* @__PURE__ */ jsx("span", { className: "dim", children: failed ? t2("common.unavailable") : t2("common.loading") })
     ] });
   }
   const records = [...all].reverse();
@@ -932,13 +1725,9 @@ function ErrorsWidget({ logs, widgetProps, onWidgetPropsChange }) {
     arrows,
     /* @__PURE__ */ jsxs("div", { className: "logs-sub", children: [
       /* @__PURE__ */ jsx("span", { className: "logs-file", children: fileKey.toUpperCase() }),
-      /* @__PURE__ */ jsxs("span", { className: "dim", children: [
-        records.length,
-        " ",
-        records.length === 1 ? "record" : "records"
-      ] })
+      /* @__PURE__ */ jsx("span", { className: "dim", children: t2(records.length === 1 ? "logs.record" : "logs.records", { n: records.length }) })
     ] }),
-    /* @__PURE__ */ jsx("div", { className: "home-logs", children: records.length === 0 ? /* @__PURE__ */ jsx("span", { className: "dim", children: "no records" }) : records.map((r, i) => /* @__PURE__ */ jsxs("div", { className: "log-row", title: r.text, children: [
+    /* @__PURE__ */ jsx("div", { className: "home-logs", children: records.length === 0 ? /* @__PURE__ */ jsx("span", { className: "dim", children: t2("logs.empty") }) : records.map((r, i) => /* @__PURE__ */ jsxs("div", { className: "log-row", title: r.text, children: [
       /* @__PURE__ */ jsx("span", { className: `log-lvl ${levelClass(r.level)}`, children: SHORT[r.level] ?? r.level.slice(0, 4) }),
       r.time && /* @__PURE__ */ jsx("span", { className: "log-time", children: r.time }),
       /* @__PURE__ */ jsx("span", { className: "log-msg", children: r.message })
@@ -948,24 +1737,16 @@ function ErrorsWidget({ logs, widgetProps, onWidgetPropsChange }) {
 const SYNODIC_DAYS = 29.53058867;
 const NEW_MOON_MS = Date.UTC(2e3, 0, 6, 18, 14);
 const DAY_MS = 864e5;
-const PHASE_NAMES = [
-  "new moon",
-  "waxing crescent",
-  "first quarter",
-  "waxing gibbous",
-  "full moon",
-  "waning gibbous",
-  "last quarter",
-  "waning crescent"
-];
 function moonPhase(now) {
   const days = (now - NEW_MOON_MS) / DAY_MS;
   return (days % SYNODIC_DAYS + SYNODIC_DAYS) % SYNODIC_DAYS / SYNODIC_DAYS;
 }
-function phaseName(phase) {
-  return PHASE_NAMES[Math.round(phase * 8) % 8];
+function phaseName(phase, t2) {
+  const i = Math.round(phase * 8) % 8;
+  return t2(`moon.phase.${i}`);
 }
 function MoonWidget({ widgetProps, onWidgetPropsChange }) {
+  const t2 = useT();
   const ref = useRef(null);
   const [label, setLabel] = useState("");
   const offset = typeof widgetProps.offsetDays === "number" ? widgetProps.offsetDays : 0;
@@ -981,7 +1762,7 @@ function MoonWidget({ widgetProps, onWidgetPropsChange }) {
       cv.height = Math.max(10, rect.height);
       const accent = getComputedStyle(cv).getPropertyValue("--home-accent").trim() || "#d4af37";
       const phase = moonPhase(Date.now() + offset * DAY_MS);
-      setLabel(`${phaseName(phase)} · ${Math.round(
+      setLabel(`${phaseName(phase, t2)} · ${Math.round(
         (1 - Math.cos(2 * Math.PI * phase)) / 2 * 100
       )}%`);
       const r = Math.min(cv.width, cv.height) / 2 - 6;
@@ -1005,13 +1786,13 @@ function MoonWidget({ widgetProps, onWidgetPropsChange }) {
     draw();
     const ro = new ResizeObserver(draw);
     ro.observe(cv);
-    const t = setInterval(draw, 36e5);
+    const timer = setInterval(draw, 36e5);
     return () => {
       ro.disconnect();
-      clearInterval(t);
+      clearInterval(timer);
     };
-  }, [offset]);
-  const offLabel = offset === 0 ? void 0 : offset > 0 ? `+${offset}d` : `${offset}d`;
+  }, [offset, t2]);
+  const offLabel = offset === 0 ? void 0 : t2("moon.offset", { n: offset > 0 ? `+${offset}` : String(offset) });
   return /* @__PURE__ */ jsxs("div", { className: "home-moon-wrap", children: [
     /* @__PURE__ */ jsx(
       HoverArrows,
@@ -1030,12 +1811,12 @@ const SPEED_PX = 2;
 const TICK_MS = 33;
 const BEAT_S = 1;
 const SPEEDS = [0.5, 1, 1.5, 2];
-function beatY(t) {
-  if (t > 0.1 && t < 0.18) return 0.12 * Math.sin((t - 0.1) / 0.08 * Math.PI);
-  if (t > 0.22 && t < 0.25) return -0.12;
-  if (t >= 0.25 && t < 0.29) return 1 * Math.sin((t - 0.25) / 0.04 * Math.PI);
-  if (t >= 0.29 && t < 0.33) return -0.28;
-  if (t > 0.42 && t < 0.54) return 0.2 * Math.sin((t - 0.42) / 0.12 * Math.PI);
+function beatY(t2) {
+  if (t2 > 0.1 && t2 < 0.18) return 0.12 * Math.sin((t2 - 0.1) / 0.08 * Math.PI);
+  if (t2 > 0.22 && t2 < 0.25) return -0.12;
+  if (t2 >= 0.25 && t2 < 0.29) return 1 * Math.sin((t2 - 0.25) / 0.04 * Math.PI);
+  if (t2 >= 0.29 && t2 < 0.33) return -0.28;
+  if (t2 > 0.42 && t2 < 0.54) return 0.2 * Math.sin((t2 - 0.42) / 0.12 * Math.PI);
   return 0;
 }
 function HeartbeatWidget({ status, widgetProps, onWidgetPropsChange }) {
@@ -1075,7 +1856,7 @@ function HeartbeatWidget({ status, widgetProps, onWidgetPropsChange }) {
     fit();
     const ro = new ResizeObserver(fit);
     ro.observe(cv);
-    const t = setInterval(() => {
+    const t2 = setInterval(() => {
       if (document.hidden || cv.width < 20) return;
       const mult = speedRef.current;
       const px = SPEED_PX * mult;
@@ -1101,7 +1882,7 @@ function HeartbeatWidget({ status, widgetProps, onWidgetPropsChange }) {
     }, TICK_MS);
     return () => {
       ro.disconnect();
-      clearInterval(t);
+      clearInterval(t2);
     };
   }, []);
   return /* @__PURE__ */ jsxs(Fragment, { children: [
@@ -1121,6 +1902,7 @@ const STEP_MS = 160;
 const SEED_DENSITY = 0.22;
 const RESEED_STEPS = 400;
 function LifeWidget({ editing }) {
+  const t2 = useT();
   const ref = useRef(null);
   const gridRef = useRef(new Uint8Array(0));
   const dimsRef = useRef({ cols: 0, rows: 0 });
@@ -1178,7 +1960,7 @@ function LifeWidget({ editing }) {
       }
       ctx.globalAlpha = 1;
     };
-    const t = setInterval(() => {
+    const t22 = setInterval(() => {
       if (document.hidden) return;
       const g = gridRef.current;
       if (g.length === 0) return;
@@ -1243,7 +2025,7 @@ function LifeWidget({ editing }) {
     cv.addEventListener("pointerup", onUp);
     return () => {
       ro.disconnect();
-      clearInterval(t);
+      clearInterval(t22);
       cv.removeEventListener("pointerdown", onDown);
       cv.removeEventListener("pointermove", onMove);
       cv.removeEventListener("pointerup", onUp);
@@ -1251,9 +2033,9 @@ function LifeWidget({ editing }) {
   }, []);
   return /* @__PURE__ */ jsxs(Fragment, { children: [
     /* @__PURE__ */ jsxs(HoverCtl, { children: [
-      /* @__PURE__ */ jsx("button", { className: "hv-opt", onClick: () => setPaused((p) => !p), children: paused ? "play" : "pause" }),
-      /* @__PURE__ */ jsx("button", { className: "hv-opt", onClick: seedGrid, children: "seed" }),
-      /* @__PURE__ */ jsx("button", { className: "hv-opt", onClick: clearGrid, children: "clear" })
+      /* @__PURE__ */ jsx("button", { className: "hv-opt", onClick: () => setPaused((p) => !p), children: paused ? t2("life.play") : t2("life.pause") }),
+      /* @__PURE__ */ jsx("button", { className: "hv-opt", onClick: seedGrid, children: t2("life.seed") }),
+      /* @__PURE__ */ jsx("button", { className: "hv-opt", onClick: clearGrid, children: t2("life.clear") })
     ] }),
     /* @__PURE__ */ jsx("canvas", { ref, className: "home-canvas home-life" })
   ] });
@@ -1275,6 +2057,7 @@ function readState(p) {
 }
 const clampMin = (n) => Math.max(1, Math.min(180, Math.round(n)));
 function PomodoroWidget({ widgetProps, onWidgetPropsChange }) {
+  const t2 = useT();
   const state = readState(widgetProps);
   const label = typeof widgetProps.label === "string" ? widgetProps.label : "";
   const [now, setNow] = useState(() => Date.now());
@@ -1284,7 +2067,7 @@ function PomodoroWidget({ widgetProps, onWidgetPropsChange }) {
   const running = state.endsAt !== null;
   useEffect(() => {
     if (state.endsAt === null) return;
-    const t = setInterval(() => {
+    const t22 = setInterval(() => {
       if (state.endsAt !== null && state.endsAt - Date.now() <= 0) {
         const mode = state.mode === "work" ? "break" : "work";
         const remaining = (mode === "work" ? state.workMin : state.breakMin) * 60;
@@ -1293,7 +2076,7 @@ function PomodoroWidget({ widgetProps, onWidgetPropsChange }) {
         setNow(Date.now());
       }
     }, 1e3);
-    return () => clearInterval(t);
+    return () => clearInterval(t22);
   }, [state.endsAt, state.mode]);
   const toggle = () => {
     setNow(Date.now());
@@ -1314,13 +2097,13 @@ function PomodoroWidget({ widgetProps, onWidgetPropsChange }) {
   return /* @__PURE__ */ jsxs("div", { className: "home-clock-wrap home-pomo", children: [
     /* @__PURE__ */ jsxs(HoverCtl, { className: "pomo-set", children: [
       /* @__PURE__ */ jsxs("div", { className: "pomo-stepper", children: [
-        /* @__PURE__ */ jsx("span", { className: "hv-label", children: "work" }),
+        /* @__PURE__ */ jsx("span", { className: "hv-label", children: t2("pomo.work") }),
         /* @__PURE__ */ jsx("button", { className: "hv-arrow", disabled: running, onClick: () => setWork(state.workMin - 1), children: "‹" }),
         /* @__PURE__ */ jsx("span", { className: "hv-label", children: state.workMin }),
         /* @__PURE__ */ jsx("button", { className: "hv-arrow", disabled: running, onClick: () => setWork(state.workMin + 1), children: "›" })
       ] }),
       /* @__PURE__ */ jsxs("div", { className: "pomo-stepper", children: [
-        /* @__PURE__ */ jsx("span", { className: "hv-label", children: "break" }),
+        /* @__PURE__ */ jsx("span", { className: "hv-label", children: t2("pomo.break") }),
         /* @__PURE__ */ jsx("button", { className: "hv-arrow", onClick: () => setBreak(state.breakMin - 1), children: "‹" }),
         /* @__PURE__ */ jsx("span", { className: "hv-label", children: state.breakMin }),
         /* @__PURE__ */ jsx("button", { className: "hv-arrow", onClick: () => setBreak(state.breakMin + 1), children: "›" })
@@ -1331,7 +2114,7 @@ function PomodoroWidget({ widgetProps, onWidgetPropsChange }) {
       {
         className: `home-clock${running ? "" : " paused"}`,
         onClick: toggle,
-        title: "click: start / pause",
+        title: t2("pomo.toggleTitle"),
         children: [
           mm,
           ":",
@@ -1356,19 +2139,19 @@ function PomodoroWidget({ widgetProps, onWidgetPropsChange }) {
       {
         className: "home-clock-sub pomo-sub",
         onClick: () => setEditing(true),
-        title: "click to name this timer",
+        title: t2("pomo.nameTitle"),
         children: [
           label ? `${label} · ` : "",
-          state.mode,
-          " ",
-          running ? "· running" : "· paused"
+          t2(state.mode === "work" ? "pomo.work" : "pomo.break"),
+          " · ",
+          running ? t2("pomo.running") : t2("pomo.paused")
         ]
       }
     )
   ] });
 }
 const pad = (n) => String(n).padStart(2, "0");
-const MONTHS = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
+const monthName = (mo) => new Date(2024, mo, 1).toLocaleDateString(void 0, { month: "short" }).replace(/\.$/, "").toUpperCase();
 const buildISO = (s) => `${s.y}-${pad(s.mo + 1)}-${pad(s.d)}T${pad(s.h)}:${pad(s.mi)}`;
 const fromDate = (dt) => ({ y: dt.getFullYear(), mo: dt.getMonth(), d: dt.getDate(), h: dt.getHours(), mi: dt.getMinutes() });
 const daysIn = (y, mo) => new Date(y, mo + 1, 0).getDate();
@@ -1387,12 +2170,13 @@ function NumSeg({
   onStep,
   onCommit
 }) {
+  const t2 = useT();
   const [buf, setBuf] = useState(null);
   return /* @__PURE__ */ jsxs("div", { className: "count-seg", onWheel: (e) => {
     e.preventDefault();
     onStep(e.deltaY < 0 ? 1 : -1);
   }, children: [
-    /* @__PURE__ */ jsx("button", { className: "seg-btn", tabIndex: -1, "aria-label": `${label} up`, onClick: () => {
+    /* @__PURE__ */ jsx("button", { className: "seg-btn", tabIndex: -1, "aria-label": t2("count.up", { field: label }), onClick: () => {
       setBuf(null);
       onStep(1);
     }, children: "▲" }),
@@ -1427,31 +2211,34 @@ function NumSeg({
         }
       }
     ),
-    /* @__PURE__ */ jsx("button", { className: "seg-btn", tabIndex: -1, "aria-label": `${label} down`, onClick: () => {
+    /* @__PURE__ */ jsx("button", { className: "seg-btn", tabIndex: -1, "aria-label": t2("count.down", { field: label }), onClick: () => {
       setBuf(null);
       onStep(-1);
     }, children: "▼" })
   ] });
 }
 function MonSeg({ value, onStep }) {
+  const t2 = useT();
+  const field = t2("count.month");
   return /* @__PURE__ */ jsxs("div", { className: "count-seg", onWheel: (e) => {
     e.preventDefault();
     onStep(e.deltaY < 0 ? 1 : -1);
   }, children: [
-    /* @__PURE__ */ jsx("button", { className: "seg-btn", tabIndex: -1, "aria-label": "month up", onClick: () => onStep(1), children: "▲" }),
-    /* @__PURE__ */ jsx("div", { className: "seg-val seg-static", style: { width: 36 }, children: MONTHS[value] }),
-    /* @__PURE__ */ jsx("button", { className: "seg-btn", tabIndex: -1, "aria-label": "month down", onClick: () => onStep(-1), children: "▼" })
+    /* @__PURE__ */ jsx("button", { className: "seg-btn", tabIndex: -1, "aria-label": t2("count.up", { field }), onClick: () => onStep(1), children: "▲" }),
+    /* @__PURE__ */ jsx("div", { className: "seg-val seg-static", style: { width: 36 }, children: monthName(value) }),
+    /* @__PURE__ */ jsx("button", { className: "seg-btn", tabIndex: -1, "aria-label": t2("count.down", { field }), onClick: () => onStep(-1), children: "▼" })
   ] });
 }
 function CountdownWidget({ widgetProps, onWidgetPropsChange }) {
+  const t2 = useT();
   const label = typeof widgetProps.label === "string" ? widgetProps.label : "";
   const target = typeof widgetProps.target === "string" ? widgetProps.target : "";
   const [mode, setMode] = useState("none");
   const [seg, setSeg] = useState(null);
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
-    const t = setInterval(() => setNow(Date.now()), 3e4);
-    return () => clearInterval(t);
+    const t22 = setInterval(() => setNow(Date.now()), 3e4);
+    return () => clearInterval(t22);
   }, []);
   const targetMs = parseTargetMs(target);
   const commitSeg = (s) => {
@@ -1509,7 +2296,7 @@ function CountdownWidget({ widgetProps, onWidgetPropsChange }) {
           {
             value: seg.d,
             width: 22,
-            label: "day",
+            label: t2("count.day"),
             onStep: (d) => stepField("day", d),
             onCommit: (n) => commitField("day", n)
           }
@@ -1519,7 +2306,7 @@ function CountdownWidget({ widgetProps, onWidgetPropsChange }) {
           {
             value: seg.y,
             width: 42,
-            label: "year",
+            label: t2("count.year"),
             onStep: (d) => stepField("year", d),
             onCommit: (n) => commitField("year", n)
           }
@@ -1531,7 +2318,7 @@ function CountdownWidget({ widgetProps, onWidgetPropsChange }) {
           {
             value: seg.h,
             width: 22,
-            label: "hour",
+            label: t2("count.hour"),
             onStep: (d) => stepField("hour", d),
             onCommit: (n) => commitField("hour", n)
           }
@@ -1542,7 +2329,7 @@ function CountdownWidget({ widgetProps, onWidgetPropsChange }) {
           {
             value: seg.mi,
             width: 22,
-            label: "minute",
+            label: t2("count.minute"),
             onStep: (d) => stepField("min", d),
             onCommit: (n) => commitField("min", n)
           }
@@ -1551,7 +2338,7 @@ function CountdownWidget({ widgetProps, onWidgetPropsChange }) {
       /* @__PURE__ */ jsx("button", { className: "count-done", onClick: () => {
         setMode("none");
         setSeg(null);
-      }, children: "done" })
+      }, children: t2("common.done") })
     ] }) });
   }
   let big = "—";
@@ -1563,7 +2350,7 @@ function CountdownWidget({ widgetProps, onWidgetPropsChange }) {
     const m = Math.floor(abs % 36e5 / 6e4);
     big = `${diff < 0 ? "+" : ""}${d > 0 ? `${d}d ` : ""}${pad(h)}:${pad(m)}`;
   }
-  const dateLabel = !Number.isNaN(targetMs) ? new Date(targetMs).toLocaleDateString(void 0, { month: "short", day: "numeric" }) : "set date";
+  const dateLabel = !Number.isNaN(targetMs) ? new Date(targetMs).toLocaleDateString(void 0, { month: "short", day: "numeric" }) : t2("count.setDate");
   return /* @__PURE__ */ jsxs("div", { className: "home-clock-wrap home-count", children: [
     /* @__PURE__ */ jsx(HoverArrows, { onPrev: () => shiftDays(-1), onNext: () => shiftDays(1), label: dateLabel }),
     /* @__PURE__ */ jsx(
@@ -1571,7 +2358,7 @@ function CountdownWidget({ widgetProps, onWidgetPropsChange }) {
       {
         className: "home-clock count-big",
         onClick: openDatetime,
-        title: "click to set the date & time",
+        title: t2("count.setTitle"),
         children: big
       }
     ),
@@ -1592,18 +2379,19 @@ function CountdownWidget({ widgetProps, onWidgetPropsChange }) {
       {
         className: "home-clock-sub count-label",
         onClick: () => setMode("label"),
-        title: "click to edit the label",
-        children: label || "click to name this countdown"
+        title: t2("count.labelTitle"),
+        children: label || t2("count.namePrompt")
       }
     )
   ] });
 }
 function CalendarWidget({ gridSize }) {
+  const t2 = useT();
   const [now, setNow] = useState(() => /* @__PURE__ */ new Date());
   const [offset, setOffset] = useState(0);
   useEffect(() => {
-    const t = setInterval(() => setNow(/* @__PURE__ */ new Date()), 6e4);
-    return () => clearInterval(t);
+    const t22 = setInterval(() => setNow(/* @__PURE__ */ new Date()), 6e4);
+    return () => clearInterval(t22);
   }, []);
   const view = new Date(now.getFullYear(), now.getMonth() + offset, 1);
   const year = view.getFullYear();
@@ -1624,7 +2412,7 @@ function CalendarWidget({ gridSize }) {
       {
         onPrev: () => setOffset(offset - 1),
         onNext: () => setOffset(offset + 1),
-        label: offset === 0 ? void 0 : "today",
+        label: offset === 0 ? void 0 : t2("common.today"),
         onLabelClick: offset === 0 ? void 0 : () => setOffset(0)
       }
     ),
@@ -1731,7 +2519,7 @@ function handleEvent(event) {
       busy: true,
       currentTool: { name, startedAt: now, status: "running" }
     }));
-    pushFeed({ at: now, kind: "tool", label: name, detail: "generating…" });
+    pushFeed({ at: now, kind: "tool", label: name, detailKey: "feed.generating" });
     return;
   }
   if (type === "tool.start" || type === "tool.progress") {
@@ -1745,7 +2533,7 @@ function handleEvent(event) {
       at: now,
       kind: "tool",
       label: name,
-      detail: type === "tool.progress" ? "progress…" : argPreview(p?.args)
+      ...type === "tool.progress" ? { detailKey: "feed.progress" } : { detail: argPreview(p?.args) }
     });
     return;
   }
@@ -1816,7 +2604,7 @@ function handleEvent(event) {
         ...s.subagents.filter((a) => a.name !== name)
       ].slice(0, 6)
     }));
-    pushFeed({ at: now, kind: "subagent", label: name, detail: "spawned" });
+    pushFeed({ at: now, kind: "subagent", label: name, detailKey: "feed.spawned" });
     return;
   }
   if (type === "subagent.complete") {
@@ -1826,12 +2614,12 @@ function handleEvent(event) {
       ...s,
       subagents: s.subagents.map((a) => a.name === name ? { ...a, status: "done" } : a)
     }));
-    pushFeed({ at: now, kind: "subagent", label: name, ok: true, detail: "done" });
+    pushFeed({ at: now, kind: "subagent", label: name, ok: true, detailKey: "feed.done" });
     return;
   }
   if (type === "subagent.thinking") {
     const name = pick(p, "name", "role", "id") ?? "subagent";
-    pushFeed({ at: now, kind: "subagent", label: name, detail: "thinking…" });
+    pushFeed({ at: now, kind: "subagent", label: name, detailKey: "feed.thinking" });
     setLive(bump);
     return;
   }
@@ -1843,7 +2631,7 @@ function handleEvent(event) {
       activeSessionId: sid,
       activeTitle: pick(p, "title") ?? s.activeTitle
     }));
-    pushFeed({ at: now, kind: "session", label: "session", detail: "new" });
+    pushFeed({ at: now, kind: "session", label: "session", labelKey: "feed.session", detailKey: "feed.new" });
     return;
   }
   if (type === "session.title") {
@@ -1866,6 +2654,7 @@ function handleEvent(event) {
       at: now,
       kind: "system",
       label: "error",
+      labelKey: "feed.error",
       detail: pick(p, "error", "message")
     });
     setLive(bump);
@@ -1882,7 +2671,7 @@ function ensureSubscribed() {
   const all = onGatewayEvent("*", handleEvent);
   if (all) {
     setLive((s) => s.live ? s : { ...s, live: true });
-    pushFeed({ at: Date.now(), kind: "system", label: "live", detail: "gateway channel open" });
+    pushFeed({ at: Date.now(), kind: "system", label: "live", labelKey: "feed.live", detailKey: "feed.channelOpen" });
   }
 }
 function useAgentLive() {
@@ -1954,13 +2743,13 @@ function MarkdownText({ text }) {
       codeBuf.push(line);
       return;
     }
-    const t = line.trim();
-    if (!t) {
+    const t2 = line.trim();
+    if (!t2) {
       flushList(key);
       out.push(/* @__PURE__ */ jsx("div", { className: "home-md-gap" }, key));
       return;
     }
-    const heading = t.match(/^(#{1,3})\s+(.*)$/);
+    const heading = t2.match(/^(#{1,3})\s+(.*)$/);
     if (heading) {
       flushList(key);
       out.push(
@@ -1968,13 +2757,13 @@ function MarkdownText({ text }) {
       );
       return;
     }
-    const item = t.match(/^[-*]\s+(.*)$/);
+    const item = t2.match(/^[-*]\s+(.*)$/);
     if (item) {
       listItems.push(/* @__PURE__ */ jsx("div", { className: "home-md-li", children: renderInline(item[1], key) }, key));
       return;
     }
     flushList(key);
-    out.push(/* @__PURE__ */ jsx("div", { className: "home-md-p", children: renderInline(t, key) }, key));
+    out.push(/* @__PURE__ */ jsx("div", { className: "home-md-p", children: renderInline(t2, key) }, key));
   });
   if (inCode) {
     out.push(
@@ -1985,7 +2774,8 @@ function MarkdownText({ text }) {
   return /* @__PURE__ */ jsx(Fragment, { children: out });
 }
 function useScene(live) {
-  const [scene, setScene] = useState(() => sceneFrom(live));
+  const t2 = useT();
+  const [scene, setScene] = useState(() => sceneFrom(live, t2));
   const wasStreaming = useRef(false);
   useEffect(() => {
     const streaming = live.streamText.trim().length > 0;
@@ -2000,7 +2790,7 @@ function useScene(live) {
           kind: "tool",
           title: live.currentTool.name,
           body,
-          meta: "running"
+          meta: t2("scene.running")
         }
       );
       return;
@@ -2009,9 +2799,9 @@ function useScene(live) {
       setScene({
         key: `msg-${Date.now()}`,
         kind: "message",
-        title: "message",
+        title: t2("scene.message"),
         body: live.streamText,
-        meta: "streaming",
+        meta: t2("scene.streaming"),
         streaming: true
       });
     } else if (streaming) {
@@ -2019,24 +2809,24 @@ function useScene(live) {
     } else if (live.lastMessage) {
       const msg = live.lastMessage;
       setScene(
-        (s) => s.kind === "message" && !s.streaming && s.body === msg ? s : { key: `done-${Date.now()}`, kind: "message", title: "message", body: msg, meta: "complete" }
+        (s) => s.kind === "message" && !s.streaming && s.body === msg ? s : { key: `done-${Date.now()}`, kind: "message", title: t2("scene.message"), body: msg, meta: t2("scene.complete") }
       );
     } else {
       setScene(
-        (s) => s.kind === "idle" ? s : { key: "idle", kind: "idle", title: "idle", body: "the agent is resting — new activity will appear here" }
+        (s) => s.kind === "idle" && s.body === t2("scene.resting") ? s : { key: "idle", kind: "idle", title: t2("scene.idle"), body: t2("scene.resting") }
       );
     }
-  }, [live.streamText, live.currentTool, live.lastMessage]);
+  }, [live.streamText, live.currentTool, live.lastMessage, t2]);
   return scene;
 }
-function sceneFrom(live) {
+function sceneFrom(live, t2) {
   if (live.streamText.trim()) {
     return {
       key: `msg-${Date.now()}`,
       kind: "message",
-      title: "message",
+      title: t2("scene.message"),
       body: live.streamText,
-      meta: "streaming",
+      meta: t2("scene.streaming"),
       streaming: true
     };
   }
@@ -2046,13 +2836,13 @@ function sceneFrom(live) {
       kind: "tool",
       title: live.currentTool.name,
       body: argPreview(live.currentTool.args, 500) ?? "",
-      meta: "running"
+      meta: t2("scene.running")
     };
   }
   if (live.lastMessage) {
-    return { key: "done", kind: "message", title: "message", body: live.lastMessage, meta: "complete" };
+    return { key: "done", kind: "message", title: t2("scene.message"), body: live.lastMessage, meta: t2("scene.complete") };
   }
-  return { key: "idle", kind: "idle", title: "idle", body: "the agent is resting — new activity will appear here" };
+  return { key: "idle", kind: "idle", title: t2("scene.idle"), body: t2("scene.resting") };
 }
 function SceneBody({ scene }) {
   if (scene.kind === "tool") {
@@ -2071,12 +2861,12 @@ function SceneBody({ scene }) {
   return /* @__PURE__ */ jsx("div", { className: "home-scene-idle", children: scene.body });
 }
 function LiveScene({ scene }) {
-  const [current, setCurrent] = useState(scene);
+  const [current2, setCurrent] = useState(scene);
   const [leaving, setLeaving] = useState(null);
   const timer = useRef(null);
   useEffect(() => {
-    if (scene.key === current.key) return;
-    setLeaving(current);
+    if (scene.key === current2.key) return;
+    setLeaving(current2);
     setCurrent(scene);
     if (timer.current) window.clearTimeout(timer.current);
     timer.current = window.setTimeout(() => setLeaving(null), 460);
@@ -2086,7 +2876,7 @@ function LiveScene({ scene }) {
   }, []);
   return /* @__PURE__ */ jsxs("div", { className: "home-scene", children: [
     leaving && /* @__PURE__ */ jsx("div", { className: "home-scene-item leaving", "aria-hidden": "true", children: /* @__PURE__ */ jsx(SceneBody, { scene: leaving }) }),
-    /* @__PURE__ */ jsx("div", { className: "home-scene-item", children: /* @__PURE__ */ jsx(SceneBody, { scene: current }) }, current.key)
+    /* @__PURE__ */ jsx("div", { className: "home-scene-item", children: /* @__PURE__ */ jsx(SceneBody, { scene: current2 }) }, current2.key)
   ] });
 }
 function fmtCost$1(n) {
@@ -2102,10 +2892,11 @@ function fmtTok$1(n) {
   return String(n);
 }
 function AgentWidget({ data }) {
+  const t2 = useT();
   const live = useAgentLive();
   const scene = useScene(live);
   const totals = data.analytics?.totals;
-  const statusLabel = live.busy ? live.currentTool ? "working" : "thinking" : "idle";
+  const statusLabel = live.busy ? live.currentTool ? t2("agent.working") : t2("agent.thinking") : t2("agent.idle");
   return /* @__PURE__ */ jsxs("div", { className: "home-agent", children: [
     /* @__PURE__ */ jsxs("div", { className: "home-agent-head", children: [
       /* @__PURE__ */ jsx("span", { className: `home-agent-dot ${live.busy ? "busy" : ""}`, "aria-hidden": "true" }),
@@ -2117,56 +2908,56 @@ function AgentWidget({ data }) {
       {
         className: "home-agent-take",
         onClick: () => enterTheater(),
-        title: "Take control of the screen — live agent theater",
-        "aria-label": "Take control",
+        title: t2("agent.takeTitle"),
+        "aria-label": t2("agent.takeAria"),
         children: [
           /* @__PURE__ */ jsx("span", { className: "home-agent-take-ico", "aria-hidden": "true" }),
-          "take control"
+          t2("agent.take")
         ]
       }
     ) }),
     /* @__PURE__ */ jsxs("div", { className: "home-agent-stats", children: [
-      /* @__PURE__ */ jsxs("span", { title: "Input tokens today", children: [
-        /* @__PURE__ */ jsx("i", { children: "in" }),
+      /* @__PURE__ */ jsxs("span", { title: t2("agent.inTitle"), children: [
+        /* @__PURE__ */ jsx("i", { children: t2("agent.in") }),
         " ",
         fmtTok$1(totals?.total_input)
       ] }),
-      /* @__PURE__ */ jsxs("span", { title: "Output tokens today", children: [
-        /* @__PURE__ */ jsx("i", { children: "out" }),
+      /* @__PURE__ */ jsxs("span", { title: t2("agent.outTitle"), children: [
+        /* @__PURE__ */ jsx("i", { children: t2("agent.out") }),
         " ",
         fmtTok$1(totals?.total_output)
       ] }),
-      /* @__PURE__ */ jsxs("span", { title: "Estimated cost today", children: [
-        /* @__PURE__ */ jsx("i", { children: "est" }),
+      /* @__PURE__ */ jsxs("span", { title: t2("agent.estTitle"), children: [
+        /* @__PURE__ */ jsx("i", { children: t2("agent.est") }),
         " ",
         fmtCost$1(totals?.total_estimated_cost)
       ] }),
-      /* @__PURE__ */ jsxs("span", { title: "Sessions today", children: [
-        /* @__PURE__ */ jsx("i", { children: "ses" }),
+      /* @__PURE__ */ jsxs("span", { title: t2("agent.sesTitle"), children: [
+        /* @__PURE__ */ jsx("i", { children: t2("agent.ses") }),
         " ",
         totals?.total_sessions ?? "—"
       ] })
     ] }),
-    live.toolHistory.length > 0 && /* @__PURE__ */ jsx("div", { className: "home-agent-history", children: live.toolHistory.slice(0, 4).map((t, i) => /* @__PURE__ */ jsxs("span", { className: "home-agent-hist", children: [
+    live.toolHistory.length > 0 && /* @__PURE__ */ jsx("div", { className: "home-agent-history", children: live.toolHistory.slice(0, 4).map((t22, i) => /* @__PURE__ */ jsxs("span", { className: "home-agent-hist", children: [
       /* @__PURE__ */ jsx(
         "span",
         {
-          className: `home-agent-hist-dot ${t.status === "complete" ? "ok" : "bad"}`,
+          className: `home-agent-hist-dot ${t22.status === "complete" ? "ok" : "bad"}`,
           "aria-hidden": "true"
         }
       ),
-      t.name,
-      t.duration !== void 0 && /* @__PURE__ */ jsxs("i", { children: [
-        t.duration.toFixed(0),
+      t22.name,
+      t22.duration !== void 0 && /* @__PURE__ */ jsxs("i", { children: [
+        t22.duration.toFixed(0),
         "s"
       ] })
-    ] }, `${t.name}-${t.startedAt}-${i}`)) }),
-    !live.live && /* @__PURE__ */ jsx("div", { className: "home-agent-dim", children: "polling mode · no live channel" })
+    ] }, `${t22.name}-${t22.startedAt}-${i}`)) }),
+    !live.live && /* @__PURE__ */ jsx("div", { className: "home-agent-dim", children: t2("agent.polling") })
   ] });
 }
 const WIDGET_REGISTRY = {
   ascii: {
-    title: "hermes",
+    titleKey: "widget.ascii",
     component: ({ data, widgetProps, onWidgetPropsChange }) => /* @__PURE__ */ jsx(
       AsciiWidget,
       {
@@ -2181,7 +2972,7 @@ const WIDGET_REGISTRY = {
     dataSource: null
   },
   clock: {
-    title: "clock",
+    titleKey: "widget.clock",
     component: ({ widgetProps, onWidgetPropsChange }) => /* @__PURE__ */ jsx(ClockWidget, { widgetProps, onWidgetPropsChange }),
     defaultSize: { gw: 5, gh: 3 },
     minSize: { gw: 2, gh: 2 },
@@ -2189,7 +2980,7 @@ const WIDGET_REGISTRY = {
     dataSource: null
   },
   matrix: {
-    title: "matrix",
+    titleKey: "widget.matrix",
     component: ({ widgetProps, onWidgetPropsChange }) => /* @__PURE__ */ jsx(MatrixWidget, { widgetProps, onWidgetPropsChange }),
     defaultSize: { gw: 3, gh: 4 },
     minSize: { gw: 2, gh: 2 },
@@ -2197,7 +2988,7 @@ const WIDGET_REGISTRY = {
     dataSource: null
   },
   gateway: {
-    title: "gateway",
+    titleKey: "widget.gateway",
     component: ({ data }) => /* @__PURE__ */ jsx(GatewayWidget, { status: data.status }),
     defaultSize: { gw: 4, gh: 3 },
     minSize: { gw: 3, gh: 2 },
@@ -2205,21 +2996,30 @@ const WIDGET_REGISTRY = {
     dataSource: "status"
   },
   sessions: {
-    title: "sessions",
-    component: ({ data }) => /* @__PURE__ */ jsx(SessionsWidget, { status: data.status, sessions: data.sessions }),
+    titleKey: "widget.sessions",
+    component: ({ data, widgetProps, onWidgetPropsChange }) => /* @__PURE__ */ jsx(
+      SessionsWidget,
+      {
+        status: data.status,
+        sessions: data.sessions,
+        widgetProps,
+        onWidgetPropsChange
+      }
+    ),
     defaultSize: { gw: 3, gh: 3 },
     minSize: { gw: 2, gh: 2 },
     navigateTo: "/sessions",
     dataSource: "sessions"
   },
   tokens: {
-    title: "tokens",
-    component: ({ data, widgetProps, onWidgetPropsChange }) => /* @__PURE__ */ jsx(
+    titleKey: "widget.tokens",
+    component: ({ data, widgetProps, onWidgetPropsChange, gridSize }) => /* @__PURE__ */ jsx(
       TokensWidget,
       {
         analytics: data.analytics,
         widgetProps,
-        onWidgetPropsChange
+        onWidgetPropsChange,
+        gridSize
       }
     ),
     defaultSize: { gw: 5, gh: 4 },
@@ -2228,7 +3028,7 @@ const WIDGET_REGISTRY = {
     dataSource: "analytics"
   },
   host: {
-    title: "host",
+    titleKey: "widget.host",
     component: ({ data, widgetProps, onWidgetPropsChange }) => /* @__PURE__ */ jsx(
       HostWidget,
       {
@@ -2243,7 +3043,7 @@ const WIDGET_REGISTRY = {
     dataSource: "system"
   },
   cron: {
-    title: "cron",
+    titleKey: "widget.cron",
     component: ({ data }) => /* @__PURE__ */ jsx(CronWidget, { cron: data.cron }),
     defaultSize: { gw: 3, gh: 3 },
     minSize: { gw: 3, gh: 2 },
@@ -2251,7 +3051,7 @@ const WIDGET_REGISTRY = {
     dataSource: "cron"
   },
   notes: {
-    title: "notes",
+    titleKey: "widget.notes",
     component: ({ widgetProps, onWidgetPropsChange }) => /* @__PURE__ */ jsx(NotesWidget, { widgetProps, onWidgetPropsChange }),
     defaultSize: { gw: 3, gh: 4 },
     minSize: { gw: 2, gh: 2 },
@@ -2259,7 +3059,7 @@ const WIDGET_REGISTRY = {
     dataSource: null
   },
   errors: {
-    title: "Logs",
+    titleKey: "widget.errors",
     component: ({ data, widgetProps, onWidgetPropsChange }) => /* @__PURE__ */ jsx(
       ErrorsWidget,
       {
@@ -2274,7 +3074,7 @@ const WIDGET_REGISTRY = {
     dataSource: "logs"
   },
   moon: {
-    title: "moon",
+    titleKey: "widget.moon",
     component: ({ widgetProps, onWidgetPropsChange }) => /* @__PURE__ */ jsx(MoonWidget, { widgetProps, onWidgetPropsChange }),
     defaultSize: { gw: 2, gh: 3 },
     minSize: { gw: 2, gh: 2 },
@@ -2282,7 +3082,7 @@ const WIDGET_REGISTRY = {
     dataSource: null
   },
   heartbeat: {
-    title: "heartbeat",
+    titleKey: "widget.heartbeat",
     component: ({ data, widgetProps, onWidgetPropsChange }) => /* @__PURE__ */ jsx(
       HeartbeatWidget,
       {
@@ -2297,7 +3097,7 @@ const WIDGET_REGISTRY = {
     dataSource: null
   },
   life: {
-    title: "life",
+    titleKey: "widget.life",
     component: ({ editing }) => /* @__PURE__ */ jsx(LifeWidget, { editing }),
     defaultSize: { gw: 3, gh: 3 },
     minSize: { gw: 2, gh: 2 },
@@ -2305,7 +3105,7 @@ const WIDGET_REGISTRY = {
     dataSource: null
   },
   pomodoro: {
-    title: "pomodoro",
+    titleKey: "widget.pomodoro",
     component: ({ widgetProps, onWidgetPropsChange }) => /* @__PURE__ */ jsx(PomodoroWidget, { widgetProps, onWidgetPropsChange }),
     defaultSize: { gw: 3, gh: 3 },
     minSize: { gw: 2, gh: 2 },
@@ -2313,7 +3113,7 @@ const WIDGET_REGISTRY = {
     dataSource: null
   },
   countdown: {
-    title: "countdown",
+    titleKey: "widget.countdown",
     component: ({ widgetProps, onWidgetPropsChange }) => /* @__PURE__ */ jsx(CountdownWidget, { widgetProps, onWidgetPropsChange }),
     defaultSize: { gw: 3, gh: 2 },
     minSize: { gw: 2, gh: 2 },
@@ -2321,7 +3121,7 @@ const WIDGET_REGISTRY = {
     dataSource: null
   },
   calendar: {
-    title: "calendar",
+    titleKey: "widget.calendar",
     component: ({ gridSize }) => /* @__PURE__ */ jsx(CalendarWidget, { gridSize }),
     defaultSize: { gw: 3, gh: 4 },
     minSize: { gw: 2, gh: 3 },
@@ -2329,7 +3129,7 @@ const WIDGET_REGISTRY = {
     dataSource: null
   },
   agent: {
-    title: "agent",
+    titleKey: "widget.agent",
     component: ({ data }) => /* @__PURE__ */ jsx(AgentWidget, { data }),
     defaultSize: { gw: 4, gh: 3 },
     minSize: { gw: 3, gh: 2 },
@@ -2338,8 +3138,8 @@ const WIDGET_REGISTRY = {
   }
 };
 const STATE_COPY = {
-  offline: "offline · Hermes backend unreachable",
-  unavailable: "unavailable · this source is not responding"
+  offline: "shell.offline",
+  unavailable: "shell.unavailable"
 };
 function WidgetShell({
   title,
@@ -2355,6 +3155,8 @@ function WidgetShell({
   onClickThrough,
   children
 }) {
+  const t2 = useT();
+  const stateKey = STATE_COPY[state];
   const cls = [
     "home-widget",
     dragging ? "dragging" : "",
@@ -2371,10 +3173,13 @@ function WidgetShell({
       children: [
         /* @__PURE__ */ jsxs("b", { className: "hd", onPointerDown: editing ? onHeaderPointerDown : void 0, children: [
           title,
-          state === "stale" && /* @__PURE__ */ jsx("span", { className: "hd-stale", title: "Last update failed — showing previous data", children: " · stale" })
+          state === "stale" && /* @__PURE__ */ jsxs("span", { className: "hd-stale", title: t2("shell.staleTitle"), children: [
+            " · ",
+            t2("shell.stale")
+          ] })
         ] }),
-        STATE_COPY[state] ? /* @__PURE__ */ jsx("span", { className: `wstate wstate-${state}`, children: STATE_COPY[state] }) : children,
-        editing && onRemove && /* @__PURE__ */ jsx("button", { className: "wremove", onClick: onRemove, "aria-label": `Remove ${title}`, children: "×" }),
+        stateKey ? /* @__PURE__ */ jsx("span", { className: `wstate wstate-${state}`, children: t2(stateKey) }) : children,
+        editing && onRemove && /* @__PURE__ */ jsx("button", { className: "wremove", onClick: onRemove, "aria-label": t2("shell.remove", { title }), children: "×" }),
         editing && /* @__PURE__ */ jsx("div", { className: "rs", onPointerDown: onResizePointerDown })
       ]
     }
@@ -2393,6 +3198,7 @@ const GAP = 10;
 const PAD = 12;
 const GridCanvas = forwardRef(function GridCanvas2({ layout, editing, data, onLayoutChange, onRemove, onWidgetPropsChange, trashRef, onTrashActive }, ref) {
   const stageRef = useRef(null);
+  const t2 = useT();
   const [stageW, setStageW] = useState(0);
   const [drag, setDrag] = useState(null);
   const dragRef = useRef(null);
@@ -2631,7 +3437,7 @@ const GridCanvas = forwardRef(function GridCanvas2({ layout, editing, data, onLa
       return /* @__PURE__ */ jsx(
         WidgetShell,
         {
-          title: def.title,
+          title: t2(def.titleKey),
           style,
           editing,
           dragging: isDragged,
@@ -2663,17 +3469,18 @@ const GridCanvas = forwardRef(function GridCanvas2({ layout, editing, data, onLa
         style: { left: adding.pointer.x, top: adding.pointer.y },
         children: [
           "+ ",
-          addDef.title
+          t2(addDef.titleKey)
         ]
       }
     )
   ] });
 });
 function WidgetCatalog({ layout, onChipPointerDown }) {
+  const t2 = useT();
   const placed = new Set(layout.widgets.map((w) => w.id));
   const available = Object.entries(WIDGET_REGISTRY).filter(([id]) => !placed.has(id));
   return /* @__PURE__ */ jsx("div", { className: "home-catalog", children: /* @__PURE__ */ jsxs("div", { className: "home-catalog-inner", children: [
-    /* @__PURE__ */ jsx("span", { className: "home-catalog-hint", children: "drag a widget here to remove it" }),
+    /* @__PURE__ */ jsx("span", { className: "home-catalog-hint", children: t2("catalog.hint") }),
     available.map(([id, def]) => /* @__PURE__ */ jsxs(
       "button",
       {
@@ -2681,7 +3488,7 @@ function WidgetCatalog({ layout, onChipPointerDown }) {
         onPointerDown: (e) => onChipPointerDown(id, e),
         children: [
           "+ ",
-          def.title
+          t2(def.titleKey)
         ]
       },
       id
@@ -2694,7 +3501,7 @@ const SOURCES = {
   system: () => api.getSystemStats(),
   analytics: () => api.getAnalytics(1),
   cron: () => api.getCronJobs(),
-  sessions: () => api.getSessions(9),
+  sessions: () => api.getSessions(20),
   logs: () => api.getLogs({ lines: 50, level: "ERROR" })
 };
 function useHomeData() {
@@ -2743,69 +3550,69 @@ function useHomeData() {
   }, []);
   return data;
 }
-function buildRecommendations(data, live) {
+function buildRecommendations(data, live, t2) {
   const out = [];
   const totals = data.analytics?.totals;
   if (data.errors.size > 0) {
     out.push({
       severity: "crit",
-      title: `${data.errors.size} data source(s) failing`,
-      detail: `Polling errors on: ${[...data.errors].join(", ")}. Check the gateway and plugin API.`
+      title: t2("coach.sourcesFailing.title", { n: data.errors.size }),
+      detail: t2("coach.sourcesFailing.detail", { sources: [...data.errors].join(", ") })
     });
   }
   const errorLogs = data.logs?.lines?.length ?? 0;
   if (errorLogs > 0) {
     out.push({
       severity: errorLogs > 10 ? "crit" : "warn",
-      title: `${errorLogs} error line(s) in the gateway log`,
-      detail: "Tail the log to see if a platform or plugin is throwing repeatedly."
+      title: t2("coach.errorLines.title", { n: errorLogs }),
+      detail: t2("coach.errorLines.detail")
     });
   }
   const est = totals?.total_estimated_cost ?? 0;
   if (est > 0.5) {
     out.push({
       severity: est > 2 ? "crit" : "warn",
-      title: `≈$${est.toFixed(2)} estimated today`,
-      detail: est > 2 ? "Cost is climbing. Consider a cheaper model, context compression, or capping long sessions." : "Spend is moderate — keep an eye on it if you're mid-migration."
+      title: t2("coach.cost.title", { cost: est.toFixed(2) }),
+      detail: est > 2 ? t2("coach.cost.high") : t2("coach.cost.moderate")
     });
   }
   const totalTok = (totals?.total_input ?? 0) + (totals?.total_output ?? 0);
   if (totalTok > 2e6) {
     out.push({
       severity: "warn",
-      title: `${(totalTok / 1e6).toFixed(1)}M tokens today`,
-      detail: "Heavy usage. /compact long sessions and reuse cached context to cut input tokens."
+      title: t2("coach.tokens.title", { n: (totalTok / 1e6).toFixed(1) }),
+      detail: t2("coach.tokens.detail")
     });
   }
   const repeated = mostRepeatedTool(live.toolHistory);
   if (repeated && repeated.count >= 5) {
     out.push({
       severity: "info",
-      title: `"${repeated.name}" called ${repeated.count}× recently`,
-      detail: "A repeated tool sequence is a skill in disguise — consider saving it with skill_manage."
+      title: t2("coach.repeated.title", { name: repeated.name, n: repeated.count }),
+      detail: t2("coach.repeated.detail")
     });
   }
   const activeSessions = (data.sessions?.sessions ?? []).filter((s) => s.is_active).length;
   if (activeSessions >= 3) {
     out.push({
       severity: "info",
-      title: `${activeSessions} sessions active at once`,
-      detail: "Parallel work is running — delegate_task fans out well, but watch for tool conflicts on shared files."
+      title: t2("coach.parallel.title", { n: activeSessions }),
+      detail: t2("coach.parallel.detail")
     });
   }
   if (live.subagents.some((a) => a.status === "running")) {
     out.push({
       severity: "info",
-      title: `${live.subagents.filter((a) => a.status === "running").length} subagent(s) working`,
-      detail: "Orchestration in flight. Check back for their consolidated reports."
+      title: t2("coach.subagents.title", { n: live.subagents.filter((a) => a.status === "running").length }),
+      detail: t2("coach.subagents.detail")
     });
   }
   const slow = live.currentTool && Date.now() - live.currentTool.startedAt > 12e4 ? live.currentTool : null;
   if (slow) {
     out.push({
       severity: "warn",
-      title: `"${slow.name}" running >2min`,
-      detail: "Long tool call — it may be a build, a big search, or a hung process. Watch it."
+      title: t2("coach.slow.title", { name: slow.name }),
+      detail: t2("coach.slow.detail")
     });
   }
   const active2 = (data.sessions?.sessions ?? []).find((s) => s.is_active);
@@ -2813,15 +3620,15 @@ function buildRecommendations(data, live) {
     if ((active2.message_count ?? 0) > 80) {
       out.push({
         severity: "warn",
-        title: `Active session at ${active2.message_count} messages`,
-        detail: "Long context costs more per turn and degrades focus. A fresh session or /compact resets the cache."
+        title: t2("coach.longSession.title", { n: active2.message_count }),
+        detail: t2("coach.longSession.detail")
       });
     }
     if ((active2.tool_call_count ?? 0) > 40) {
       out.push({
         severity: "info",
-        title: `${active2.tool_call_count} tool calls in the active session`,
-        detail: "High tool churn — the task may benefit from a dedicated skill or a subagent."
+        title: t2("coach.toolChurn.title", { n: active2.tool_call_count }),
+        detail: t2("coach.toolChurn.detail")
       });
     }
   }
@@ -2829,23 +3636,23 @@ function buildRecommendations(data, live) {
   if (topSkill && topSkill.total_count > 0 && topSkill.percentage < 5) {
     out.push({
       severity: "info",
-      title: `Top skill "${topSkill.skill}" only ${topSkill.percentage}% of loads`,
-      detail: "Your most-used skill is still under-leveraged — consider bundling related skills."
+      title: t2("coach.skill.title", { name: topSkill.skill, n: topSkill.percentage }),
+      detail: t2("coach.skill.detail")
     });
   }
   if (out.length === 0) {
     out.push({
       severity: "info",
-      title: "All quiet on the home front",
-      detail: "No anomalies right now. The coach stays silent until there's something worth saying."
+      title: t2("coach.quiet.title"),
+      detail: t2("coach.quiet.detail")
     });
   }
   return out;
 }
 function mostRepeatedTool(history) {
   const counts = /* @__PURE__ */ new Map();
-  for (const t of history) {
-    counts.set(t.name, (counts.get(t.name) ?? 0) + 1);
+  for (const t2 of history) {
+    counts.set(t2.name, (counts.get(t2.name) ?? 0) + 1);
   }
   let best = null;
   for (const [name, count] of counts) {
@@ -2865,13 +3672,13 @@ function fmtTok(n) {
   if (n >= 1e3) return `${(n / 1e3).toFixed(1)}k`;
   return String(n);
 }
-function timeAgo(at) {
+function timeAgo(at, t2) {
   const s = Math.max(0, Math.round((Date.now() - at) / 1e3));
-  if (s < 5) return "now";
-  if (s < 60) return `${s}s ago`;
+  if (s < 5) return t2("time.now");
+  if (s < 60) return t2("time.secondsAgo", { n: s });
   const m = Math.round(s / 60);
-  if (m < 60) return `${m}m ago`;
-  return `${Math.round(m / 60)}h ago`;
+  if (m < 60) return t2("time.minutesAgo", { n: m });
+  return t2("time.hoursAgo", { n: Math.round(m / 60) });
 }
 function hhmm(at) {
   const d = new Date(at);
@@ -2879,8 +3686,8 @@ function hhmm(at) {
 }
 function extractPaths(tools) {
   const paths = /* @__PURE__ */ new Set();
-  for (const t of tools) {
-    const args = t.args;
+  for (const t2 of tools) {
+    const args = t2.args;
     if (!args || typeof args !== "object") continue;
     const a = args;
     for (const key of ["path", "file", "output_path", "workdir", "cwd", "target"]) {
@@ -2910,18 +3717,18 @@ function PanelTitle({ children }) {
   return /* @__PURE__ */ jsx("b", { className: "home-theater-panel-title", children });
 }
 function NowPanel({ data, live }) {
+  const t2 = useT();
   const scene = useScene(live);
   const [now, setNow] = useState(Date.now());
   useEffect(() => {
-    const t = setInterval(() => setNow(Date.now()), 1e3);
-    return () => clearInterval(t);
+    const timer = setInterval(() => setNow(Date.now()), 1e3);
+    return () => clearInterval(timer);
   }, []);
-  const status = live.busy ? live.currentTool ? "working" : "thinking" : data.status?.gateway_running ? "idle" : "gateway down";
+  const status = live.busy ? live.currentTool ? t2("agent.working") : t2("agent.thinking") : data.status?.gateway_running ? t2("agent.idle") : t2("theater.gatewayDown");
   return /* @__PURE__ */ jsxs("section", { className: "home-theater-panel home-theater-now", children: [
     /* @__PURE__ */ jsxs(PanelTitle, { children: [
       /* @__PURE__ */ jsx("span", { className: `home-agent-dot ${live.busy ? "busy" : ""}`, "aria-hidden": "true" }),
-      "NOW · ",
-      status.toUpperCase(),
+      t2("theater.now", { status: status.toUpperCase() }),
       live.activeTitle && /* @__PURE__ */ jsxs("span", { className: "home-theater-sub", children: [
         "— ",
         live.activeTitle
@@ -2929,7 +3736,7 @@ function NowPanel({ data, live }) {
     ] }),
     /* @__PURE__ */ jsx("div", { className: "home-theater-scene", children: /* @__PURE__ */ jsx(LiveScene, { scene }) }),
     /* @__PURE__ */ jsxs("div", { className: "home-theater-feed", children: [
-      live.feed.length === 0 && /* @__PURE__ */ jsx("div", { className: "home-theater-dim", children: "no live activity yet — the feed fills as the agent works" }),
+      live.feed.length === 0 && /* @__PURE__ */ jsx("div", { className: "home-theater-dim", children: t2("theater.feedEmpty") }),
       live.feed.slice(0, 40).map((e) => /* @__PURE__ */ jsxs("div", { className: "home-theater-feed-row", children: [
         /* @__PURE__ */ jsx("span", { className: "home-theater-feed-time", children: hhmm(e.at) }),
         /* @__PURE__ */ jsx(
@@ -2939,120 +3746,110 @@ function NowPanel({ data, live }) {
             "aria-hidden": "true"
           }
         ),
-        /* @__PURE__ */ jsx("span", { className: "home-theater-feed-label", children: e.label }),
-        e.detail && /* @__PURE__ */ jsx("span", { className: "home-theater-feed-detail", children: e.detail })
+        /* @__PURE__ */ jsx("span", { className: "home-theater-feed-label", children: e.labelKey ? t2(e.labelKey) : e.label }),
+        (e.detailKey || e.detail) && /* @__PURE__ */ jsx("span", { className: "home-theater-feed-detail", children: e.detailKey ? t2(e.detailKey) : e.detail })
       ] }, e.id))
     ] }),
     /* @__PURE__ */ jsxs("div", { className: "home-theater-foot", children: [
-      /* @__PURE__ */ jsxs("span", { children: [
-        "last event ",
-        live.lastEventAt ? timeAgo(live.lastEventAt) : "—"
-      ] }),
-      /* @__PURE__ */ jsx("span", { children: live.live ? "live" : "polling" }),
-      /* @__PURE__ */ jsxs("span", { children: [
-        "updated ",
-        timeAgo(now)
-      ] })
+      /* @__PURE__ */ jsx("span", { children: t2("theater.lastEvent", { when: live.lastEventAt ? timeAgo(live.lastEventAt, t2) : "—" }) }),
+      /* @__PURE__ */ jsx("span", { children: live.live ? t2("theater.live") : t2("theater.polling") }),
+      /* @__PURE__ */ jsx("span", { children: t2("theater.updated", { when: timeAgo(now, t2) }) })
     ] })
   ] });
 }
 function ToolPanel({ live }) {
+  const t2 = useT();
   return /* @__PURE__ */ jsxs("section", { className: "home-theater-panel", children: [
-    /* @__PURE__ */ jsx(PanelTitle, { children: "FUNCTION" }),
+    /* @__PURE__ */ jsx(PanelTitle, { children: t2("theater.function") }),
     live.currentTool ? /* @__PURE__ */ jsxs("div", { className: "home-theater-fn-current", children: [
       /* @__PURE__ */ jsxs("div", { className: "home-theater-fn-name", children: [
         /* @__PURE__ */ jsx("span", { className: "home-theater-fn-dot running", "aria-hidden": "true" }),
         live.currentTool.name,
-        /* @__PURE__ */ jsx("span", { className: "home-theater-fn-state running", children: "running" })
+        /* @__PURE__ */ jsx("span", { className: "home-theater-fn-state running", children: t2("scene.running") })
       ] }),
-      /* @__PURE__ */ jsx("pre", { className: "home-theater-fn-args", children: argPreview(live.currentTool.args, 600) ?? "awaiting args…" })
-    ] }) : /* @__PURE__ */ jsx("div", { className: "home-theater-dim", children: "no tool running" }),
-    live.toolHistory.length > 0 && /* @__PURE__ */ jsx("div", { className: "home-theater-fn-history", children: live.toolHistory.slice(0, 8).map((t, i) => /* @__PURE__ */ jsxs("div", { className: "home-theater-fn-row", children: [
+      /* @__PURE__ */ jsx("pre", { className: "home-theater-fn-args", children: argPreview(live.currentTool.args, 600) ?? t2("theater.awaitingArgs") })
+    ] }) : /* @__PURE__ */ jsx("div", { className: "home-theater-dim", children: t2("theater.noTool") }),
+    live.toolHistory.length > 0 && /* @__PURE__ */ jsx("div", { className: "home-theater-fn-history", children: live.toolHistory.slice(0, 8).map((t22, i) => /* @__PURE__ */ jsxs("div", { className: "home-theater-fn-row", children: [
       /* @__PURE__ */ jsx(
         "span",
         {
-          className: `home-theater-fn-dot ${t.status === "complete" ? "ok" : "bad"}`,
+          className: `home-theater-fn-dot ${t22.status === "complete" ? "ok" : "bad"}`,
           "aria-hidden": "true"
         }
       ),
-      /* @__PURE__ */ jsx("span", { className: "home-theater-fn-hname", children: t.name }),
-      /* @__PURE__ */ jsx("span", { className: "home-theater-fn-hargs", children: argPreview(t.args, 90) }),
-      t.duration !== void 0 && /* @__PURE__ */ jsxs("span", { className: "home-theater-fn-hdur", children: [
-        t.duration.toFixed(1),
+      /* @__PURE__ */ jsx("span", { className: "home-theater-fn-hname", children: t22.name }),
+      /* @__PURE__ */ jsx("span", { className: "home-theater-fn-hargs", children: argPreview(t22.args, 90) }),
+      t22.duration !== void 0 && /* @__PURE__ */ jsxs("span", { className: "home-theater-fn-hdur", children: [
+        t22.duration.toFixed(1),
         "s"
       ] })
-    ] }, `${t.name}-${t.startedAt}-${i}`)) })
+    ] }, `${t22.name}-${t22.startedAt}-${i}`)) })
   ] });
 }
 function TokenPanel({ data }) {
+  const t2 = useT();
   const totals = data.analytics?.totals;
   const byModel = data.analytics?.by_model ?? [];
   const active2 = (data.sessions?.sessions ?? []).find((s) => s.is_active);
   return /* @__PURE__ */ jsxs("section", { className: "home-theater-panel", children: [
-    /* @__PURE__ */ jsx(PanelTitle, { children: "TOKENS & COST" }),
+    /* @__PURE__ */ jsx(PanelTitle, { children: t2("theater.tokensCost") }),
     /* @__PURE__ */ jsxs("div", { className: "home-theater-tok-grid", children: [
       /* @__PURE__ */ jsxs("div", { className: "home-theater-tok-cell", children: [
         /* @__PURE__ */ jsx("span", { className: "home-theater-tok-num", children: fmtTok(totals?.total_input) }),
-        /* @__PURE__ */ jsx("span", { className: "home-theater-tok-lbl", children: "input today" })
+        /* @__PURE__ */ jsx("span", { className: "home-theater-tok-lbl", children: t2("theater.inputToday") })
       ] }),
       /* @__PURE__ */ jsxs("div", { className: "home-theater-tok-cell", children: [
         /* @__PURE__ */ jsx("span", { className: "home-theater-tok-num", children: fmtTok(totals?.total_output) }),
-        /* @__PURE__ */ jsx("span", { className: "home-theater-tok-lbl", children: "output today" })
+        /* @__PURE__ */ jsx("span", { className: "home-theater-tok-lbl", children: t2("theater.outputToday") })
       ] }),
       /* @__PURE__ */ jsxs("div", { className: "home-theater-tok-cell", children: [
         /* @__PURE__ */ jsx("span", { className: "home-theater-tok-num", children: fmtTok(totals?.total_cache_read) }),
-        /* @__PURE__ */ jsx("span", { className: "home-theater-tok-lbl", children: "cache read" })
+        /* @__PURE__ */ jsx("span", { className: "home-theater-tok-lbl", children: t2("theater.cacheRead") })
       ] }),
       /* @__PURE__ */ jsxs("div", { className: "home-theater-tok-cell", children: [
         /* @__PURE__ */ jsx("span", { className: "home-theater-tok-num home-theater-money", children: fmtCost(totals?.total_estimated_cost) }),
-        /* @__PURE__ */ jsx("span", { className: "home-theater-tok-lbl", children: "est. cost today" })
+        /* @__PURE__ */ jsx("span", { className: "home-theater-tok-lbl", children: t2("theater.costToday") })
       ] })
     ] }),
     byModel.length > 0 && /* @__PURE__ */ jsx("div", { className: "home-theater-tok-models", children: byModel.slice(0, 4).map((m) => /* @__PURE__ */ jsxs("div", { className: "home-theater-tok-model", children: [
       /* @__PURE__ */ jsx("span", { className: "home-theater-tok-mname", children: m.model }),
-      /* @__PURE__ */ jsxs("span", { className: "home-theater-tok-mtok", children: [
-        fmtTok(m.input_tokens + m.output_tokens),
-        " tok"
-      ] }),
+      /* @__PURE__ */ jsx("span", { className: "home-theater-tok-mtok", children: t2("theater.tok", { n: fmtTok(m.input_tokens + m.output_tokens) }) }),
       /* @__PURE__ */ jsx("span", { className: "home-theater-tok-mcost", children: fmtCost(m.estimated_cost) })
     ] }, m.model)) }),
     active2 && /* @__PURE__ */ jsxs("div", { className: "home-theater-tok-session", children: [
-      /* @__PURE__ */ jsx("span", { className: "home-theater-tok-slbl", children: "active session" }),
+      /* @__PURE__ */ jsx("span", { className: "home-theater-tok-slbl", children: t2("theater.activeSession") }),
       /* @__PURE__ */ jsx("span", { className: "home-theater-tok-stitle", children: active2.title ?? active2.id }),
-      /* @__PURE__ */ jsxs("span", { className: "home-theater-tok-snum", children: [
-        fmtTok((active2.input_tokens ?? 0) + (active2.output_tokens ?? 0)),
-        " tok ·",
-        " ",
-        active2.message_count ?? 0,
-        " msg · ",
-        active2.tool_call_count ?? 0,
-        " tools"
-      ] })
+      /* @__PURE__ */ jsx("span", { className: "home-theater-tok-snum", children: t2("theater.sessionNums", {
+        tok: fmtTok((active2.input_tokens ?? 0) + (active2.output_tokens ?? 0)),
+        msg: active2.message_count ?? 0,
+        tools: active2.tool_call_count ?? 0
+      }) })
     ] })
   ] });
 }
 function ProjectPanel({ data, live }) {
+  const t2 = useT();
   const active2 = (data.sessions?.sessions ?? []).find((s) => s.is_active);
   const paths = useMemo(
     () => extractPaths([...live.currentTool ? [live.currentTool] : [], ...live.toolHistory]),
     [live.currentTool, live.toolHistory]
   );
   return /* @__PURE__ */ jsxs("section", { className: "home-theater-panel", children: [
-    /* @__PURE__ */ jsx(PanelTitle, { children: "PROJECT" }),
+    /* @__PURE__ */ jsx(PanelTitle, { children: t2("theater.project") }),
     active2 ? /* @__PURE__ */ jsxs("div", { className: "home-theater-proj-session", children: [
-      /* @__PURE__ */ jsx("div", { className: "home-theater-proj-title", children: active2.title ?? "(untitled session)" }),
+      /* @__PURE__ */ jsx("div", { className: "home-theater-proj-title", children: active2.title ?? t2("theater.untitled") }),
       /* @__PURE__ */ jsxs("div", { className: "home-theater-proj-meta", children: [
         active2.model ?? "—",
         " · ",
         active2.source ?? "—",
-        " · started ",
-        timeAgo(active2.started_at * 1e3)
+        " · ",
+        t2("theater.started", { when: timeAgo(active2.started_at * 1e3, t2) })
       ] })
-    ] }) : /* @__PURE__ */ jsx("div", { className: "home-theater-dim", children: "no active session" }),
+    ] }) : /* @__PURE__ */ jsx("div", { className: "home-theater-dim", children: t2("theater.noSession") }),
     paths.length > 0 ? /* @__PURE__ */ jsx("div", { className: "home-theater-proj-files", children: paths.map((p) => /* @__PURE__ */ jsxs("div", { className: "home-theater-proj-file", children: [
       /* @__PURE__ */ jsx("span", { className: "home-theater-proj-glyph", children: fileGlyph(p) }),
       /* @__PURE__ */ jsx("span", { className: "home-theater-proj-path", children: p })
-    ] }, p)) }) : /* @__PURE__ */ jsx("div", { className: "home-theater-dim", children: "files touched by the agent will appear here as it works" }),
+    ] }, p)) }) : /* @__PURE__ */ jsx("div", { className: "home-theater-dim", children: t2("theater.filesEmpty") }),
     live.subagents.length > 0 && /* @__PURE__ */ jsx("div", { className: "home-theater-proj-subagents", children: live.subagents.map((a) => /* @__PURE__ */ jsxs("div", { className: "home-theater-proj-subagent", children: [
       /* @__PURE__ */ jsx(
         "span",
@@ -3070,12 +3867,13 @@ function ProjectPanel({ data, live }) {
   ] });
 }
 function CoachPanel({ data, live }) {
+  const t2 = useT();
   const recs = useMemo(
-    () => buildRecommendations(data, live),
-    [data, live]
+    () => buildRecommendations(data, live, t2),
+    [data, live, t2]
   );
   return /* @__PURE__ */ jsxs("section", { className: "home-theater-panel", children: [
-    /* @__PURE__ */ jsx(PanelTitle, { children: "RECOMMENDATIONS" }),
+    /* @__PURE__ */ jsx(PanelTitle, { children: t2("theater.recommendations") }),
     /* @__PURE__ */ jsx("div", { className: "home-theater-rec-list", children: recs.map((r, i) => /* @__PURE__ */ jsxs("div", { className: `home-theater-rec ${r.severity}`, children: [
       /* @__PURE__ */ jsx("span", { className: "home-theater-rec-tag", children: r.severity === "crit" ? "!!" : r.severity === "warn" ? "!" : "i" }),
       /* @__PURE__ */ jsxs("div", { className: "home-theater-rec-body", children: [
@@ -3086,6 +3884,7 @@ function CoachPanel({ data, live }) {
   ] });
 }
 function AgentTheater({ data }) {
+  const t2 = useT();
   const live = useAgentLive();
   useEffect(() => {
     const onKey = (e) => {
@@ -3094,22 +3893,22 @@ function AgentTheater({ data }) {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, []);
-  return /* @__PURE__ */ jsxs("div", { className: "home-theater", role: "dialog", "aria-label": "Agent theater", children: [
+  return /* @__PURE__ */ jsxs("div", { className: "home-theater", role: "dialog", "aria-label": t2("theater.aria"), children: [
     /* @__PURE__ */ jsxs("header", { className: "home-theater-head", children: [
       /* @__PURE__ */ jsx("span", { className: `home-agent-dot ${live.busy ? "busy" : ""}`, "aria-hidden": "true" }),
-      /* @__PURE__ */ jsx("span", { className: "home-theater-title", children: "AGENT THEATER" }),
+      /* @__PURE__ */ jsx("span", { className: "home-theater-title", children: t2("theater.title") }),
       /* @__PURE__ */ jsxs("span", { className: "home-theater-sub", children: [
-        live.busy ? "the agent is working" : "the agent is idle",
+        live.busy ? t2("theater.working") : t2("theater.idle"),
         " · ",
-        live.live ? "live feed" : "polling"
+        live.live ? t2("theater.liveFeed") : t2("theater.polling")
       ] }),
       /* @__PURE__ */ jsx(
         "button",
         {
           className: "home-theater-release",
           onClick: () => exitTheater(),
-          title: "Release control (Esc)",
-          children: "release control"
+          title: t2("theater.releaseTitle"),
+          children: t2("theater.release")
         }
       )
     ] }),
@@ -3173,6 +3972,11 @@ function HomePage() {
   const dirty = useRef(false);
   const toastTimer = useRef(null);
   const data = useHomeData();
+  const dashboardLocale = useDashboardLocale();
+  useEffect(() => {
+    if (dashboardLocale !== null) setHostLanguage(dashboardLocale);
+  }, [dashboardLocale]);
+  const t2 = useT();
   useEffect(() => subscribeTheater(setTheaterOn), []);
   useEffect(() => {
     if (theaterOn && editing) setEditing(false);
@@ -3213,14 +4017,14 @@ function HomePage() {
             () => {
               dirty.current = false;
             },
-            () => showToast("Could not save the layout — it is kept for this session")
+            () => showToast(t2("home.saveFailed"))
           );
         }, 800);
         dirty.current = true;
         return next;
       });
     },
-    [showToast]
+    [showToast, t2]
   );
   useEffect(() => () => {
     if (saveTimer.current) clearTimeout(saveTimer.current);
@@ -3232,11 +4036,11 @@ function HomePage() {
         await saveLayout(layout);
         dirty.current = false;
       } catch {
-        showToast("Could not save the layout — it is kept for this session");
+        showToast(t2("home.saveFailed"));
       }
     }
     setEditing((e) => !e);
-  }, [editing, layout, showToast]);
+  }, [editing, layout, showToast, t2]);
   useEffect(() => {
     if (!editing) return;
     const onKey = (e) => {
@@ -3288,8 +4092,8 @@ function HomePage() {
             {
               className: "home-fab home-fab-enter",
               onClick: () => update(DEFAULT_LAYOUT),
-              title: "Restore default layout",
-              "aria-label": "Restore default layout",
+              title: t2("home.restoreDefault"),
+              "aria-label": t2("home.restoreDefault"),
               children: /* @__PURE__ */ jsx("span", { className: "home-fab-spin", children: "↺" })
             }
           ),
@@ -3298,8 +4102,8 @@ function HomePage() {
             {
               className: `home-fab${editing ? " active" : ""}`,
               onClick: () => void toggleEditing(),
-              title: editing ? "Done editing" : "Edit layout",
-              "aria-label": editing ? "Done editing" : "Edit layout",
+              title: editing ? t2("home.doneEditing") : t2("home.editLayout"),
+              "aria-label": editing ? t2("home.doneEditing") : t2("home.editLayout"),
               children: [
                 /* @__PURE__ */ jsx("span", { className: "home-fab-ico ico-edit", "aria-hidden": "true", children: "✎" }),
                 /* @__PURE__ */ jsx("span", { className: "home-fab-ico ico-done", "aria-hidden": "true", children: "✓" })
@@ -3790,6 +4594,25 @@ const homeCss = `/* Home page — rice-style widget grid.
 }
 .tok-stats > span { white-space: nowrap; }
 .tok-stats .dim { margin-right: 2px; }
+
+/* Grouped usage (tokens widget, by provider / by model): one row per group
+ * with a faint share bar behind it, width = --share of the grouped total. */
+.tok-groups { padding-top: 3px; font-variant-numeric: tabular-nums; }
+.home-widget .row.tok-group {
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--home-accent) 16%, transparent) var(--share, 0%),
+    transparent var(--share, 0%)
+  );
+  border-radius: 2px;
+  padding-left: 3px;
+}
+.tok-share { min-width: 3ch; text-align: right; }
+.tok-group-note,
+.tok-group-more { font-size: 9.5px; padding-top: 1px; }
+
+/* Sessions widget: per-row token count (shown while sorting/filtering by it). */
+.ses-tok { font-variant-numeric: tabular-nums; color: var(--home-accent-soft); }
 
 /* ── logs widget (per-file record list) ── */
 .logs-sub {
@@ -5132,12 +5955,13 @@ const homeCss = `/* Home page — rice-style widget grid.
 `;
 const HOME_DESKTOP_PATH = "/home";
 const DESKTOP_START_KEY = "home-dashboard.opened-this-start";
-function createHomeContributions(render, navigate = () => void 0) {
+const ENGLISH_LABELS = { home: "Home", open: "Open Home" };
+function createHomeContributions(render, navigate = () => void 0, labels = ENGLISH_LABELS) {
   return [
     {
       id: "page",
       area: "routes",
-      title: "Home",
+      title: labels.home,
       order: -1e3,
       data: { path: HOME_DESKTOP_PATH },
       render
@@ -5146,7 +5970,7 @@ function createHomeContributions(render, navigate = () => void 0) {
       id: "nav",
       area: "sidebar.nav",
       order: -1e3,
-      data: { path: HOME_DESKTOP_PATH, label: "Home", codicon: "home" }
+      data: { path: HOME_DESKTOP_PATH, label: labels.home, codicon: "home" }
     },
     {
       id: "open",
@@ -5154,8 +5978,8 @@ function createHomeContributions(render, navigate = () => void 0) {
       order: -1e3,
       data: {
         id: "home.open",
-        label: "Open Home",
-        keywords: ["home", "dashboard", "widgets"],
+        label: labels.open,
+        keywords: ["home", "dashboard", "widgets", labels.home.toLowerCase()],
         run: () => navigate(HOME_DESKTOP_PATH)
       }
     }
@@ -5202,6 +6026,7 @@ function createDesktopHomeHost(ctx, desktop) {
     getStatus: () => desktop.status(),
     getSystemStats: () => ctx.rest("/system"),
     getAnalytics: (days) => ctx.rest(query("/analytics", { days })),
+    getModelsAnalytics: (days) => ctx.rest(query("/models", { days })),
     getCronJobs: (profile) => ctx.rest(query("/cron", { profile })),
     getSessions: (limit, offset) => ctx.rest(query("/sessions", { limit, offset })),
     getLogs: (params) => desktop.logs(params)
@@ -5230,16 +6055,35 @@ function DesktopHomePage() {
     /* @__PURE__ */ jsx(HomePage, {})
   ] });
 }
+const LANGUAGE_PROBE = "home.language";
+function followDesktopLanguage(ctx) {
+  const i18n = ctx.i18n;
+  if (!i18n || typeof i18n.register !== "function" || typeof i18n.t !== "function") return;
+  try {
+    i18n.register(Object.fromEntries(LANGUAGES.map((id) => [id, { [LANGUAGE_PROBE]: id }])));
+    const sync = () => {
+      const value = i18n.t(LANGUAGE_PROBE);
+      setHostLanguage(value && value !== LANGUAGE_PROBE ? value : null);
+    };
+    sync();
+    i18n.onLocaleChange?.(sync);
+  } catch {
+  }
+}
 const plugin = {
   id: "home-dashboard",
   name: "Home",
   defaultEnabled: true,
   register(ctx) {
     configureHomeHost(createDesktopHomeHost(ctx, host));
+    followDesktopLanguage(ctx);
     ctx.registerMany(
       createHomeContributions(
         () => /* @__PURE__ */ jsx(DesktopHomePage, {}),
-        (path) => host.navigate(path)
+        (path) => host.navigate(path),
+        // Sidebar / palette labels are registered once, in the language
+        // active at load time.
+        { home: t("nav.home"), open: t("nav.open") }
       )
     );
     window.setTimeout(() => {

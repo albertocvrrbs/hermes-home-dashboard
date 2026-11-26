@@ -1,6 +1,7 @@
 import type { StatusResponse } from "@/api-types";
 import { asciiArtClass } from "./ascii-presentation";
 import { HoverArrows } from "./HoverArrows";
+import { useT, type MessageKey } from "../i18n";
 
 /** The official Hermes caduceus from hermes_cli/banner.py (HERMES_CADUCEUS),
  *  stripped of rich markup. Keep in sync if the banner art ever changes. */
@@ -35,10 +36,10 @@ const diamond = Array.from({ length: 15 }, (_, r) => {
   return row(14 - k, 2 * k + 1);
 }).join("\n");
 
-const ARTS = [
-  { name: "caduceus", art: CADUCEUS },
-  { name: "pyramid", art: pyramid },
-  { name: "diamond", art: diamond },
+const ARTS: { name: string; label: MessageKey; art: string }[] = [
+  { name: "caduceus", label: "ascii.art.caduceus", art: CADUCEUS },
+  { name: "pyramid", label: "ascii.art.pyramid", art: pyramid },
+  { name: "diamond", label: "ascii.art.diamond", art: diamond },
 ];
 
 interface Props {
@@ -50,6 +51,7 @@ interface Props {
 /** Hermes emblem. Hover arrows cycle the art (caduceus + geometric emblems);
  *  the choice persists in the widget's layout props. */
 export function AsciiWidget({ status, widgetProps, onWidgetPropsChange }: Props) {
+  const t = useT();
   const version = status?.version;
   const raw = typeof widgetProps.artIndex === "number" ? widgetProps.artIndex : 0;
   const idx = ((raw % ARTS.length) + ARTS.length) % ARTS.length;
@@ -58,7 +60,7 @@ export function AsciiWidget({ status, widgetProps, onWidgetPropsChange }: Props)
 
   return (
     <div className="home-ascii-wrap">
-      <HoverArrows onPrev={() => cycle(-1)} onNext={() => cycle(1)} label={ARTS[idx].name} />
+      <HoverArrows onPrev={() => cycle(-1)} onNext={() => cycle(1)} label={t(ARTS[idx].label)} />
       <div className={asciiArtClass(ARTS[idx].name)}>{ARTS[idx].art}</div>
       <div className="home-ascii-ver">
         HERMES-AGENT{version ? ` · v${version}` : ""}

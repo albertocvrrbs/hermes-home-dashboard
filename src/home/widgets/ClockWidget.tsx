@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { HoverCtl } from "./HoverArrows";
+import { useT } from "../i18n";
 
 interface Props {
   widgetProps: Record<string, unknown>;
@@ -9,6 +10,7 @@ interface Props {
 /** Clock with hover toggles for 12/24h and a seconds readout. Both persist in
  *  the widget's layout props; the tick rate follows the seconds toggle. */
 export function ClockWidget({ widgetProps, onWidgetPropsChange }: Props) {
+  const t = useT();
   const is12 = widgetProps.format === "12";
   const showSeconds = widgetProps.showSeconds === true;
   const [now, setNow] = useState(() => new Date());
@@ -31,14 +33,19 @@ export function ClockWidget({ widgetProps, onWidgetPropsChange }: Props) {
   return (
     <div className="home-clock-wrap">
       <HoverCtl>
-        <button className="hv-opt" onClick={() => set({ format: is12 ? "24" : "12" })}>
+        <button
+          className="hv-opt"
+          onClick={() => set({ format: is12 ? "24" : "12" })}
+          title={t("clock.formatTitle")}
+        >
           {is12 ? "12h" : "24h"}
         </button>
         <button
           className={`hv-opt${showSeconds ? " on" : ""}`}
           onClick={() => set({ showSeconds: !showSeconds })}
+          title={t("clock.secondsTitle")}
         >
-          s
+          {t("clock.seconds")}
         </button>
       </HoverCtl>
       <div className="home-clock">

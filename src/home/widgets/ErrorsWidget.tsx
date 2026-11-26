@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { api } from "@/sdk";
 import type { LogsResponse } from "@/api-types";
 import { HoverArrows } from "./HoverArrows";
+import { useT } from "../i18n";
 import { FILES, SHORT, levelClass, parseRecords, type FileKey, type LogRecord } from "./logParse";
 
 interface Props {
@@ -15,6 +16,7 @@ interface Props {
  *  gateway), picked with hover arrows. Multi-line records are grouped so a stack
  *  trace shows as one row. The chosen file persists in the layout props. */
 export function ErrorsWidget({ logs, widgetProps, onWidgetPropsChange }: Props) {
+  const t = useT();
   const fileKey: FileKey =
     FILES.find((f) => f === widgetProps.file) ?? "agent";
   const idx = FILES.indexOf(fileKey);
@@ -48,7 +50,7 @@ export function ErrorsWidget({ logs, widgetProps, onWidgetPropsChange }: Props) 
     return (
       <div>
         {arrows}
-        <span className="dim">{failed ? "unavailable" : "loading…"}</span>
+        <span className="dim">{failed ? t("common.unavailable") : t("common.loading")}</span>
       </div>
     );
   }
@@ -59,11 +61,11 @@ export function ErrorsWidget({ logs, widgetProps, onWidgetPropsChange }: Props) 
       {arrows}
       <div className="logs-sub">
         <span className="logs-file">{fileKey.toUpperCase()}</span>
-        <span className="dim">{records.length} {records.length === 1 ? "record" : "records"}</span>
+        <span className="dim">{t(records.length === 1 ? "logs.record" : "logs.records", { n: records.length })}</span>
       </div>
       <div className="home-logs">
         {records.length === 0 ? (
-          <span className="dim">no records</span>
+          <span className="dim">{t("logs.empty")}</span>
         ) : (
           records.map((r, i) => (
             <div className="log-row" key={`${r.time}-${i}`} title={r.text}>

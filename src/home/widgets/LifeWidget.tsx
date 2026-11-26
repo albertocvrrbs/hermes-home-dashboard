@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { HoverCtl } from "./HoverArrows";
+import { useT } from "../i18n";
 
 const CELL = 7;
 const STEP_MS = 160;
@@ -13,6 +14,7 @@ const RESEED_STEPS = 400;
  *  edit mode so it never fights drag/resize. The board is ephemeral — a reload
  *  reseeds. */
 export function LifeWidget({ editing }: { editing: boolean }) {
+  const t = useT();
   const ref = useRef<HTMLCanvasElement>(null);
   const gridRef = useRef<Uint8Array>(new Uint8Array(0));
   const dimsRef = useRef({ cols: 0, rows: 0 });
@@ -159,10 +161,10 @@ export function LifeWidget({ editing }: { editing: boolean }) {
     <>
       <HoverCtl>
         <button className="hv-opt" onClick={() => setPaused((p) => !p)}>
-          {paused ? "play" : "pause"}
+          {paused ? t("life.play") : t("life.pause")}
         </button>
-        <button className="hv-opt" onClick={seedGrid}>seed</button>
-        <button className="hv-opt" onClick={clearGrid}>clear</button>
+        <button className="hv-opt" onClick={seedGrid}>{t("life.seed")}</button>
+        <button className="hv-opt" onClick={clearGrid}>{t("life.clear")}</button>
       </HoverCtl>
       <canvas ref={ref} className="home-canvas home-life" />
     </>

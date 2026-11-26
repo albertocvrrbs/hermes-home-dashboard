@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { fetchJSON } from "../sdk";
+import { fetchJSON, useDashboardLocale } from "../sdk";
+import { setHostLanguage, useT } from "./i18n";
 import { GridCanvas, type GridCanvasHandle } from "./GridCanvas";
 import { WidgetCatalog } from "./WidgetCatalog";
 import { useHomeData } from "./useHomeData";
@@ -38,6 +39,13 @@ export default function HomePage() {
   const dirty = useRef(false);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const data = useHomeData();
+  // Web dashboard: follow its language picker (Desktop reports its language
+  // from the plugin entry point instead; see src/desktop/index.tsx).
+  const dashboardLocale = useDashboardLocale();
+  useEffect(() => {
+    if (dashboardLocale !== null) setHostLanguage(dashboardLocale);
+  }, [dashboardLocale]);
+  const t = useT();
 
   // The agent widget can "take control" of the whole screen. While the
   // theater is active the grid stays mounted underneath (state intact) and
@@ -90,14 +98,14 @@ export default function HomePage() {
         saveTimer.current = setTimeout(() => {
           saveLayout(next).then(
             () => { dirty.current = false; },
-            () => showToast("Could not save the layout — it is kept for this session"),
+            () => showToast(t("home.saveFailed")),
           );
         }, 800);
         dirty.current = true;
         return next;
       });
     },
-    [showToast],
+    [showToast, t],
   );
   useEffect(() => () => {
     if (saveTimer.current) clearTimeout(saveTimer.current);
@@ -110,11 +118,11 @@ export default function HomePage() {
         await saveLayout(layout);
         dirty.current = false;
       } catch {
-        showToast("Could not save the layout — it is kept for this session");
+        showToast(t("home.saveFailed"));
       }
     }
     setEditing((e) => !e);
-  }, [editing, layout, showToast]);
+  }, [editing, layout, showToast, t]);
 
   // Escape closes the lock (saving), same as the button.
   useEffect(() => {
@@ -162,8 +170,8 @@ export default function HomePage() {
           <button
             className="home-fab home-fab-enter"
             onClick={() => update(DEFAULT_LAYOUT)}
-            title="Restore default layout"
-            aria-label="Restore default layout"
+            title={t("home.restoreDefault")}
+            aria-label={t("home.restoreDefault")}
           >
             <span className="home-fab-spin">↺</span>
           </button>
@@ -171,8 +179,8 @@ export default function HomePage() {
         <button
           className={`home-fab${editing ? " active" : ""}`}
           onClick={() => void toggleEditing()}
-          title={editing ? "Done editing" : "Edit layout"}
-          aria-label={editing ? "Done editing" : "Edit layout"}
+          title={editing ? t("home.doneEditing") : t("home.editLayout")}
+          aria-label={editing ? t("home.doneEditing") : t("home.editLayout")}
         >
           <span className="home-fab-ico ico-edit" aria-hidden="true">✎</span>
           <span className="home-fab-ico ico-done" aria-hidden="true">✓</span>

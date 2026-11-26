@@ -1,5 +1,6 @@
 import type { HomeData } from "@/home/useHomeData";
 import type { AgentLiveState, LiveToolCall } from "./agentLive";
+import type { Translate } from "@/home/i18n";
 
 export interface Recommendation {
   severity: "info" | "warn" | "crit";
@@ -9,7 +10,11 @@ export interface Recommendation {
 
 /** Heuristic coach — no LLM, just sharp eyes on the live + polled data.
  *  Each rule is cheap and explains itself. */
-export function buildRecommendations(data: HomeData, live: AgentLiveState): Recommendation[] {
+export function buildRecommendations(
+  data: HomeData,
+  live: AgentLiveState,
+  t: Translate,
+): Recommendation[] {
   const out: Recommendation[] = [];
   const totals = data.analytics?.totals;
 
@@ -17,8 +22,8 @@ export function buildRecommendations(data: HomeData, live: AgentLiveState): Reco
   if (data.errors.size > 0) {
     out.push({
       severity: "crit",
-      title: `${data.errors.size} data source(s) failing`,
-      detail: `Polling errors on: ${[...data.errors].join(", ")}. Check the gateway and plugin API.`,
+      title: t("coach.sourcesFailing.title", { n: data.errors.size }),
+      detail: t("coach.sourcesFailing.detail", { sources: [...data.errors].join(", ") }),
     });
   }
 
@@ -26,8 +31,8 @@ export function buildRecommendations(data: HomeData, live: AgentLiveState): Reco
   if (errorLogs > 0) {
     out.push({
       severity: errorLogs > 10 ? "crit" : "warn",
-      title: `${errorLogs} error line(s) in the gateway log`,
-      detail: "Tail the log to see if a platform or plugin is throwing repeatedly.",
+      title: t("coach.errorLines.title", { n: errorLogs }),
+      detail: t("coach.errorLines.detail"),
     });
   }
 
@@ -36,10 +41,8 @@ export function buildRecommendations(data: HomeData, live: AgentLiveState): Reco
   if (est > 0.5) {
     out.push({
       severity: est > 2 ? "crit" : "warn",
-      title: `≈$${est.toFixed(2)} estimated today`,
-      detail: est > 2
-        ? "Cost is climbing. Consider a cheaper model, context compression, or capping long sessions."
-        : "Spend is moderate — keep an eye on it if you're mid-migration.",
+      title: t("coach.cost.title", { cost: est.toFixed(2) }),
+      detail: est > 2 ? t("coach.cost.high") : t("coach.cost.moderate"),
     });
   }
 
@@ -47,8 +50,8 @@ export function buildRecommendations(data: HomeData, live: AgentLiveState): Reco
   if (totalTok > 2_000_000) {
     out.push({
       severity: "warn",
-      title: `${(totalTok / 1_000_000).toFixed(1)}M tokens today`,
-      detail: "Heavy usage. /compact long sessions and reuse cached context to cut input tokens.",
+      title: t("coach.tokens.title", { n: (totalTok / 1_000_000).toFixed(1) }),
+      detail: t("coach.tokens.detail"),
     });
   }
 
@@ -57,8 +60,8 @@ export function buildRecommendations(data: HomeData, live: AgentLiveState): Reco
   if (repeated && repeated.count >= 5) {
     out.push({
       severity: "info",
-      title: `"${repeated.name}" called ${repeated.count}× recently`,
-      detail: "A repeated tool sequence is a skill in disguise — consider saving it with skill_manage.",
+      title: t("coach.repeated.title", { name: repeated.name, n: repeated.count }),
+      detail: t("coach.repeated.detail"),
     });
   }
 
@@ -66,16 +69,16 @@ export function buildRecommendations(data: HomeData, live: AgentLiveState): Reco
   if (activeSessions >= 3) {
     out.push({
       severity: "info",
-      title: `${activeSessions} sessions active at once`,
-      detail: "Parallel work is running — delegate_task fans out well, but watch for tool conflicts on shared files.",
+      title: t("coach.parallel.title", { n: activeSessions }),
+      detail: t("coach.parallel.detail"),
     });
   }
 
   if (live.subagents.some((a) => a.status === "running")) {
     out.push({
       severity: "info",
-      title: `${live.subagents.filter((a) => a.status === "running").length} subagent(s) working`,
-      detail: "Orchestration in flight. Check back for their consolidated reports.",
+      title: t("coach.subagents.title", { n: live.subagents.filter((a) => a.status === "running").length }),
+      detail: t("coach.subagents.detail"),
     });
   }
 
@@ -85,8 +88,8 @@ export function buildRecommendations(data: HomeData, live: AgentLiveState): Reco
   if (slow) {
     out.push({
       severity: "warn",
-      title: `"${slow.name}" running >2min`,
-      detail: "Long tool call — it may be a build, a big search, or a hung process. Watch it.",
+      title: t("coach.slow.title", { name: slow.name }),
+      detail: t("coach.slow.detail"),
     });
   }
 
@@ -96,15 +99,15 @@ export function buildRecommendations(data: HomeData, live: AgentLiveState): Reco
     if ((active.message_count ?? 0) > 80) {
       out.push({
         severity: "warn",
-        title: `Active session at ${active.message_count} messages`,
-        detail: "Long context costs more per turn and degrades focus. A fresh session or /compact resets the cache.",
+        title: t("coach.longSession.title", { n: active.message_count }),
+        detail: t("coach.longSession.detail"),
       });
     }
     if ((active.tool_call_count ?? 0) > 40) {
       out.push({
         severity: "info",
-        title: `${active.tool_call_count} tool calls in the active session`,
-        detail: "High tool churn — the task may benefit from a dedicated skill or a subagent.",
+        title: t("coach.toolChurn.title", { n: active.tool_call_count }),
+        detail: t("coach.toolChurn.detail"),
       });
     }
   }
@@ -114,16 +117,16 @@ export function buildRecommendations(data: HomeData, live: AgentLiveState): Reco
   if (topSkill && topSkill.total_count > 0 && topSkill.percentage < 5) {
     out.push({
       severity: "info",
-      title: `Top skill "${topSkill.skill}" only ${topSkill.percentage}% of loads`,
-      detail: "Your most-used skill is still under-leveraged — consider bundling related skills.",
+      title: t("coach.skill.title", { name: topSkill.skill, n: topSkill.percentage }),
+      detail: t("coach.skill.detail"),
     });
   }
 
   if (out.length === 0) {
     out.push({
       severity: "info",
-      title: "All quiet on the home front",
-      detail: "No anomalies right now. The coach stays silent until there's something worth saying.",
+      title: t("coach.quiet.title"),
+      detail: t("coach.quiet.detail"),
     });
   }
 

@@ -1,9 +1,10 @@
 import type { CSSProperties, ReactNode } from "react";
 import type { WidgetState } from "./widget-state";
+import { useT, type MessageKey } from "./i18n";
 
-const STATE_COPY: Partial<Record<WidgetState, string>> = {
-  offline: "offline · Hermes backend unreachable",
-  unavailable: "unavailable · this source is not responding",
+const STATE_COPY: Partial<Record<WidgetState, MessageKey>> = {
+  offline: "shell.offline",
+  unavailable: "shell.unavailable",
 };
 
 interface Props {
@@ -29,6 +30,8 @@ export function WidgetShell({
   title, style, editing, dragging, swapTarget, trashing, state = "ok",
   onRemove, onHeaderPointerDown, onResizePointerDown, onClickThrough, children,
 }: Props) {
+  const t = useT();
+  const stateKey = STATE_COPY[state];
   const cls = [
     "home-widget",
     dragging ? "dragging" : "",
@@ -44,13 +47,13 @@ export function WidgetShell({
     >
       <b className="hd" onPointerDown={editing ? onHeaderPointerDown : undefined}>
         {title}
-        {state === "stale" && <span className="hd-stale" title="Last update failed — showing previous data"> · stale</span>}
+        {state === "stale" && <span className="hd-stale" title={t("shell.staleTitle")}> · {t("shell.stale")}</span>}
       </b>
-      {STATE_COPY[state] ? (
-        <span className={`wstate wstate-${state}`}>{STATE_COPY[state]}</span>
+      {stateKey ? (
+        <span className={`wstate wstate-${state}`}>{t(stateKey)}</span>
       ) : children}
       {editing && onRemove && (
-        <button className="wremove" onClick={onRemove} aria-label={`Remove ${title}`}>
+        <button className="wremove" onClick={onRemove} aria-label={t("shell.remove", { title })}>
           ×
         </button>
       )}

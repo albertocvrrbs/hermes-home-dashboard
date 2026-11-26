@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { SystemStats } from "@/api-types";
 import { HoverArrows } from "./HoverArrows";
+import { useT, type MessageKey } from "../i18n";
 import {
   BUFFER_CAP, HOST_SIGNALS, HOST_VIEWS, SAMPLE_MS,
   areaPath, coerceHostView, pushSample, seriesOf, seriesPath, signalMax, toSample,
@@ -94,6 +95,7 @@ function Spark({ values, fixedMax, label, readout, gid }: {
  *  shows four live sparklines (cpu, ram, load, proc) over a rolling one-minute
  *  window sampled every 2s. The chosen view persists in the layout props. */
 export function HostWidget({ system, widgetProps, onWidgetPropsChange }: Props) {
+  const t = useT();
   const view: HostView = coerceHostView(widgetProps.view);
   const [buf, setBuf] = useState<HostSample[]>([]);
   const latest = useRef<SystemStats | null>(null);
@@ -116,7 +118,7 @@ export function HostWidget({ system, widgetProps, onWidgetPropsChange }: Props) 
     return () => clearInterval(id);
   }, [view]);
 
-  if (!system) return <span className="dim">loading…</span>;
+  if (!system) return <span className="dim">{t("common.loading")}</span>;
 
   const cycle = (dir: 1 | -1) => {
     const i = (HOST_VIEWS.indexOf(view) + dir + HOST_VIEWS.length) % HOST_VIEWS.length;
@@ -125,18 +127,18 @@ export function HostWidget({ system, widgetProps, onWidgetPropsChange }: Props) 
 
   return (
     <div>
-      <HoverArrows onPrev={() => cycle(-1)} onNext={() => cycle(1)} label={view} />
+      <HoverArrows onPrev={() => cycle(-1)} onNext={() => cycle(1)} label={t(`host.view.${view}`)} />
       {view === "meters" && (
         <>
           <div className="meters">
             {system.cpu_percent !== undefined && (
-              <Meter label="cpu" pct={system.cpu_percent} val={`${Math.round(system.cpu_percent)}%`} />
+              <Meter label={t("host.cpu")} pct={system.cpu_percent} val={`${Math.round(system.cpu_percent)}%`} />
             )}
             {system.memory && (
-              <Meter label="ram" pct={system.memory.percent} val={`${(system.memory.used / GB).toFixed(1)}G`} />
+              <Meter label={t("host.ram")} pct={system.memory.percent} val={`${(system.memory.used / GB).toFixed(1)}G`} />
             )}
             {system.disk && (
-              <Meter label="disk" pct={system.disk.percent} val={`${Math.round(system.disk.percent)}%`} />
+              <Meter label={t("host.disk")} pct={system.disk.percent} val={`${Math.round(system.disk.percent)}%`} />
             )}
           </div>
           <div className="row">
@@ -148,19 +150,19 @@ export function HostWidget({ system, widgetProps, onWidgetPropsChange }: Props) 
       {view === "detail" && (
         <div className="rows">
           {system.load_avg && system.load_avg.length >= 3 && (
-            <Row label="load" val={system.load_avg.slice(0, 3).map((n) => n.toFixed(2)).join(" ")} />
+            <Row label={t("host.load")} val={system.load_avg.slice(0, 3).map((n) => n.toFixed(2)).join(" ")} />
           )}
-          {system.cpu_count !== null && <Row label="cores" val={String(system.cpu_count)} />}
+          {system.cpu_count !== null && <Row label={t("host.cores")} val={String(system.cpu_count)} />}
           {system.memory && (
-            <Row label="ram" val={`${(system.memory.used / GB).toFixed(1)} / ${(system.memory.total / GB).toFixed(1)}G`} />
+            <Row label={t("host.ram")} val={`${(system.memory.used / GB).toFixed(1)} / ${(system.memory.total / GB).toFixed(1)}G`} />
           )}
           {system.disk && (
-            <Row label="disk" val={`${(system.disk.free / GB).toFixed(0)}G free`} />
+            <Row label={t("host.disk")} val={t("host.diskFree", { n: (system.disk.free / GB).toFixed(0) })} />
           )}
           {system.process && (
-            <Row label="proc" val={`${(system.process.rss / MB).toFixed(0)}M · ${system.process.num_threads} thr`} />
+            <Row label={t("host.proc")} val={t("host.procValue", { mb: (system.process.rss / MB).toFixed(0), threads: system.process.num_threads })} />
           )}
-          <Row label="os" val={`${system.platform} ${system.arch}`} />
+          <Row label={t("host.os")} val={`${system.platform} ${system.arch}`} />
         </div>
       )}
       {view === "graphs" && (
@@ -173,7 +175,7 @@ export function HostWidget({ system, widgetProps, onWidgetPropsChange }: Props) 
                 key={sig.key}
                 values={values}
                 fixedMax={sig.fixedMax}
-                label={sig.label}
+                label={t(`host.${sig.key}` as MessageKey)}
                 readout={last === undefined || last === null ? "—" : sig.format(last)}
                 gid={`${gidBase}-${sig.key}`}
               />
