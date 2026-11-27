@@ -92,6 +92,10 @@ class AddSetDelTest(unittest.TestCase):
             {"op": "add", "item": {"k": "card", "x": 0, "y": 0, "text": "y" * (engine.MAX_TEXT + 50)}}], by="u")
         self.assertEqual(len(doc["items"]["0"]["text"]), engine.MAX_TEXT)
 
+    def test_sketch_text_uses_the_hand_size(self):
+        doc, _, _ = engine.apply_batch(blank(), [{"op": "add", "item": {"k": "text", "x": 0, "y": 0, "text": "post!", "size": "s"}}], by="u")
+        self.assertEqual(doc["items"]["0"]["size"], "s")
+
     def test_stroke_format_validated(self):
         doc, _, _ = engine.apply_batch(blank(), [
             {"op": "add", "item": {"k": "draw", "x": 5, "y": 5, "d": "0,0 4,5 10,-2"}}], by="u")

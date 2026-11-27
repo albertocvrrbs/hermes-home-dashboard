@@ -191,7 +191,7 @@ SANITIZE: Dict[str, Callable[[Any], Any]] = {
     "desc": _text(1000), "site": _text(200), "label": _text(200), "note": _text(1000),
     "due": _text(32), "num": _text(8),
     "url": _url, "src": _url,
-    "st": _enum("wait", "ok", "fail"), "size": _enum("h", "p"),
+    "st": _enum("wait", "ok", "fail"), "size": _enum("h", "p", "s"),
     "asset": _asset, "icon": _asset, "img": _asset, "ref": _bid,
     "tags": _tags, "items": _todo_items, "d": _stroke, "video": _video, "sw": _sw,
 }

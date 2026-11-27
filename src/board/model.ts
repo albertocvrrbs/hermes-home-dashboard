@@ -22,7 +22,7 @@ export interface Item {
   url?: string; desc?: string; site?: string; icon?: string; img?: string;
   st?: "wait" | "ok" | "fail"; video?: VideoRef;
   asset?: string; cap?: string; iw?: number; ih?: number; src?: string;
-  ref?: string; note?: string; sub?: string; num?: string; size?: "h" | "p";
+  ref?: string; note?: string; sub?: string; num?: string; size?: "h" | "p" | "s";
   d?: string; sw?: number; a?: End; b?: End; label?: string;
 }
 

@@ -402,7 +402,7 @@ export function BoxView({ id, item, c }: { id: string; item: Item; c: ItemCtx })
 }
 
 export function TextView({ id, item, c }: { id: string; item: Item; c: ItemCtx }) {
-  const size = item.size === "h" ? "h" : "p";
+  const size = item.size === "h" || item.size === "s" ? item.size : "p";
   if (c.editing === id) {
     return <div className={`hb-text ${size}`}><EditText single={size === "h"} value={item.text ?? ""}
       onDone={(v) => { c.setEditing(null); c.update(id, { text: v || null }); }} /></div>;

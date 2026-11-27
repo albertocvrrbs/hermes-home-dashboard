@@ -4172,7 +4172,7 @@ function BoxView({ id, item, c }) {
   ] });
 }
 function TextView({ id, item, c }) {
-  const size = item.size === "h" ? "h" : "p";
+  const size = item.size === "h" || item.size === "s" ? item.size : "p";
   if (c.editing === id) {
     return /* @__PURE__ */ jsx("div", { className: `hb-text ${size}`, children: /* @__PURE__ */ jsx(
       EditText,
@@ -6808,15 +6808,15 @@ const boardCss = `/* Board — "Mesa de despacho" (hd-canvas-plan/mockup-v2). Ev
 .hb {
   --accent: var(--color-primary, var(--ui-accent, #ffe3c4));
   --accent-soft: color-mix(in srgb, var(--accent) 82%, #9aa3b5);
-  --bg: var(--hb-table, #031919);
-  --sheet: color-mix(in srgb, var(--accent) 4%, color-mix(in srgb, var(--bg) 92%, #1d4a48));
-  --sheet-2: color-mix(in srgb, var(--accent) 5%, color-mix(in srgb, var(--bg) 86%, #1d4a48));
-  --chrome: color-mix(in srgb, var(--bg) 96%, #ffffff);
-  --well: color-mix(in srgb, var(--bg) 90%, #0f3a38);
-  --ink: color-mix(in srgb, var(--accent) 22%, #f6f1ea);
+  --bg: var(--color-background, #031919);
+  --ink: var(--color-foreground, #f3ece3);
+  --sheet: color-mix(in oklab, var(--bg) 93.5%, var(--ink));
+  --sheet-2: color-mix(in oklab, var(--bg) 90.5%, var(--ink));
+  --chrome: color-mix(in oklab, var(--bg) 98%, var(--ink));
+  --well: color-mix(in oklab, var(--bg) 96.5%, var(--ink));
   --ink-2: color-mix(in srgb, var(--ink) 76%, transparent);
   --ink-3: color-mix(in srgb, var(--ink) 60%, transparent);
-  --on-accent: color-mix(in srgb, var(--bg) 85%, #000);
+  --on-accent: color-mix(in srgb, var(--bg) 70%, #000);
   --rule: color-mix(in srgb, var(--accent) 13%, transparent);
   --rule-2: color-mix(in srgb, var(--accent) 26%, transparent);
   --rule-3: color-mix(in srgb, var(--accent) 42%, transparent);
@@ -7039,6 +7039,8 @@ const boardCss = `/* Board — "Mesa de despacho" (hd-canvas-plan/mockup-v2). Ev
 .hb-text.h::before { content: ""; width: 22px; height: 1px; background: currentColor; opacity: .5; flex: none; }
 .hb-text.h::after { content: ""; flex: 1; height: 1px; background: linear-gradient(to right, currentColor, transparent 92%); opacity: .28; }
 .hb-text.p { font: 400 13px/1.35 var(--read); color: var(--ink-2); white-space: pre-wrap; }
+/* Alberto's hand, only for sketch labels */
+.hb-text.s { font: 400 19px/1.15 var(--hand); color: var(--ink); opacity: .92; white-space: pre-wrap; }
 
 /* freehand */
 .hb-draw { overflow: visible; pointer-events: none; }
