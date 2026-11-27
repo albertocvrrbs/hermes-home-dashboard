@@ -141,3 +141,14 @@ export function fitView(b: Rect, vp: { w: number; h: number }, pad = 60, maxZ = 
 export function intersects(a: Rect, b: Rect): boolean {
   return a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
 }
+
+/** Kinds whose height is set by hand; everything else sizes its own height
+ *  (video stages keep 16:9 or 9:16 via CSS aspect-ratio, images keep theirs). */
+export const RESIZE_H = new Set(["frame", "box", "embed", "text"]);
+
+/** The patch a resize-handle drag commits: width always, height only for free-height kinds. */
+export function resizePatch(kind: string, w: number, h: number): { w: number; h?: number } {
+  const p: { w: number; h?: number } = { w: Math.round(Math.max(120, w)) };
+  if (RESIZE_H.has(kind)) p.h = Math.round(Math.max(40, h));
+  return p;
+}

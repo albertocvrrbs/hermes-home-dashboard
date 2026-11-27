@@ -121,3 +121,11 @@ test("fitView centres the bounds inside the viewport", () => {
   const bx = boundsOf([{ x: 10, y: 20, w: 5, h: 5 }, { x: -10, y: 0, w: 5, h: 5 }]);
   assert.deepEqual(bx, { x: -10, y: 0, w: 25, h: 25 });
 });
+
+test("resizing a video (or video link) commits width only, so the stage keeps its aspect ratio", async () => {
+  const { resizePatch } = await import("../src/board/geometry.ts");
+  assert.deepEqual(resizePatch("video", 512.4, 999), { w: 512 });
+  assert.deepEqual(resizePatch("link", 300, 10), { w: 300 });
+  assert.deepEqual(resizePatch("image", 50, 10), { w: 120 });
+  assert.deepEqual(resizePatch("embed", 400, 260.6), { w: 400, h: 261 });
+});

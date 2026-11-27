@@ -389,7 +389,7 @@
 .hb-widget { display: flex; flex-direction: column; gap: 8px; height: calc(100% - 22px); min-height: 0; cursor: pointer; }
 .hb-widget .pvw { position: relative; flex: 1; min-height: 40px; border: 1px solid var(--home-border, rgb(255 227 196 / .13)); border-radius: 3px; overflow: hidden; background: rgb(0 0 0 / .18); }
 .hb-widget canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
-.hb-widget .foot { display: flex; align-items: baseline; gap: 8px; min-width: 0; font-size: 10.5px; color: var(--color-muted-foreground, #9aa3b5); }
+.hb-widget .foot { display: flex; align-items: baseline; gap: 8px; min-width: 0; padding: 0 2px; font-size: 10.5px; color: var(--color-muted-foreground, #9aa3b5); }
 .hb-widget .foot b { font: 600 13px/1.2 "HB Atkinson", ui-sans-serif, sans-serif; color: var(--color-foreground, #e8e3dc); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .hb-widget .foot .sp { flex: 1; }
 .hb-widget .tagh { display: inline-flex; align-items: center; gap: 4px; height: 15px; padding: 0 5px; background: var(--home-accent, #ffe3c4); color: #072120; font: 400 11px/1 "HB Departure", monospace; letter-spacing: .05em; white-space: nowrap; }

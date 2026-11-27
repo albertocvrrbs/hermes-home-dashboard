@@ -4,7 +4,7 @@ import { useT, type MessageKey } from "../home/i18n";
 import { hostRpc, hostSandboxedFrame, newChatWithDraft, openSession } from "../sdk";
 import { boardsApi, prepareImage } from "./api";
 import { Cad, clock } from "./bits";
-import { boundsOf, fitView, intersects, simplify, strokePath, toStroke, type Rect, type View } from "./geometry";
+import { boundsOf, fitView, intersects, RESIZE_H, resizePatch, simplify, strokePath, toStroke, type Rect, type View } from "./geometry";
 import { HermesCursor, type CursorHandle, type CursorStep } from "./HermesCursor";
 import { ItemBody, itemForUrl, type ItemCtx } from "./items";
 import { drawPreview } from "./preview";
@@ -27,7 +27,6 @@ const KEY_TOOL: Record<string, Tool> = Object.fromEntries(TOOLS.flat().map((x) =
 const PLACE: Tool[] = ["note", "todo", "col", "link", "board", "embed", "image"];
 const EDITABLE = new Set(["card", "todo", "col", "frame", "box", "text", "image"]);
 const INTO_COLUMN = new Set(["card", "todo", "link", "image", "video", "board"]);
-const RESIZE_H = new Set(["frame", "box", "embed", "text"]);
 
 interface Drag {
   kind: "pan" | "move" | "resize" | "marquee" | "draw" | "arrow" | "kid";
@@ -570,10 +569,7 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
       const r = resize;
       setResize(null);
       if (!r) return;
-      const it = d.items[r.id];
-      const p: Record<string, number> = { w: Math.round(r.w) };
-      if (RESIZE_H.has(it.k)) p.h = Math.round(r.h);
-      commit([{ op: "set", id: r.id, p }]);
+      commit([{ op: "set", id: r.id, p: resizePatch(d.items[r.id].k, r.w, r.h) }]);
       return;
     }
     if (g.kind === "marquee") {
