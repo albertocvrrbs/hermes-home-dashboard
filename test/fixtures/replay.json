@@ -1,0 +1,453 @@
+[
+ {
+  "before": {
+   "v": 1,
+   "id": "k3x9p2qa",
+   "name": "Fixture",
+   "parent": null,
+   "seq": 0,
+   "n": 4,
+   "session": null,
+   "seen": 0,
+   "created": 1,
+   "updated": 1,
+   "items": {
+    "0": {
+     "k": "col",
+     "x": 0,
+     "y": 0,
+     "title": "C",
+     "kids": [
+      "1"
+     ]
+    },
+    "1": {
+     "k": "card",
+     "text": "one",
+     "in": "0"
+    },
+    "2": {
+     "k": "card",
+     "x": 400,
+     "y": 0,
+     "text": "loose"
+    },
+    "3": {
+     "k": "box",
+     "x": 800,
+     "y": 0,
+     "title": "A"
+    }
+   }
+  },
+  "ops": [
+   {
+    "op": "put",
+    "id": "4",
+    "item": {
+     "k": "card",
+     "text": "kid",
+     "by": "h",
+     "in": "0"
+    },
+    "at": 1
+   },
+   {
+    "op": "set",
+    "id": "2",
+    "p": {
+     "in": "0",
+     "x": null,
+     "y": null
+    },
+    "at": 0
+   },
+   {
+    "op": "put",
+    "id": "5",
+    "item": {
+     "k": "line",
+     "a": "4",
+     "b": "3",
+     "label": "next",
+     "by": "h"
+    }
+   },
+   {
+    "op": "set",
+    "id": "4",
+    "p": {
+     "text": "kid!",
+     "tags": [
+      "x"
+     ]
+    }
+   },
+   {
+    "op": "set",
+    "id": "2",
+    "p": {
+     "in": null,
+     "x": 316,
+     "y": 0
+    }
+   },
+   {
+    "op": "board",
+    "p": {
+     "name": "Next"
+    }
+   }
+  ],
+  "inv": [
+   {
+    "op": "board",
+    "p": {
+     "name": "Fixture"
+    }
+   },
+   {
+    "op": "set",
+    "id": "2",
+    "p": {
+     "in": "0",
+     "x": null,
+     "y": null
+    },
+    "at": 0
+   },
+   {
+    "op": "set",
+    "id": "4",
+    "p": {
+     "text": "kid",
+     "tags": null
+    }
+   },
+   {
+    "op": "del",
+    "id": "5"
+   },
+   {
+    "op": "set",
+    "id": "2",
+    "p": {
+     "in": null,
+     "x": 400,
+     "y": 0
+    }
+   },
+   {
+    "op": "del",
+    "id": "4"
+   }
+  ],
+  "after": {
+   "v": 1,
+   "id": "k3x9p2qa",
+   "name": "Next",
+   "parent": null,
+   "seq": 0,
+   "n": 6,
+   "session": null,
+   "seen": 0,
+   "created": 1,
+   "updated": 1,
+   "items": {
+    "0": {
+     "k": "col",
+     "x": 0,
+     "y": 0,
+     "title": "C",
+     "kids": [
+      "1",
+      "4"
+     ]
+    },
+    "1": {
+     "k": "card",
+     "text": "one",
+     "in": "0"
+    },
+    "2": {
+     "k": "card",
+     "text": "loose",
+     "x": 316,
+     "y": 0
+    },
+    "3": {
+     "k": "box",
+     "x": 800,
+     "y": 0,
+     "title": "A"
+    },
+    "4": {
+     "k": "card",
+     "text": "kid!",
+     "by": "h",
+     "in": "0",
+     "tags": [
+      "x"
+     ]
+    },
+    "5": {
+     "k": "line",
+     "a": "4",
+     "b": "3",
+     "label": "next",
+     "by": "h"
+    }
+   }
+  }
+ },
+ {
+  "before": {
+   "v": 1,
+   "id": "k3x9p2qa",
+   "name": "Next",
+   "parent": null,
+   "seq": 0,
+   "n": 6,
+   "session": null,
+   "seen": 0,
+   "created": 1,
+   "updated": 1,
+   "items": {
+    "0": {
+     "k": "col",
+     "x": 0,
+     "y": 0,
+     "title": "C",
+     "kids": [
+      "1",
+      "4"
+     ]
+    },
+    "1": {
+     "k": "card",
+     "text": "one",
+     "in": "0"
+    },
+    "2": {
+     "k": "card",
+     "text": "loose",
+     "x": 316,
+     "y": 0
+    },
+    "3": {
+     "k": "box",
+     "x": 800,
+     "y": 0,
+     "title": "A"
+    },
+    "4": {
+     "k": "card",
+     "text": "kid!",
+     "by": "h",
+     "in": "0",
+     "tags": [
+      "x"
+     ]
+    },
+    "5": {
+     "k": "line",
+     "a": "4",
+     "b": "3",
+     "label": "next",
+     "by": "h"
+    }
+   }
+  },
+  "ops": [
+   {
+    "op": "del",
+    "id": "0"
+   }
+  ],
+  "inv": [
+   {
+    "op": "put",
+    "id": "0",
+    "item": {
+     "k": "col",
+     "x": 0,
+     "y": 0,
+     "title": "C",
+     "kids": [
+      "1",
+      "4"
+     ]
+    }
+   },
+   {
+    "op": "put",
+    "id": "1",
+    "item": {
+     "k": "card",
+     "text": "one",
+     "in": "0"
+    }
+   },
+   {
+    "op": "put",
+    "id": "4",
+    "item": {
+     "k": "card",
+     "text": "kid!",
+     "by": "h",
+     "in": "0",
+     "tags": [
+      "x"
+     ]
+    }
+   },
+   {
+    "op": "put",
+    "id": "5",
+    "item": {
+     "k": "line",
+     "a": "4",
+     "b": "3",
+     "label": "next",
+     "by": "h"
+    }
+   }
+  ],
+  "after": {
+   "v": 1,
+   "id": "k3x9p2qa",
+   "name": "Next",
+   "parent": null,
+   "seq": 0,
+   "n": 6,
+   "session": null,
+   "seen": 0,
+   "created": 1,
+   "updated": 1,
+   "items": {
+    "2": {
+     "k": "card",
+     "text": "loose",
+     "x": 316,
+     "y": 0
+    },
+    "3": {
+     "k": "box",
+     "x": 800,
+     "y": 0,
+     "title": "A"
+    }
+   }
+  }
+ },
+ {
+  "before": {
+   "v": 1,
+   "id": "k3x9p2qa",
+   "name": "Next",
+   "parent": null,
+   "seq": 0,
+   "n": 6,
+   "session": null,
+   "seen": 0,
+   "created": 1,
+   "updated": 1,
+   "items": {
+    "2": {
+     "k": "card",
+     "text": "loose",
+     "x": 316,
+     "y": 0
+    },
+    "3": {
+     "k": "box",
+     "x": 800,
+     "y": 0,
+     "title": "A"
+    }
+   }
+  },
+  "ops": [
+   {
+    "op": "set",
+    "id": "3",
+    "p": {
+     "x": 5,
+     "w": 250,
+     "title": null
+    }
+   },
+   {
+    "op": "put",
+    "id": "6",
+    "item": {
+     "k": "todo",
+     "title": "T",
+     "items": [
+      {
+       "t": "a",
+       "done": true
+      }
+     ],
+     "by": "h",
+     "x": 652,
+     "y": 0
+    }
+   }
+  ],
+  "inv": [
+   {
+    "op": "del",
+    "id": "6"
+   },
+   {
+    "op": "set",
+    "id": "3",
+    "p": {
+     "x": 800,
+     "w": null,
+     "title": "A"
+    }
+   }
+  ],
+  "after": {
+   "v": 1,
+   "id": "k3x9p2qa",
+   "name": "Next",
+   "parent": null,
+   "seq": 0,
+   "n": 7,
+   "session": null,
+   "seen": 0,
+   "created": 1,
+   "updated": 1,
+   "items": {
+    "2": {
+     "k": "card",
+     "text": "loose",
+     "x": 316,
+     "y": 0
+    },
+    "3": {
+     "k": "box",
+     "x": 5,
+     "y": 0,
+     "w": 250
+    },
+    "6": {
+     "k": "todo",
+     "title": "T",
+     "items": [
+      {
+       "t": "a",
+       "done": true
+      }
+     ],
+     "by": "h",
+     "x": 652,
+     "y": 0
+    }
+   }
+  }
+ }
+]

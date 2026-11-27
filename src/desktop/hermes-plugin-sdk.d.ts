@@ -58,6 +58,12 @@ declare module "@hermes/plugin-sdk" {
     navigate(path: string): void;
     /** Open a stored session core-style (newer Desktop builds). */
     openSession?(id: string, options?: { profile?: string; intent?: "in-place" | "stack" | "tab" | "window" }): unknown;
+    newChat?(profile?: string): unknown;
+    composer?: {
+      setDraft?(sessionId: string | null, text: string): Promise<boolean>;
+      focus?(sessionId: string | null): void;
+    };
+    request?<T>(method: string, params?: Record<string, unknown>): Promise<T>;
     /** Subscribe to live gateway events by type ('*' = everything). Returns a disposer. */
     onEvent(type: string, listener: (event: RpcEvent) => void): () => void;
   };

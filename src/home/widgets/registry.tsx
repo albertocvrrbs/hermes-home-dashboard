@@ -19,6 +19,7 @@ import { CountdownWidget } from "./CountdownWidget";
 import { CalendarWidget } from "./CalendarWidget";
 import { ProjectsWidget } from "./ProjectsWidget";
 import { SpendWidget } from "./SpendWidget";
+import { BoardWidget } from "../../board/BoardApp";
 
 export interface WidgetRenderProps {
   data: HomeData;
@@ -194,6 +195,14 @@ export const WIDGET_REGISTRY: Record<string, WidgetDef> = {
     titleKey: "widget.calendar",
     component: ({ gridSize }) => <CalendarWidget gridSize={gridSize} />,
     defaultSize: { gw: 3, gh: 4 }, minSize: { gw: 2, gh: 3 },
+    navigateTo: null, dataSource: null,
+  },
+  board: {
+    titleKey: "widget.board",
+    component: ({ widgetProps, onWidgetPropsChange, editing }) => (
+      <BoardWidget widgetProps={widgetProps} onWidgetPropsChange={onWidgetPropsChange} editing={editing} />
+    ),
+    defaultSize: { gw: 4, gh: 4 }, minSize: { gw: 3, gh: 3 },
     navigateTo: null, dataSource: null,
   },
   projects: {

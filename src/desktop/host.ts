@@ -1,4 +1,4 @@
-import type { GatewayRpcEvent, HermesApi, HermesHomeHost } from "../sdk";
+import type { GatewayRpcEvent, HermesApi, HermesHomeHost, SandboxedFrameComponent } from "../sdk";
 
 interface DesktopPluginContext {
   rest<T>(path: string, options?: { method?: string; body?: unknown }): Promise<T>;
@@ -16,7 +16,20 @@ interface DesktopSdkHost {
   /** Newer Desktop builds; feature-detected. */
   openSession?(id: string, options?: { profile?: string; intent?: string }): unknown;
   onEvent(type: string, listener: (event: GatewayRpcEvent) => void): () => void;
+  /** Newer Desktop builds; feature-detected (Boards). */
+  newChat?(profile?: string): unknown;
+  composer?: {
+    setDraft?(sessionId: string | null, text: string): Promise<boolean>;
+    focus?(sessionId: string | null): void;
+  };
+  request?<T>(method: string, params?: Record<string, unknown>): Promise<T>;
 }
+
+export interface DesktopBoardExtras {
+  SandboxedFrame?: SandboxedFrameComponent;
+}
+
+const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 const PLUGIN_API_PREFIX = "/api/plugins/home-dashboard";
 
@@ -42,6 +55,7 @@ function desktopRoute(path: string): string {
 export function createDesktopHomeHost(
   ctx: DesktopPluginContext,
   desktop: DesktopSdkHost,
+  extras: DesktopBoardExtras = {},
 ): HermesHomeHost {
   const api: HermesApi = {
     getStatus: () => desktop.status() as ReturnType<HermesApi["getStatus"]>,
@@ -77,5 +91,24 @@ export function createDesktopHomeHost(
       }
     },
     onEvent: (type, listener) => desktop.onEvent(type, listener),
+    openBoard: (id) => desktop.navigate(id ? `/boards?id=${encodeURIComponent(id)}` : "/boards"),
+    newChatWithDraft: async (text: string, opts?: { settleMs?: number }) => {
+      if (typeof desktop.newChat !== "function" || typeof desktop.composer?.setDraft !== "function") return false;
+      await Promise.resolve(desktop.newChat());
+      // The fresh draft's composer mounts a moment after the route change.
+      for (let i = 0; i < 10; i++) {
+        if (opts?.settleMs !== 0) await wait(opts?.settleMs ?? 150);
+        if (await desktop.composer.setDraft("new", text).catch(() => false)) {
+          desktop.composer.focus?.("new");
+          return true;
+        }
+        if (opts?.settleMs === 0) break;
+      }
+      return false;
+    },
+    rpc: typeof desktop.request === "function"
+      ? <T,>(method: string, params?: Record<string, unknown>) => desktop.request!<T>(method, params)
+      : undefined,
+    SandboxedFrame: extras.SandboxedFrame,
   };
 }

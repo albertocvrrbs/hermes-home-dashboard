@@ -3,12 +3,17 @@ import {
   type HermesPlugin,
   type PluginContext,
 } from "@hermes/plugin-sdk";
+import * as PluginSdk from "@hermes/plugin-sdk";
 
 import HomePage from "../home/HomePage";
 import homeCss from "../home/home.css?inline";
+import boardCss from "../board/board.css?inline";
+import { BoardApp, useBoardRoute } from "../board/BoardApp";
+import type { SandboxedFrameComponent } from "../sdk";
 import { configureHomeHost } from "../sdk";
 import { LANGUAGES, setHostLanguage, t } from "../home/i18n";
 import {
+  createBoardContributions,
   createHomeContributions,
   openHomeOnDesktopStart,
 } from "./contract";
@@ -17,8 +22,20 @@ import { createDesktopHomeHost } from "./host";
 function DesktopHomePage() {
   return (
     <>
-      <style>{homeCss}</style>
+      <style>{homeCss + boardCss}</style>
       <HomePage />
+    </>
+  );
+}
+
+function DesktopBoardsPage() {
+  const route = useBoardRoute();
+  return (
+    <>
+      <style>{homeCss + boardCss}</style>
+      <div className="home-board-page desktop">
+        <BoardApp route={route ?? null} onHome={() => host.navigate("/home")} />
+      </div>
     </>
   );
 }
@@ -52,7 +69,9 @@ const plugin: HermesPlugin = {
   name: "Home",
   defaultEnabled: true,
   register(ctx: PluginContext) {
-    configureHomeHost(createDesktopHomeHost(ctx, host));
+    // SandboxedFrame is feature-detected: older Desktop builds don't export it.
+    const SandboxedFrame = (PluginSdk as unknown as { SandboxedFrame?: SandboxedFrameComponent }).SandboxedFrame;
+    configureHomeHost(createDesktopHomeHost(ctx, host as Parameters<typeof createDesktopHomeHost>[1], { SandboxedFrame }));
     followDesktopLanguage(ctx);
     ctx.registerMany(
       createHomeContributions(
@@ -61,6 +80,13 @@ const plugin: HermesPlugin = {
         // Sidebar / palette labels are registered once, in the language
         // active at load time.
         { home: t("nav.home"), open: t("nav.open") },
+      ),
+    );
+    ctx.registerMany(
+      createBoardContributions(
+        () => <DesktopBoardsPage />,
+        (path) => host.navigate(path),
+        { boards: t("nav.boards"), open: t("nav.openBoards") },
       ),
     );
 

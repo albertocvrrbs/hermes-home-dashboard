@@ -31,6 +31,12 @@ export interface GatewayRpcEvent<T = unknown> {
   profile?: string;
 }
 
+/** Sandboxed frame from the Desktop SDK (opaque origin, allow-scripts). Absent on the web
+ *  dashboard and on older Desktop builds. */
+export type SandboxedFrameComponent = (props: {
+  src: string; title: string; sandbox?: string; className?: string; style?: Record<string, string | number>;
+}) => import("react").ReactNode;
+
 export interface HermesHomeHost extends HermesPluginSDK {
   navigateTo: (routePath: string) => void;
   /** Open one stored session (chat resume on the web, the session view on
@@ -38,6 +44,14 @@ export interface HermesHomeHost extends HermesPluginSDK {
   openSession: (sessionId: string) => void;
   /** Live gateway events (desktop only). Absent on the web dashboard. */
   onEvent?: (type: string, listener: (event: GatewayRpcEvent) => void) => () => void;
+  /** Boards: open the board page (null = the boards index). */
+  openBoard?: (id: string | null) => void;
+  /** Boards: start a fresh chat with `text` in its composer (Desktop/Webapp). */
+  newChatWithDraft?: (text: string, opts?: { settleMs?: number }) => Promise<boolean>;
+  /** Boards: gateway JSON-RPC (Desktop/Webapp), used to send board prompts to the linked session. */
+  rpc?: <T = unknown>(method: string, params?: Record<string, unknown>) => Promise<T>;
+  /** Boards: the SDK's SandboxedFrame for HTML embeds. */
+  SandboxedFrame?: SandboxedFrameComponent;
 }
 
 declare global {
@@ -137,4 +151,55 @@ export function onGatewayEvent(
   const h = getHost();
   if (!h.onEvent) return null;
   return h.onEvent(type, listener);
+}
+
+// ── Boards host doors ────────────────────────────────────────────────────
+
+/** Web dashboard board routes live in the Home tab's hash: #boards, #board=<id>. */
+export function webBoardHash(id: string | null): string {
+  return id ? `#board=${id}` : "#boards";
+}
+
+/** Reads the board route from either surface: web `#board=<id>` / `#boards`, Desktop
+ *  `#/boards?id=<id>` (hash router) or `?id=` in the search. `undefined` = not a board route. */
+export function readBoardRoute(loc: { hash: string; search: string; pathname: string }): string | null | undefined {
+  const hash = loc.hash || "";
+  const web = /^#board=([a-z0-9]{8})$/.exec(hash);
+  if (web) return web[1];
+  if (hash === "#boards") return null;
+  const routed = /^#\/boards(?:\?(.*))?$/.exec(hash);
+  if (routed || /\/boards\/?$/.test(loc.pathname)) {
+    const q = new URLSearchParams(routed?.[1] ?? loc.search.replace(/^\?/, ""));
+    const id = q.get("id");
+    return id && /^[a-z0-9]{8}$/.test(id) ? id : null;
+  }
+  return undefined;
+}
+
+export function openBoard(id: string | null): void {
+  const h = getHost();
+  if (h.openBoard) h.openBoard(id);
+  else window.location.hash = webBoardHash(id);
+}
+
+/** Opens a new chat with a prepared prompt. On the web dashboard the prompt is copied and
+ *  the chat page opened (no composer door there); returns false in that case. */
+export async function newChatWithDraft(text: string): Promise<boolean> {
+  const h = getHost();
+  if (h.newChatWithDraft) return h.newChatWithDraft(text);
+  try {
+    await navigator.clipboard?.writeText(text);
+  } catch {
+    // clipboard may be unavailable (insecure origin); the chat still opens
+  }
+  window.location.assign("/chat");
+  return false;
+}
+
+export function hostRpc(): HermesHomeHost["rpc"] {
+  return getHost().rpc;
+}
+
+export function hostSandboxedFrame(): SandboxedFrameComponent | undefined {
+  return getHost().SandboxedFrame;
 }

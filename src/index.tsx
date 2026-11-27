@@ -1,6 +1,7 @@
 // Entry point: register the Home dashboard component with the Hermes host.
 import HomePage from "./home/HomePage";
 import "./home/home.css";
+import "./board/board.css";
 
 const registry = window.__HERMES_PLUGINS__;
 if (registry) {

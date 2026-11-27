@@ -1097,3 +1097,7 @@
 .project-detail-row { line-height: 1.4; }
 .project-alerts ul { margin: 2px 0 0 14px; padding: 0; list-style: disc; }
 .project-alerts li { color: var(--home-error); }
+
+/* ── boards (full page inside the Home tab on the web dashboard) ── */
+.home-board-page { position: relative; height: calc(100vh - 72px); min-height: 480px; }
+.home-board-page.desktop { height: 100%; }

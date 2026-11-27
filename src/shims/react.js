@@ -20,3 +20,4 @@ export const useImperativeHandle = React.useImperativeHandle;
 export const Fragment = React.Fragment;
 export const createElement = React.createElement;
 export const memo = React.memo;
+export const useLayoutEffect = React.useLayoutEffect;

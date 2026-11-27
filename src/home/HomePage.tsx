@@ -5,6 +5,7 @@ import { GridCanvas, type GridCanvasHandle } from "./GridCanvas";
 import { WidgetCatalog } from "./WidgetCatalog";
 import { useHomeData } from "./useHomeData";
 import { WIDGET_REGISTRY } from "./widgets/registry";
+import { BoardApp, notifyBoardRoute, useBoardRoute } from "../board/BoardApp";
 import {
   DEFAULT_LAYOUT, parseLayout, type HomeLayout,
 } from "./layout-schema";
@@ -27,6 +28,22 @@ function saveLayout(layout: HomeLayout): Promise<unknown> {
 }
 
 export default function HomePage() {
+  // Boards open inside the Home tab on the web dashboard (#boards, #board=<id>).
+  const boardRoute = useBoardRoute();
+  if (boardRoute !== undefined) {
+    return (
+      <div className="home-board-page">
+        <BoardApp route={boardRoute} onHome={() => {
+          window.history.pushState(null, "", window.location.pathname + window.location.search);
+          notifyBoardRoute();
+        }} />
+      </div>
+    );
+  }
+  return <HomeGrid />;
+}
+
+function HomeGrid() {
   const [layout, setLayout] = useState<HomeLayout | null>(null);
   const [editing, setEditing] = useState(false);
   const [showEdit, setShowEdit] = useState(false);

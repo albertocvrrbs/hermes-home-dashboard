@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 
 export const HOME_DESKTOP_PATH = "/home";
+export const BOARDS_DESKTOP_PATH = "/boards";
 
 const DESKTOP_START_KEY = "home-dashboard.opened-this-start";
 
@@ -86,4 +87,29 @@ export function openHomeOnDesktopStart(
   storage.setItem(DESKTOP_START_KEY, "1");
   navigate(HOME_DESKTOP_PATH);
   return true;
+}
+
+export interface BoardLabels {
+  boards: string;
+  open: string;
+}
+
+/** The Boards page (index and one board, `?id=`), its sidebar row and palette command. */
+export function createBoardContributions(
+  render: () => ReactNode,
+  navigate: (path: string) => void = () => undefined,
+  labels: BoardLabels = { boards: "Boards", open: "Open boards" },
+): HomeContribution[] {
+  return [
+    { id: "boards-page", area: "routes", title: labels.boards, order: -990, data: { path: BOARDS_DESKTOP_PATH }, render },
+    { id: "boards-nav", area: "sidebar.nav", order: -990, data: { path: BOARDS_DESKTOP_PATH, label: labels.boards, codicon: "layout" } },
+    {
+      id: "boards-open", area: "palette", order: -990,
+      data: {
+        id: "boards.open", label: labels.open,
+        keywords: ["board", "boards", "canvas", "whiteboard", labels.boards.toLowerCase()],
+        run: () => navigate(BOARDS_DESKTOP_PATH),
+      },
+    },
+  ];
 }
