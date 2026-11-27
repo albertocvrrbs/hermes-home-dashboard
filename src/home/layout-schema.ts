@@ -35,12 +35,25 @@ function isValidWidget(w: unknown): w is LayoutWidget {
 }
 
 /** Unknown/corrupt documents fall back to the default layout. With `known` (the
- *  widget registry's ids), widgets that no longer exist — e.g. the retired agent
- *  widget — are dropped and everything else keeps its place and props. */
+ *  widget registry's ids), the retired agent widget's slot becomes the board
+ *  widget, other ids that no longer exist are dropped, and everything else keeps
+ *  its place and props. */
 export function parseLayout(raw: unknown, known?: ReadonlySet<string>): HomeLayout {
   if (typeof raw !== "object" || raw === null) return DEFAULT_LAYOUT;
   const o = raw as Record<string, unknown>;
   if (o.version !== LAYOUT_VERSION || !Array.isArray(o.widgets)) return DEFAULT_LAYOUT;
-  const widgets = o.widgets.filter(isValidWidget).filter((w) => !known || known.has(w.id));
+  const valid = o.widgets.filter(isValidWidget);
+  if (!known) return { version: LAYOUT_VERSION, widgets: valid };
+  // The board took the retired agent widget's place (1.8): same slot, fresh props.
+  let hasBoard = valid.some((w) => w.id === "board");
+  const widgets: LayoutWidget[] = [];
+  for (const w of valid) {
+    if (w.id === "agent" && known.has("board") && !hasBoard) {
+      hasBoard = true;
+      widgets.push({ id: "board", gx: w.gx, gy: w.gy, gw: w.gw, gh: w.gh });
+    } else if (known.has(w.id)) {
+      widgets.push(w);
+    }
+  }
   return { version: LAYOUT_VERSION, widgets };
 }

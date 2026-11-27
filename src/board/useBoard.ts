@@ -152,8 +152,10 @@ export function useBoard(bid: string, onHermesEntries?: (entries: Entry[], doc: 
     setQueue([]);
     setStacks({ undo: [], redo: [] });
     let timer: ReturnType<typeof setTimeout> | null = null;
+    let first = true;
     const tick = async () => {
-      if (!document.hidden) await pull();
+      if (first || !document.hidden) await pull();
+      first = false;
       if (!alive.current) return;
       const p = presenceRef.current;
       const active = p && Date.now() / 1000 - p.at < HERMES_ACTIVE_S;

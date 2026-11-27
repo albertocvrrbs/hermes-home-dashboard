@@ -147,7 +147,8 @@ export function BoardWidget({ widgetProps, onWidgetPropsChange, editing }: {
     let live = true;
     seq.current = -1;
     const poll = async () => {
-      if (document.hidden) return;
+      // the first load always runs; later polls pause while the tab is hidden
+      if (document.hidden && seq.current >= 0) return;
       try {
         const r = await boardsApi.since(bid, seq.current >= 0 ? seq.current : -1);
         if (!live) return;
@@ -164,7 +165,9 @@ export function BoardWidget({ widgetProps, onWidgetPropsChange, editing }: {
     };
     void poll();
     const i = window.setInterval(poll, 10000);
-    return () => { live = false; window.clearInterval(i); };
+    const onVis = () => { if (!document.hidden) void poll(); };
+    document.addEventListener("visibilitychange", onVis);
+    return () => { live = false; window.clearInterval(i); document.removeEventListener("visibilitychange", onVis); };
   }, [bid]);
 
   const cycle = (dir: 1 | -1) => {

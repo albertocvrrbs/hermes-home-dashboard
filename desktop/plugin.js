@@ -4376,8 +4376,10 @@ function useBoard(bid, onHermesEntries) {
     setQueue([]);
     setStacks({ undo: [], redo: [] });
     let timer = null;
+    let first = true;
     const tick = async () => {
-      if (!document.hidden) await pull();
+      if (first || !document.hidden) await pull();
+      first = false;
       if (!alive.current) return;
       const p = presenceRef.current;
       const active = p && Date.now() / 1e3 - p.at < HERMES_ACTIVE_S;
@@ -5912,7 +5914,7 @@ function BoardWidget({ widgetProps, onWidgetPropsChange, editing }) {
     let live = true;
     seq.current = -1;
     const poll = async () => {
-      if (document.hidden) return;
+      if (document.hidden && seq.current >= 0) return;
       try {
         const r = await boardsApi.since(bid, seq.current >= 0 ? seq.current : -1);
         if (!live) return;
@@ -5933,9 +5935,14 @@ function BoardWidget({ widgetProps, onWidgetPropsChange, editing }) {
     };
     void poll();
     const i = window.setInterval(poll, 1e4);
+    const onVis = () => {
+      if (!document.hidden) void poll();
+    };
+    document.addEventListener("visibilitychange", onVis);
     return () => {
       live = false;
       window.clearInterval(i);
+      document.removeEventListener("visibilitychange", onVis);
     };
   }, [bid]);
   const cycle = (dir) => {
@@ -6619,7 +6626,18 @@ function parseLayout(raw, known) {
   if (typeof raw !== "object" || raw === null) return DEFAULT_LAYOUT;
   const o = raw;
   if (o.version !== LAYOUT_VERSION || !Array.isArray(o.widgets)) return DEFAULT_LAYOUT;
-  const widgets = o.widgets.filter(isValidWidget).filter((w) => !known || known.has(w.id));
+  const valid = o.widgets.filter(isValidWidget);
+  if (!known) return { version: LAYOUT_VERSION, widgets: valid };
+  let hasBoard = valid.some((w) => w.id === "board");
+  const widgets = [];
+  for (const w of valid) {
+    if (w.id === "agent" && known.has("board") && !hasBoard) {
+      hasBoard = true;
+      widgets.push({ id: "board", gx: w.gx, gy: w.gy, gw: w.gw, gh: w.gh });
+    } else if (known.has(w.id)) {
+      widgets.push(w);
+    }
+  }
   return { version: LAYOUT_VERSION, widgets };
 }
 const KNOWN_WIDGETS = new Set(Object.keys(WIDGET_REGISTRY));
