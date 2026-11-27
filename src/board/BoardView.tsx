@@ -131,7 +131,7 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
         }
         steps.push({
           id, act,
-          locate: () => locateFor(id),
+          locate: () => locateFor(id, doc),
           onArrive: () => {
             setHidden((h) => { if (!h.has(id)) return h; const n = new Set(h); n.delete(id); return n; });
             setFresh((f) => new Set(f).add(id));
@@ -168,9 +168,10 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
     return it ? approxRect(it) : null;
   }, []);
 
-  function locateFor(id: string): { x: number; y: number } | null {
-    const r = getRect(id);
-    const it = docRef.current?.items[id];
+  function locateFor(id: string, fallback?: BoardDoc): { x: number; y: number } | null {
+    const known = fallback?.items[id];
+    const r = getRect(id) ?? (known ? approxRect(known) : null);
+    const it = docRef.current?.items[id] ?? known;
     if (it?.k === "line") {
       const ends = [it.a, it.b].map((e) => (Array.isArray(e) ? { x: e[0], y: e[1], w: 0, h: 0 } : typeof e === "string" ? getRect(e) : null));
       if (ends[0] && ends[1]) {
@@ -736,11 +737,17 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
   };
 
   // ── render ──────────────────────────────────────────────────────────────
-  const hermesActive = !!(doc?.hermes && Date.now() / 1000 - doc.hermes.at < HERMES_ACTIVE_S) || !!cursorAct;
+  const pres = sync.presence && (!doc?.hermes || sync.presence.at >= doc.hermes.at) ? sync.presence : doc?.hermes ?? null;
+  const hermesActive = !!(pres && Date.now() / 1000 - pres.at < HERMES_ACTIVE_S) || !!cursorAct;
   const presenceLabel = (() => {
     if (!doc) return "";
-    const on = doc.hermes?.on ? doc.items[doc.hermes.on] : null;
-    const frame = on ? Object.values(doc.items).find((f) => f.k === "frame" && f.by === "h") : null;
+    const on = pres?.on ? doc.items[pres.on] : null;
+    const r = on ? approxRect(on) : null;
+    const frame = r ? Object.values(doc.items).find((f) => {
+      if (f.k !== "frame") return false;
+      const fr = approxRect(f);
+      return !!fr && r.x >= fr.x && r.y >= fr.y && r.x <= fr.x + fr.w && r.y <= fr.y + fr.h;
+    }) : null;
     return frame?.title || (on ? itemLabel(on).slice(0, 28) : "") || doc.name;
   })();
 

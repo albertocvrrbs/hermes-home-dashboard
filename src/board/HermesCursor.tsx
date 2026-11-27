@@ -117,7 +117,8 @@ export const HermesCursor = forwardRef<CursorHandle, { reducedMotion: boolean; o
       enqueue: (steps, doneLabel) => {
         state.current.queue.push(...steps);
         state.current.doneLabel = doneLabel;
-        run();
+        // Start after React has committed the new items, so targets can be measured.
+        requestAnimationFrame(() => requestAnimationFrame(run));
       },
       position: () => state.current.pos,
       active: () => state.current.running || state.current.queue.length > 0,
