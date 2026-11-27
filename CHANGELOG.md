@@ -20,6 +20,39 @@ clone, they never build).
 
 ---
 
+## 1.7.0 — 2026-11-27
+
+Feature release: a widget for what Hermes costs in money, not tokens.
+Verified against Hermes 0.23.4 (web dashboard).
+
+- **New widget: Spend.** Real pay-per-use spend for today / 7 days / this
+  month, split by provider, with the value covered by flat-fee subscriptions
+  shown apart and never added to it (e.g. "Claude subscription covered $1,818").
+  Below: the month so far with a month-end projection, an optional monthly cap
+  (hover stepper, persisted) that turns the line amber when spend nears it or
+  the projection passes it and red once spend reaches it, and the five most
+  expensive sessions in range (all costs or real only) — click one to open it.
+  Estimated (list-price) amounts are marked `est.`; costs that can't be
+  classified, unpriced sessions and sessions without cost data are counted
+  instead of hidden.
+- **How spend is classified.** Hermes prices every call but has no analytics
+  route carrying cost status and billing mode per provider, so a new
+  read-only `/spend` route reads `state.db` (`mode=ro`, bounded to ~31 days,
+  row-capped). Per call: a route Hermes marks `included` is a subscription; so
+  are flat-fee providers (`openai-codex`, Copilot) and Anthropic when every
+  configured Anthropic credential is OAuth (a Claude Pro/Max plan, which Hermes
+  prices at API list price); providers with only API keys are real spend;
+  anything else (mixed or removed credentials, unknown cost) is
+  `unclassified`. Costs come from the per-call usage table, so a session that
+  switched provider is split correctly (the session row alone bills it all to
+  the last provider). Credentials are read as they are configured now, from
+  the active profile. `?profile=` reads another profile's store.
+- **Open a session from a widget.** The host adapter gains `openSession(id)`:
+  `/chat?resume=<id>` on the web (the Sessions page's own target),
+  `host.openSession` on Desktop, falling back to the sessions view on older
+  builds.
+- `scripts/check-host-compatibility.py` also exercises `/models` and `/spend`.
+
 ## 1.6.0 — 2026-11-26
 
 Feature release: two ideas from #3, a localized UI, and the Project Status
