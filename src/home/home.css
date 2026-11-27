@@ -87,19 +87,41 @@
   box-shadow: 0 8px 24px rgb(0 0 0 / 0.45);
 }
 
+/* Header: short lead rule · TITLE · hairline that fades out. Drawn with CSS
+ * (not box-drawing glyphs) so the gaps stay even and the rule never touches
+ * the text, whatever the font or title length. */
 .home-widget .hd {
-  display: block;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 16px;
   font-size: 9.5px;
   letter-spacing: 0.18em;
-  margin-bottom: 6px;
+  margin-bottom: 8px;
   font-weight: 700;
   text-transform: uppercase;
   color: var(--home-accent-soft);
   white-space: nowrap;
   overflow: hidden;
 }
-.home-widget .hd::before { content: "── "; opacity: 0.5; }
-.home-widget .hd::after { content: " ─────────────────────────────────"; opacity: 0.3; }
+.home-widget .hd .hd-t { flex: none; }
+.home-widget .hd::before,
+.home-widget .hd::after {
+  content: "";
+  height: 1px;
+  flex: none;
+}
+.home-widget .hd::before {
+  width: 12px;
+  background: currentColor;
+  opacity: 0.45;
+}
+.home-widget .hd::after {
+  flex: 1 1 auto;
+  min-width: 0;
+  background: linear-gradient(to right, currentColor, transparent 92%);
+  opacity: 0.28;
+}
 .home-root.editing .home-widget .hd { cursor: grab; }
 
 .home-widget .rs {
@@ -150,10 +172,19 @@
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.18s ease;
-  /* Sits on the glass without a hard edge. */
-  padding: 1px 3px;
-  border-radius: 6px;
-  background: color-mix(in srgb, var(--home-surface) 80%, transparent);
+  /* A solid chip so the header rule never runs through the controls;
+   * the soft shadow on its left fades the rule out before it reaches them. */
+  padding: 2px 8px;
+  border-radius: 7px;
+  border: 1px solid var(--home-border);
+  background: linear-gradient(var(--home-surface), var(--home-surface)), rgb(12 12 17);
+  box-shadow: -18px 0 14px -6px rgb(10 10 14 / 0.9);
+  /* Never over the title: lead rule (12px) + gaps + title width + breathing room.
+   * When the controls need more room they wrap onto a second row instead. */
+  max-width: calc(100% - var(--hd-title-w, 80px) - 52px);
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  row-gap: 2px;
 }
 .home-widget:hover .hover-ctl,
 .hover-ctl:focus-within { opacity: 1; pointer-events: auto; }

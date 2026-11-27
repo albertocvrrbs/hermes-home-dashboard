@@ -9,7 +9,7 @@
 name: home-dashboard
 label: Home
 description: Personalizable rice-style Home page with draggable, resizable glass widgets for Hermes Web and Desktop.
-version: 1.7.0
+version: 1.7.1
 manifest_version: 1
 # Oldest Hermes with a field report (Desktop 0.21.5, issue #3); the backend
 # adapters also cover hosts that predate the web_routers split.

@@ -20,6 +20,15 @@ clone, they never build).
 
 ---
 
+## 1.7.1
+
+- **Cleaner widget headers.** The header rule is now drawn in CSS instead of
+  box-drawing glyphs: a short lead rule, even spacing around the title, and a
+  hairline that fades out, so the line never touches the text.
+- **Hover controls never cover the title.** The control chip is solid (the rule
+  no longer shows through it) and keeps clear of the title; on narrow widgets
+  it wraps onto a second row instead of overlapping.
+
 ## 1.7.0 — 2026-11-27
 
 Feature release: a widget for what Hermes costs in money, not tokens.
