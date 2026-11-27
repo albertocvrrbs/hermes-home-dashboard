@@ -1,0 +1,161 @@
+[
+ [
+  "https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=42",
+  {
+   "kind": "video",
+   "p": "youtube",
+   "id": "dQw4w9WgXcQ"
+  }
+ ],
+ [
+  "https://youtu.be/dQw4w9WgXcQ?si=abc",
+  {
+   "kind": "video",
+   "p": "youtube",
+   "id": "dQw4w9WgXcQ"
+  }
+ ],
+ [
+  "https://youtube.com/shorts/abcdefghijk",
+  {
+   "kind": "video",
+   "p": "youtube",
+   "id": "abcdefghijk",
+   "vert": true
+  }
+ ],
+ [
+  "https://m.youtube.com/embed/abcdefghijk",
+  {
+   "kind": "video",
+   "p": "youtube",
+   "id": "abcdefghijk"
+  }
+ ],
+ [
+  "https://www.youtube.com/live/abcdefghijk",
+  {
+   "kind": "video",
+   "p": "youtube",
+   "id": "abcdefghijk"
+  }
+ ],
+ [
+  "https://vimeo.com/76979871",
+  {
+   "kind": "video",
+   "p": "vimeo",
+   "id": "76979871"
+  }
+ ],
+ [
+  "https://player.vimeo.com/video/76979871?h=1",
+  {
+   "kind": "video",
+   "p": "vimeo",
+   "id": "76979871"
+  }
+ ],
+ [
+  "https://www.loom.com/share/0281766fa2d04bb788eaf19e65135184",
+  {
+   "kind": "video",
+   "p": "loom",
+   "id": "0281766fa2d04bb788eaf19e65135184"
+  }
+ ],
+ [
+  "https://x.com/NousResearch/status/1862000000000000000",
+  {
+   "kind": "video",
+   "p": "x",
+   "id": "1862000000000000000"
+  }
+ ],
+ [
+  "https://twitter.com/a/status/123?s=20",
+  {
+   "kind": "video",
+   "p": "x",
+   "id": "123"
+  }
+ ],
+ [
+  "https://cdn.example.com/clips/demo.MP4?sig=1",
+  {
+   "kind": "file-video"
+  }
+ ],
+ [
+  "https://example.com/a/b.webm",
+  {
+   "kind": "file-video"
+  }
+ ],
+ [
+  "https://example.com/pic.JPEG",
+  {
+   "kind": "image"
+  }
+ ],
+ [
+  "https://example.com/docs",
+  {
+   "kind": "page"
+  }
+ ],
+ [
+  "https://www.youtube.com/watch?v=short",
+  {
+   "kind": "page"
+  }
+ ],
+ [
+  "https://evil.example/youtube.com/watch?v=dQw4w9WgXcQ",
+  {
+   "kind": "page"
+  }
+ ],
+ [
+  "https://youtube.com.evil.example/watch?v=dQw4w9WgXcQ",
+  {
+   "kind": "page"
+  }
+ ],
+ [
+  "https://music.youtube.com/watch?v=dQw4w9WgXcQ",
+  {
+   "kind": "video",
+   "p": "youtube",
+   "id": "dQw4w9WgXcQ"
+  }
+ ],
+ [
+  "https://www.loom.com/embed/0281766fa2d04bb788eaf19e65135184",
+  {
+   "kind": "video",
+   "p": "loom",
+   "id": "0281766fa2d04bb788eaf19e65135184"
+  }
+ ],
+ [
+  "https://vimeo.com/channels/staffpicks/76979871",
+  {
+   "kind": "video",
+   "p": "vimeo",
+   "id": "76979871"
+  }
+ ],
+ [
+  "http://example.com/movie.mov",
+  {
+   "kind": "file-video"
+  }
+ ],
+ [
+  "https://example.com/a.gif?x=1",
+  {
+   "kind": "image"
+  }
+ ]
+]

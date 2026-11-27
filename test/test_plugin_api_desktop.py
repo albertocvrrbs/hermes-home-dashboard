@@ -251,14 +251,39 @@ class LayoutValidationTest(unittest.TestCase):
 
 
 class PackageRootTest(unittest.TestCase):
-    def test_root_package_exposes_a_register_hook(self):
-        # The Hermes agent plugin loader refuses a directory plugin without a
-        # root __init__.py exposing register(ctx) (issues #5 and #6).
+    def test_root_package_registers_board_tools_and_hook(self):
+        # The Hermes agent plugin loader imports the root __init__.py as a package
+        # (issues #5 and #6) and calls register(ctx). Boards register three tools
+        # in their own toolset plus the pre_llm_call hook.
+        import importlib.util
+        import os
+        import sys
         root = Path(__file__).resolve().parents[1]
-        namespace: dict = {}
-        exec(compile((root / "__init__.py").read_text("utf-8"), "__init__.py", "exec"), namespace)
-        self.assertTrue(callable(namespace.get("register")))
-        self.assertIsNone(namespace["register"](object()))
+        parent = types.ModuleType("hermes_plugins_test")
+        parent.__path__ = []
+        sys.modules.setdefault("hermes_plugins_test", parent)
+        name = "hermes_plugins_test.home_dashboard"
+        spec = importlib.util.spec_from_file_location(name, root / "__init__.py",
+                                                      submodule_search_locations=[str(root)])
+        module = importlib.util.module_from_spec(spec)
+        sys.modules[name] = module
+        spec.loader.exec_module(module)
+
+        class Ctx:
+            profile_name = "default"
+            def __init__(self):
+                self.tools, self.hooks = {}, {}
+            def register_tool(self, name, toolset, schema, handler, description=""):
+                self.tools[name] = (toolset, schema, handler)
+            def register_hook(self, name, fn):
+                self.hooks[name] = fn
+
+        ctx = Ctx()
+        with tempfile.TemporaryDirectory() as tmp, patch.dict(os.environ, {"HERMES_HOME": tmp}):
+            self.assertIsNone(module.register(ctx))
+        self.assertEqual(sorted(ctx.tools), ["board_apply", "board_read", "board_render"])
+        self.assertEqual({t[0] for t in ctx.tools.values()}, {"board"})
+        self.assertIn("pre_llm_call", ctx.hooks)
 
 
 if __name__ == "__main__":

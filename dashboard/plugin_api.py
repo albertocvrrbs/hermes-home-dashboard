@@ -10,10 +10,12 @@ from __future__ import annotations
 import asyncio
 import calendar
 import importlib
+import importlib.util
 import inspect
 import json
 import os
 import sqlite3
+import sys
 import time
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -37,6 +39,12 @@ except Exception:  # pragma: no cover - allows local unit tests
             return lambda fn: fn
 
         def put(self, *_a, **_k):
+            return lambda fn: fn
+
+        def post(self, *_a, **_k):
+            return lambda fn: fn
+
+        def delete(self, *_a, **_k):
             return lambda fn: fn
 
     class BaseModel:  # type: ignore
@@ -624,3 +632,145 @@ async def get_spend(period: str = "week", utc_offset: int = 0, profile: str | No
     """Money spent vs value covered by subscriptions, for the Spend widget."""
     path = spend_db_path(profile)
     return await asyncio.to_thread(compute_spend, path, period, utc_offset)
+
+
+# ── Boards (infinite canvas) ─────────────────────────────────────────────
+# The board backend lives in dashboard/boardkit/ and is shared with the agent half
+# (__init__.py). This module is loaded standalone by the dashboard host (not as a
+# package), so boardkit is loaded by path under a private module name.
+
+_BOARDKIT = "home_dashboard_boardkit"
+_board_service: Any = None
+
+
+def _boardkit(sub: str) -> Any:
+    if _BOARDKIT not in sys.modules:
+        pkg = Path(__file__).resolve().parent / "boardkit"
+        spec = importlib.util.spec_from_file_location(
+            _BOARDKIT, pkg / "__init__.py", submodule_search_locations=[str(pkg)])
+        if spec is None or spec.loader is None:
+            raise ImportError("boardkit not found")
+        module = importlib.util.module_from_spec(spec)
+        sys.modules[_BOARDKIT] = module
+        spec.loader.exec_module(module)
+    return importlib.import_module(f"{_BOARDKIT}.{sub}")
+
+
+def boards_root() -> Path:
+    return get_hermes_home() / "plugin-data" / "home-dashboard" / "boards"
+
+
+def board_service() -> Any:
+    global _board_service
+    if _board_service is None:
+        _board_service = _boardkit("service").BoardService(boards_root())
+    return _board_service
+
+
+def _board_call(fn: Any, *args: Any, **kwargs: Any) -> Any:
+    """Map board errors to HTTP: bad input 400, unknown board/asset 404."""
+    engine = _boardkit("engine")
+    store = _boardkit("store")
+    assets = _boardkit("assets")
+    try:
+        return fn(*args, **kwargs)
+    except store.NotFound as e:
+        raise HTTPException(status_code=404, detail=str(e) or "not found")
+    except assets.AssetError as e:
+        status = 404 if "no such asset" in str(e) else 400
+        raise HTTPException(status_code=status, detail=str(e))
+    except engine.OpError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+class BoardCreateBody(BaseModel):
+    name: str = "Untitled board"
+    parent: Optional[str] = None
+
+
+class BoardOpsBody(BaseModel):
+    ops: list
+    note: Optional[str] = None
+
+
+class BoardUndoBody(BaseModel):
+    s: int
+
+
+class BoardAssetBody(BaseModel):
+    data: Optional[str] = None
+    html: Optional[str] = None
+
+
+class BoardUrlBody(BaseModel):
+    url: str
+
+
+@router.get("/boards")
+def list_boards() -> Dict[str, Any]:
+    return {"boards": _board_call(lambda: board_service().store.list())}
+
+
+@router.post("/boards")
+def create_board(body: "BoardCreateBody") -> Dict[str, Any]:
+    svc = board_service()
+    return {"board": _board_call(svc.store.create, body.name, body.parent)}
+
+
+@router.get("/boards/assets/{aid}")
+def get_board_asset(aid: str) -> Dict[str, Any]:
+    import base64
+    mime, data = _board_call(board_service().assets.get, aid)
+    if mime == "text/html":
+        return {"mime": mime, "text": data.decode("utf-8", "replace")}
+    return {"mime": mime, "data": base64.b64encode(data).decode("ascii")}
+
+
+@router.post("/boards/assets")
+def upload_board_asset(body: "BoardAssetBody") -> Dict[str, Any]:
+    svc = board_service()
+    if body.html is not None:
+        return {"asset": _board_call(svc.assets.put_html, body.html)}
+    if body.data is None:
+        raise HTTPException(status_code=400, detail="data or html required")
+    aid = _board_call(svc.assets.put_b64, body.data)
+    out: Dict[str, Any] = {"asset": aid}
+    size = _boardkit("assets").image_size(svc.assets.get(aid)[1])
+    if size:
+        out["iw"], out["ih"] = size
+    return out
+
+
+@router.post("/boards/link-preview")
+def board_link_preview(body: "BoardUrlBody") -> Dict[str, Any]:
+    return {"preview": board_service().preview(body.url)}
+
+
+@router.get("/boards/{bid}")
+def get_board(bid: str, since: int = -1) -> Dict[str, Any]:
+    svc = board_service()
+    out = _board_call(svc.store.since, bid, since)
+    if since < 0:
+        try:
+            svc.refresh_waiting(bid)
+        except Exception:
+            pass
+    return out
+
+
+@router.post("/boards/{bid}/ops")
+def post_board_ops(bid: str, body: "BoardOpsBody") -> Dict[str, Any]:
+    doc, entry = _board_call(board_service().commit, bid, body.ops, "u", body.note)
+    return {"seq": doc["seq"], "entry": entry}
+
+
+@router.post("/boards/{bid}/undo")
+def undo_board_entry(bid: str, body: "BoardUndoBody") -> Dict[str, Any]:
+    doc, entry = _board_call(board_service().store.undo, bid, body.s, "u")
+    return {"seq": doc["seq"], "entry": entry}
+
+
+@router.delete("/boards/{bid}")
+def delete_board(bid: str) -> Dict[str, Any]:
+    _board_call(board_service().store.delete, bid)
+    return {"ok": True}

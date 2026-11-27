@@ -8,9 +8,17 @@
 # below guarantees.
 name: home-dashboard
 label: Home
-description: Personalizable rice-style Home page with draggable, resizable glass widgets for Hermes Web and Desktop.
+description: Personalizable rice-style Home page with draggable, resizable widgets and Boards, an infinite canvas Hermes draws on with you, for Hermes Web and Desktop.
 version: 1.7.1
 manifest_version: 1
 # Oldest Hermes with a field report (Desktop 0.21.5, issue #3); the backend
 # adapters also cover hosts that predate the web_routers split.
 requires_hermes: ">=0.21.5"
+# Boards: the agent reads and writes the user's boards, and linked sessions hear
+# what the user changed between turns.
+provides_tools:
+  - board_read
+  - board_apply
+  - board_render
+provides_hooks:
+  - pre_llm_call
