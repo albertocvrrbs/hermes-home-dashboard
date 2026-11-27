@@ -54,11 +54,6 @@ function navigateTo(routePath) {
 function openSession(sessionId) {
   getHost().openSession(sessionId);
 }
-function onGatewayEvent(type, listener) {
-  const h = getHost();
-  if (!h.onEvent) return null;
-  return h.onEvent(type, listener);
-}
 const en = {
   // ── shared ──
   "common.loading": "loading…",
@@ -104,7 +99,6 @@ const en = {
   "widget.pomodoro": "pomodoro",
   "widget.countdown": "countdown",
   "widget.calendar": "calendar",
-  "widget.agent": "agent",
   "widget.projects": "projects",
   "widget.spend": "spend",
   // ── ascii ──
@@ -268,98 +262,7 @@ const en = {
   "spend.unpricedTitle": "sessions Hermes could not price",
   "spend.noCost": "{n} sessions without cost data",
   "spend.empty": "no cost data in this range",
-  "spend.noStore": "session store unavailable",
-  // ── agent widget ──
-  "agent.working": "working",
-  "agent.thinking": "thinking",
-  "agent.idle": "idle",
-  "agent.take": "take control",
-  "agent.takeAria": "Take control",
-  "agent.takeTitle": "Take control of the screen — live agent theater",
-  "agent.in": "in",
-  "agent.out": "out",
-  "agent.est": "est",
-  "agent.ses": "ses",
-  "agent.inTitle": "Input tokens today",
-  "agent.outTitle": "Output tokens today",
-  "agent.estTitle": "Estimated cost today",
-  "agent.sesTitle": "Sessions today",
-  "agent.polling": "polling mode · no live channel",
-  // ── live scene + feed ──
-  "scene.running": "running",
-  "scene.message": "message",
-  "scene.streaming": "streaming",
-  "scene.complete": "complete",
-  "scene.idle": "idle",
-  "scene.resting": "the agent is resting — new activity will appear here",
-  "feed.generating": "generating…",
-  "feed.progress": "progress…",
-  "feed.spawned": "spawned",
-  "feed.done": "done",
-  "feed.thinking": "thinking…",
-  "feed.session": "session",
-  "feed.new": "new",
-  "feed.error": "error",
-  "feed.live": "live",
-  "feed.channelOpen": "gateway channel open",
-  // ── agent theater ──
-  "theater.aria": "Agent theater",
-  "theater.title": "AGENT THEATER",
-  "theater.working": "the agent is working",
-  "theater.idle": "the agent is idle",
-  "theater.liveFeed": "live feed",
-  "theater.polling": "polling",
-  "theater.live": "live",
-  "theater.release": "release control",
-  "theater.releaseTitle": "Release control (Esc)",
-  "theater.now": "NOW · {status}",
-  "theater.gatewayDown": "gateway down",
-  "theater.feedEmpty": "no live activity yet — the feed fills as the agent works",
-  "theater.lastEvent": "last event {when}",
-  "theater.updated": "updated {when}",
-  "theater.function": "FUNCTION",
-  "theater.awaitingArgs": "awaiting args…",
-  "theater.noTool": "no tool running",
-  "theater.tokensCost": "TOKENS & COST",
-  "theater.inputToday": "input today",
-  "theater.outputToday": "output today",
-  "theater.cacheRead": "cache read",
-  "theater.costToday": "est. cost today",
-  "theater.tok": "{n} tok",
-  "theater.activeSession": "active session",
-  "theater.sessionNums": "{tok} tok · {msg} msg · {tools} tools",
-  "theater.project": "PROJECT",
-  "theater.untitled": "(untitled session)",
-  "theater.started": "started {when}",
-  "theater.noSession": "no active session",
-  "theater.filesEmpty": "files touched by the agent will appear here as it works",
-  "theater.recommendations": "RECOMMENDATIONS",
-  // ── coach (recommendations) ──
-  "coach.sourcesFailing.title": "{n} data source(s) failing",
-  "coach.sourcesFailing.detail": "Polling errors on: {sources}. Check the gateway and plugin API.",
-  "coach.errorLines.title": "{n} error line(s) in the gateway log",
-  "coach.errorLines.detail": "Tail the log to see if a platform or plugin is throwing repeatedly.",
-  "coach.cost.title": "≈${cost} estimated today",
-  "coach.cost.high": "Cost is climbing. Consider a cheaper model, context compression, or capping long sessions.",
-  "coach.cost.moderate": "Spend is moderate — keep an eye on it if you're mid-migration.",
-  "coach.tokens.title": "{n}M tokens today",
-  "coach.tokens.detail": "Heavy usage. /compact long sessions and reuse cached context to cut input tokens.",
-  "coach.repeated.title": '"{name}" called {n}× recently',
-  "coach.repeated.detail": "A repeated tool sequence is a skill in disguise — consider saving it with skill_manage.",
-  "coach.parallel.title": "{n} sessions active at once",
-  "coach.parallel.detail": "Parallel work is running — delegate_task fans out well, but watch for tool conflicts on shared files.",
-  "coach.subagents.title": "{n} subagent(s) working",
-  "coach.subagents.detail": "Orchestration in flight. Check back for their consolidated reports.",
-  "coach.slow.title": '"{name}" running >2min',
-  "coach.slow.detail": "Long tool call — it may be a build, a big search, or a hung process. Watch it.",
-  "coach.longSession.title": "Active session at {n} messages",
-  "coach.longSession.detail": "Long context costs more per turn and degrades focus. A fresh session or /compact resets the cache.",
-  "coach.toolChurn.title": "{n} tool calls in the active session",
-  "coach.toolChurn.detail": "High tool churn — the task may benefit from a dedicated skill or a subagent.",
-  "coach.skill.title": 'Top skill "{name}" only {n}% of loads',
-  "coach.skill.detail": "Your most-used skill is still under-leveraged — consider bundling related skills.",
-  "coach.quiet.title": "All quiet on the home front",
-  "coach.quiet.detail": "No anomalies right now. The coach stays silent until there's something worth saying."
+  "spend.noStore": "session store unavailable"
 };
 const __vite_glob_0_0 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
@@ -410,7 +313,6 @@ const es = {
   "widget.pomodoro": "pomodoro",
   "widget.countdown": "cuenta regresiva",
   "widget.calendar": "calendario",
-  "widget.agent": "agente",
   "widget.projects": "proyectos",
   "widget.spend": "gasto",
   // ── ascii ──
@@ -574,98 +476,7 @@ const es = {
   "spend.unpricedTitle": "sesiones a las que Hermes no pudo ponerles precio",
   "spend.noCost": "{n} sesiones sin datos de costo",
   "spend.empty": "sin datos de costo en este rango",
-  "spend.noStore": "almacén de sesiones no disponible",
-  // ── agent widget ──
-  "agent.working": "trabajando",
-  "agent.thinking": "pensando",
-  "agent.idle": "en reposo",
-  "agent.take": "tomar el control",
-  "agent.takeAria": "Tomar el control",
-  "agent.takeTitle": "Toma el control de la pantalla: teatro del agente en vivo",
-  "agent.in": "ent",
-  "agent.out": "sal",
-  "agent.est": "est",
-  "agent.ses": "ses",
-  "agent.inTitle": "Tokens de entrada de hoy",
-  "agent.outTitle": "Tokens de salida de hoy",
-  "agent.estTitle": "Costo estimado de hoy",
-  "agent.sesTitle": "Sesiones de hoy",
-  "agent.polling": "modo de consulta · sin canal en vivo",
-  // ── live scene + feed ──
-  "scene.running": "en ejecución",
-  "scene.message": "mensaje",
-  "scene.streaming": "escribiendo",
-  "scene.complete": "completo",
-  "scene.idle": "en reposo",
-  "scene.resting": "el agente descansa; aquí aparecerá la nueva actividad",
-  "feed.generating": "generando…",
-  "feed.progress": "avanzando…",
-  "feed.spawned": "iniciado",
-  "feed.done": "terminado",
-  "feed.thinking": "pensando…",
-  "feed.session": "sesión",
-  "feed.new": "nueva",
-  "feed.error": "error",
-  "feed.live": "en vivo",
-  "feed.channelOpen": "canal del gateway abierto",
-  // ── agent theater ──
-  "theater.aria": "Teatro del agente",
-  "theater.title": "TEATRO DEL AGENTE",
-  "theater.working": "el agente está trabajando",
-  "theater.idle": "el agente está en reposo",
-  "theater.liveFeed": "transmisión en vivo",
-  "theater.polling": "consulta periódica",
-  "theater.live": "en vivo",
-  "theater.release": "soltar el control",
-  "theater.releaseTitle": "Soltar el control (Esc)",
-  "theater.now": "AHORA · {status}",
-  "theater.gatewayDown": "gateway caído",
-  "theater.feedEmpty": "todavía no hay actividad; se irá llenando mientras el agente trabaja",
-  "theater.lastEvent": "último evento {when}",
-  "theater.updated": "actualizado {when}",
-  "theater.function": "FUNCIÓN",
-  "theater.awaitingArgs": "esperando argumentos…",
-  "theater.noTool": "ninguna herramienta en ejecución",
-  "theater.tokensCost": "TOKENS Y COSTO",
-  "theater.inputToday": "entrada hoy",
-  "theater.outputToday": "salida hoy",
-  "theater.cacheRead": "lectura de caché",
-  "theater.costToday": "costo est. hoy",
-  "theater.tok": "{n} tok",
-  "theater.activeSession": "sesión activa",
-  "theater.sessionNums": "{tok} tok · {msg} mensajes · {tools} herramientas",
-  "theater.project": "PROYECTO",
-  "theater.untitled": "(sesión sin título)",
-  "theater.started": "iniciada {when}",
-  "theater.noSession": "no hay una sesión activa",
-  "theater.filesEmpty": "aquí aparecerán los archivos que toque el agente mientras trabaja",
-  "theater.recommendations": "RECOMENDACIONES",
-  // ── coach (recommendations) ──
-  "coach.sourcesFailing.title": "{n} fuente(s) de datos con fallas",
-  "coach.sourcesFailing.detail": "Errores de consulta en: {sources}. Revisa el gateway y la API del plugin.",
-  "coach.errorLines.title": "{n} línea(s) de error en el registro del gateway",
-  "coach.errorLines.detail": "Sigue el registro para ver si una plataforma o un plugin falla una y otra vez.",
-  "coach.cost.title": "≈${cost} estimados hoy",
-  "coach.cost.high": "El costo va en aumento. Considera un modelo más barato, comprimir el contexto o acotar las sesiones largas.",
-  "coach.cost.moderate": "El gasto es moderado; vigílalo si estás a mitad de una migración.",
-  "coach.tokens.title": "{n}M tokens hoy",
-  "coach.tokens.detail": "Uso intenso. Usa /compact en sesiones largas y reutiliza el contexto en caché para bajar los tokens de entrada.",
-  "coach.repeated.title": '"{name}" se llamó {n} veces hace poco',
-  "coach.repeated.detail": "Una secuencia de herramientas repetida es una skill disfrazada; considera guardarla con skill_manage.",
-  "coach.parallel.title": "{n} sesiones activas a la vez",
-  "coach.parallel.detail": "Hay trabajo en paralelo; delegate_task reparte bien, pero cuida los choques de herramientas sobre archivos compartidos.",
-  "coach.subagents.title": "{n} subagente(s) trabajando",
-  "coach.subagents.detail": "Orquestación en curso. Vuelve luego por sus reportes consolidados.",
-  "coach.slow.title": '"{name}" lleva más de 2 min',
-  "coach.slow.detail": "Llamada larga: puede ser una compilación, una búsqueda grande o un proceso colgado. Vigílala.",
-  "coach.longSession.title": "La sesión activa va en {n} mensajes",
-  "coach.longSession.detail": "Un contexto largo cuesta más por turno y dispersa el foco. Una sesión nueva o /compact reinicia la caché.",
-  "coach.toolChurn.title": "{n} llamadas a herramientas en la sesión activa",
-  "coach.toolChurn.detail": "Mucho movimiento de herramientas; a la tarea le convendría una skill dedicada o un subagente.",
-  "coach.skill.title": 'La skill principal "{name}" es solo el {n} % de las cargas',
-  "coach.skill.detail": "Tu skill más usada sigue desaprovechada; considera agrupar skills relacionadas.",
-  "coach.quiet.title": "Todo en calma por aquí",
-  "coach.quiet.detail": "Sin anomalías por ahora. El coach guarda silencio hasta que haya algo que valga la pena decir."
+  "spend.noStore": "almacén de sesiones no disponible"
 };
 const __vite_glob_0_1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
@@ -707,7 +518,7 @@ const DICTIONARIES = Object.fromEntries(
 );
 const LANGUAGES = Object.keys(DICTIONARIES);
 let hostLanguage = null;
-const listeners$2 = /* @__PURE__ */ new Set();
+const listeners = /* @__PURE__ */ new Set();
 function browserLanguages() {
   if (typeof navigator === "undefined") return [];
   return navigator.languages?.length ? navigator.languages : [navigator.language];
@@ -721,7 +532,7 @@ function setHostLanguage(language) {
   const next = computeLanguage();
   if (next === current) return;
   current = next;
-  listeners$2.forEach((l) => l());
+  listeners.forEach((l) => l());
 }
 const translators = /* @__PURE__ */ new Map();
 function translatorFor(language) {
@@ -737,10 +548,10 @@ function useT() {
   const [language, setLanguage] = useState(current);
   useEffect(() => {
     const onChange = () => setLanguage(current);
-    listeners$2.add(onChange);
+    listeners.add(onChange);
     onChange();
     return () => {
-      listeners$2.delete(onChange);
+      listeners.delete(onChange);
     };
   }, []);
   return translatorFor(language);
@@ -2575,530 +2386,6 @@ function CalendarWidget({ gridSize }) {
     ] })
   ] });
 }
-let active = false;
-const listeners$1 = /* @__PURE__ */ new Set();
-function enterTheater() {
-  if (active) return;
-  active = true;
-  listeners$1.forEach((l) => l(true));
-}
-function exitTheater() {
-  if (!active) return;
-  active = false;
-  listeners$1.forEach((l) => l(false));
-}
-function subscribeTheater(listener) {
-  listeners$1.add(listener);
-  return () => listeners$1.delete(listener);
-}
-const EMPTY_LIVE = {
-  live: false,
-  busy: false,
-  currentTool: null,
-  toolHistory: [],
-  streamText: "",
-  lastMessage: null,
-  feed: [],
-  subagents: [],
-  activeSessionId: null,
-  activeTitle: null,
-  lastEventAt: null
-};
-const MAX_TOOL_HISTORY = 12;
-const MAX_FEED = 80;
-let liveState = EMPTY_LIVE;
-const listeners = /* @__PURE__ */ new Set();
-let subscribed = false;
-let feedSeq = 0;
-function setLive(fn) {
-  const next = fn(liveState);
-  if (next === liveState) return;
-  liveState = next;
-  listeners.forEach((l) => l());
-}
-function pushFeed(entry) {
-  setLive((s) => {
-    const e = { ...entry, id: ++feedSeq };
-    const feed = [e, ...s.feed];
-    return { ...s, feed: feed.length > MAX_FEED ? feed.slice(0, MAX_FEED) : feed };
-  });
-}
-function str(v) {
-  return typeof v === "string" && v.length > 0 ? v : void 0;
-}
-function asObj(v) {
-  return typeof v === "object" && v !== null ? v : void 0;
-}
-function pick(p, ...keys) {
-  if (!p) return void 0;
-  for (const k of keys) {
-    const v = str(p[k]);
-    if (v) return v;
-  }
-  return void 0;
-}
-function argPreview(args, max = 160) {
-  if (args === void 0 || args === null) return void 0;
-  let s;
-  if (typeof args === "string") s = args;
-  else {
-    try {
-      s = JSON.stringify(args);
-    } catch {
-      s = String(args);
-    }
-  }
-  if (s.length <= max) return s;
-  return `${s.slice(0, max)}…`;
-}
-function handleEvent(event) {
-  const { type, payload } = event;
-  const p = asObj(payload);
-  const now = Date.now();
-  const bump = (s) => ({ ...s, lastEventAt: now });
-  if (type === "tool.generating") {
-    const name = pick(p, "name") ?? "tool";
-    setLive((s) => bump({
-      ...s,
-      busy: true,
-      currentTool: { name, startedAt: now, status: "running" }
-    }));
-    pushFeed({ at: now, kind: "tool", label: name, detailKey: "feed.generating" });
-    return;
-  }
-  if (type === "tool.start" || type === "tool.progress") {
-    const name = pick(p, "name", "tool_name") ?? "tool";
-    setLive((s) => bump({
-      ...s,
-      busy: true,
-      currentTool: { name, args: p?.args ?? p, startedAt: now, status: "running" }
-    }));
-    pushFeed({
-      at: now,
-      kind: "tool",
-      label: name,
-      ...type === "tool.progress" ? { detailKey: "feed.progress" } : { detail: argPreview(p?.args) }
-    });
-    return;
-  }
-  if (type === "tool.complete") {
-    const name = pick(p, "name", "tool_name") ?? "";
-    const ok = p?.ok !== false && !str(p?.error);
-    const duration = typeof p?.duration === "number" ? p.duration : void 0;
-    setLive((s) => bump({
-      ...s,
-      currentTool: null,
-      busy: s.subagents.some((a) => a.status === "running") || s.streamText.length > 0,
-      toolHistory: [{
-        name: name || s.currentTool?.name || "tool",
-        args: p?.args ?? s.currentTool?.args,
-        startedAt: s.currentTool?.startedAt ?? now,
-        status: ok ? "complete" : "failed",
-        duration
-      }, ...s.toolHistory].slice(0, MAX_TOOL_HISTORY)
-    }));
-    pushFeed({
-      at: now,
-      kind: "tool",
-      label: name || "tool",
-      ok,
-      detail: duration !== void 0 ? `${duration.toFixed(1)}s` : void 0
-    });
-    return;
-  }
-  if (type === "message.start") {
-    setLive((s) => bump({ ...s, busy: true, streamText: "" }));
-    return;
-  }
-  if (type === "message.delta") {
-    const text = pick(p, "text", "delta", "content");
-    if (!text) return;
-    setLive((s) => bump({
-      ...s,
-      busy: true,
-      streamText: (s.streamText + text).slice(-6e3)
-    }));
-    return;
-  }
-  if (type === "message.interim") {
-    const text = pick(p, "text", "content");
-    if (!text) return;
-    setLive((s) => bump({ ...s, lastMessage: text }));
-    return;
-  }
-  if (type === "message.complete") {
-    setLive((s) => {
-      const done = s.streamText.trim();
-      return bump({
-        ...s,
-        streamText: "",
-        lastMessage: done.length > 0 ? done : s.lastMessage,
-        busy: s.currentTool !== null || s.subagents.some((a) => a.status === "running")
-      });
-    });
-    return;
-  }
-  if (type === "subagent.start" || type === "subagent.progress") {
-    const name = pick(p, "name", "role", "id") ?? "subagent";
-    setLive((s) => bump({
-      ...s,
-      busy: true,
-      subagents: [
-        { name, status: "running", goal: pick(p, "goal", "task") },
-        ...s.subagents.filter((a) => a.name !== name)
-      ].slice(0, 6)
-    }));
-    pushFeed({ at: now, kind: "subagent", label: name, detailKey: "feed.spawned" });
-    return;
-  }
-  if (type === "subagent.complete") {
-    const name = pick(p, "name", "role", "id");
-    if (!name) return;
-    setLive((s) => bump({
-      ...s,
-      subagents: s.subagents.map((a) => a.name === name ? { ...a, status: "done" } : a)
-    }));
-    pushFeed({ at: now, kind: "subagent", label: name, ok: true, detailKey: "feed.done" });
-    return;
-  }
-  if (type === "subagent.thinking") {
-    const name = pick(p, "name", "role", "id") ?? "subagent";
-    pushFeed({ at: now, kind: "subagent", label: name, detailKey: "feed.thinking" });
-    setLive(bump);
-    return;
-  }
-  if (type === "session.new" || type === "session.info") {
-    const sid = pick(p, "session_id", "id") ?? event.session_id;
-    if (!sid) return;
-    setLive((s) => bump({
-      ...s,
-      activeSessionId: sid,
-      activeTitle: pick(p, "title") ?? s.activeTitle
-    }));
-    pushFeed({ at: now, kind: "session", label: "session", labelKey: "feed.session", detailKey: "feed.new" });
-    return;
-  }
-  if (type === "session.title") {
-    const title = pick(p, "title");
-    if (!title) return;
-    setLive((s) => bump({ ...s, activeTitle: title }));
-    return;
-  }
-  if (type === "session.status") {
-    const sid = pick(p, "session_id", "id") ?? event.session_id;
-    const status = pick(p, "status");
-    if (status === "stopped" || status === "idle") {
-      setLive((s) => s.busy ? bump({ ...s, busy: false }) : s);
-    }
-    if (sid) setLive((s) => bump({ ...s, activeSessionId: sid }));
-    return;
-  }
-  if (type === "error") {
-    pushFeed({
-      at: now,
-      kind: "system",
-      label: "error",
-      labelKey: "feed.error",
-      detail: pick(p, "error", "message")
-    });
-    setLive(bump);
-    return;
-  }
-  if (type.startsWith("tool.") || type.startsWith("message.") || type.startsWith("subagent.") || type.startsWith("session.") || type.startsWith("thinking.") || type.startsWith("reasoning.") || type.startsWith("approval.") || type.startsWith("run.")) {
-    pushFeed({ at: now, kind: "system", label: type });
-    setLive(bump);
-  }
-}
-function ensureSubscribed() {
-  if (subscribed) return;
-  subscribed = true;
-  const all = onGatewayEvent("*", handleEvent);
-  if (all) {
-    setLive((s) => s.live ? s : { ...s, live: true });
-    pushFeed({ at: Date.now(), kind: "system", label: "live", labelKey: "feed.live", detailKey: "feed.channelOpen" });
-  }
-}
-function useAgentLive() {
-  const [state, setState] = useState(liveState);
-  useEffect(() => {
-    ensureSubscribed();
-    setState(liveState);
-    listeners.add(onChange);
-    return () => {
-      listeners.delete(onChange);
-    };
-  }, []);
-  function onChange() {
-    setState(liveState);
-  }
-  return state;
-}
-function renderInline(text, keyBase) {
-  const nodes = [];
-  const re = /(\*\*[^*]+\*\*|\*[^*]+\*|`[^`]+`)/g;
-  let last = 0;
-  let i = 0;
-  let m;
-  while ((m = re.exec(text)) !== null) {
-    if (m.index > last) nodes.push(text.slice(last, m.index));
-    const tok = m[0];
-    if (tok.startsWith("**")) {
-      nodes.push(/* @__PURE__ */ jsx("strong", { children: tok.slice(2, -2) }, `${keyBase}-b${i}`));
-    } else if (tok.startsWith("`")) {
-      nodes.push(/* @__PURE__ */ jsx("code", { children: tok.slice(1, -1) }, `${keyBase}-c${i}`));
-    } else {
-      nodes.push(/* @__PURE__ */ jsx("em", { children: tok.slice(1, -1) }, `${keyBase}-i${i}`));
-    }
-    last = m.index + tok.length;
-    i += 1;
-  }
-  if (last < text.length) nodes.push(text.slice(last));
-  return nodes;
-}
-function MarkdownText({ text }) {
-  const lines = text.split("\n");
-  const out = [];
-  const codeBuf = [];
-  let inCode = false;
-  const listItems = [];
-  const flushList = (key) => {
-    if (listItems.length === 0) return;
-    out.push(
-      /* @__PURE__ */ jsx("div", { className: "home-md-list", children: listItems }, key)
-    );
-    listItems.length = 0;
-  };
-  lines.forEach((line, idx) => {
-    const key = `l${idx}`;
-    if (line.trimStart().startsWith("```")) {
-      if (inCode) {
-        out.push(
-          /* @__PURE__ */ jsx("pre", { className: "home-md-pre", children: /* @__PURE__ */ jsx("code", { children: codeBuf.join("\n") }) }, key)
-        );
-        codeBuf.length = 0;
-        inCode = false;
-      } else {
-        flushList(key);
-        inCode = true;
-      }
-      return;
-    }
-    if (inCode) {
-      codeBuf.push(line);
-      return;
-    }
-    const t2 = line.trim();
-    if (!t2) {
-      flushList(key);
-      out.push(/* @__PURE__ */ jsx("div", { className: "home-md-gap" }, key));
-      return;
-    }
-    const heading = t2.match(/^(#{1,3})\s+(.*)$/);
-    if (heading) {
-      flushList(key);
-      out.push(
-        /* @__PURE__ */ jsx("div", { className: `home-md-h h${heading[1].length}`, children: renderInline(heading[2], key) }, key)
-      );
-      return;
-    }
-    const item = t2.match(/^[-*]\s+(.*)$/);
-    if (item) {
-      listItems.push(/* @__PURE__ */ jsx("div", { className: "home-md-li", children: renderInline(item[1], key) }, key));
-      return;
-    }
-    flushList(key);
-    out.push(/* @__PURE__ */ jsx("div", { className: "home-md-p", children: renderInline(t2, key) }, key));
-  });
-  if (inCode) {
-    out.push(
-      /* @__PURE__ */ jsx("pre", { className: "home-md-pre", children: /* @__PURE__ */ jsx("code", { children: codeBuf.join("\n") }) }, "open-fence")
-    );
-  }
-  flushList("list-end");
-  return /* @__PURE__ */ jsx(Fragment, { children: out });
-}
-function useScene(live) {
-  const t2 = useT();
-  const [scene, setScene] = useState(() => sceneFrom(live, t2));
-  const wasStreaming = useRef(false);
-  useEffect(() => {
-    const streaming = live.streamText.trim().length > 0;
-    const prevStreaming = wasStreaming.current;
-    wasStreaming.current = streaming;
-    if (live.currentTool) {
-      const key = `tool-${live.currentTool.name}-${live.currentTool.startedAt}`;
-      const body = argPreview(live.currentTool.args, 800) ?? "";
-      setScene(
-        (s) => s.key === key ? { ...s, body } : {
-          key,
-          kind: "tool",
-          title: live.currentTool.name,
-          body,
-          meta: t2("scene.running")
-        }
-      );
-      return;
-    }
-    if (streaming && !prevStreaming) {
-      setScene({
-        key: `msg-${Date.now()}`,
-        kind: "message",
-        title: t2("scene.message"),
-        body: live.streamText,
-        meta: t2("scene.streaming"),
-        streaming: true
-      });
-    } else if (streaming) {
-      setScene((s) => s.streaming ? { ...s, body: live.streamText } : s);
-    } else if (live.lastMessage) {
-      const msg = live.lastMessage;
-      setScene(
-        (s) => s.kind === "message" && !s.streaming && s.body === msg ? s : { key: `done-${Date.now()}`, kind: "message", title: t2("scene.message"), body: msg, meta: t2("scene.complete") }
-      );
-    } else {
-      setScene(
-        (s) => s.kind === "idle" && s.body === t2("scene.resting") ? s : { key: "idle", kind: "idle", title: t2("scene.idle"), body: t2("scene.resting") }
-      );
-    }
-  }, [live.streamText, live.currentTool, live.lastMessage, t2]);
-  return scene;
-}
-function sceneFrom(live, t2) {
-  if (live.streamText.trim()) {
-    return {
-      key: `msg-${Date.now()}`,
-      kind: "message",
-      title: t2("scene.message"),
-      body: live.streamText,
-      meta: t2("scene.streaming"),
-      streaming: true
-    };
-  }
-  if (live.currentTool) {
-    return {
-      key: `tool-${live.currentTool.name}-${live.currentTool.startedAt}`,
-      kind: "tool",
-      title: live.currentTool.name,
-      body: argPreview(live.currentTool.args, 500) ?? "",
-      meta: t2("scene.running")
-    };
-  }
-  if (live.lastMessage) {
-    return { key: "done", kind: "message", title: t2("scene.message"), body: live.lastMessage, meta: t2("scene.complete") };
-  }
-  return { key: "idle", kind: "idle", title: t2("scene.idle"), body: t2("scene.resting") };
-}
-function SceneBody({ scene }) {
-  if (scene.kind === "tool") {
-    return /* @__PURE__ */ jsxs("div", { className: "home-scene-tool", children: [
-      /* @__PURE__ */ jsx("span", { className: "home-scene-title", children: scene.title }),
-      /* @__PURE__ */ jsx("span", { className: "home-scene-meta", children: scene.meta }),
-      scene.body && /* @__PURE__ */ jsx("pre", { className: "home-scene-args", children: scene.body })
-    ] });
-  }
-  if (scene.kind === "message") {
-    return /* @__PURE__ */ jsxs("div", { className: "home-scene-msg", children: [
-      /* @__PURE__ */ jsx(MarkdownText, { text: scene.body }),
-      scene.streaming && /* @__PURE__ */ jsx("span", { className: "home-scene-caret", "aria-hidden": "true" })
-    ] });
-  }
-  return /* @__PURE__ */ jsx("div", { className: "home-scene-idle", children: scene.body });
-}
-function LiveScene({ scene }) {
-  const [current2, setCurrent] = useState(scene);
-  const [leaving, setLeaving] = useState(null);
-  const timer = useRef(null);
-  useEffect(() => {
-    if (scene.key === current2.key) return;
-    setLeaving(current2);
-    setCurrent(scene);
-    if (timer.current) window.clearTimeout(timer.current);
-    timer.current = window.setTimeout(() => setLeaving(null), 460);
-  }, [scene.key]);
-  useEffect(() => () => {
-    if (timer.current) window.clearTimeout(timer.current);
-  }, []);
-  return /* @__PURE__ */ jsxs("div", { className: "home-scene", children: [
-    leaving && /* @__PURE__ */ jsx("div", { className: "home-scene-item leaving", "aria-hidden": "true", children: /* @__PURE__ */ jsx(SceneBody, { scene: leaving }) }),
-    /* @__PURE__ */ jsx("div", { className: "home-scene-item", children: /* @__PURE__ */ jsx(SceneBody, { scene: current2 }) }, current2.key)
-  ] });
-}
-function fmtCost$1(n) {
-  if (n === void 0 || !Number.isFinite(n)) return "—";
-  if (n < 0.01) return `$${(n * 1e3).toFixed(2)}m`;
-  if (n < 1) return `$${n.toFixed(3)}`;
-  return `$${n.toFixed(2)}`;
-}
-function fmtTok$1(n) {
-  if (n === void 0 || !Number.isFinite(n)) return "—";
-  if (n >= 1e6) return `${(n / 1e6).toFixed(1)}M`;
-  if (n >= 1e3) return `${(n / 1e3).toFixed(1)}k`;
-  return String(n);
-}
-function AgentWidget({ data }) {
-  const t2 = useT();
-  const live = useAgentLive();
-  const scene = useScene(live);
-  const totals = data.analytics?.totals;
-  const statusLabel = live.busy ? live.currentTool ? t2("agent.working") : t2("agent.thinking") : t2("agent.idle");
-  return /* @__PURE__ */ jsxs("div", { className: "home-agent", children: [
-    /* @__PURE__ */ jsxs("div", { className: "home-agent-head", children: [
-      /* @__PURE__ */ jsx("span", { className: `home-agent-dot ${live.busy ? "busy" : ""}`, "aria-hidden": "true" }),
-      /* @__PURE__ */ jsx("span", { className: "home-agent-status", children: statusLabel })
-    ] }),
-    /* @__PURE__ */ jsx("div", { className: "home-agent-scene", children: /* @__PURE__ */ jsx(LiveScene, { scene }) }),
-    /* @__PURE__ */ jsx(HoverCtl, { className: "home-agent-ctl", children: /* @__PURE__ */ jsxs(
-      "button",
-      {
-        className: "home-agent-take",
-        onClick: () => enterTheater(),
-        title: t2("agent.takeTitle"),
-        "aria-label": t2("agent.takeAria"),
-        children: [
-          /* @__PURE__ */ jsx("span", { className: "home-agent-take-ico", "aria-hidden": "true" }),
-          t2("agent.take")
-        ]
-      }
-    ) }),
-    /* @__PURE__ */ jsxs("div", { className: "home-agent-stats", children: [
-      /* @__PURE__ */ jsxs("span", { title: t2("agent.inTitle"), children: [
-        /* @__PURE__ */ jsx("i", { children: t2("agent.in") }),
-        " ",
-        fmtTok$1(totals?.total_input)
-      ] }),
-      /* @__PURE__ */ jsxs("span", { title: t2("agent.outTitle"), children: [
-        /* @__PURE__ */ jsx("i", { children: t2("agent.out") }),
-        " ",
-        fmtTok$1(totals?.total_output)
-      ] }),
-      /* @__PURE__ */ jsxs("span", { title: t2("agent.estTitle"), children: [
-        /* @__PURE__ */ jsx("i", { children: t2("agent.est") }),
-        " ",
-        fmtCost$1(totals?.total_estimated_cost)
-      ] }),
-      /* @__PURE__ */ jsxs("span", { title: t2("agent.sesTitle"), children: [
-        /* @__PURE__ */ jsx("i", { children: t2("agent.ses") }),
-        " ",
-        totals?.total_sessions ?? "—"
-      ] })
-    ] }),
-    live.toolHistory.length > 0 && /* @__PURE__ */ jsx("div", { className: "home-agent-history", children: live.toolHistory.slice(0, 4).map((t22, i) => /* @__PURE__ */ jsxs("span", { className: "home-agent-hist", children: [
-      /* @__PURE__ */ jsx(
-        "span",
-        {
-          className: `home-agent-hist-dot ${t22.status === "complete" ? "ok" : "bad"}`,
-          "aria-hidden": "true"
-        }
-      ),
-      t22.name,
-      t22.duration !== void 0 && /* @__PURE__ */ jsxs("i", { children: [
-        t22.duration.toFixed(0),
-        "s"
-      ] })
-    ] }, `${t22.name}-${t22.startedAt}-${i}`)) }),
-    !live.live && /* @__PURE__ */ jsx("div", { className: "home-agent-dim", children: t2("agent.polling") })
-  ] });
-}
 const POLL_MS$2 = 3e4;
 function statusTone(status) {
   const s = status.toLowerCase();
@@ -3108,7 +2395,7 @@ function statusTone(status) {
   return "dim";
 }
 const TONE_ICON = { ok: "●", warn: "▲", err: "✕", dim: "○" };
-function timeAgo$1(iso, t2) {
+function timeAgo(iso, t2) {
   if (!iso) return t2("common.none");
   const then = new Date(iso).getTime();
   if (Number.isNaN(then)) return t2("common.none");
@@ -3183,7 +2470,7 @@ function ProjectsWidget() {
               " · ",
               /* @__PURE__ */ jsx("span", { title: t2("projects.done"), children: p.stats.completed })
             ] }),
-            /* @__PURE__ */ jsx("span", { className: "project-time", children: timeAgo$1(p.lastUpdated, t2) }),
+            /* @__PURE__ */ jsx("span", { className: "project-time", children: timeAgo(p.lastUpdated, t2) }),
             /* @__PURE__ */ jsx("span", { className: "project-caret", "aria-hidden": "true", children: open ? "▾" : "▸" })
           ]
         }
@@ -3653,14 +2940,6 @@ const WIDGET_REGISTRY = {
     navigateTo: null,
     dataSource: null
   },
-  agent: {
-    titleKey: "widget.agent",
-    component: ({ data }) => /* @__PURE__ */ jsx(AgentWidget, { data }),
-    defaultSize: { gw: 4, gh: 3 },
-    minSize: { gw: 3, gh: 2 },
-    navigateTo: null,
-    dataSource: null
-  },
   projects: {
     titleKey: "widget.projects",
     component: () => /* @__PURE__ */ jsx(ProjectsWidget, {}),
@@ -4099,377 +3378,6 @@ function useHomeData() {
   }, []);
   return data;
 }
-function buildRecommendations(data, live, t2) {
-  const out = [];
-  const totals = data.analytics?.totals;
-  if (data.errors.size > 0) {
-    out.push({
-      severity: "crit",
-      title: t2("coach.sourcesFailing.title", { n: data.errors.size }),
-      detail: t2("coach.sourcesFailing.detail", { sources: [...data.errors].join(", ") })
-    });
-  }
-  const errorLogs = data.logs?.lines?.length ?? 0;
-  if (errorLogs > 0) {
-    out.push({
-      severity: errorLogs > 10 ? "crit" : "warn",
-      title: t2("coach.errorLines.title", { n: errorLogs }),
-      detail: t2("coach.errorLines.detail")
-    });
-  }
-  const est = totals?.total_estimated_cost ?? 0;
-  if (est > 0.5) {
-    out.push({
-      severity: est > 2 ? "crit" : "warn",
-      title: t2("coach.cost.title", { cost: est.toFixed(2) }),
-      detail: est > 2 ? t2("coach.cost.high") : t2("coach.cost.moderate")
-    });
-  }
-  const totalTok = (totals?.total_input ?? 0) + (totals?.total_output ?? 0);
-  if (totalTok > 2e6) {
-    out.push({
-      severity: "warn",
-      title: t2("coach.tokens.title", { n: (totalTok / 1e6).toFixed(1) }),
-      detail: t2("coach.tokens.detail")
-    });
-  }
-  const repeated = mostRepeatedTool(live.toolHistory);
-  if (repeated && repeated.count >= 5) {
-    out.push({
-      severity: "info",
-      title: t2("coach.repeated.title", { name: repeated.name, n: repeated.count }),
-      detail: t2("coach.repeated.detail")
-    });
-  }
-  const activeSessions = (data.sessions?.sessions ?? []).filter((s) => s.is_active).length;
-  if (activeSessions >= 3) {
-    out.push({
-      severity: "info",
-      title: t2("coach.parallel.title", { n: activeSessions }),
-      detail: t2("coach.parallel.detail")
-    });
-  }
-  if (live.subagents.some((a) => a.status === "running")) {
-    out.push({
-      severity: "info",
-      title: t2("coach.subagents.title", { n: live.subagents.filter((a) => a.status === "running").length }),
-      detail: t2("coach.subagents.detail")
-    });
-  }
-  const slow = live.currentTool && Date.now() - live.currentTool.startedAt > 12e4 ? live.currentTool : null;
-  if (slow) {
-    out.push({
-      severity: "warn",
-      title: t2("coach.slow.title", { name: slow.name }),
-      detail: t2("coach.slow.detail")
-    });
-  }
-  const active2 = (data.sessions?.sessions ?? []).find((s) => s.is_active);
-  if (active2) {
-    if ((active2.message_count ?? 0) > 80) {
-      out.push({
-        severity: "warn",
-        title: t2("coach.longSession.title", { n: active2.message_count }),
-        detail: t2("coach.longSession.detail")
-      });
-    }
-    if ((active2.tool_call_count ?? 0) > 40) {
-      out.push({
-        severity: "info",
-        title: t2("coach.toolChurn.title", { n: active2.tool_call_count }),
-        detail: t2("coach.toolChurn.detail")
-      });
-    }
-  }
-  const topSkill = data.analytics?.skills?.top_skills?.[0];
-  if (topSkill && topSkill.total_count > 0 && topSkill.percentage < 5) {
-    out.push({
-      severity: "info",
-      title: t2("coach.skill.title", { name: topSkill.skill, n: topSkill.percentage }),
-      detail: t2("coach.skill.detail")
-    });
-  }
-  if (out.length === 0) {
-    out.push({
-      severity: "info",
-      title: t2("coach.quiet.title"),
-      detail: t2("coach.quiet.detail")
-    });
-  }
-  return out;
-}
-function mostRepeatedTool(history) {
-  const counts = /* @__PURE__ */ new Map();
-  for (const t2 of history) {
-    counts.set(t2.name, (counts.get(t2.name) ?? 0) + 1);
-  }
-  let best = null;
-  for (const [name, count] of counts) {
-    if (!best || count > best.count) best = { name, count };
-  }
-  return best && best.count >= 2 ? best : null;
-}
-function fmtCost(n) {
-  if (n === void 0 || !Number.isFinite(n)) return "—";
-  if (n < 0.01) return `$${(n * 1e3).toFixed(2)}m`;
-  if (n < 1) return `$${n.toFixed(3)}`;
-  return `$${n.toFixed(2)}`;
-}
-function fmtTok(n) {
-  if (n === void 0 || !Number.isFinite(n)) return "—";
-  if (n >= 1e6) return `${(n / 1e6).toFixed(1)}M`;
-  if (n >= 1e3) return `${(n / 1e3).toFixed(1)}k`;
-  return String(n);
-}
-function timeAgo(at, t2) {
-  const s = Math.max(0, Math.round((Date.now() - at) / 1e3));
-  if (s < 5) return t2("time.now");
-  if (s < 60) return t2("time.secondsAgo", { n: s });
-  const m = Math.round(s / 60);
-  if (m < 60) return t2("time.minutesAgo", { n: m });
-  return t2("time.hoursAgo", { n: Math.round(m / 60) });
-}
-function hhmm(at) {
-  const d = new Date(at);
-  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}:${String(d.getSeconds()).padStart(2, "0")}`;
-}
-function extractPaths(tools) {
-  const paths = /* @__PURE__ */ new Set();
-  for (const t2 of tools) {
-    const args = t2.args;
-    if (!args || typeof args !== "object") continue;
-    const a = args;
-    for (const key of ["path", "file", "output_path", "workdir", "cwd", "target"]) {
-      const v = a[key];
-      if (typeof v === "string" && v.length > 1) paths.add(v);
-    }
-    if (typeof a.command === "string") {
-      const m = a.command.match(/["']([^"']+\.[a-zA-Z0-9_]+)["']/g);
-      if (m) m.forEach((s) => paths.add(s.slice(1, -1)));
-    }
-  }
-  return [...paths].slice(0, 8);
-}
-function fileGlyph(path) {
-  const ext = path.split(".").pop()?.toLowerCase() ?? "";
-  if (ext === "ts" || ext === "tsx") return "τ";
-  if (ext === "js" || ext === "jsx" || ext === "mjs") return "JS";
-  if (ext === "py") return "py";
-  if (ext === "md") return "MD";
-  if (ext === "json") return "{}";
-  if (ext === "yaml" || ext === "yml") return "Y";
-  if (ext === "css" || ext === "html") return "#";
-  if (["png", "jpg", "webp", "gif", "svg"].includes(ext)) return "▣";
-  return "·";
-}
-function PanelTitle({ children }) {
-  return /* @__PURE__ */ jsx("b", { className: "home-theater-panel-title", children });
-}
-function NowPanel({ data, live }) {
-  const t2 = useT();
-  const scene = useScene(live);
-  const [now, setNow] = useState(Date.now());
-  useEffect(() => {
-    const timer = setInterval(() => setNow(Date.now()), 1e3);
-    return () => clearInterval(timer);
-  }, []);
-  const status = live.busy ? live.currentTool ? t2("agent.working") : t2("agent.thinking") : data.status?.gateway_running ? t2("agent.idle") : t2("theater.gatewayDown");
-  return /* @__PURE__ */ jsxs("section", { className: "home-theater-panel home-theater-now", children: [
-    /* @__PURE__ */ jsxs(PanelTitle, { children: [
-      /* @__PURE__ */ jsx("span", { className: `home-agent-dot ${live.busy ? "busy" : ""}`, "aria-hidden": "true" }),
-      t2("theater.now", { status: status.toUpperCase() }),
-      live.activeTitle && /* @__PURE__ */ jsxs("span", { className: "home-theater-sub", children: [
-        "— ",
-        live.activeTitle
-      ] })
-    ] }),
-    /* @__PURE__ */ jsx("div", { className: "home-theater-scene", children: /* @__PURE__ */ jsx(LiveScene, { scene }) }),
-    /* @__PURE__ */ jsxs("div", { className: "home-theater-feed", children: [
-      live.feed.length === 0 && /* @__PURE__ */ jsx("div", { className: "home-theater-dim", children: t2("theater.feedEmpty") }),
-      live.feed.slice(0, 40).map((e) => /* @__PURE__ */ jsxs("div", { className: "home-theater-feed-row", children: [
-        /* @__PURE__ */ jsx("span", { className: "home-theater-feed-time", children: hhmm(e.at) }),
-        /* @__PURE__ */ jsx(
-          "span",
-          {
-            className: `home-theater-feed-kind ${e.kind}${e.ok === false ? " bad" : ""}`,
-            "aria-hidden": "true"
-          }
-        ),
-        /* @__PURE__ */ jsx("span", { className: "home-theater-feed-label", children: e.labelKey ? t2(e.labelKey) : e.label }),
-        (e.detailKey || e.detail) && /* @__PURE__ */ jsx("span", { className: "home-theater-feed-detail", children: e.detailKey ? t2(e.detailKey) : e.detail })
-      ] }, e.id))
-    ] }),
-    /* @__PURE__ */ jsxs("div", { className: "home-theater-foot", children: [
-      /* @__PURE__ */ jsx("span", { children: t2("theater.lastEvent", { when: live.lastEventAt ? timeAgo(live.lastEventAt, t2) : "—" }) }),
-      /* @__PURE__ */ jsx("span", { children: live.live ? t2("theater.live") : t2("theater.polling") }),
-      /* @__PURE__ */ jsx("span", { children: t2("theater.updated", { when: timeAgo(now, t2) }) })
-    ] })
-  ] });
-}
-function ToolPanel({ live }) {
-  const t2 = useT();
-  return /* @__PURE__ */ jsxs("section", { className: "home-theater-panel", children: [
-    /* @__PURE__ */ jsx(PanelTitle, { children: t2("theater.function") }),
-    live.currentTool ? /* @__PURE__ */ jsxs("div", { className: "home-theater-fn-current", children: [
-      /* @__PURE__ */ jsxs("div", { className: "home-theater-fn-name", children: [
-        /* @__PURE__ */ jsx("span", { className: "home-theater-fn-dot running", "aria-hidden": "true" }),
-        live.currentTool.name,
-        /* @__PURE__ */ jsx("span", { className: "home-theater-fn-state running", children: t2("scene.running") })
-      ] }),
-      /* @__PURE__ */ jsx("pre", { className: "home-theater-fn-args", children: argPreview(live.currentTool.args, 600) ?? t2("theater.awaitingArgs") })
-    ] }) : /* @__PURE__ */ jsx("div", { className: "home-theater-dim", children: t2("theater.noTool") }),
-    live.toolHistory.length > 0 && /* @__PURE__ */ jsx("div", { className: "home-theater-fn-history", children: live.toolHistory.slice(0, 8).map((t22, i) => /* @__PURE__ */ jsxs("div", { className: "home-theater-fn-row", children: [
-      /* @__PURE__ */ jsx(
-        "span",
-        {
-          className: `home-theater-fn-dot ${t22.status === "complete" ? "ok" : "bad"}`,
-          "aria-hidden": "true"
-        }
-      ),
-      /* @__PURE__ */ jsx("span", { className: "home-theater-fn-hname", children: t22.name }),
-      /* @__PURE__ */ jsx("span", { className: "home-theater-fn-hargs", children: argPreview(t22.args, 90) }),
-      t22.duration !== void 0 && /* @__PURE__ */ jsxs("span", { className: "home-theater-fn-hdur", children: [
-        t22.duration.toFixed(1),
-        "s"
-      ] })
-    ] }, `${t22.name}-${t22.startedAt}-${i}`)) })
-  ] });
-}
-function TokenPanel({ data }) {
-  const t2 = useT();
-  const totals = data.analytics?.totals;
-  const byModel = data.analytics?.by_model ?? [];
-  const active2 = (data.sessions?.sessions ?? []).find((s) => s.is_active);
-  return /* @__PURE__ */ jsxs("section", { className: "home-theater-panel", children: [
-    /* @__PURE__ */ jsx(PanelTitle, { children: t2("theater.tokensCost") }),
-    /* @__PURE__ */ jsxs("div", { className: "home-theater-tok-grid", children: [
-      /* @__PURE__ */ jsxs("div", { className: "home-theater-tok-cell", children: [
-        /* @__PURE__ */ jsx("span", { className: "home-theater-tok-num", children: fmtTok(totals?.total_input) }),
-        /* @__PURE__ */ jsx("span", { className: "home-theater-tok-lbl", children: t2("theater.inputToday") })
-      ] }),
-      /* @__PURE__ */ jsxs("div", { className: "home-theater-tok-cell", children: [
-        /* @__PURE__ */ jsx("span", { className: "home-theater-tok-num", children: fmtTok(totals?.total_output) }),
-        /* @__PURE__ */ jsx("span", { className: "home-theater-tok-lbl", children: t2("theater.outputToday") })
-      ] }),
-      /* @__PURE__ */ jsxs("div", { className: "home-theater-tok-cell", children: [
-        /* @__PURE__ */ jsx("span", { className: "home-theater-tok-num", children: fmtTok(totals?.total_cache_read) }),
-        /* @__PURE__ */ jsx("span", { className: "home-theater-tok-lbl", children: t2("theater.cacheRead") })
-      ] }),
-      /* @__PURE__ */ jsxs("div", { className: "home-theater-tok-cell", children: [
-        /* @__PURE__ */ jsx("span", { className: "home-theater-tok-num home-theater-money", children: fmtCost(totals?.total_estimated_cost) }),
-        /* @__PURE__ */ jsx("span", { className: "home-theater-tok-lbl", children: t2("theater.costToday") })
-      ] })
-    ] }),
-    byModel.length > 0 && /* @__PURE__ */ jsx("div", { className: "home-theater-tok-models", children: byModel.slice(0, 4).map((m) => /* @__PURE__ */ jsxs("div", { className: "home-theater-tok-model", children: [
-      /* @__PURE__ */ jsx("span", { className: "home-theater-tok-mname", children: m.model }),
-      /* @__PURE__ */ jsx("span", { className: "home-theater-tok-mtok", children: t2("theater.tok", { n: fmtTok(m.input_tokens + m.output_tokens) }) }),
-      /* @__PURE__ */ jsx("span", { className: "home-theater-tok-mcost", children: fmtCost(m.estimated_cost) })
-    ] }, m.model)) }),
-    active2 && /* @__PURE__ */ jsxs("div", { className: "home-theater-tok-session", children: [
-      /* @__PURE__ */ jsx("span", { className: "home-theater-tok-slbl", children: t2("theater.activeSession") }),
-      /* @__PURE__ */ jsx("span", { className: "home-theater-tok-stitle", children: active2.title ?? active2.id }),
-      /* @__PURE__ */ jsx("span", { className: "home-theater-tok-snum", children: t2("theater.sessionNums", {
-        tok: fmtTok((active2.input_tokens ?? 0) + (active2.output_tokens ?? 0)),
-        msg: active2.message_count ?? 0,
-        tools: active2.tool_call_count ?? 0
-      }) })
-    ] })
-  ] });
-}
-function ProjectPanel({ data, live }) {
-  const t2 = useT();
-  const active2 = (data.sessions?.sessions ?? []).find((s) => s.is_active);
-  const paths = useMemo(
-    () => extractPaths([...live.currentTool ? [live.currentTool] : [], ...live.toolHistory]),
-    [live.currentTool, live.toolHistory]
-  );
-  return /* @__PURE__ */ jsxs("section", { className: "home-theater-panel", children: [
-    /* @__PURE__ */ jsx(PanelTitle, { children: t2("theater.project") }),
-    active2 ? /* @__PURE__ */ jsxs("div", { className: "home-theater-proj-session", children: [
-      /* @__PURE__ */ jsx("div", { className: "home-theater-proj-title", children: active2.title ?? t2("theater.untitled") }),
-      /* @__PURE__ */ jsxs("div", { className: "home-theater-proj-meta", children: [
-        active2.model ?? "—",
-        " · ",
-        active2.source ?? "—",
-        " · ",
-        t2("theater.started", { when: timeAgo(active2.started_at * 1e3, t2) })
-      ] })
-    ] }) : /* @__PURE__ */ jsx("div", { className: "home-theater-dim", children: t2("theater.noSession") }),
-    paths.length > 0 ? /* @__PURE__ */ jsx("div", { className: "home-theater-proj-files", children: paths.map((p) => /* @__PURE__ */ jsxs("div", { className: "home-theater-proj-file", children: [
-      /* @__PURE__ */ jsx("span", { className: "home-theater-proj-glyph", children: fileGlyph(p) }),
-      /* @__PURE__ */ jsx("span", { className: "home-theater-proj-path", children: p })
-    ] }, p)) }) : /* @__PURE__ */ jsx("div", { className: "home-theater-dim", children: t2("theater.filesEmpty") }),
-    live.subagents.length > 0 && /* @__PURE__ */ jsx("div", { className: "home-theater-proj-subagents", children: live.subagents.map((a) => /* @__PURE__ */ jsxs("div", { className: "home-theater-proj-subagent", children: [
-      /* @__PURE__ */ jsx(
-        "span",
-        {
-          className: `home-theater-proj-subdot ${a.status === "running" ? "run" : "done"}`,
-          "aria-hidden": "true"
-        }
-      ),
-      /* @__PURE__ */ jsx("span", { className: "home-theater-proj-subname", children: a.name }),
-      a.goal && /* @__PURE__ */ jsxs("span", { className: "home-theater-proj-subgoal", children: [
-        "— ",
-        a.goal
-      ] })
-    ] }, a.name)) })
-  ] });
-}
-function CoachPanel({ data, live }) {
-  const t2 = useT();
-  const recs = useMemo(
-    () => buildRecommendations(data, live, t2),
-    [data, live, t2]
-  );
-  return /* @__PURE__ */ jsxs("section", { className: "home-theater-panel", children: [
-    /* @__PURE__ */ jsx(PanelTitle, { children: t2("theater.recommendations") }),
-    /* @__PURE__ */ jsx("div", { className: "home-theater-rec-list", children: recs.map((r, i) => /* @__PURE__ */ jsxs("div", { className: `home-theater-rec ${r.severity}`, children: [
-      /* @__PURE__ */ jsx("span", { className: "home-theater-rec-tag", children: r.severity === "crit" ? "!!" : r.severity === "warn" ? "!" : "i" }),
-      /* @__PURE__ */ jsxs("div", { className: "home-theater-rec-body", children: [
-        /* @__PURE__ */ jsx("div", { className: "home-theater-rec-title", children: r.title }),
-        /* @__PURE__ */ jsx("div", { className: "home-theater-rec-detail", children: r.detail })
-      ] })
-    ] }, i)) })
-  ] });
-}
-function AgentTheater({ data }) {
-  const t2 = useT();
-  const live = useAgentLive();
-  useEffect(() => {
-    const onKey = (e) => {
-      if (e.key === "Escape") exitTheater();
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, []);
-  return /* @__PURE__ */ jsxs("div", { className: "home-theater", role: "dialog", "aria-label": t2("theater.aria"), children: [
-    /* @__PURE__ */ jsxs("header", { className: "home-theater-head", children: [
-      /* @__PURE__ */ jsx("span", { className: `home-agent-dot ${live.busy ? "busy" : ""}`, "aria-hidden": "true" }),
-      /* @__PURE__ */ jsx("span", { className: "home-theater-title", children: t2("theater.title") }),
-      /* @__PURE__ */ jsxs("span", { className: "home-theater-sub", children: [
-        live.busy ? t2("theater.working") : t2("theater.idle"),
-        " · ",
-        live.live ? t2("theater.liveFeed") : t2("theater.polling")
-      ] }),
-      /* @__PURE__ */ jsx(
-        "button",
-        {
-          className: "home-theater-release",
-          onClick: () => exitTheater(),
-          title: t2("theater.releaseTitle"),
-          children: t2("theater.release")
-        }
-      )
-    ] }),
-    /* @__PURE__ */ jsxs("div", { className: "home-theater-grid", children: [
-      /* @__PURE__ */ jsx("div", { className: "home-theater-span-7", children: /* @__PURE__ */ jsx(NowPanel, { data, live }) }),
-      /* @__PURE__ */ jsx("div", { className: "home-theater-span-5", children: /* @__PURE__ */ jsx(ToolPanel, { live }) }),
-      /* @__PURE__ */ jsx("div", { className: "home-theater-span-5", children: /* @__PURE__ */ jsx(TokenPanel, { data }) }),
-      /* @__PURE__ */ jsx("div", { className: "home-theater-span-7", children: /* @__PURE__ */ jsx(ProjectPanel, { data, live }) }),
-      /* @__PURE__ */ jsx("div", { className: "home-theater-span-12", children: /* @__PURE__ */ jsx(CoachPanel, { data, live }) })
-    ] })
-  ] });
-}
 const LAYOUT_VERSION = 1;
 const DEFAULT_LAYOUT = {
   version: LAYOUT_VERSION,
@@ -4490,16 +3398,17 @@ function isValidWidget(w) {
   const o = w;
   return typeof o.id === "string" && [o.gx, o.gy, o.gw, o.gh].every((n) => typeof n === "number" && Number.isFinite(n));
 }
-function parseLayout(raw) {
+function parseLayout(raw, known) {
   if (typeof raw !== "object" || raw === null) return DEFAULT_LAYOUT;
   const o = raw;
   if (o.version !== LAYOUT_VERSION || !Array.isArray(o.widgets)) return DEFAULT_LAYOUT;
-  const widgets = o.widgets.filter(isValidWidget);
+  const widgets = o.widgets.filter(isValidWidget).filter((w) => !known || known.has(w.id));
   return { version: LAYOUT_VERSION, widgets };
 }
+const KNOWN_WIDGETS = new Set(Object.keys(WIDGET_REGISTRY));
 const LAYOUT_URL = "/api/plugins/home-dashboard/layout";
 function loadLayout() {
-  return fetchJSON(LAYOUT_URL).then((r) => r.layout == null ? DEFAULT_LAYOUT : parseLayout(r.layout)).catch(() => DEFAULT_LAYOUT);
+  return fetchJSON(LAYOUT_URL).then((r) => r.layout == null ? DEFAULT_LAYOUT : parseLayout(r.layout, KNOWN_WIDGETS)).catch(() => DEFAULT_LAYOUT);
 }
 function saveLayout(layout) {
   return fetchJSON(LAYOUT_URL, {
@@ -4513,7 +3422,6 @@ function HomePage() {
   const [editing, setEditing] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
   const [overTrash, setOverTrash] = useState(false);
-  const [theaterOn, setTheaterOn] = useState(false);
   const [toast, setToast] = useState(null);
   const rootRef = useRef(null);
   const catalogRef = useRef(null);
@@ -4526,10 +3434,6 @@ function HomePage() {
     if (dashboardLocale !== null) setHostLanguage(dashboardLocale);
   }, [dashboardLocale]);
   const t2 = useT();
-  useEffect(() => subscribeTheater(setTheaterOn), []);
-  useEffect(() => {
-    if (theaterOn && editing) setEditing(false);
-  }, [theaterOn, editing]);
   const showToast = useCallback((msg) => {
     setToast(msg);
     if (toastTimer.current) clearTimeout(toastTimer.current);
@@ -4660,13 +3564,12 @@ function HomePage() {
             }
           )
         ] }),
-        toast && /* @__PURE__ */ jsx("div", { className: "home-toast", role: "status", children: toast }),
-        theaterOn && /* @__PURE__ */ jsx(AgentTheater, { data })
+        toast && /* @__PURE__ */ jsx("div", { className: "home-toast", role: "status", children: toast })
       ]
     }
   );
 }
-const homeCss = "/* Home page — rice-style widget grid.\n * Every color routes through --home-accent (the active theme's primary),\n * so switching themes recolors the whole page with zero widget changes.\n * Swap teal (#2dd4bf) stays fixed: it is interaction semantics, not theme. */\n\n.home-root {\n  --home-accent: var(--color-primary, var(--ui-accent, #ffd700));\n  --home-accent-dim: color-mix(in srgb, var(--home-accent) 55%, #000);\n  /* Readable secondary text (headers, captions): dim was ~3:1 on the glass. */\n  --home-accent-soft: color-mix(in srgb, var(--home-accent) 82%, #9aa3b5);\n  --home-surface: color-mix(\n    in srgb,\n    var(--home-accent) 6%,\n    var(--ui-editor-surface-background, rgb(10 10 14 / 0.55))\n  );\n  --home-border: color-mix(in srgb, var(--home-accent) 18%, transparent);\n  --home-error: var(--color-destructive, #e25555);\n  position: relative;\n  height: 100%;\n  overflow: auto;\n  font-family: var(--theme-font-mono, ui-monospace, monospace);\n  color: var(--color-foreground, var(--ui-text-primary, #d8dce6));\n}\n\n.home-stage {\n  position: relative;\n  min-height: 60vh;\n  touch-action: none;\n}\n\n.home-widget {\n  position: absolute;\n  border-radius: 8px;\n  padding: 10px 12px;\n  background: var(--home-surface);\n  border: 1px solid var(--home-border);\n  backdrop-filter: blur(12px);\n  -webkit-backdrop-filter: blur(12px);\n  box-shadow: 0 10px 30px rgb(0 0 0 / 0.5);\n  overflow: hidden;\n  transition: left 0.18s ease, top 0.18s ease;\n  container-type: size;\n  font-size: 11px;\n  line-height: 1.5;\n  /* Promote each widget to its own compositor layer so the constantly\n   * repainting matrix canvas doesn't force the neighbours' backdrop-filter\n   * to recompose every frame — that recomposition is what produced the\n   * horizontal flicker sweeping across the glass panels. */\n  transform: translateZ(0);\n  contain: paint;\n}\n.home-root.editing .home-widget { user-select: none; }\n.home-widget.dragging {\n  transition: none;\n  opacity: 0.9;\n  border-color: var(--home-accent);\n  z-index: 50;\n  cursor: grabbing;\n}\n.home-widget.swap-target {\n  border-color: #2dd4bf;\n  box-shadow: 0 0 0 1px rgb(45 212 191 / 0.5), 0 10px 30px rgb(0 0 0 / 0.5);\n}\n/* Over the trash zone — about to be deleted. */\n.home-widget.trashing {\n  opacity: 0.45;\n  border-color: var(--home-error);\n  box-shadow: 0 0 0 1px color-mix(in srgb, var(--home-error) 60%, transparent),\n    0 10px 30px rgb(0 0 0 / 0.5);\n}\n\n/* Floating label that follows the pointer while dragging a new widget in. */\n.home-add-ghost {\n  position: fixed;\n  z-index: 70;\n  transform: translate(-50%, -140%);\n  padding: 4px 10px;\n  border-radius: 6px;\n  font-size: 11px;\n  white-space: nowrap;\n  pointer-events: none;\n  color: var(--home-accent);\n  background: var(--home-surface);\n  border: 1px solid var(--home-accent);\n  backdrop-filter: blur(12px);\n  -webkit-backdrop-filter: blur(12px);\n  box-shadow: 0 8px 24px rgb(0 0 0 / 0.45);\n}\n\n/* Header: short lead rule · TITLE · hairline that fades out. Drawn with CSS\n * (not box-drawing glyphs) so the gaps stay even and the rule never touches\n * the text, whatever the font or title length. */\n.home-widget .hd {\n  display: flex;\n  align-items: center;\n  gap: 10px;\n  min-height: 16px;\n  font-size: 9.5px;\n  letter-spacing: 0.18em;\n  margin-bottom: 8px;\n  font-weight: 700;\n  text-transform: uppercase;\n  color: var(--home-accent-soft);\n  white-space: nowrap;\n  overflow: hidden;\n}\n.home-widget .hd .hd-t { flex: none; }\n.home-widget .hd::before,\n.home-widget .hd::after {\n  content: \"\";\n  height: 1px;\n  flex: none;\n}\n.home-widget .hd::before {\n  width: 12px;\n  background: currentColor;\n  opacity: 0.45;\n}\n.home-widget .hd::after {\n  flex: 1 1 auto;\n  min-width: 0;\n  background: linear-gradient(to right, currentColor, transparent 92%);\n  opacity: 0.28;\n}\n.home-root.editing .home-widget .hd { cursor: grab; }\n\n.home-widget .rs {\n  position: absolute;\n  right: 2px;\n  bottom: 2px;\n  width: 13px;\n  height: 13px;\n  cursor: nwse-resize;\n  border-right: 2px solid color-mix(in srgb, var(--home-accent) 45%, transparent);\n  border-bottom: 2px solid color-mix(in srgb, var(--home-accent) 45%, transparent);\n  border-radius: 2px;\n  z-index: 3;\n}\n.home-widget .wremove {\n  position: absolute;\n  top: 4px;\n  right: 6px;\n  z-index: 3;\n  background: none;\n  border: none;\n  color: var(--home-error);\n  font-size: 13px;\n  line-height: 1;\n  cursor: pointer;\n  padding: 2px 4px;\n}\n.home-widget .werr { color: var(--home-error); }\n/* Data-source states (widget-state.ts): honest copy per failure kind. */\n.home-widget .wstate { display: block; font-size: 10px; letter-spacing: 0.04em; }\n.home-widget .wstate::before { content: \"● \"; }\n.home-widget .wstate-offline { color: var(--home-error); }\n.home-widget .wstate-unavailable { color: #f5b945; }\n.home-widget .hd .hd-stale { color: #f5b945; letter-spacing: 0.1em; opacity: 0.8; }\n\n/* ── hover controls (contextual chrome, rest mode only) ──\n * Reusable floating control rendered inside a widget body. Hidden by default,\n * fades in while hovering the widget, and fully suppressed in edit mode so it\n * never fights drag/resize. Widgets opt in by rendering <HoverCtl>/<HoverArrows>. */\n.hover-ctl {\n  /* Sits IN the header row: same top as the widget padding, same height as .hd,\n   * right-aligned at the end of the header rule. No chip: bare glyphs, like the rest. */\n  position: absolute;\n  top: 10px;\n  right: 12px;\n  height: 16px;\n  z-index: 4;\n  display: flex;\n  align-items: center;\n  gap: 6px;\n  white-space: nowrap;\n  opacity: 0;\n  pointer-events: none;\n  transition: opacity 0.16s ease;\n}\n/* Visible only while the pointer is over the widget. Keyboard users still get them\n * (:focus-visible), but a mouse click no longer leaves them stuck on screen. */\n.home-widget:hover .hover-ctl,\n.hover-ctl:has(:focus-visible) { opacity: 1; pointer-events: auto; }\n/* While the controls show, the header rule stops short of them... */\n.home-widget:hover .hd::after,\n.home-widget:has(.hover-ctl :focus-visible) .hd::after {\n  margin-right: calc(var(--ctl-w, 0px) + 10px);\n}\n/* ...and when the widget is too narrow for title + controls, the title steps aside. */\n.home-widget[data-ctl-tight]:hover .hd .hd-t,\n.home-widget[data-ctl-tight]:hover .hd::before { opacity: 0; }\n.home-widget .hd .hd-t,\n.home-widget .hd::before,\n.home-widget .hd::after { transition: opacity 0.16s ease, margin-right 0.16s ease; }\n/* Multi-row controls (Pomodoro steppers) don't fit the header: they sit below it. */\n.hover-ctl.pomo-set { top: 30px; height: auto; }\n.home-root.editing .hover-ctl { display: none; }\n@media (hover: none) {\n  /* Touch: no hover, so keep controls reachable but understated. */\n  .hover-ctl { opacity: 0.5; pointer-events: auto; }\n}\n\n.hv-arrow {\n  background: none;\n  border: none;\n  cursor: pointer;\n  padding: 0 3px;\n  color: var(--home-accent-dim);\n  font-size: 14px;\n  line-height: 1;\n  font-family: inherit;\n}\n.hv-arrow:hover:not(:disabled) { color: var(--home-accent); }\n.hv-arrow:disabled { opacity: 0.3; cursor: default; }\n.hv-label {\n  font-size: 9px;\n  letter-spacing: 0.1em;\n  text-transform: uppercase;\n  color: var(--home-accent-dim);\n  white-space: nowrap;\n}\n.hv-label-btn {\n  background: none;\n  border: none;\n  cursor: pointer;\n  font: inherit;\n  letter-spacing: 0.1em;\n  padding: 0;\n}\n.hv-label-btn:hover { color: var(--home-accent); }\n\n/* Toggle/option buttons inside a hover control (clock format, host view…). */\n.hv-opt {\n  background: none;\n  border: none;\n  cursor: pointer;\n  font: inherit;\n  font-size: 9px;\n  letter-spacing: 0.08em;\n  text-transform: uppercase;\n  color: var(--home-accent-dim);\n  padding: 0 4px;\n  border-radius: 4px;\n}\n.hv-opt:hover { color: var(--home-accent); }\n.hv-opt.on { color: #000; background: var(--home-accent); }\n\n/* Extra detail that smoothly expands on widget hover (rest mode only). Uses\n * the 0fr→1fr grid trick so it animates real height without a fixed value. */\n.hover-reveal {\n  display: grid;\n  grid-template-rows: 0fr;\n  opacity: 0;\n  transition: grid-template-rows 0.25s ease, opacity 0.2s ease, margin-top 0.25s ease;\n}\n.home-widget:hover .hover-reveal { grid-template-rows: 1fr; opacity: 1; margin-top: 4px; }\n.home-root.editing .hover-reveal { grid-template-rows: 0fr; opacity: 0; margin-top: 0; }\n.hover-reveal > * { overflow: hidden; min-height: 0; }\n\n.home-ghost {\n  position: absolute;\n  border: 1.5px dashed color-mix(in srgb, var(--home-accent) 70%, transparent);\n  border-radius: 8px;\n  background: color-mix(in srgb, var(--home-accent) 7%, transparent);\n  display: none;\n  z-index: 5;\n  pointer-events: none;\n  transition: left 0.18s ease, top 0.18s ease, width 0.18s ease, height 0.18s ease;\n}\n.home-ghost.visible { display: block; }\n.home-ghost.swap {\n  border-color: rgb(45 212 191 / 0.85);\n  background: rgb(45 212 191 / 0.08);\n}\n\n/* ── widget content primitives (responsive to the widget's own size) ── */\n.home-widget .rows { column-gap: 18px; }\n@container (min-width: 380px) {\n  .home-widget .rows { columns: 2; column-rule: 1px solid rgb(255 255 255 / 0.06); }\n}\n@container (min-width: 600px) {\n  .home-widget .rows { columns: 3; }\n}\n.home-widget .row {\n  display: flex;\n  justify-content: space-between;\n  gap: 6px;\n  padding: 1px 0;\n  border-bottom: 1px solid rgb(255 255 255 / 0.04);\n  break-inside: avoid;\n}\n.home-widget .row:last-child { border-bottom: none; }\n/* Names flex and ellipsize at the real column width instead of a fixed\n * character slice that cut words mid-glyph (\"bitacoras-guayab\"). */\n.home-widget .row > * { flex: none; }\n.home-widget .row > .row-name {\n  flex: 1 1 auto;\n  min-width: 0;\n  overflow: hidden;\n  white-space: nowrap;\n  text-overflow: ellipsis;\n}\n\n.home-widget .meters { column-gap: 18px; }\n@container (min-width: 380px) {\n  .home-widget .meters { columns: 2; }\n}\n.home-widget .meter {\n  display: flex;\n  align-items: center;\n  gap: 6px;\n  margin: 3px 0;\n  break-inside: avoid;\n}\n.home-widget .meter .lbl { width: 34px; color: var(--color-muted-foreground, #7d8496); font-size: 10px; }\n.home-widget .meter .track {\n  flex: 1;\n  height: 7px;\n  border-radius: 2px;\n  background: rgb(255 255 255 / 0.07);\n  overflow: hidden;\n}\n.home-widget .meter .fill {\n  height: 100%;\n  background: linear-gradient(90deg, var(--home-accent-dim), var(--home-accent));\n  transition: width 0.6s ease;\n}\n.home-widget .meter .val { width: 44px; text-align: right; font-size: 10px; }\n\n.home-widget .ok { color: var(--home-accent); }\n.home-widget .dim { color: var(--color-muted-foreground, #6b7387); }\n.home-widget .bigval {\n  font-size: min(9cqw, 18cqh);\n  font-weight: 700;\n  color: var(--home-accent);\n}\n\n.home-clock-wrap {\n  display: flex;\n  flex-direction: column;\n  align-items: center;\n  justify-content: center;\n  height: calc(100% - 18px);\n}\n.home-clock {\n  font-size: min(26cqw, 52cqh);\n  font-weight: 800;\n  color: var(--home-accent);\n  letter-spacing: 0.02em;\n  text-shadow: 0 0 24px color-mix(in srgb, var(--home-accent) 35%, transparent);\n  line-height: 1;\n}\n.home-clock-ampm {\n  font-size: 0.32em;\n  vertical-align: 0.9em;\n  margin-left: 0.2em;\n  letter-spacing: 0.05em;\n  color: var(--home-accent-dim);\n}\n.home-clock-sub {\n  color: var(--home-accent-dim);\n  font-size: max(9px, min(3.4cqw, 8cqh));\n  letter-spacing: 0.14em;\n  text-transform: uppercase;\n  margin-top: 1cqh;\n}\n\n.home-ascii-wrap {\n  display: flex;\n  flex-direction: column;\n  align-items: center;\n  justify-content: center;\n  height: calc(100% - 18px);\n}\n.home-ascii {\n  font-size: min(5.6cqw, 5.4cqh);\n  line-height: 1.05;\n  white-space: pre;\n  text-align: center;\n  background: linear-gradient(\n    180deg,\n    var(--home-accent-dim),\n    var(--home-accent) 40%,\n    var(--home-accent) 60%,\n    var(--home-accent-dim)\n  );\n  -webkit-background-clip: text;\n  background-clip: text;\n  color: transparent;\n  filter: drop-shadow(0 0 10px color-mix(in srgb, var(--home-accent) 25%, transparent));\n}\n.home-ascii-caduceus {\n  transform: scaleX(0.88);\n  transform-origin: center;\n}\n.home-ascii-ver {\n  text-align: center;\n  color: var(--home-accent-soft);\n  font-size: max(8px, min(2.6cqw, 5cqh));\n  letter-spacing: 0.22em;\n  margin-top: 1.5cqh;\n}\n\n.home-spark {\n  display: flex;\n  align-items: flex-end;\n  gap: 2px;\n  height: max(18px, 22cqh);\n  margin: 6px 0 4px;\n}\n.home-spark i {\n  flex: 1;\n  background: linear-gradient(180deg, var(--home-accent), var(--home-accent-dim));\n  border-radius: 1px 1px 0 0;\n  opacity: 0.85;\n  transition: height 0.6s ease, opacity 0.15s ease;\n  cursor: default;\n}\n.home-spark i:hover { opacity: 1; }\n\n/* Hover tooltip over a bar (tokens widget). Anchored to the bar via inline\n * `left` + `translateX`, which clamps it inside the clipped widget; the appear/\n * disappear slide+fade runs on the independent `translate` property so it never\n * fights the positioning transform. */\n.home-spark-wrap { position: relative; }\n.home-spark-tip {\n  position: absolute;\n  bottom: 100%;\n  margin-bottom: 6px;\n  padding: 3px 7px;\n  border-radius: 6px;\n  background: color-mix(in srgb, var(--home-accent) 10%, rgb(8 8 12 / 0.96));\n  border: 1px solid var(--home-border);\n  color: rgb(236 236 242);\n  font-size: 10px;\n  line-height: 1.3;\n  white-space: nowrap;\n  pointer-events: none;\n  opacity: 0;\n  translate: 0 4px;\n  transition: opacity 0.18s ease, translate 0.18s ease, transform 0.18s ease;\n  z-index: 6;\n}\n.home-spark-tip.show { opacity: 1; translate: 0 0; }\n.home-spark-tip b { color: var(--home-accent); font-weight: 600; }\n\n/* Line/area chart (tokens widget, alternative to the bars). Stretched to fill\n * via preserveAspectRatio=none; the stroke stays crisp with non-scaling-stroke. */\n.home-area {\n  display: block;\n  width: 100%;\n  height: max(18px, 22cqh);\n  margin: 6px 0 4px;\n  overflow: visible;\n}\n.home-area rect { cursor: default; }\n\n/* Host graphs view: four live sparklines (cpu / ram / load / proc) in a 2×2\n * grid over a rolling one-minute window. Fills the widget below the header\n * (same absolute pattern as the canvas widgets); cells reuse .home-area but\n * stretch to their cell height instead of the tokens widget's fixed band. */\n.host-sparks {\n  position: absolute;\n  inset: 30px 12px 10px;\n  display: grid;\n  grid-template-columns: 1fr 1fr;\n  grid-template-rows: 1fr 1fr;\n  gap: 4px 12px;\n  min-height: 0;\n}\n.host-spark {\n  display: flex;\n  flex-direction: column;\n  min-height: 0;\n  min-width: 0;\n}\n.host-spark-head {\n  display: flex;\n  justify-content: space-between;\n  align-items: baseline;\n  font-size: max(8px, min(3.2cqw, 6cqh));\n  letter-spacing: 0.14em;\n  text-transform: uppercase;\n}\n.host-spark-head .val {\n  font-variant-numeric: tabular-nums;\n  color: var(--home-accent);\n}\n.host-spark .home-area {\n  flex: 1;\n  height: auto;\n  min-height: 12px;\n  margin: 2px 0 0;\n}\n\n/* Small vertical divider between the range arrows and the toggles. */\n.tok-div {\n  width: 1px;\n  align-self: stretch;\n  margin: 2px 2px;\n  background: var(--home-border);\n}\n\n/* Totals line, regrouped: each label sticks to its value, groups spaced evenly\n * (the old `.row` space-between scattered the six tokens across the full width). */\n.tok-stats {\n  display: flex;\n  flex-wrap: wrap;\n  gap: 2px 14px;\n  padding: 3px 0 1px;\n  font-variant-numeric: tabular-nums;\n}\n.tok-stats > span { white-space: nowrap; }\n.tok-stats .dim { margin-right: 2px; }\n\n/* Grouped usage (tokens widget, by provider / by model): one row per group\n * with a faint share bar behind it, width = --share of the grouped total. */\n.tok-groups { padding-top: 3px; font-variant-numeric: tabular-nums; }\n.home-widget .row.tok-group {\n  background: linear-gradient(\n    90deg,\n    color-mix(in srgb, var(--home-accent) 16%, transparent) var(--share, 0%),\n    transparent var(--share, 0%)\n  );\n  border-radius: 2px;\n  padding-left: 3px;\n}\n.tok-share { min-width: 3ch; text-align: right; }\n.tok-group-note,\n.tok-group-more { font-size: 9.5px; padding-top: 1px; }\n\n/* ── spend widget ── */\n.home-spend { font-variant-numeric: tabular-nums; }\n.spend-head { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\n.spend-est {\n  margin-left: 6px;\n  padding: 0 4px;\n  border: 1px solid var(--home-border);\n  border-radius: 3px;\n  font-size: 9px;\n  letter-spacing: 0.06em;\n  color: var(--color-muted-foreground, #6b7387);\n  vertical-align: 2px;\n}\n.spend-providers { padding-top: 2px; }\n.spend-covered {\n  margin-top: 4px;\n  padding: 2px 0 2px 6px;\n  border-left: 2px solid color-mix(in srgb, var(--home-accent) 35%, transparent);\n  color: var(--home-accent-soft, var(--home-accent));\n}\n.spend-covered > div { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\n.spend-month {\n  margin-top: 4px;\n  padding-top: 3px;\n  border-top: 1px solid rgb(255 255 255 / 0.06);\n}\n.spend-month .spend-flag { white-space: nowrap; }\n.spend-top-head {\n  font-size: 9.5px;\n  letter-spacing: 0.12em;\n  text-transform: uppercase;\n  padding: 2px 0 1px;\n}\n.spend-month.spend-near .spend-flag,\n.spend-month.spend-pace .spend-flag { color: color-mix(in srgb, var(--home-accent) 50%, var(--home-error)); }\n.spend-month.spend-over,\n.spend-month.spend-over .spend-flag { color: var(--home-error); }\n.spend-top { margin-top: 3px; }\n.home-widget .row.spend-session { cursor: pointer; border-radius: 2px; }\n.home-widget .row.spend-session:hover { background: color-mix(in srgb, var(--home-accent) 10%, transparent); }\n.home-widget .row.spend-session:hover .row-name { color: var(--home-accent); }\n.home-root.editing .home-widget .row.spend-session { cursor: inherit; }\n.spend-tag {\n  font-size: 9px;\n  letter-spacing: 0.06em;\n  text-transform: uppercase;\n  color: var(--color-muted-foreground, #6b7387);\n  align-self: center;\n}\n.spend-tag-metered { color: var(--home-accent); }\n.spend-cost { min-width: 6ch; text-align: right; }\n.spend-foot { display: flex; flex-wrap: wrap; gap: 0 10px; font-size: 9.5px; padding-top: 2px; }\n.spend-cap-val { min-width: 4ch; text-align: center; color: var(--home-accent); }\n\n/* Sessions widget: per-row token count (shown while sorting/filtering by it). */\n.ses-tok { font-variant-numeric: tabular-nums; color: var(--home-accent-soft); }\n\n/* ── logs widget (per-file record list) ── */\n.logs-sub {\n  display: flex;\n  justify-content: space-between;\n  align-items: baseline;\n  gap: 8px;\n}\n.logs-file {\n  font-size: 11px;\n  font-weight: 600;\n  letter-spacing: 0.06em;\n  color: var(--home-accent);\n}\n/* The wrapper owns the widget's remaining height so the list scrolls inside it\n * instead of growing past the bottom edge (the old calc() resolved against an\n * auto-height parent and never clamped). */\n.home-logs-wrap {\n  display: flex;\n  flex-direction: column;\n  height: calc(100% - 21px);\n  min-height: 0;\n}\n.home-logs {\n  display: flex;\n  flex-direction: column;\n  gap: 1px;\n  flex: 1 1 0;\n  min-height: 0;\n  overflow-y: auto;\n  margin-top: 3px;\n  /* Rows that don't fit fade out instead of being sliced by the edge. */\n  mask-image: linear-gradient(180deg, #000 calc(100% - 14px), transparent);\n}\n.log-row {\n  display: flex;\n  gap: 6px;\n  align-items: baseline;\n  padding: 1px 0;\n  border-bottom: 1px solid rgb(255 255 255 / 0.04);\n  cursor: default;\n}\n.log-row:last-child { border-bottom: none; }\n.log-lvl {\n  flex: none;\n  width: 32px;\n  font-size: 9px;\n  font-weight: 600;\n  letter-spacing: 0.03em;\n}\n.log-lvl.lvl-error { color: var(--home-error); }\n.log-lvl.lvl-warn { color: #f5b945; }\n.log-lvl.lvl-info { color: var(--color-muted-foreground, #6b7387); }\n.log-time {\n  flex: none;\n  font-size: 9px;\n  color: var(--color-muted-foreground, #6b7387);\n  font-variant-numeric: tabular-nums;\n}\n.log-msg {\n  flex: 1;\n  min-width: 0;\n  font-size: 10px;\n  white-space: nowrap;\n  overflow: hidden;\n  text-overflow: ellipsis;\n}\n\n.home-matrix-c {\n  position: absolute;\n  inset: 0;\n  top: 24px;\n  width: 100%;\n  height: calc(100% - 24px);\n}\n\n/* ── notes widget ── */\n.home-notes { display: flex; flex-direction: column; gap: 1px; height: calc(100% - 18px); overflow-y: auto; }\n.home-notes .note-row {\n  display: flex;\n  align-items: baseline;\n  gap: 7px;\n  padding: 1px 0;\n  border-bottom: 1px solid rgb(255 255 255 / 0.04);\n}\n.home-notes .note-mark {\n  cursor: pointer;\n  width: 12px;\n  text-align: center;\n  color: var(--home-accent);\n  flex-shrink: 0;\n}\n.home-notes .note-mark.done { color: var(--color-muted-foreground, #6b7387); }\n.home-notes .note-text { cursor: text; flex: 1; min-width: 0; overflow-wrap: anywhere; }\n.home-notes .note-text.done {\n  text-decoration: line-through;\n  color: var(--color-muted-foreground, #6b7387);\n}\n.home-notes .note-input {\n  flex: 1;\n  min-width: 0;\n  background: none;\n  border: none;\n  border-bottom: 1px dashed var(--home-border);\n  outline: none;\n  color: inherit;\n  font: inherit;\n  padding: 0;\n}\n.home-notes .note-add {\n  align-self: flex-start;\n  margin-top: 4px;\n  background: none;\n  border: none;\n  cursor: pointer;\n  color: var(--home-accent-dim);\n  font-size: 14px;\n  line-height: 1;\n  padding: 2px 6px 2px 2px;\n}\n.home-notes .note-add:hover { color: var(--home-accent); }\n\n/* ── canvas widgets (heartbeat, life) ── */\n.home-canvas {\n  position: absolute;\n  inset: 0;\n  top: 24px;\n  width: 100%;\n  height: calc(100% - 24px);\n}\n/* Life is drawable in rest mode — signal it with a crosshair. */\n.home-root:not(.editing) .home-life { cursor: crosshair; }\n\n/* ── moon ── */\n.home-moon-wrap {\n  display: flex;\n  flex-direction: column;\n  align-items: center;\n  height: calc(100% - 18px);\n}\n.home-moon-c { flex: 1; width: 100%; min-height: 0; }\n.home-moon-label {\n  color: var(--home-accent-dim);\n  font-size: max(8px, min(3cqw, 6cqh));\n  letter-spacing: 0.14em;\n  text-transform: uppercase;\n}\n\n/* ── pomodoro / countdown ── */\n.home-pomo .home-clock,\n.home-count .home-clock { cursor: pointer; }\n.home-pomo .home-clock.paused { opacity: 0.55; }\n.home-pomo .pomo-sub { cursor: pointer; }\n.home-count .count-label { cursor: pointer; }\n.home-count .count-input,\n.home-pomo .count-input { max-width: 92%; text-align: center; color-scheme: dark; }\n\n/* ── countdown segment editor (alarm-style spinners) ── */\n.count-edit {\n  display: flex;\n  flex-direction: column;\n  align-items: center;\n  justify-content: center;\n  gap: 3px;\n  height: calc(100% - 18px);\n}\n.count-edit-row { display: flex; align-items: center; gap: 5px; }\n.count-seg { display: flex; flex-direction: column; align-items: center; }\n.count-seg .seg-btn {\n  background: none;\n  border: none;\n  cursor: pointer;\n  padding: 0;\n  line-height: 0.6;\n  font-size: 8px;\n  color: var(--home-accent-dim);\n}\n.count-seg .seg-btn:hover { color: var(--home-accent); }\n.count-seg .seg-val {\n  background: none;\n  border: none;\n  outline: none;\n  text-align: center;\n  color: var(--home-accent);\n  font: inherit;\n  font-weight: 800;\n  font-size: max(12px, min(7cqw, 15cqh));\n  padding: 1px 0;\n  border-bottom: 1px solid transparent;\n  letter-spacing: 0.02em;\n}\n.count-seg input.seg-val:focus { border-bottom-color: var(--home-accent); }\n.count-seg .seg-static { cursor: default; }\n.count-colon {\n  font-weight: 800;\n  color: var(--home-accent-dim);\n  font-size: max(12px, min(7cqw, 15cqh));\n}\n.count-done {\n  margin-top: 3px;\n  background: none;\n  border: 1px solid var(--home-border);\n  border-radius: 6px;\n  color: var(--home-accent);\n  cursor: pointer;\n  font: inherit;\n  font-size: 10px;\n  letter-spacing: 0.08em;\n  text-transform: uppercase;\n  padding: 2px 12px;\n}\n.count-done:hover { border-color: var(--home-accent); }\n.home-pomo .pomo-min {\n  font-size: min(20cqw, 40cqh);\n  font-weight: 800;\n  color: var(--home-accent);\n  max-width: 70%;\n}\n/* Hover steppers for the pomodoro work/break lengths. */\n.hover-ctl.pomo-set { flex-direction: column; align-items: flex-end; gap: 1px; }\n.pomo-stepper { display: flex; align-items: center; gap: 3px; }\n.pomo-stepper .hv-label:nth-child(3) { min-width: 16px; text-align: center; color: var(--home-accent); }\n\n/* ── calendar ── */\n.home-cal { height: calc(100% - 18px); display: flex; flex-direction: column; }\n.home-cal-month {\n  text-align: center;\n  color: var(--home-accent-dim);\n  font-size: max(9px, min(3.2cqw, 7cqh));\n  letter-spacing: 0.14em;\n  text-transform: uppercase;\n  margin-bottom: 4px;\n}\n.home-cal-grid {\n  flex: 1;\n  display: grid;\n  grid-template-columns: repeat(7, 1fr);\n  align-content: space-evenly;\n  justify-items: center;\n  font-size: max(8px, min(3cqw, 6.5cqh));\n}\n.home-cal-h { color: var(--color-muted-foreground, #6b7387); }\n.home-cal-d { color: var(--color-foreground, #d8dce6); opacity: 0.75; }\n.home-cal-today {\n  color: #000;\n  background: var(--home-accent);\n  border-radius: 4px;\n  padding: 0 4px;\n  font-weight: 700;\n}\n/* Density tiers, chosen from the widget's cell width (see CalendarWidget). */\n.home-cal.tier-mini .home-cal-month {\n  font-size: max(8px, min(4cqw, 8cqh));\n  margin-bottom: 2px;\n}\n.home-cal.tier-mini .home-cal-grid { font-size: max(9px, min(4cqw, 8cqh)); }\n.home-cal.tier-large .home-cal-month {\n  font-size: max(11px, min(3cqw, 7cqh));\n  margin-bottom: 7px;\n}\n.home-cal.tier-large .home-cal-grid { row-gap: 3px; }\n.home-cal.tier-large .home-cal-h { font-weight: 700; opacity: 0.8; }\n.home-cal.tier-large .home-cal-today { padding: 1px 6px; }\n\n/* ── page chrome ── */\n/* Edit affordance lives BELOW the grid, centered. It fades in once the user\n * starts scrolling down (or immediately when the grid is short enough that\n * there's nothing to scroll), keeping the home clean on first paint. While\n * editing it sticks to the bottom of the viewport so it stays reachable. */\n.home-editbar {\n  display: flex;\n  justify-content: center;\n  gap: 10px;\n  padding: 22px 12px 30px;\n  opacity: 0;\n  transition: opacity 0.25s ease;\n  pointer-events: none;\n}\n.home-editbar.visible {\n  opacity: 1;\n  pointer-events: auto;\n}\n.home-root.editing .home-editbar {\n  position: sticky;\n  bottom: 0;\n}\n.home-fab {\n  position: relative;\n  width: 38px;\n  height: 38px;\n  border-radius: 50%;\n  display: flex;\n  align-items: center;\n  justify-content: center;\n  font-size: 15px;\n  cursor: pointer;\n  color: var(--home-accent);\n  background: var(--home-surface);\n  border: 1px solid var(--home-border);\n  backdrop-filter: blur(12px);\n  -webkit-backdrop-filter: blur(12px);\n  transition:\n    border-color 0.25s ease,\n    background 0.35s ease,\n    box-shadow 0.45s ease,\n    transform 0.4s cubic-bezier(0.34, 1.4, 0.64, 1);\n}\n.home-fab:hover {\n  border-color: var(--home-accent);\n  transform: scale(1.06);\n}\n.home-fab:active { transform: scale(0.94); }\n.home-fab.active {\n  background: color-mix(in srgb, var(--home-accent) 22%, transparent);\n  /* Warm Hermes glow ring when edit mode engages. */\n  animation: home-fab-glow 0.55s ease-out;\n}\n\n/* Crossfading edit ✎ ↔ done ✓ glyphs — each rotates and scales through the\n * swap with a gentle overshoot, matching the dashboard's soft motion. */\n.home-fab-ico {\n  position: absolute;\n  inset: 0;\n  display: flex;\n  align-items: center;\n  justify-content: center;\n  transition:\n    opacity 0.3s ease,\n    transform 0.45s cubic-bezier(0.34, 1.45, 0.64, 1);\n}\n.ico-edit { opacity: 1; transform: rotate(0) scale(1); }\n.ico-done { opacity: 0; transform: rotate(-120deg) scale(0.3); }\n.home-fab.active .ico-edit { opacity: 0; transform: rotate(120deg) scale(0.3); }\n.home-fab.active .ico-done { opacity: 1; transform: rotate(0) scale(1); }\n\n.home-fab-spin {\n  display: inline-block;\n  animation: home-fab-spin-in 0.5s cubic-bezier(0.34, 1.4, 0.64, 1);\n}\n\n/* The restore-default button slides up into place, like the dashboard's\n * dialog-in entrance. */\n.home-fab-enter {\n  animation: home-fab-enter 0.32s cubic-bezier(0.34, 1.3, 0.64, 1);\n}\n\n@keyframes home-fab-glow {\n  0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--home-accent) 55%, transparent); }\n  100% { box-shadow: 0 0 0 13px transparent; }\n}\n@keyframes home-fab-spin-in {\n  from { transform: rotate(-150deg); opacity: 0.3; }\n  to   { transform: rotate(0); opacity: 1; }\n}\n@keyframes home-fab-enter {\n  from { opacity: 0; transform: translateY(6px) scale(0.9); }\n  to   { opacity: 1; transform: translateY(0) scale(1); }\n}\n\n@media (prefers-reduced-motion: reduce) {\n  .home-fab,\n  .home-fab-ico,\n  .home-fab-spin,\n  .home-fab-enter { animation: none; transition: opacity 0.2s ease; }\n}\n\n/* ── toast (plugin-local; the host toast isn't exposed in the SDK) ── */\n.home-toast {\n  position: fixed;\n  bottom: 18px;\n  left: 50%;\n  transform: translateX(-50%);\n  z-index: 80;\n  padding: 8px 16px;\n  border-radius: 8px;\n  font-size: 12px;\n  color: var(--home-error, #e25555);\n  background: var(--home-surface);\n  border: 1px solid var(--home-error, #e25555);\n  backdrop-filter: blur(12px);\n  -webkit-backdrop-filter: blur(12px);\n  box-shadow: 0 8px 24px rgb(0 0 0 / 0.45);\n  animation: home-toast-in 0.25s ease;\n}\n@keyframes home-toast-in {\n  from { opacity: 0; transform: translateX(-50%) translateY(8px); }\n  to { opacity: 1; transform: translateX(-50%) translateY(0); }\n}\n\n/* Catalog reveal: the wrapper animates its row track 0fr → 1fr so the panel\n * grows/collapses its real height smoothly (no grid jump), with a matching\n * fade. Kept mounted so the exit animates too. */\n.home-catalog-wrap {\n  display: grid;\n  grid-template-rows: 0fr;\n  margin: 0 12px;\n  opacity: 0;\n  pointer-events: none;\n  transition:\n    grid-template-rows 0.34s cubic-bezier(0.34, 1.2, 0.64, 1),\n    opacity 0.28s ease,\n    margin-bottom 0.34s ease;\n}\n.home-catalog-wrap.open {\n  grid-template-rows: 1fr;\n  opacity: 1;\n  pointer-events: auto;\n  margin-bottom: 8px;\n}\n.home-catalog {\n  overflow: hidden;\n  min-height: 0;\n  border-radius: 8px;\n  background: var(--home-surface);\n  border: 1px solid var(--home-border);\n  backdrop-filter: blur(12px);\n  -webkit-backdrop-filter: blur(12px);\n  transition: border-color 0.2s ease, background 0.2s ease;\n}\n/* Highlighted as a delete target while a widget is dragged over it. */\n.home-catalog-wrap.trash-active .home-catalog {\n  border-color: var(--home-error);\n  border-style: dashed;\n  background: color-mix(in srgb, var(--home-error) 10%, var(--home-surface));\n}\n.home-catalog-inner {\n  display: flex;\n  flex-wrap: wrap;\n  align-items: center;\n  gap: 8px;\n  padding: 10px;\n}\n.home-catalog-hint {\n  font-size: 10px;\n  letter-spacing: 0.04em;\n  color: var(--color-muted-foreground, #6b7387);\n  margin-right: 4px;\n}\n.home-catalog-wrap.trash-active .home-catalog-hint { color: var(--home-error); }\n.home-catalog-chip { touch-action: none; }\n.home-catalog-chip {\n  font-family: inherit;\n  font-size: 11px;\n  padding: 4px 10px;\n  border-radius: 6px;\n  cursor: pointer;\n  background: none;\n  border: 1px dashed var(--home-border);\n  color: var(--color-foreground, #d8dce6);\n  transition: border-color 0.2s ease, color 0.2s ease, transform 0.2s ease;\n}\n.home-catalog-chip:hover {\n  border-color: var(--home-accent);\n  color: var(--home-accent);\n  transform: translateY(-1px);\n}\n.home-catalog-chip:active { transform: scale(0.95); }\n.home-catalog .empty { color: var(--color-muted-foreground, #6b7387); font-size: 11px; }\n\n@media (prefers-reduced-motion: reduce) {\n  .home-catalog-wrap { transition: opacity 0.2s ease; }\n}\n\n/* ── Agent widget (the eye) ─────────────────────────────────────────── */\n\n.home-agent {\n  display: flex;\n  flex-direction: column;\n  gap: 6px;\n  /* The .hd header sits above in the same content box (same as the other\n   * widgets' calc) — 100% pushed the stats row 8px past the bottom edge. */\n  height: calc(100% - 21px);\n  min-height: 0;\n  overflow: hidden;\n  font-size: 11px;\n  box-sizing: border-box;\n}\n\n/* The animated scene owns the leftover space and centers its content\n * vertically; head/stats/history are fixed rows that never move or\n * overflow. flex-basis: 0 — the scene shrinks to zero before the fixed\n * rows are ever pushed out. */\n.home-agent-scene {\n  flex: 1 1 0;\n  min-height: 0;\n  display: flex;\n  align-items: center;\n  overflow: hidden;\n}\n\n.home-agent-head {\n  display: flex;\n  align-items: center;\n  gap: 6px;\n  flex-wrap: wrap;\n  min-height: 18px;\n  flex: none;\n}\n\n.home-agent-dot {\n  width: 8px;\n  height: 8px;\n  border-radius: 50%;\n  background: var(--home-accent);\n  opacity: 0.45;\n  flex: none;\n  box-shadow: 0 0 6px var(--home-accent);\n}\n.home-agent-dot.busy {\n  opacity: 1;\n  animation: home-agent-pulse 1.2s ease-in-out infinite;\n}\n@keyframes home-agent-pulse {\n  0%, 100% { opacity: 1; transform: scale(1); }\n  50% { opacity: 0.35; transform: scale(0.8); }\n}\n\n.home-agent-status {\n  text-transform: uppercase;\n  letter-spacing: 0.08em;\n  font-size: 10px;\n  color: var(--color-foreground, #d8dce6);\n}\n\n.home-agent-take {\n  background: none;\n  border: none;\n  cursor: pointer;\n  font-family: inherit;\n  font-size: 9px;\n  letter-spacing: 0.08em;\n  text-transform: uppercase;\n  color: var(--home-accent-dim);\n  display: inline-flex;\n  align-items: center;\n  gap: 5px;\n  padding: 1px 5px;\n  border-radius: 4px;\n  white-space: nowrap;\n}\n.home-agent-take:hover { color: var(--home-accent); background: color-mix(in srgb, var(--home-accent) 10%, transparent); }\n.home-agent-take:active { transform: scale(0.95); }\n\n/* Play triangle, pure CSS — no emoji. */\n.home-agent-take-ico {\n  width: 0;\n  height: 0;\n  border-left: 4.5px solid currentColor;\n  border-top: 3px solid transparent;\n  border-bottom: 3px solid transparent;\n}\n\n.home-agent-line {\n  overflow: hidden;\n  text-overflow: ellipsis;\n  white-space: nowrap;\n  min-width: 0;\n}\n\n.home-agent-toolbox {\n  display: flex;\n  gap: 6px;\n  align-items: baseline;\n}\n.home-agent-k {\n  color: var(--home-accent);\n  flex: none;\n}\n.home-agent-dim { color: var(--color-muted-foreground, #6b7387); }\n\n.home-agent-msg {\n  color: var(--color-muted-foreground, #8b93a7);\n  font-style: italic;\n  max-height: 42px;\n  white-space: normal;\n  overflow: hidden;\n  display: -webkit-box;\n  -webkit-line-clamp: 2;\n  -webkit-box-orient: vertical;\n}\n\n.home-agent-stats {\n  display: flex;\n  gap: 10px;\n  flex-wrap: wrap;\n  font-size: 10px;\n  color: var(--color-foreground, #d8dce6);\n  border-top: 1px solid var(--home-border);\n  padding-top: 5px;\n  /* Shrinkable last: the scene compresses first (flex-basis 0), then this\n     row and the history may compress instead of overflowing the widget. */\n  flex: 0 1 auto;\n  min-height: 0;\n  overflow: hidden;\n}\n.home-agent-stats span {\n  white-space: nowrap;\n  overflow: hidden;\n  text-overflow: ellipsis;\n  min-width: 0;\n}\n.home-agent-stats i {\n  font-style: normal;\n  color: var(--color-muted-foreground, #6b7387);\n  font-size: 9px;\n}\n\n.home-agent-history {\n  display: flex;\n  flex-wrap: wrap;\n  gap: 4px 10px;\n  max-height: 40px;\n  overflow: hidden;\n  flex: 0 1 auto;\n  min-height: 0;\n}\n.home-agent-hist {\n  font-size: 10px;\n  color: var(--color-muted-foreground, #8b93a7);\n  display: inline-flex;\n  gap: 4px;\n  align-items: center;\n}\n.home-agent-hist-dot {\n  width: 5px;\n  height: 5px;\n  border-radius: 50%;\n  flex: none;\n}\n.home-agent-hist-dot.ok { background: #2dd4bf; }\n.home-agent-hist-dot.bad { background: var(--home-error); }\n.home-agent-hist i {\n  font-style: normal;\n  font-size: 9px;\n  color: var(--color-muted-foreground, #6b7387);\n}\n\n/* ── Agent theater (take-control fullscreen) ───────────────────────── */\n\n.home-theater {\n  position: fixed;\n  inset: 0;\n  z-index: 1000;\n  background: color-mix(in srgb, var(--ui-editor-surface-background, rgb(8 8 12 / 1)) 92%, #000);\n  backdrop-filter: blur(18px);\n  -webkit-backdrop-filter: blur(18px);\n  display: flex;\n  flex-direction: column;\n  padding: 18px 22px 22px;\n  gap: 14px;\n  overflow: auto;\n  font-family: var(--theme-font-mono, ui-monospace, monospace);\n  color: var(--color-foreground, #d8dce6);\n  animation: home-theater-in 0.22s ease;\n}\n@keyframes home-theater-in {\n  from { opacity: 0; transform: scale(0.985); }\n  to { opacity: 1; transform: scale(1); }\n}\n\n.home-theater-head {\n  display: flex;\n  align-items: center;\n  gap: 10px;\n  border-bottom: 1px solid var(--home-border);\n  padding-bottom: 10px;\n  flex: none;\n}\n\n.home-theater-title {\n  font-size: 13px;\n  letter-spacing: 0.14em;\n  color: var(--home-accent);\n}\n\n.home-theater-sub {\n  font-size: 10px;\n  color: var(--color-muted-foreground, #6b7387);\n  text-transform: uppercase;\n  letter-spacing: 0.06em;\n}\n\n.home-theater-release {\n  margin-left: auto;\n  background: transparent;\n  border: 1px solid var(--home-border);\n  color: var(--color-foreground, #d8dce6);\n  border-radius: 6px;\n  font-size: 11px;\n  font-family: inherit;\n  padding: 4px 12px;\n  cursor: pointer;\n  transition: border-color 0.15s ease, color 0.15s ease;\n}\n.home-theater-release:hover {\n  border-color: var(--home-error);\n  color: var(--home-error);\n}\n\n.home-theater-grid {\n  display: grid;\n  grid-template-columns: repeat(12, 1fr);\n  gap: 12px;\n  flex: 1;\n  min-height: 0;\n  align-content: start;\n}\n.home-theater-span-5 { grid-column: span 5; }\n.home-theater-span-7 { grid-column: span 7; }\n.home-theater-span-12 { grid-column: span 12; }\n@media (max-width: 900px) {\n  .home-theater-span-5, .home-theater-span-7, .home-theater-span-12 { grid-column: span 12; }\n}\n\n.home-theater-panel {\n  background: var(--home-surface);\n  border: 1px solid var(--home-border);\n  border-radius: 10px;\n  padding: 12px 14px;\n  display: flex;\n  flex-direction: column;\n  gap: 8px;\n  min-height: 160px;\n  max-height: 420px;\n  overflow: hidden;\n  box-shadow: 0 10px 30px rgb(0 0 0 / 0.35);\n}\n\n.home-theater-panel-title {\n  font-size: 10px;\n  letter-spacing: 0.12em;\n  color: var(--color-muted-foreground, #6b7387);\n  display: flex;\n  align-items: center;\n  gap: 7px;\n  flex: none;\n  text-transform: uppercase;\n}\n.home-theater-dim {\n  color: var(--color-muted-foreground, #6b7387);\n  font-size: 10px;\n  font-style: italic;\n}\n\n/* NOW panel */\n.home-theater-current-tool {\n  display: flex;\n  flex-direction: column;\n  gap: 3px;\n  background: color-mix(in srgb, var(--home-accent) 8%, transparent);\n  border: 1px solid var(--home-border);\n  border-radius: 8px;\n  padding: 8px 10px;\n  flex: none;\n}\n.home-theater-ct-name {\n  color: var(--home-accent);\n  font-size: 12px;\n}\n.home-theater-ct-args {\n  font-size: 10px;\n  color: var(--color-muted-foreground, #8b93a7);\n  overflow: hidden;\n  text-overflow: ellipsis;\n  white-space: nowrap;\n}\n\n.home-theater-stream {\n  font-size: 11px;\n  line-height: 1.55;\n  color: var(--color-foreground, #d8dce6);\n  background: color-mix(in srgb, var(--home-accent) 4%, transparent);\n  border-left: 2px solid var(--home-accent);\n  padding: 6px 10px;\n  border-radius: 0 6px 6px 0;\n  max-height: 110px;\n  overflow: auto;\n  flex: none;\n  white-space: pre-wrap;\n  word-break: break-word;\n}\n\n.home-theater-feed {\n  flex: 1;\n  min-height: 0;\n  overflow: auto;\n  display: flex;\n  flex-direction: column;\n  gap: 2px;\n  font-size: 10.5px;\n}\n.home-theater-feed-row {\n  display: flex;\n  gap: 8px;\n  align-items: baseline;\n  padding: 1px 0;\n  border-bottom: 1px solid color-mix(in srgb, var(--home-border) 40%, transparent);\n  animation: home-feed-in 0.32s ease-out both;\n}\n.home-theater-feed-time {\n  color: var(--color-muted-foreground, #555d70);\n  flex: none;\n  font-size: 9.5px;\n}\n/* Kind dot, pure CSS — no emoji. */\n.home-theater-feed-kind {\n  flex: none;\n  width: 6px;\n  height: 6px;\n  border-radius: 50%;\n  align-self: center;\n}\n.home-theater-feed-kind.tool { background: var(--home-accent); }\n.home-theater-feed-kind.message { background: #2dd4bf; }\n.home-theater-feed-kind.subagent { background: #a78bfa; }\n.home-theater-feed-kind.system { background: var(--color-muted-foreground, #6b7387); }\n.home-theater-feed-kind.bad { background: var(--home-error); }\n.home-theater-feed-label {\n  color: var(--color-foreground, #d8dce6);\n  flex: none;\n}\n.home-theater-feed-detail {\n  color: var(--color-muted-foreground, #8b93a7);\n  overflow: hidden;\n  text-overflow: ellipsis;\n  white-space: nowrap;\n  min-width: 0;\n}\n\n.home-theater-foot {\n  display: flex;\n  gap: 14px;\n  font-size: 9.5px;\n  color: var(--color-muted-foreground, #555d70);\n  text-transform: uppercase;\n  letter-spacing: 0.06em;\n  flex: none;\n  border-top: 1px solid var(--home-border);\n  padding-top: 6px;\n}\n\n/* FUNCTION panel */\n.home-theater-fn-current {\n  background: color-mix(in srgb, var(--home-accent) 8%, transparent);\n  border: 1px solid var(--home-border);\n  border-radius: 8px;\n  padding: 8px 10px;\n  display: flex;\n  flex-direction: column;\n  gap: 6px;\n  flex: none;\n}\n.home-theater-fn-name {\n  display: flex;\n  align-items: center;\n  gap: 8px;\n  font-size: 12px;\n  color: var(--home-accent);\n}\n.home-theater-fn-dot {\n  width: 6px;\n  height: 6px;\n  border-radius: 50%;\n  flex: none;\n}\n.home-theater-fn-dot.running {\n  background: var(--home-accent);\n  animation: home-agent-pulse 1.2s ease-in-out infinite;\n}\n.home-theater-fn-dot.ok { background: #2dd4bf; }\n.home-theater-fn-dot.bad { background: var(--home-error); }\n.home-theater-fn-state {\n  margin-left: auto;\n  font-size: 9px;\n  text-transform: uppercase;\n  letter-spacing: 0.08em;\n  padding: 1px 8px;\n  border-radius: 20px;\n  border: 1px solid;\n}\n.home-theater-fn-state.running {\n  color: var(--home-accent);\n  border-color: var(--home-accent);\n}\n.home-theater-fn-args {\n  font-size: 10px;\n  color: var(--color-muted-foreground, #8b93a7);\n  white-space: pre-wrap;\n  word-break: break-word;\n  max-height: 120px;\n  overflow: auto;\n  margin: 0;\n  font-family: inherit;\n}\n\n.home-theater-fn-history {\n  flex: 1;\n  min-height: 0;\n  overflow: auto;\n  display: flex;\n  flex-direction: column;\n  gap: 2px;\n  font-size: 10.5px;\n}\n.home-theater-fn-row {\n  display: flex;\n  gap: 8px;\n  align-items: baseline;\n  border-bottom: 1px solid color-mix(in srgb, var(--home-border) 40%, transparent);\n  padding: 2px 0;\n}\n.home-theater-fn-hname { color: var(--color-foreground, #d8dce6); flex: none; }\n.home-theater-fn-hargs {\n  color: var(--color-muted-foreground, #8b93a7);\n  overflow: hidden;\n  text-overflow: ellipsis;\n  white-space: nowrap;\n  min-width: 0;\n}\n.home-theater-fn-hdur {\n  margin-left: auto;\n  color: var(--color-muted-foreground, #6b7387);\n  flex: none;\n  font-size: 9.5px;\n}\n\n/* TOKENS & COST panel */\n.home-theater-tok-grid {\n  display: grid;\n  grid-template-columns: repeat(2, 1fr);\n  gap: 8px;\n}\n.home-theater-tok-cell {\n  background: color-mix(in srgb, var(--home-accent) 5%, transparent);\n  border: 1px solid var(--home-border);\n  border-radius: 8px;\n  padding: 8px 10px;\n  display: flex;\n  flex-direction: column;\n  gap: 2px;\n  min-width: 0;\n  overflow: hidden;\n}\n.home-theater-tok-num {\n  font-size: 15px;\n  color: var(--color-foreground, #d8dce6);\n  white-space: nowrap;\n  overflow: hidden;\n  text-overflow: ellipsis;\n}\n.home-theater-tok-num.home-theater-money { color: var(--home-accent); }\n.home-theater-tok-lbl {\n  font-size: 9px;\n  text-transform: uppercase;\n  letter-spacing: 0.07em;\n  color: var(--color-muted-foreground, #6b7387);\n}\n\n.home-theater-tok-models {\n  display: flex;\n  flex-direction: column;\n  gap: 3px;\n  font-size: 10px;\n  border-top: 1px solid var(--home-border);\n  padding-top: 6px;\n}\n.home-theater-tok-model {\n  display: flex;\n  gap: 10px;\n  align-items: baseline;\n}\n.home-theater-tok-mname { color: var(--color-foreground, #d8dce6); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }\n.home-theater-tok-mtok { color: var(--color-muted-foreground, #8b93a7); margin-left: auto; }\n.home-theater-tok-mcost { color: var(--home-accent); flex: none; }\n\n.home-theater-tok-session {\n  border-top: 1px solid var(--home-border);\n  padding-top: 6px;\n  font-size: 10px;\n  display: flex;\n  flex-direction: column;\n  gap: 2px;\n  min-width: 0;\n}\n.home-theater-tok-slbl {\n  font-size: 9px;\n  text-transform: uppercase;\n  letter-spacing: 0.07em;\n  color: var(--color-muted-foreground, #6b7387);\n}\n.home-theater-tok-stitle {\n  overflow: hidden;\n  text-overflow: ellipsis;\n  white-space: nowrap;\n}\n.home-theater-tok-snum {\n  color: var(--color-muted-foreground, #8b93a7);\n  white-space: nowrap;\n  overflow: hidden;\n  text-overflow: ellipsis;\n}\n\n/* PROJECT panel */\n.home-theater-proj-session {\n  background: color-mix(in srgb, var(--home-accent) 5%, transparent);\n  border: 1px solid var(--home-border);\n  border-radius: 8px;\n  padding: 8px 10px;\n  display: flex;\n  flex-direction: column;\n  gap: 2px;\n}\n.home-theater-proj-title { font-size: 12px; color: var(--color-foreground, #d8dce6); }\n.home-theater-proj-meta {\n  font-size: 9.5px;\n  color: var(--color-muted-foreground, #6b7387);\n}\n\n.home-theater-proj-files {\n  flex: 1;\n  min-height: 0;\n  overflow: auto;\n  display: flex;\n  flex-direction: column;\n  gap: 2px;\n  font-size: 10.5px;\n}\n.home-theater-proj-file {\n  display: flex;\n  gap: 8px;\n  align-items: baseline;\n  border-bottom: 1px solid color-mix(in srgb, var(--home-border) 40%, transparent);\n  padding: 2px 0;\n}\n.home-theater-proj-glyph {\n  color: var(--home-accent);\n  flex: none;\n  font-size: 9px;\n  width: 16px;\n  text-align: center;\n}\n.home-theater-proj-path {\n  color: var(--color-muted-foreground, #8b93a7);\n  overflow: hidden;\n  text-overflow: ellipsis;\n  white-space: nowrap;\n}\n\n.home-theater-proj-subagents {\n  border-top: 1px solid var(--home-border);\n  padding-top: 6px;\n  display: flex;\n  flex-direction: column;\n  gap: 3px;\n  font-size: 10px;\n}\n.home-theater-proj-subagent { display: flex; gap: 8px; align-items: baseline; }\n.home-theater-proj-subdot {\n  width: 6px;\n  height: 6px;\n  border-radius: 50%;\n  flex: none;\n  align-self: center;\n}\n.home-theater-proj-subdot.run { background: var(--home-accent); animation: home-agent-pulse 1.2s ease-in-out infinite; }\n.home-theater-proj-subdot.done { background: #2dd4bf; }\n.home-theater-proj-subname { color: var(--color-foreground, #d8dce6); }\n.home-theater-proj-subgoal {\n  color: var(--color-muted-foreground, #6b7387);\n  overflow: hidden;\n  text-overflow: ellipsis;\n  white-space: nowrap;\n}\n\n/* RECOMMENDATIONS panel */\n.home-theater-rec-list {\n  flex: 1;\n  min-height: 0;\n  overflow: auto;\n  display: flex;\n  flex-direction: column;\n  gap: 6px;\n}\n.home-theater-rec {\n  display: flex;\n  gap: 10px;\n  align-items: flex-start;\n  border: 1px solid var(--home-border);\n  border-radius: 8px;\n  padding: 7px 10px;\n  background: color-mix(in srgb, var(--home-surface) 60%, transparent);\n}\n.home-theater-rec.warn { border-color: color-mix(in srgb, #e8b33c 45%, transparent); }\n.home-theater-rec.crit { border-color: color-mix(in srgb, var(--home-error) 55%, transparent); }\n.home-theater-rec-tag {\n  flex: none;\n  width: 18px;\n  height: 18px;\n  border-radius: 50%;\n  display: grid;\n  place-items: center;\n  font-size: 10px;\n  margin-top: 1px;\n}\n.home-theater-rec.info .home-theater-rec-tag {\n  color: var(--home-accent);\n  border: 1px solid var(--home-accent);\n}\n.home-theater-rec.warn .home-theater-rec-tag {\n  color: #e8b33c;\n  border: 1px solid #e8b33c;\n}\n.home-theater-rec.crit .home-theater-rec-tag {\n  color: var(--home-error);\n  border: 1px solid var(--home-error);\n}\n.home-theater-rec-body { min-width: 0; }\n.home-theater-rec-title { font-size: 11px; color: var(--color-foreground, #d8dce6); }\n.home-theater-rec-detail {\n  font-size: 10px;\n  color: var(--color-muted-foreground, #8b93a7);\n  margin-top: 1px;\n}\n\n/* ── Live scene — the animated centerpiece ────────────────────────────\n * On identity change: the outgoing content slides up while fading, the\n * incoming content rises from below with a blur that dissolves as it\n * settles. */\n\n.home-theater-scene {\n  flex: 1 1 auto;\n  min-height: 0;\n  display: flex;\n  align-items: center;\n  overflow: hidden;\n}\n\n.home-scene {\n  position: relative;\n  width: 100%;\n}\n\n.home-scene-item {\n  animation: home-scene-in 0.42s ease-out both;\n}\n\n.home-scene-item.leaving {\n  position: absolute;\n  inset-inline: 0;\n  top: 0;\n  animation: home-scene-out 0.4s ease-in forwards;\n  pointer-events: none;\n}\n\n@keyframes home-scene-in {\n  from {\n    opacity: 0;\n    transform: translateY(26px);\n    filter: blur(6px);\n  }\n  to {\n    opacity: 1;\n    transform: translateY(0);\n    filter: blur(0);\n  }\n}\n\n@keyframes home-scene-out {\n  from {\n    opacity: 1;\n    transform: translateY(0);\n    filter: blur(0);\n  }\n  to {\n    opacity: 0;\n    transform: translateY(-26px);\n    filter: blur(4px);\n  }\n}\n\n@keyframes home-feed-in {\n  from { opacity: 0; transform: translateY(7px); }\n  to { opacity: 1; transform: translateY(0); }\n}\n\n@keyframes home-caret-blink {\n  0%, 45% { opacity: 1; }\n  50%, 100% { opacity: 0; }\n}\n\n/* Scene content — tool call */\n.home-scene-tool {\n  display: flex;\n  flex-direction: column;\n  gap: 4px;\n  min-width: 0;\n}\n.home-scene-title {\n  color: var(--home-accent);\n  font-size: 12px;\n  font-weight: 600;\n  overflow: hidden;\n  text-overflow: ellipsis;\n  white-space: nowrap;\n}\n.home-scene-meta {\n  font-size: 9px;\n  text-transform: uppercase;\n  letter-spacing: 0.08em;\n  color: var(--color-muted-foreground, #6b7387);\n}\n.home-scene-args {\n  margin: 0;\n  font-family: inherit;\n  font-size: 10px;\n  color: var(--color-muted-foreground, #8b93a7);\n  white-space: pre-wrap;\n  word-break: break-word;\n  max-height: 90px;\n  overflow: auto;\n}\n\n/* Scene content — message (markdown-rendered) */\n.home-scene-msg {\n  font-size: 11.5px;\n  line-height: 1.6;\n  color: var(--color-foreground, #d8dce6);\n  word-break: break-word;\n  max-height: 150px;\n  overflow: auto;\n}\n.home-scene-msg strong {\n  color: var(--home-accent);\n  font-weight: 650;\n}\n.home-scene-msg em { font-style: italic; }\n.home-scene-msg code {\n  font-family: var(--theme-font-mono, ui-monospace, monospace);\n  font-size: 0.92em;\n  color: var(--home-accent);\n  background: color-mix(in srgb, var(--home-accent) 10%, transparent);\n  padding: 0 4px;\n  border-radius: 4px;\n  white-space: pre-wrap;\n}\n.home-scene-msg .home-md-pre {\n  margin: 4px 0;\n  background: color-mix(in srgb, var(--home-accent) 5%, transparent);\n  border: 1px solid var(--home-border);\n  border-left: 2px solid var(--home-accent);\n  border-radius: 0 6px 6px 0;\n  padding: 6px 10px;\n  overflow: auto;\n  max-height: 120px;\n}\n.home-scene-msg .home-md-pre code {\n  background: none;\n  padding: 0;\n  color: var(--color-muted-foreground, #9aa3b8);\n  font-size: 10px;\n  line-height: 1.5;\n  white-space: pre;\n}\n.home-scene-msg .home-md-h {\n  color: var(--home-accent);\n  font-weight: 650;\n  margin: 3px 0 1px;\n}\n.home-scene-msg .home-md-h.h1 { font-size: 13px; letter-spacing: 0.02em; }\n.home-scene-msg .home-md-h.h2 { font-size: 12px; }\n.home-scene-msg .home-md-h.h3 { font-size: 11px; }\n.home-scene-msg .home-md-p { margin: 2px 0; }\n.home-scene-msg .home-md-gap { height: 4px; }\n.home-scene-msg .home-md-list { margin: 2px 0; display: flex; flex-direction: column; gap: 1px; }\n.home-scene-msg .home-md-li {\n  padding-left: 14px;\n  position: relative;\n}\n.home-scene-msg .home-md-li::before {\n  content: \"\";\n  position: absolute;\n  left: 3px;\n  top: 0.62em;\n  width: 5px;\n  height: 5px;\n  border-radius: 50%;\n  background: var(--home-accent);\n  opacity: 0.8;\n}\n.home-scene-caret {\n  display: inline-block;\n  width: 6px;\n  height: 13px;\n  margin-left: 2px;\n  vertical-align: -2px;\n  background: var(--home-accent);\n  animation: home-caret-blink 1s steps(1) infinite;\n}\n\n/* Scene content — idle */\n.home-scene-idle {\n  font-size: 10px;\n  font-style: italic;\n  color: var(--color-muted-foreground, #6b7387);\n}\n\n/* Compact scene (widget body) */\n.home-agent-scene .home-scene {\n  display: flex;\n  min-height: 0;\n  overflow: hidden;\n}\n.home-agent-scene .home-scene-item {\n  min-width: 0;\n  min-height: 0;\n  flex: 1;\n}\n.home-agent-scene .home-scene-msg {\n  font-size: 10.5px;\n  max-height: 64px;\n  overflow: hidden;\n}\n.home-agent-scene .home-scene-tool {\n  gap: 2px;\n}\n.home-agent-scene .home-scene-title {\n  font-size: 11px;\n}\n.home-agent-scene .home-scene-args {\n  font-size: 10px;\n  max-height: 36px;\n  white-space: nowrap;\n  text-overflow: ellipsis;\n  overflow: hidden;\n}\n.home-agent-scene .home-scene-meta,\n.home-agent-scene .home-scene-idle {\n  font-size: 9.5px;\n}\n\n/* ── projects widget (~/projects/<name>/status.json) ── */\n.home-projects {\n  display: flex;\n  flex-direction: column;\n  gap: 3px;\n  max-height: calc(100% - 18px);\n  overflow-y: auto;\n}\n.project-row {\n  display: flex;\n  align-items: center;\n  gap: 6px;\n  padding: 2px 6px;\n  border-radius: 4px;\n  border-left: 2px solid var(--home-border);\n  background: color-mix(in srgb, var(--home-accent) 4%, transparent);\n  cursor: pointer;\n}\n.project-row:hover,\n.project-item.open .project-row { background: color-mix(in srgb, var(--home-accent) 10%, transparent); }\n.project-row.ok { border-left-color: var(--home-accent); }\n.project-row.warn { border-left-color: color-mix(in srgb, var(--home-accent) 50%, var(--home-error)); }\n.project-row.err { border-left-color: var(--home-error); }\n.project-icon { font-size: 9px; color: var(--color-muted-foreground, #6b7387); }\n.project-row.ok .project-icon { color: var(--home-accent); }\n.project-row.warn .project-icon { color: color-mix(in srgb, var(--home-accent) 50%, var(--home-error)); }\n.project-row.err .project-icon { color: var(--home-error); }\n.project-name {\n  flex: 1 1 auto;\n  min-width: 0;\n  overflow: hidden;\n  white-space: nowrap;\n  text-overflow: ellipsis;\n}\n.project-stats { font-variant-numeric: tabular-nums; color: var(--home-accent-soft); font-size: 10px; }\n.project-time { color: var(--color-muted-foreground, #6b7387); font-size: 9.5px; white-space: nowrap; }\n.project-caret { color: var(--color-muted-foreground, #6b7387); font-size: 9px; width: 10px; text-align: center; }\n.project-detail {\n  margin: 1px 0 3px 12px;\n  padding: 4px 8px;\n  border-left: 1px dashed var(--home-border);\n  display: flex;\n  flex-direction: column;\n  gap: 3px;\n  font-size: 10px;\n}\n.project-detail-row { line-height: 1.4; }\n.project-alerts ul { margin: 2px 0 0 14px; padding: 0; list-style: disc; }\n.project-alerts li { color: var(--home-error); }\n";
+const homeCss = "/* Home page — rice-style widget grid.\n * Every color routes through --home-accent (the active theme's primary),\n * so switching themes recolors the whole page with zero widget changes.\n * Swap teal (#2dd4bf) stays fixed: it is interaction semantics, not theme. */\n\n.home-root {\n  --home-accent: var(--color-primary, var(--ui-accent, #ffd700));\n  --home-accent-dim: color-mix(in srgb, var(--home-accent) 55%, #000);\n  /* Readable secondary text (headers, captions): dim was ~3:1 on the glass. */\n  --home-accent-soft: color-mix(in srgb, var(--home-accent) 82%, #9aa3b5);\n  --home-surface: color-mix(\n    in srgb,\n    var(--home-accent) 6%,\n    var(--ui-editor-surface-background, rgb(10 10 14 / 0.55))\n  );\n  --home-border: color-mix(in srgb, var(--home-accent) 18%, transparent);\n  --home-error: var(--color-destructive, #e25555);\n  position: relative;\n  height: 100%;\n  overflow: auto;\n  font-family: var(--theme-font-mono, ui-monospace, monospace);\n  color: var(--color-foreground, var(--ui-text-primary, #d8dce6));\n}\n\n.home-stage {\n  position: relative;\n  min-height: 60vh;\n  touch-action: none;\n}\n\n.home-widget {\n  position: absolute;\n  border-radius: 8px;\n  padding: 10px 12px;\n  background: var(--home-surface);\n  border: 1px solid var(--home-border);\n  backdrop-filter: blur(12px);\n  -webkit-backdrop-filter: blur(12px);\n  box-shadow: 0 10px 30px rgb(0 0 0 / 0.5);\n  overflow: hidden;\n  transition: left 0.18s ease, top 0.18s ease;\n  container-type: size;\n  font-size: 11px;\n  line-height: 1.5;\n  /* Promote each widget to its own compositor layer so the constantly\n   * repainting matrix canvas doesn't force the neighbours' backdrop-filter\n   * to recompose every frame — that recomposition is what produced the\n   * horizontal flicker sweeping across the glass panels. */\n  transform: translateZ(0);\n  contain: paint;\n}\n.home-root.editing .home-widget { user-select: none; }\n.home-widget.dragging {\n  transition: none;\n  opacity: 0.9;\n  border-color: var(--home-accent);\n  z-index: 50;\n  cursor: grabbing;\n}\n.home-widget.swap-target {\n  border-color: #2dd4bf;\n  box-shadow: 0 0 0 1px rgb(45 212 191 / 0.5), 0 10px 30px rgb(0 0 0 / 0.5);\n}\n/* Over the trash zone — about to be deleted. */\n.home-widget.trashing {\n  opacity: 0.45;\n  border-color: var(--home-error);\n  box-shadow: 0 0 0 1px color-mix(in srgb, var(--home-error) 60%, transparent),\n    0 10px 30px rgb(0 0 0 / 0.5);\n}\n\n/* Floating label that follows the pointer while dragging a new widget in. */\n.home-add-ghost {\n  position: fixed;\n  z-index: 70;\n  transform: translate(-50%, -140%);\n  padding: 4px 10px;\n  border-radius: 6px;\n  font-size: 11px;\n  white-space: nowrap;\n  pointer-events: none;\n  color: var(--home-accent);\n  background: var(--home-surface);\n  border: 1px solid var(--home-accent);\n  backdrop-filter: blur(12px);\n  -webkit-backdrop-filter: blur(12px);\n  box-shadow: 0 8px 24px rgb(0 0 0 / 0.45);\n}\n\n/* Header: short lead rule · TITLE · hairline that fades out. Drawn with CSS\n * (not box-drawing glyphs) so the gaps stay even and the rule never touches\n * the text, whatever the font or title length. */\n.home-widget .hd {\n  display: flex;\n  align-items: center;\n  gap: 10px;\n  min-height: 16px;\n  font-size: 9.5px;\n  letter-spacing: 0.18em;\n  margin-bottom: 8px;\n  font-weight: 700;\n  text-transform: uppercase;\n  color: var(--home-accent-soft);\n  white-space: nowrap;\n  overflow: hidden;\n}\n.home-widget .hd .hd-t { flex: none; }\n.home-widget .hd::before,\n.home-widget .hd::after {\n  content: \"\";\n  height: 1px;\n  flex: none;\n}\n.home-widget .hd::before {\n  width: 12px;\n  background: currentColor;\n  opacity: 0.45;\n}\n.home-widget .hd::after {\n  flex: 1 1 auto;\n  min-width: 0;\n  background: linear-gradient(to right, currentColor, transparent 92%);\n  opacity: 0.28;\n}\n.home-root.editing .home-widget .hd { cursor: grab; }\n\n.home-widget .rs {\n  position: absolute;\n  right: 2px;\n  bottom: 2px;\n  width: 13px;\n  height: 13px;\n  cursor: nwse-resize;\n  border-right: 2px solid color-mix(in srgb, var(--home-accent) 45%, transparent);\n  border-bottom: 2px solid color-mix(in srgb, var(--home-accent) 45%, transparent);\n  border-radius: 2px;\n  z-index: 3;\n}\n.home-widget .wremove {\n  position: absolute;\n  top: 4px;\n  right: 6px;\n  z-index: 3;\n  background: none;\n  border: none;\n  color: var(--home-error);\n  font-size: 13px;\n  line-height: 1;\n  cursor: pointer;\n  padding: 2px 4px;\n}\n.home-widget .werr { color: var(--home-error); }\n/* Data-source states (widget-state.ts): honest copy per failure kind. */\n.home-widget .wstate { display: block; font-size: 10px; letter-spacing: 0.04em; }\n.home-widget .wstate::before { content: \"● \"; }\n.home-widget .wstate-offline { color: var(--home-error); }\n.home-widget .wstate-unavailable { color: #f5b945; }\n.home-widget .hd .hd-stale { color: #f5b945; letter-spacing: 0.1em; opacity: 0.8; }\n\n/* ── hover controls (contextual chrome, rest mode only) ──\n * Reusable floating control rendered inside a widget body. Hidden by default,\n * fades in while hovering the widget, and fully suppressed in edit mode so it\n * never fights drag/resize. Widgets opt in by rendering <HoverCtl>/<HoverArrows>. */\n.hover-ctl {\n  /* Sits IN the header row: same top as the widget padding, same height as .hd,\n   * right-aligned at the end of the header rule. No chip: bare glyphs, like the rest. */\n  position: absolute;\n  top: 10px;\n  right: 12px;\n  height: 16px;\n  z-index: 4;\n  display: flex;\n  align-items: center;\n  gap: 6px;\n  white-space: nowrap;\n  opacity: 0;\n  pointer-events: none;\n  transition: opacity 0.16s ease;\n}\n/* Visible only while the pointer is over the widget. Keyboard users still get them\n * (:focus-visible), but a mouse click no longer leaves them stuck on screen. */\n.home-widget:hover .hover-ctl,\n.hover-ctl:has(:focus-visible) { opacity: 1; pointer-events: auto; }\n/* While the controls show, the header rule stops short of them... */\n.home-widget:hover .hd::after,\n.home-widget:has(.hover-ctl :focus-visible) .hd::after {\n  margin-right: calc(var(--ctl-w, 0px) + 10px);\n}\n/* ...and when the widget is too narrow for title + controls, the title steps aside. */\n.home-widget[data-ctl-tight]:hover .hd .hd-t,\n.home-widget[data-ctl-tight]:hover .hd::before { opacity: 0; }\n.home-widget .hd .hd-t,\n.home-widget .hd::before,\n.home-widget .hd::after { transition: opacity 0.16s ease, margin-right 0.16s ease; }\n/* Multi-row controls (Pomodoro steppers) don't fit the header: they sit below it. */\n.hover-ctl.pomo-set { top: 30px; height: auto; }\n.home-root.editing .hover-ctl { display: none; }\n@media (hover: none) {\n  /* Touch: no hover, so keep controls reachable but understated. */\n  .hover-ctl { opacity: 0.5; pointer-events: auto; }\n}\n\n.hv-arrow {\n  background: none;\n  border: none;\n  cursor: pointer;\n  padding: 0 3px;\n  color: var(--home-accent-dim);\n  font-size: 14px;\n  line-height: 1;\n  font-family: inherit;\n}\n.hv-arrow:hover:not(:disabled) { color: var(--home-accent); }\n.hv-arrow:disabled { opacity: 0.3; cursor: default; }\n.hv-label {\n  font-size: 9px;\n  letter-spacing: 0.1em;\n  text-transform: uppercase;\n  color: var(--home-accent-dim);\n  white-space: nowrap;\n}\n.hv-label-btn {\n  background: none;\n  border: none;\n  cursor: pointer;\n  font: inherit;\n  letter-spacing: 0.1em;\n  padding: 0;\n}\n.hv-label-btn:hover { color: var(--home-accent); }\n\n/* Toggle/option buttons inside a hover control (clock format, host view…). */\n.hv-opt {\n  background: none;\n  border: none;\n  cursor: pointer;\n  font: inherit;\n  font-size: 9px;\n  letter-spacing: 0.08em;\n  text-transform: uppercase;\n  color: var(--home-accent-dim);\n  padding: 0 4px;\n  border-radius: 4px;\n}\n.hv-opt:hover { color: var(--home-accent); }\n.hv-opt.on { color: #000; background: var(--home-accent); }\n\n/* Extra detail that smoothly expands on widget hover (rest mode only). Uses\n * the 0fr→1fr grid trick so it animates real height without a fixed value. */\n.hover-reveal {\n  display: grid;\n  grid-template-rows: 0fr;\n  opacity: 0;\n  transition: grid-template-rows 0.25s ease, opacity 0.2s ease, margin-top 0.25s ease;\n}\n.home-widget:hover .hover-reveal { grid-template-rows: 1fr; opacity: 1; margin-top: 4px; }\n.home-root.editing .hover-reveal { grid-template-rows: 0fr; opacity: 0; margin-top: 0; }\n.hover-reveal > * { overflow: hidden; min-height: 0; }\n\n.home-ghost {\n  position: absolute;\n  border: 1.5px dashed color-mix(in srgb, var(--home-accent) 70%, transparent);\n  border-radius: 8px;\n  background: color-mix(in srgb, var(--home-accent) 7%, transparent);\n  display: none;\n  z-index: 5;\n  pointer-events: none;\n  transition: left 0.18s ease, top 0.18s ease, width 0.18s ease, height 0.18s ease;\n}\n.home-ghost.visible { display: block; }\n.home-ghost.swap {\n  border-color: rgb(45 212 191 / 0.85);\n  background: rgb(45 212 191 / 0.08);\n}\n\n/* ── widget content primitives (responsive to the widget's own size) ── */\n.home-widget .rows { column-gap: 18px; }\n@container (min-width: 380px) {\n  .home-widget .rows { columns: 2; column-rule: 1px solid rgb(255 255 255 / 0.06); }\n}\n@container (min-width: 600px) {\n  .home-widget .rows { columns: 3; }\n}\n.home-widget .row {\n  display: flex;\n  justify-content: space-between;\n  gap: 6px;\n  padding: 1px 0;\n  border-bottom: 1px solid rgb(255 255 255 / 0.04);\n  break-inside: avoid;\n}\n.home-widget .row:last-child { border-bottom: none; }\n/* Names flex and ellipsize at the real column width instead of a fixed\n * character slice that cut words mid-glyph (\"bitacoras-guayab\"). */\n.home-widget .row > * { flex: none; }\n.home-widget .row > .row-name {\n  flex: 1 1 auto;\n  min-width: 0;\n  overflow: hidden;\n  white-space: nowrap;\n  text-overflow: ellipsis;\n}\n\n.home-widget .meters { column-gap: 18px; }\n@container (min-width: 380px) {\n  .home-widget .meters { columns: 2; }\n}\n.home-widget .meter {\n  display: flex;\n  align-items: center;\n  gap: 6px;\n  margin: 3px 0;\n  break-inside: avoid;\n}\n.home-widget .meter .lbl { width: 34px; color: var(--color-muted-foreground, #7d8496); font-size: 10px; }\n.home-widget .meter .track {\n  flex: 1;\n  height: 7px;\n  border-radius: 2px;\n  background: rgb(255 255 255 / 0.07);\n  overflow: hidden;\n}\n.home-widget .meter .fill {\n  height: 100%;\n  background: linear-gradient(90deg, var(--home-accent-dim), var(--home-accent));\n  transition: width 0.6s ease;\n}\n.home-widget .meter .val { width: 44px; text-align: right; font-size: 10px; }\n\n.home-widget .ok { color: var(--home-accent); }\n.home-widget .dim { color: var(--color-muted-foreground, #6b7387); }\n.home-widget .bigval {\n  font-size: min(9cqw, 18cqh);\n  font-weight: 700;\n  color: var(--home-accent);\n}\n\n.home-clock-wrap {\n  display: flex;\n  flex-direction: column;\n  align-items: center;\n  justify-content: center;\n  height: calc(100% - 18px);\n}\n.home-clock {\n  font-size: min(26cqw, 52cqh);\n  font-weight: 800;\n  color: var(--home-accent);\n  letter-spacing: 0.02em;\n  text-shadow: 0 0 24px color-mix(in srgb, var(--home-accent) 35%, transparent);\n  line-height: 1;\n}\n.home-clock-ampm {\n  font-size: 0.32em;\n  vertical-align: 0.9em;\n  margin-left: 0.2em;\n  letter-spacing: 0.05em;\n  color: var(--home-accent-dim);\n}\n.home-clock-sub {\n  color: var(--home-accent-dim);\n  font-size: max(9px, min(3.4cqw, 8cqh));\n  letter-spacing: 0.14em;\n  text-transform: uppercase;\n  margin-top: 1cqh;\n}\n\n.home-ascii-wrap {\n  display: flex;\n  flex-direction: column;\n  align-items: center;\n  justify-content: center;\n  height: calc(100% - 18px);\n}\n.home-ascii {\n  font-size: min(5.6cqw, 5.4cqh);\n  line-height: 1.05;\n  white-space: pre;\n  text-align: center;\n  background: linear-gradient(\n    180deg,\n    var(--home-accent-dim),\n    var(--home-accent) 40%,\n    var(--home-accent) 60%,\n    var(--home-accent-dim)\n  );\n  -webkit-background-clip: text;\n  background-clip: text;\n  color: transparent;\n  filter: drop-shadow(0 0 10px color-mix(in srgb, var(--home-accent) 25%, transparent));\n}\n.home-ascii-caduceus {\n  transform: scaleX(0.88);\n  transform-origin: center;\n}\n.home-ascii-ver {\n  text-align: center;\n  color: var(--home-accent-soft);\n  font-size: max(8px, min(2.6cqw, 5cqh));\n  letter-spacing: 0.22em;\n  margin-top: 1.5cqh;\n}\n\n.home-spark {\n  display: flex;\n  align-items: flex-end;\n  gap: 2px;\n  height: max(18px, 22cqh);\n  margin: 6px 0 4px;\n}\n.home-spark i {\n  flex: 1;\n  background: linear-gradient(180deg, var(--home-accent), var(--home-accent-dim));\n  border-radius: 1px 1px 0 0;\n  opacity: 0.85;\n  transition: height 0.6s ease, opacity 0.15s ease;\n  cursor: default;\n}\n.home-spark i:hover { opacity: 1; }\n\n/* Hover tooltip over a bar (tokens widget). Anchored to the bar via inline\n * `left` + `translateX`, which clamps it inside the clipped widget; the appear/\n * disappear slide+fade runs on the independent `translate` property so it never\n * fights the positioning transform. */\n.home-spark-wrap { position: relative; }\n.home-spark-tip {\n  position: absolute;\n  bottom: 100%;\n  margin-bottom: 6px;\n  padding: 3px 7px;\n  border-radius: 6px;\n  background: color-mix(in srgb, var(--home-accent) 10%, rgb(8 8 12 / 0.96));\n  border: 1px solid var(--home-border);\n  color: rgb(236 236 242);\n  font-size: 10px;\n  line-height: 1.3;\n  white-space: nowrap;\n  pointer-events: none;\n  opacity: 0;\n  translate: 0 4px;\n  transition: opacity 0.18s ease, translate 0.18s ease, transform 0.18s ease;\n  z-index: 6;\n}\n.home-spark-tip.show { opacity: 1; translate: 0 0; }\n.home-spark-tip b { color: var(--home-accent); font-weight: 600; }\n\n/* Line/area chart (tokens widget, alternative to the bars). Stretched to fill\n * via preserveAspectRatio=none; the stroke stays crisp with non-scaling-stroke. */\n.home-area {\n  display: block;\n  width: 100%;\n  height: max(18px, 22cqh);\n  margin: 6px 0 4px;\n  overflow: visible;\n}\n.home-area rect { cursor: default; }\n\n/* Host graphs view: four live sparklines (cpu / ram / load / proc) in a 2×2\n * grid over a rolling one-minute window. Fills the widget below the header\n * (same absolute pattern as the canvas widgets); cells reuse .home-area but\n * stretch to their cell height instead of the tokens widget's fixed band. */\n.host-sparks {\n  position: absolute;\n  inset: 30px 12px 10px;\n  display: grid;\n  grid-template-columns: 1fr 1fr;\n  grid-template-rows: 1fr 1fr;\n  gap: 4px 12px;\n  min-height: 0;\n}\n.host-spark {\n  display: flex;\n  flex-direction: column;\n  min-height: 0;\n  min-width: 0;\n}\n.host-spark-head {\n  display: flex;\n  justify-content: space-between;\n  align-items: baseline;\n  font-size: max(8px, min(3.2cqw, 6cqh));\n  letter-spacing: 0.14em;\n  text-transform: uppercase;\n}\n.host-spark-head .val {\n  font-variant-numeric: tabular-nums;\n  color: var(--home-accent);\n}\n.host-spark .home-area {\n  flex: 1;\n  height: auto;\n  min-height: 12px;\n  margin: 2px 0 0;\n}\n\n/* Small vertical divider between the range arrows and the toggles. */\n.tok-div {\n  width: 1px;\n  align-self: stretch;\n  margin: 2px 2px;\n  background: var(--home-border);\n}\n\n/* Totals line, regrouped: each label sticks to its value, groups spaced evenly\n * (the old `.row` space-between scattered the six tokens across the full width). */\n.tok-stats {\n  display: flex;\n  flex-wrap: wrap;\n  gap: 2px 14px;\n  padding: 3px 0 1px;\n  font-variant-numeric: tabular-nums;\n}\n.tok-stats > span { white-space: nowrap; }\n.tok-stats .dim { margin-right: 2px; }\n\n/* Grouped usage (tokens widget, by provider / by model): one row per group\n * with a faint share bar behind it, width = --share of the grouped total. */\n.tok-groups { padding-top: 3px; font-variant-numeric: tabular-nums; }\n.home-widget .row.tok-group {\n  background: linear-gradient(\n    90deg,\n    color-mix(in srgb, var(--home-accent) 16%, transparent) var(--share, 0%),\n    transparent var(--share, 0%)\n  );\n  border-radius: 2px;\n  padding-left: 3px;\n}\n.tok-share { min-width: 3ch; text-align: right; }\n.tok-group-note,\n.tok-group-more { font-size: 9.5px; padding-top: 1px; }\n\n/* ── spend widget ── */\n.home-spend { font-variant-numeric: tabular-nums; }\n.spend-head { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\n.spend-est {\n  margin-left: 6px;\n  padding: 0 4px;\n  border: 1px solid var(--home-border);\n  border-radius: 3px;\n  font-size: 9px;\n  letter-spacing: 0.06em;\n  color: var(--color-muted-foreground, #6b7387);\n  vertical-align: 2px;\n}\n.spend-providers { padding-top: 2px; }\n.spend-covered {\n  margin-top: 4px;\n  padding: 2px 0 2px 6px;\n  border-left: 2px solid color-mix(in srgb, var(--home-accent) 35%, transparent);\n  color: var(--home-accent-soft, var(--home-accent));\n}\n.spend-covered > div { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\n.spend-month {\n  margin-top: 4px;\n  padding-top: 3px;\n  border-top: 1px solid rgb(255 255 255 / 0.06);\n}\n.spend-month .spend-flag { white-space: nowrap; }\n.spend-top-head {\n  font-size: 9.5px;\n  letter-spacing: 0.12em;\n  text-transform: uppercase;\n  padding: 2px 0 1px;\n}\n.spend-month.spend-near .spend-flag,\n.spend-month.spend-pace .spend-flag { color: color-mix(in srgb, var(--home-accent) 50%, var(--home-error)); }\n.spend-month.spend-over,\n.spend-month.spend-over .spend-flag { color: var(--home-error); }\n.spend-top { margin-top: 3px; }\n.home-widget .row.spend-session { cursor: pointer; border-radius: 2px; }\n.home-widget .row.spend-session:hover { background: color-mix(in srgb, var(--home-accent) 10%, transparent); }\n.home-widget .row.spend-session:hover .row-name { color: var(--home-accent); }\n.home-root.editing .home-widget .row.spend-session { cursor: inherit; }\n.spend-tag {\n  font-size: 9px;\n  letter-spacing: 0.06em;\n  text-transform: uppercase;\n  color: var(--color-muted-foreground, #6b7387);\n  align-self: center;\n}\n.spend-tag-metered { color: var(--home-accent); }\n.spend-cost { min-width: 6ch; text-align: right; }\n.spend-foot { display: flex; flex-wrap: wrap; gap: 0 10px; font-size: 9.5px; padding-top: 2px; }\n.spend-cap-val { min-width: 4ch; text-align: center; color: var(--home-accent); }\n\n/* Sessions widget: per-row token count (shown while sorting/filtering by it). */\n.ses-tok { font-variant-numeric: tabular-nums; color: var(--home-accent-soft); }\n\n/* ── logs widget (per-file record list) ── */\n.logs-sub {\n  display: flex;\n  justify-content: space-between;\n  align-items: baseline;\n  gap: 8px;\n}\n.logs-file {\n  font-size: 11px;\n  font-weight: 600;\n  letter-spacing: 0.06em;\n  color: var(--home-accent);\n}\n/* The wrapper owns the widget's remaining height so the list scrolls inside it\n * instead of growing past the bottom edge (the old calc() resolved against an\n * auto-height parent and never clamped). */\n.home-logs-wrap {\n  display: flex;\n  flex-direction: column;\n  height: calc(100% - 21px);\n  min-height: 0;\n}\n.home-logs {\n  display: flex;\n  flex-direction: column;\n  gap: 1px;\n  flex: 1 1 0;\n  min-height: 0;\n  overflow-y: auto;\n  margin-top: 3px;\n  /* Rows that don't fit fade out instead of being sliced by the edge. */\n  mask-image: linear-gradient(180deg, #000 calc(100% - 14px), transparent);\n}\n.log-row {\n  display: flex;\n  gap: 6px;\n  align-items: baseline;\n  padding: 1px 0;\n  border-bottom: 1px solid rgb(255 255 255 / 0.04);\n  cursor: default;\n}\n.log-row:last-child { border-bottom: none; }\n.log-lvl {\n  flex: none;\n  width: 32px;\n  font-size: 9px;\n  font-weight: 600;\n  letter-spacing: 0.03em;\n}\n.log-lvl.lvl-error { color: var(--home-error); }\n.log-lvl.lvl-warn { color: #f5b945; }\n.log-lvl.lvl-info { color: var(--color-muted-foreground, #6b7387); }\n.log-time {\n  flex: none;\n  font-size: 9px;\n  color: var(--color-muted-foreground, #6b7387);\n  font-variant-numeric: tabular-nums;\n}\n.log-msg {\n  flex: 1;\n  min-width: 0;\n  font-size: 10px;\n  white-space: nowrap;\n  overflow: hidden;\n  text-overflow: ellipsis;\n}\n\n.home-matrix-c {\n  position: absolute;\n  inset: 0;\n  top: 24px;\n  width: 100%;\n  height: calc(100% - 24px);\n}\n\n/* ── notes widget ── */\n.home-notes { display: flex; flex-direction: column; gap: 1px; height: calc(100% - 18px); overflow-y: auto; }\n.home-notes .note-row {\n  display: flex;\n  align-items: baseline;\n  gap: 7px;\n  padding: 1px 0;\n  border-bottom: 1px solid rgb(255 255 255 / 0.04);\n}\n.home-notes .note-mark {\n  cursor: pointer;\n  width: 12px;\n  text-align: center;\n  color: var(--home-accent);\n  flex-shrink: 0;\n}\n.home-notes .note-mark.done { color: var(--color-muted-foreground, #6b7387); }\n.home-notes .note-text { cursor: text; flex: 1; min-width: 0; overflow-wrap: anywhere; }\n.home-notes .note-text.done {\n  text-decoration: line-through;\n  color: var(--color-muted-foreground, #6b7387);\n}\n.home-notes .note-input {\n  flex: 1;\n  min-width: 0;\n  background: none;\n  border: none;\n  border-bottom: 1px dashed var(--home-border);\n  outline: none;\n  color: inherit;\n  font: inherit;\n  padding: 0;\n}\n.home-notes .note-add {\n  align-self: flex-start;\n  margin-top: 4px;\n  background: none;\n  border: none;\n  cursor: pointer;\n  color: var(--home-accent-dim);\n  font-size: 14px;\n  line-height: 1;\n  padding: 2px 6px 2px 2px;\n}\n.home-notes .note-add:hover { color: var(--home-accent); }\n\n/* ── canvas widgets (heartbeat, life) ── */\n.home-canvas {\n  position: absolute;\n  inset: 0;\n  top: 24px;\n  width: 100%;\n  height: calc(100% - 24px);\n}\n/* Life is drawable in rest mode — signal it with a crosshair. */\n.home-root:not(.editing) .home-life { cursor: crosshair; }\n\n/* ── moon ── */\n.home-moon-wrap {\n  display: flex;\n  flex-direction: column;\n  align-items: center;\n  height: calc(100% - 18px);\n}\n.home-moon-c { flex: 1; width: 100%; min-height: 0; }\n.home-moon-label {\n  color: var(--home-accent-dim);\n  font-size: max(8px, min(3cqw, 6cqh));\n  letter-spacing: 0.14em;\n  text-transform: uppercase;\n}\n\n/* ── pomodoro / countdown ── */\n.home-pomo .home-clock,\n.home-count .home-clock { cursor: pointer; }\n.home-pomo .home-clock.paused { opacity: 0.55; }\n.home-pomo .pomo-sub { cursor: pointer; }\n.home-count .count-label { cursor: pointer; }\n.home-count .count-input,\n.home-pomo .count-input { max-width: 92%; text-align: center; color-scheme: dark; }\n\n/* ── countdown segment editor (alarm-style spinners) ── */\n.count-edit {\n  display: flex;\n  flex-direction: column;\n  align-items: center;\n  justify-content: center;\n  gap: 3px;\n  height: calc(100% - 18px);\n}\n.count-edit-row { display: flex; align-items: center; gap: 5px; }\n.count-seg { display: flex; flex-direction: column; align-items: center; }\n.count-seg .seg-btn {\n  background: none;\n  border: none;\n  cursor: pointer;\n  padding: 0;\n  line-height: 0.6;\n  font-size: 8px;\n  color: var(--home-accent-dim);\n}\n.count-seg .seg-btn:hover { color: var(--home-accent); }\n.count-seg .seg-val {\n  background: none;\n  border: none;\n  outline: none;\n  text-align: center;\n  color: var(--home-accent);\n  font: inherit;\n  font-weight: 800;\n  font-size: max(12px, min(7cqw, 15cqh));\n  padding: 1px 0;\n  border-bottom: 1px solid transparent;\n  letter-spacing: 0.02em;\n}\n.count-seg input.seg-val:focus { border-bottom-color: var(--home-accent); }\n.count-seg .seg-static { cursor: default; }\n.count-colon {\n  font-weight: 800;\n  color: var(--home-accent-dim);\n  font-size: max(12px, min(7cqw, 15cqh));\n}\n.count-done {\n  margin-top: 3px;\n  background: none;\n  border: 1px solid var(--home-border);\n  border-radius: 6px;\n  color: var(--home-accent);\n  cursor: pointer;\n  font: inherit;\n  font-size: 10px;\n  letter-spacing: 0.08em;\n  text-transform: uppercase;\n  padding: 2px 12px;\n}\n.count-done:hover { border-color: var(--home-accent); }\n.home-pomo .pomo-min {\n  font-size: min(20cqw, 40cqh);\n  font-weight: 800;\n  color: var(--home-accent);\n  max-width: 70%;\n}\n/* Hover steppers for the pomodoro work/break lengths. */\n.hover-ctl.pomo-set { flex-direction: column; align-items: flex-end; gap: 1px; }\n.pomo-stepper { display: flex; align-items: center; gap: 3px; }\n.pomo-stepper .hv-label:nth-child(3) { min-width: 16px; text-align: center; color: var(--home-accent); }\n\n/* ── calendar ── */\n.home-cal { height: calc(100% - 18px); display: flex; flex-direction: column; }\n.home-cal-month {\n  text-align: center;\n  color: var(--home-accent-dim);\n  font-size: max(9px, min(3.2cqw, 7cqh));\n  letter-spacing: 0.14em;\n  text-transform: uppercase;\n  margin-bottom: 4px;\n}\n.home-cal-grid {\n  flex: 1;\n  display: grid;\n  grid-template-columns: repeat(7, 1fr);\n  align-content: space-evenly;\n  justify-items: center;\n  font-size: max(8px, min(3cqw, 6.5cqh));\n}\n.home-cal-h { color: var(--color-muted-foreground, #6b7387); }\n.home-cal-d { color: var(--color-foreground, #d8dce6); opacity: 0.75; }\n.home-cal-today {\n  color: #000;\n  background: var(--home-accent);\n  border-radius: 4px;\n  padding: 0 4px;\n  font-weight: 700;\n}\n/* Density tiers, chosen from the widget's cell width (see CalendarWidget). */\n.home-cal.tier-mini .home-cal-month {\n  font-size: max(8px, min(4cqw, 8cqh));\n  margin-bottom: 2px;\n}\n.home-cal.tier-mini .home-cal-grid { font-size: max(9px, min(4cqw, 8cqh)); }\n.home-cal.tier-large .home-cal-month {\n  font-size: max(11px, min(3cqw, 7cqh));\n  margin-bottom: 7px;\n}\n.home-cal.tier-large .home-cal-grid { row-gap: 3px; }\n.home-cal.tier-large .home-cal-h { font-weight: 700; opacity: 0.8; }\n.home-cal.tier-large .home-cal-today { padding: 1px 6px; }\n\n/* ── page chrome ── */\n/* Edit affordance lives BELOW the grid, centered. It fades in once the user\n * starts scrolling down (or immediately when the grid is short enough that\n * there's nothing to scroll), keeping the home clean on first paint. While\n * editing it sticks to the bottom of the viewport so it stays reachable. */\n.home-editbar {\n  display: flex;\n  justify-content: center;\n  gap: 10px;\n  padding: 22px 12px 30px;\n  opacity: 0;\n  transition: opacity 0.25s ease;\n  pointer-events: none;\n}\n.home-editbar.visible {\n  opacity: 1;\n  pointer-events: auto;\n}\n.home-root.editing .home-editbar {\n  position: sticky;\n  bottom: 0;\n}\n.home-fab {\n  position: relative;\n  width: 38px;\n  height: 38px;\n  border-radius: 50%;\n  display: flex;\n  align-items: center;\n  justify-content: center;\n  font-size: 15px;\n  cursor: pointer;\n  color: var(--home-accent);\n  background: var(--home-surface);\n  border: 1px solid var(--home-border);\n  backdrop-filter: blur(12px);\n  -webkit-backdrop-filter: blur(12px);\n  transition:\n    border-color 0.25s ease,\n    background 0.35s ease,\n    box-shadow 0.45s ease,\n    transform 0.4s cubic-bezier(0.34, 1.4, 0.64, 1);\n}\n.home-fab:hover {\n  border-color: var(--home-accent);\n  transform: scale(1.06);\n}\n.home-fab:active { transform: scale(0.94); }\n.home-fab.active {\n  background: color-mix(in srgb, var(--home-accent) 22%, transparent);\n  /* Warm Hermes glow ring when edit mode engages. */\n  animation: home-fab-glow 0.55s ease-out;\n}\n\n/* Crossfading edit ✎ ↔ done ✓ glyphs — each rotates and scales through the\n * swap with a gentle overshoot, matching the dashboard's soft motion. */\n.home-fab-ico {\n  position: absolute;\n  inset: 0;\n  display: flex;\n  align-items: center;\n  justify-content: center;\n  transition:\n    opacity 0.3s ease,\n    transform 0.45s cubic-bezier(0.34, 1.45, 0.64, 1);\n}\n.ico-edit { opacity: 1; transform: rotate(0) scale(1); }\n.ico-done { opacity: 0; transform: rotate(-120deg) scale(0.3); }\n.home-fab.active .ico-edit { opacity: 0; transform: rotate(120deg) scale(0.3); }\n.home-fab.active .ico-done { opacity: 1; transform: rotate(0) scale(1); }\n\n.home-fab-spin {\n  display: inline-block;\n  animation: home-fab-spin-in 0.5s cubic-bezier(0.34, 1.4, 0.64, 1);\n}\n\n/* The restore-default button slides up into place, like the dashboard's\n * dialog-in entrance. */\n.home-fab-enter {\n  animation: home-fab-enter 0.32s cubic-bezier(0.34, 1.3, 0.64, 1);\n}\n\n@keyframes home-fab-glow {\n  0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--home-accent) 55%, transparent); }\n  100% { box-shadow: 0 0 0 13px transparent; }\n}\n@keyframes home-fab-spin-in {\n  from { transform: rotate(-150deg); opacity: 0.3; }\n  to   { transform: rotate(0); opacity: 1; }\n}\n@keyframes home-fab-enter {\n  from { opacity: 0; transform: translateY(6px) scale(0.9); }\n  to   { opacity: 1; transform: translateY(0) scale(1); }\n}\n\n@media (prefers-reduced-motion: reduce) {\n  .home-fab,\n  .home-fab-ico,\n  .home-fab-spin,\n  .home-fab-enter { animation: none; transition: opacity 0.2s ease; }\n}\n\n/* ── toast (plugin-local; the host toast isn't exposed in the SDK) ── */\n.home-toast {\n  position: fixed;\n  bottom: 18px;\n  left: 50%;\n  transform: translateX(-50%);\n  z-index: 80;\n  padding: 8px 16px;\n  border-radius: 8px;\n  font-size: 12px;\n  color: var(--home-error, #e25555);\n  background: var(--home-surface);\n  border: 1px solid var(--home-error, #e25555);\n  backdrop-filter: blur(12px);\n  -webkit-backdrop-filter: blur(12px);\n  box-shadow: 0 8px 24px rgb(0 0 0 / 0.45);\n  animation: home-toast-in 0.25s ease;\n}\n@keyframes home-toast-in {\n  from { opacity: 0; transform: translateX(-50%) translateY(8px); }\n  to { opacity: 1; transform: translateX(-50%) translateY(0); }\n}\n\n/* Catalog reveal: the wrapper animates its row track 0fr → 1fr so the panel\n * grows/collapses its real height smoothly (no grid jump), with a matching\n * fade. Kept mounted so the exit animates too. */\n.home-catalog-wrap {\n  display: grid;\n  grid-template-rows: 0fr;\n  margin: 0 12px;\n  opacity: 0;\n  pointer-events: none;\n  transition:\n    grid-template-rows 0.34s cubic-bezier(0.34, 1.2, 0.64, 1),\n    opacity 0.28s ease,\n    margin-bottom 0.34s ease;\n}\n.home-catalog-wrap.open {\n  grid-template-rows: 1fr;\n  opacity: 1;\n  pointer-events: auto;\n  margin-bottom: 8px;\n}\n.home-catalog {\n  overflow: hidden;\n  min-height: 0;\n  border-radius: 8px;\n  background: var(--home-surface);\n  border: 1px solid var(--home-border);\n  backdrop-filter: blur(12px);\n  -webkit-backdrop-filter: blur(12px);\n  transition: border-color 0.2s ease, background 0.2s ease;\n}\n/* Highlighted as a delete target while a widget is dragged over it. */\n.home-catalog-wrap.trash-active .home-catalog {\n  border-color: var(--home-error);\n  border-style: dashed;\n  background: color-mix(in srgb, var(--home-error) 10%, var(--home-surface));\n}\n.home-catalog-inner {\n  display: flex;\n  flex-wrap: wrap;\n  align-items: center;\n  gap: 8px;\n  padding: 10px;\n}\n.home-catalog-hint {\n  font-size: 10px;\n  letter-spacing: 0.04em;\n  color: var(--color-muted-foreground, #6b7387);\n  margin-right: 4px;\n}\n.home-catalog-wrap.trash-active .home-catalog-hint { color: var(--home-error); }\n.home-catalog-chip { touch-action: none; }\n.home-catalog-chip {\n  font-family: inherit;\n  font-size: 11px;\n  padding: 4px 10px;\n  border-radius: 6px;\n  cursor: pointer;\n  background: none;\n  border: 1px dashed var(--home-border);\n  color: var(--color-foreground, #d8dce6);\n  transition: border-color 0.2s ease, color 0.2s ease, transform 0.2s ease;\n}\n.home-catalog-chip:hover {\n  border-color: var(--home-accent);\n  color: var(--home-accent);\n  transform: translateY(-1px);\n}\n.home-catalog-chip:active { transform: scale(0.95); }\n.home-catalog .empty { color: var(--color-muted-foreground, #6b7387); font-size: 11px; }\n\n@media (prefers-reduced-motion: reduce) {\n  .home-catalog-wrap { transition: opacity 0.2s ease; }\n}\n\n/* ── projects widget (~/projects/<name>/status.json) ── */\n.home-projects {\n  display: flex;\n  flex-direction: column;\n  gap: 3px;\n  max-height: calc(100% - 18px);\n  overflow-y: auto;\n}\n.project-row {\n  display: flex;\n  align-items: center;\n  gap: 6px;\n  padding: 2px 6px;\n  border-radius: 4px;\n  border-left: 2px solid var(--home-border);\n  background: color-mix(in srgb, var(--home-accent) 4%, transparent);\n  cursor: pointer;\n}\n.project-row:hover,\n.project-item.open .project-row { background: color-mix(in srgb, var(--home-accent) 10%, transparent); }\n.project-row.ok { border-left-color: var(--home-accent); }\n.project-row.warn { border-left-color: color-mix(in srgb, var(--home-accent) 50%, var(--home-error)); }\n.project-row.err { border-left-color: var(--home-error); }\n.project-icon { font-size: 9px; color: var(--color-muted-foreground, #6b7387); }\n.project-row.ok .project-icon { color: var(--home-accent); }\n.project-row.warn .project-icon { color: color-mix(in srgb, var(--home-accent) 50%, var(--home-error)); }\n.project-row.err .project-icon { color: var(--home-error); }\n.project-name {\n  flex: 1 1 auto;\n  min-width: 0;\n  overflow: hidden;\n  white-space: nowrap;\n  text-overflow: ellipsis;\n}\n.project-stats { font-variant-numeric: tabular-nums; color: var(--home-accent-soft); font-size: 10px; }\n.project-time { color: var(--color-muted-foreground, #6b7387); font-size: 9.5px; white-space: nowrap; }\n.project-caret { color: var(--color-muted-foreground, #6b7387); font-size: 9px; width: 10px; text-align: center; }\n.project-detail {\n  margin: 1px 0 3px 12px;\n  padding: 4px 8px;\n  border-left: 1px dashed var(--home-border);\n  display: flex;\n  flex-direction: column;\n  gap: 3px;\n  font-size: 10px;\n}\n.project-detail-row { line-height: 1.4; }\n.project-alerts ul { margin: 2px 0 0 14px; padding: 0; list-style: disc; }\n.project-alerts li { color: var(--home-error); }\n";
 const HOME_DESKTOP_PATH = "/home";
 const DESKTOP_START_KEY = "home-dashboard.opened-this-start";
 const ENGLISH_LABELS = { home: "Home", open: "Open Home" };

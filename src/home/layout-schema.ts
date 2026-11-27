@@ -34,11 +34,13 @@ function isValidWidget(w: unknown): w is LayoutWidget {
   );
 }
 
-/** Unknown/corrupt documents fall back to the default layout. */
-export function parseLayout(raw: unknown): HomeLayout {
+/** Unknown/corrupt documents fall back to the default layout. With `known` (the
+ *  widget registry's ids), widgets that no longer exist — e.g. the retired agent
+ *  widget — are dropped and everything else keeps its place and props. */
+export function parseLayout(raw: unknown, known?: ReadonlySet<string>): HomeLayout {
   if (typeof raw !== "object" || raw === null) return DEFAULT_LAYOUT;
   const o = raw as Record<string, unknown>;
   if (o.version !== LAYOUT_VERSION || !Array.isArray(o.widgets)) return DEFAULT_LAYOUT;
-  const widgets = o.widgets.filter(isValidWidget);
+  const widgets = o.widgets.filter(isValidWidget).filter((w) => !known || known.has(w.id));
   return { version: LAYOUT_VERSION, widgets };
 }

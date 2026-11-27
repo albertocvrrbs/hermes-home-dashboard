@@ -4,17 +4,17 @@ import { setHostLanguage, useT } from "./i18n";
 import { GridCanvas, type GridCanvasHandle } from "./GridCanvas";
 import { WidgetCatalog } from "./WidgetCatalog";
 import { useHomeData } from "./useHomeData";
-import { AgentTheater } from "./widgets/agent/AgentTheater";
-import { subscribeTheater } from "./theater";
+import { WIDGET_REGISTRY } from "./widgets/registry";
 import {
   DEFAULT_LAYOUT, parseLayout, type HomeLayout,
 } from "./layout-schema";
 
+const KNOWN_WIDGETS = new Set(Object.keys(WIDGET_REGISTRY));
 const LAYOUT_URL = "/api/plugins/home-dashboard/layout";
 
 function loadLayout(): Promise<HomeLayout> {
   return fetchJSON<{ layout: unknown }>(LAYOUT_URL)
-    .then((r) => (r.layout == null ? DEFAULT_LAYOUT : parseLayout(r.layout)))
+    .then((r) => (r.layout == null ? DEFAULT_LAYOUT : parseLayout(r.layout, KNOWN_WIDGETS)))
     .catch(() => DEFAULT_LAYOUT);
 }
 
@@ -31,7 +31,6 @@ export default function HomePage() {
   const [editing, setEditing] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
   const [overTrash, setOverTrash] = useState(false);
-  const [theaterOn, setTheaterOn] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const rootRef = useRef<HTMLDivElement>(null);
   const catalogRef = useRef<HTMLDivElement>(null);
@@ -46,14 +45,6 @@ export default function HomePage() {
     if (dashboardLocale !== null) setHostLanguage(dashboardLocale);
   }, [dashboardLocale]);
   const t = useT();
-
-  // The agent widget can "take control" of the whole screen. While the
-  // theater is active the grid stays mounted underneath (state intact) and
-  // the fullscreen overlay sits on top; editing is force-closed.
-  useEffect(() => subscribeTheater(setTheaterOn), []);
-  useEffect(() => {
-    if (theaterOn && editing) setEditing(false);
-  }, [theaterOn, editing]);
 
   const showToast = useCallback((msg: string) => {
     setToast(msg);
@@ -187,7 +178,6 @@ export default function HomePage() {
         </button>
       </div>
       {toast && <div className="home-toast" role="status">{toast}</div>}
-      {theaterOn && <AgentTheater data={data} />}
     </div>
   );
 }
