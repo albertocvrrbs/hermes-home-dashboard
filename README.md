@@ -320,6 +320,21 @@ made; your work stays solid.
   - *Web dashboard:* reads the public `/api/sessions/{id}/messages` route. The
     web dashboard gives plugins no way to submit a turn, so sending copies
     your message and opens the session (the panel says so).
+- **Model picker.** The panel header shows the model of the board's session.
+  On Hermes Desktop and the Webapp it is Desktop's own model menu, the same
+  component the chat composer opens (the SDK's `ModelCatalogMenu`), so search,
+  provider groups, favourites, `-fast` variants, MoA presets, *Refresh models*
+  and the per-model thinking/effort/speed submenu look and work the same. A
+  pick switches only the board's session (`config.set model … --session`, the
+  rule Desktop uses for a secondary chat tile), never your profile default; it
+  sticks across reloads because the gateway saves it with the session, and
+  expensive-model guards ask through Desktop's own confirm dialog. Desktop
+  builds that don't export the menu show the model as text.
+  - *Web dashboard:* the model is shown read-only (from the stored session);
+    the web dashboard gives plugins no way to switch a session's model.
+
+![The board chat's model picker: Desktop's own menu, scoped to the board's session](assets/screenshot-board-model-picker.png)
+
 - **Tools and menus.** Every tool, action and menu row carries its lucide
   icon; the name and shortcut show in a tooltip after a short hover. Right-
   click a card for its actions, or the table to add something right there.

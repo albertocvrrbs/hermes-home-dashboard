@@ -20,6 +20,34 @@ clone, they never build).
 
 ---
 
+## 1.9.1
+
+A model picker in the board's chat.
+
+- **Model picker in the chat panel.** The panel header now shows the model of
+  the board's linked session. On Hermes Desktop and the Webapp it opens
+  Desktop's own model menu — the SDK's `ModelCatalogMenu`, the component the
+  chat composer renders — so search, provider groups, favourites, `-fast`
+  families, MoA presets, *Refresh models* and the per-model
+  thinking/effort/speed submenu are the real thing, not a copy. A pick is a
+  session-scoped switch of the board's session (`config.set model
+  "<model> --provider <p> --session"`), like a secondary chat tile, so your
+  profile default never changes; effort and speed edits on the active model go
+  to the session too, edits on other models are remembered for when you pick
+  them. The gateway stores the choice with the session, so it survives reloads.
+  Guarded (expensive) switches ask through Desktop's confirm dialog; failures
+  roll back and toast. Every SDK piece is feature-detected: an older Desktop
+  shows the model as text instead of failing to load.
+- **Web dashboard:** the model shows read-only, read from the stored session
+  (`GET /api/sessions/{id}`); there is no session RPC there to switch it.
+- **Fix: the plugin now follows Desktop's language.** The language probe used a
+  dotted key, which Desktop's translator reads as a nested path, so the Home
+  and the boards fell back to the browser's language (English) even with
+  `display.language: es`.
+- The panel resumes the board's session lazily once (no messages, no agent
+  build) and retries while the gateway is still connecting, so the header and
+  the first send share one live session.
+
 ## 1.9.0
 
 Live cards, and posters for every video.

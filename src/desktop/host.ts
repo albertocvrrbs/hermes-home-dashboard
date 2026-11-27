@@ -1,4 +1,4 @@
-import type { GatewayRpcEvent, HermesApi, HermesHomeHost, SandboxedFrameComponent } from "../sdk";
+import type { GatewayRpcEvent, HermesApi, HermesHomeHost, ModelMenuHost, SandboxedFrameComponent } from "../sdk";
 
 interface DesktopPluginContext {
   rest<T>(path: string, options?: { method?: string; body?: unknown }): Promise<T>;
@@ -27,6 +27,8 @@ interface DesktopSdkHost {
 
 export interface DesktopBoardExtras {
   SandboxedFrame?: SandboxedFrameComponent;
+  /** Desktop's model menu for the board chat (src/desktop/modelPicker.tsx). */
+  modelMenu?: ModelMenuHost;
 }
 
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -110,5 +112,6 @@ export function createDesktopHomeHost(
       ? <T,>(method: string, params?: Record<string, unknown>) => desktop.request!<T>(method, params)
       : undefined,
     SandboxedFrame: extras.SandboxedFrame,
+    modelMenu: extras.modelMenu,
   };
 }

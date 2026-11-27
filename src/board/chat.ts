@@ -46,8 +46,31 @@ export async function readChat(doc: BoardDoc, limit = 60): Promise<ChatRow[] | n
   }
 }
 
-// Live gateway session per board, so each send doesn't resume again.
-const liveSessions = new Map<string, string>();
+// Live gateway session per board, so each send (or model pick) doesn't resume again. Keyed by
+// board id + stored session id: relinking the board to another session starts over.
+const liveSessions = new Map<string, { sid: string; info: unknown }>();
+const liveKey = (doc: BoardDoc) => `${doc.id}:${doc.session?.id ?? ""}`;
+
+/** The gateway runtime id of the board's linked session, resuming it lazily (no messages, no
+ *  agent build) the first time. `info` is the resume's `{model, provider, …}`. Null when this
+ *  surface has no gateway RPC or the board has no session yet. */
+export async function liveSession(doc: BoardDoc, opts: { fresh?: boolean } = {}): Promise<{ sid: string; info: unknown } | null> {
+  const rpc = hostRpc();
+  if (!rpc || !doc.session?.id) return null;
+  const key = liveKey(doc);
+  const known = liveSessions.get(key);
+  if (known && !opts.fresh) return known;
+  const r = await rpc<{ session_id?: string; info?: unknown }>("session.resume", { session_id: doc.session.id, omit_messages: true, lazy: true });
+  if (!r?.session_id) return null;
+  const live = { sid: r.session_id, info: r.info ?? null };
+  liveSessions.set(key, live);
+  return live;
+}
+
+/** Forget the cached runtime id (it was reaped or the gateway restarted). */
+export function dropLiveSession(doc: BoardDoc): void {
+  liveSessions.delete(liveKey(doc));
+}
 
 /** Sends a prompt to the board's session. `sent` = submitted from here; `handoff` = the prompt
  *  was copied / drafted and the chat opened instead. */
@@ -56,19 +79,20 @@ export async function sendToSession(doc: BoardDoc, body: string): Promise<"sent"
   if (rpc) {
     const submit = async (sid: string) => { await rpc("prompt.submit", { session_id: sid, text: body }); };
     try {
-      let sid = liveSessions.get(doc.id);
-      if (sid) {
-        try { await submit(sid); return "sent"; } catch { liveSessions.delete(doc.id); sid = undefined; }
+      const key = liveKey(doc);
+      const known = liveSessions.get(key);
+      if (known) {
+        try { await submit(known.sid); return "sent"; } catch { liveSessions.delete(key); }
       }
+      let sid: string | undefined;
       if (doc.session?.id) {
-        const r = await rpc<{ session_id?: string }>("session.resume", { session_id: doc.session.id, omit_messages: true, lazy: true });
-        sid = r?.session_id;
+        sid = (await liveSession(doc, { fresh: true }))?.sid;
       } else {
         const r = await rpc<{ session_id?: string }>("session.create", {});
         sid = r?.session_id;
+        if (sid) liveSessions.set(key, { sid, info: null });
       }
       if (sid) {
-        liveSessions.set(doc.id, sid);
         await submit(sid);
         return "sent";
       }

@@ -359,11 +359,22 @@
 .hb-chat .grip::after { content: ""; position: absolute; left: 3px; top: 0; bottom: 0; width: 2px; background: transparent; transition: background-color .14s var(--out); }
 .hb-chat .grip:hover::after, .hb-chat .grip:active::after { background: var(--rule-3); }
 .hb-chat .ch-top { height: 40px; flex: none; display: flex; align-items: center; gap: 2px; padding: 0 6px 0 14px; border-bottom: 1px solid var(--rule); }
-.hb-chat .ch-top .hd { flex: 1; min-width: 0; }
+.hb-chat .ch-top .hd { flex: 1 0 auto; min-width: auto; }
+.hb-chat .ch-top .hd:has(+ .hb-model) { flex-grow: 0; }
 .hb-chat .ch-top .hd::after { display: none; }
 .hb-chat .ch-top .who { display: inline-flex; align-items: center; gap: 6px; color: var(--accent); }
 .hb-chat .ch-top .who svg { width: 8px; height: 10px; }
 .hb-chat .ch-top .n { text-transform: none; letter-spacing: .04em; }
+/* the session's model: Desktop's composer pill (its menu is Desktop's own), or quiet text where
+   this surface can't switch it */
+.hb-chat .hb-model { display: inline-flex; align-items: center; gap: 4px; height: 26px; min-width: 0; max-width: 60%; flex: 0 1 auto; margin: 0 4px 0 auto;
+  padding: 0 8px; border-radius: 6px; font: 400 12px/1 var(--sans); color: var(--ink-3); white-space: nowrap; background: transparent;
+  transition: background-color .14s var(--out), color .14s var(--out); }
+.hb-chat .hb-model .truncate { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hb-chat button.hb-model { cursor: pointer; }
+.hb-chat button.hb-model:hover, .hb-chat button.hb-model[data-state="open"] { background: var(--hover); color: var(--ink); }
+.hb-chat .hb-model.ro { display: block; overflow: hidden; text-overflow: ellipsis; line-height: 26px; cursor: default; }
+.hb-chat .hb-model-caret { width: 0; height: 0; border: 3px solid transparent; border-top-color: currentColor; margin-top: 3px; opacity: .5; flex: none; }
 .hb-chat .ch-list { flex: 1; min-height: 0; overflow-y: auto; padding: 14px 16px 10px; display: flex; flex-direction: column; gap: 12px;
   scrollbar-width: thin; scrollbar-color: var(--rule-2) transparent; }
 .hb-chat .ch-empty { margin: auto 0; display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 24px 12px; text-align: center; color: var(--ink-3); }

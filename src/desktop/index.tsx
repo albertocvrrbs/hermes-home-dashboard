@@ -18,6 +18,7 @@ import {
   openHomeOnDesktopStart,
 } from "./contract";
 import { createDesktopHomeHost } from "./host";
+import { createModelMenuHost } from "./modelPicker";
 
 function DesktopHomePage() {
   return (
@@ -40,7 +41,9 @@ function DesktopBoardsPage() {
   );
 }
 
-const LANGUAGE_PROBE = "home.language";
+// No dots: the app's translator reads "a.b" as a nested path, so a flat "home.language" key
+// never resolved and the plugin fell back to the browser's language.
+const LANGUAGE_PROBE = "homeLanguageProbe";
 
 /** Follow the app's `display.language`. The SDK exposes the active locale
  *  only through translation, so register one probe string per language we
@@ -71,7 +74,9 @@ const plugin: HermesPlugin = {
   register(ctx: PluginContext) {
     // SandboxedFrame is feature-detected: older Desktop builds don't export it.
     const SandboxedFrame = (PluginSdk as unknown as { SandboxedFrame?: SandboxedFrameComponent }).SandboxedFrame;
-    configureHomeHost(createDesktopHomeHost(ctx, host as Parameters<typeof createDesktopHomeHost>[1], { SandboxedFrame }));
+    // The board chat's model picker is Desktop's own menu; absent on builds that don't export it.
+    const modelMenu = createModelMenuHost(PluginSdk);
+    configureHomeHost(createDesktopHomeHost(ctx, host as Parameters<typeof createDesktopHomeHost>[1], { SandboxedFrame, modelMenu }));
     followDesktopLanguage(ctx);
     ctx.registerMany(
       createHomeContributions(

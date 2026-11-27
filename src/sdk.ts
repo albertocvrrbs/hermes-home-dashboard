@@ -52,6 +52,46 @@ export interface HermesHomeHost extends HermesPluginSDK {
   rpc?: <T = unknown>(method: string, params?: Record<string, unknown>) => Promise<T>;
   /** Boards: the SDK's SandboxedFrame for HTML embeds. */
   SandboxedFrame?: SandboxedFrameComponent;
+  /** Boards: Hermes Desktop's own model menu (`ModelCatalogMenu`), wrapped for the chat panel.
+   *  Absent on the web dashboard and on Desktop builds that don't export it. */
+  modelMenu?: ModelMenuHost;
+}
+
+/** What a pick means, in the shape of the Desktop SDK's `ModelMenuController`. */
+export interface BoardModelController {
+  allowSpeed?: boolean;
+  current: { model: string; provider: string; effort: string; effortPending?: boolean; effortWire?: string; fast: boolean; serviceTier?: string };
+  applyPreset: (preset: { effort?: string; fast?: boolean; serviceTier?: string }, row: { model: string; provider: string }) => void;
+  presetFor: (provider: string, model: string) => { effort?: string; fast?: boolean; serviceTier?: string };
+  select: (model: string, provider: string) => Promise<boolean | void> | void;
+  setOptions: (patch: { effort?: string; fast?: boolean; serviceTier?: string }, row: { isActive: boolean; model: string; provider: string }) => void;
+}
+
+export interface ModelPickerProps {
+  controller: BoardModelController;
+  /** Runtime id of the board's live session (scopes the catalog like a chat tile). */
+  sessionId: string;
+  profile: string;
+  /** Pill text (current model) and its tooltip. */
+  label: string;
+  title: string;
+  /** Copy of the composer's "Refresh models" footer row. */
+  refreshLabel: string;
+  className?: string;
+}
+
+/** A guarded switch answered `confirm_required`: ask like Desktop does, resend when confirmed. */
+export interface ModelSwitchConfirm {
+  model: string;
+  message?: string;
+  failureMessage: string;
+  requestConfirmed: () => Promise<{ confirm_required?: boolean; confirm_message?: string } | undefined>;
+}
+
+export interface ModelMenuHost {
+  Picker: (props: ModelPickerProps) => import("react").ReactNode;
+  confirm?: (opts: ModelSwitchConfirm) => Promise<boolean>;
+  notifyError?: (error: unknown, fallback: string) => void;
 }
 
 declare global {
@@ -202,4 +242,8 @@ export function hostRpc(): HermesHomeHost["rpc"] {
 
 export function hostSandboxedFrame(): SandboxedFrameComponent | undefined {
   return getHost().SandboxedFrame;
+}
+
+export function hostModelMenu(): ModelMenuHost | undefined {
+  return getHost().modelMenu;
 }

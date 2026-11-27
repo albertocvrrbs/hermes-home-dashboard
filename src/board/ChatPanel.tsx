@@ -3,14 +3,34 @@
 // calls folded into one quiet line), and a composer that sends into that session.
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import type { Translate } from "../home/i18n";
-import { onGatewayEvent } from "../sdk";
+import { hostModelMenu, onGatewayEvent } from "../sdk";
 import { Cad, clock } from "./bits";
 import { boardPrompt, chatMode, readChat, sendToSession, type ChatRow } from "./chat";
 import { modKey } from "./float";
 import { Icon } from "./icons";
 import type { BoardDoc } from "./model";
+import { modelDisplayName, sessionModelLabel } from "./sessionModel";
+import { useSessionModel } from "./useSessionModel";
 
 export const CHAT_MIN_W = 300;
+
+/** The header's model: Desktop's own picker where this surface can switch the board's session,
+ *  the model as quiet text where it can't (web dashboard, older Desktop builds). */
+function SessionModelPill({ doc, t, refreshKey }: { doc: BoardDoc; t: Translate; refreshKey: number }) {
+  const { model, sid, controller } = useSessionModel(doc, { refreshKey, failureMessage: t("board.chat.model.switchFailed") });
+  const label = modelDisplayName(model.model);
+  const menu = hostModelMenu();
+  const detail = sessionModelLabel(model);
+  const title = model.provider
+    ? t("board.chat.model.title", { provider: model.provider, model: detail })
+    : t("board.chat.model.titleNoProvider", { model: detail });
+  if (controller && menu && sid && label) {
+    const Picker = menu.Picker;
+    return <Picker controller={controller} sessionId={sid} profile={doc.session?.profile || "default"} label={label} title={title} refreshLabel={t("board.chat.model.refresh")} />;
+  }
+  if (!label) return null;
+  return <span className="hb-model ro" data-tip={`${title} — ${t("board.chat.model.readonly")}`} aria-label={title}>{label}</span>;
+}
 export const CHAT_MAX_W = 640;
 
 /** Inline `**bold**` and `code`, as React text (never HTML). */
@@ -169,6 +189,7 @@ export function ChatPanel({ doc, t, width, selected, sentAt, onWidth, onClose, o
         onDoubleClick={() => onWidth(360)} />
       <header className="ch-top">
         <span className="hd"><span className="who"><Cad />hermes</span>{sessionId && <span className="n">#{sessionId.slice(-4)}</span>}</span>
+        {sessionId && <SessionModelPill doc={doc} t={t} refreshKey={mode === "live" ? 0 : sentAt} />}
         <button className="ib" data-tip={t("board.continue")} data-kbd={`${modKey()}↵`} aria-label={t("board.continue")} onClick={onContinue}>
           <Icon name="open" />
         </button>

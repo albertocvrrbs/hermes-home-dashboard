@@ -97,6 +97,9 @@ function hostRpc() {
 function hostSandboxedFrame() {
   return getHost().SandboxedFrame;
 }
+function hostModelMenu() {
+  return getHost().modelMenu;
+}
 const en = {
   // ── shared ──
   "common.loading": "loading…",
@@ -451,6 +454,11 @@ const en = {
   "board.chat.hintLive": "Enter sends · Shift+Enter new line",
   "board.chat.hintHandoff": "Send opens the session, message copied",
   "board.chat.send": "Send",
+  "board.chat.model.title": "Model · {provider}: {model}",
+  "board.chat.model.titleNoProvider": "Model · {model}",
+  "board.chat.model.readonly": "switch it from Hermes Desktop or the Webapp",
+  "board.chat.model.refresh": "Refresh models",
+  "board.chat.model.switchFailed": "Couldn't switch the model",
   "board.index.open": "Open board",
   "board.widget.empty": "No boards yet.",
   "board.kind.live": "live card",
@@ -859,6 +867,11 @@ const es = {
   "board.chat.hintLive": "Enter envía · Shift+Enter nueva línea",
   "board.chat.hintHandoff": "Enviar abre la sesión con el mensaje copiado",
   "board.chat.send": "Enviar",
+  "board.chat.model.title": "Modelo · {provider}: {model}",
+  "board.chat.model.titleNoProvider": "Modelo · {model}",
+  "board.chat.model.readonly": "cámbialo desde Hermes Desktop o la Webapp",
+  "board.chat.model.refresh": "Actualizar modelos",
+  "board.chat.model.switchFailed": "No se pudo cambiar de modelo",
   "board.index.open": "Abrir pizarrón",
   "board.widget.empty": "Todavía no hay pizarrones.",
   "board.kind.live": "tarjeta viva",
@@ -967,12 +980,12 @@ function setHostLanguage(language) {
 }
 const translators = /* @__PURE__ */ new Map();
 function translatorFor(language) {
-  let fn = translators.get(language);
-  if (!fn) {
-    fn = (key, vars) => translate(DICTIONARIES, language, key, vars);
-    translators.set(language, fn);
+  let fn2 = translators.get(language);
+  if (!fn2) {
+    fn2 = (key, vars) => translate(DICTIONARIES, language, key, vars);
+    translators.set(language, fn2);
   }
-  return fn;
+  return fn2;
 }
 const t = (key, vars) => translatorFor(current$1)(key, vars);
 function useT() {
@@ -3544,6 +3557,22 @@ async function readChat(doc, limit = 60) {
   }
 }
 const liveSessions = /* @__PURE__ */ new Map();
+const liveKey = (doc) => `${doc.id}:${doc.session?.id ?? ""}`;
+async function liveSession(doc, opts = {}) {
+  const rpc = hostRpc();
+  if (!rpc || !doc.session?.id) return null;
+  const key = liveKey(doc);
+  const known = liveSessions.get(key);
+  if (known && !opts.fresh) return known;
+  const r = await rpc("session.resume", { session_id: doc.session.id, omit_messages: true, lazy: true });
+  if (!r?.session_id) return null;
+  const live = { sid: r.session_id, info: r.info ?? null };
+  liveSessions.set(key, live);
+  return live;
+}
+function dropLiveSession(doc) {
+  liveSessions.delete(liveKey(doc));
+}
 async function sendToSession(doc, body) {
   const rpc = hostRpc();
   if (rpc) {
@@ -3551,25 +3580,25 @@ async function sendToSession(doc, body) {
       await rpc("prompt.submit", { session_id: sid, text: body });
     };
     try {
-      let sid = liveSessions.get(doc.id);
-      if (sid) {
+      const key = liveKey(doc);
+      const known = liveSessions.get(key);
+      if (known) {
         try {
-          await submit(sid);
+          await submit(known.sid);
           return "sent";
         } catch {
-          liveSessions.delete(doc.id);
-          sid = void 0;
+          liveSessions.delete(key);
         }
       }
+      let sid;
       if (doc.session?.id) {
-        const r = await rpc("session.resume", { session_id: doc.session.id, omit_messages: true, lazy: true });
-        sid = r?.session_id;
+        sid = (await liveSession(doc, { fresh: true }))?.sid;
       } else {
         const r = await rpc("session.create", {});
         sid = r?.session_id;
+        if (sid) liveSessions.set(key, { sid, info: null });
       }
       if (sid) {
-        liveSessions.set(doc.id, sid);
         await submit(sid);
         return "sent";
       }
@@ -4145,7 +4174,339 @@ function Icon({ name, size = 14, className, node: given }) {
     }
   );
 }
+const NO_MODEL = {
+  model: "",
+  provider: "",
+  effort: "",
+  effortPending: true,
+  effortWire: "",
+  fast: false,
+  serviceTier: ""
+};
+const str = (v) => typeof v === "string" ? v.trim() : "";
+function mergeSessionInfo(prev, info) {
+  if (!info || typeof info !== "object") return prev;
+  const r = info;
+  const next = { ...prev };
+  if (str(r.model)) next.model = str(r.model);
+  if ("provider" in r && str(r.provider)) next.provider = str(r.provider);
+  if (typeof r.reasoning_effort === "string") {
+    next.effort = r.reasoning_effort.trim();
+    next.effortPending = false;
+    next.effortWire = str(r.reasoning_effort_wire);
+  }
+  if (typeof r.fast === "boolean") next.fast = r.fast;
+  if (typeof r.service_tier === "string") next.serviceTier = r.service_tier.trim();
+  return next;
+}
+function modelFromSessionRow(row2) {
+  if (!row2 || typeof row2 !== "object") return NO_MODEL;
+  const r = row2;
+  let effort = "";
+  let pending = true;
+  try {
+    const cfg = typeof r.model_config === "string" ? JSON.parse(r.model_config) : r.model_config;
+    const rc = cfg && typeof cfg === "object" ? cfg.reasoning_config : null;
+    if (rc && typeof rc === "object") {
+      const o = rc;
+      effort = o.enabled === false ? "none" : str(o.effort);
+      pending = false;
+    }
+  } catch {
+  }
+  return { ...NO_MODEL, model: str(r.model), provider: str(r.billing_provider), effort, effortPending: pending };
+}
+function modelSwitchValue(model, provider) {
+  const m = model.trim();
+  const p = provider.trim();
+  return p ? `${m} --provider ${p} --session` : `${m} --session`;
+}
+function speedValue(tier) {
+  return tier === "priority" ? "fast" : tier || "normal";
+}
+const VARIANTS = [
+  [/-fast$/i, "Fast"],
+  [/-flash$/i, "Flash"],
+  [/-thinking$/i, "Thinking"],
+  [/-preview$/i, "Preview"],
+  [/-latest$/i, "Latest"]
+];
+const VENDOR = [
+  [/\bDeepseek\b/g, "DeepSeek"],
+  [/\bGlm\b/g, "GLM"],
+  [/\bMinimax\b/g, "MiniMax"],
+  [/\bOpenai\b/g, "OpenAI"],
+  [/\bErnie\b/g, "ERNIE"],
+  [/\bMimo\b/g, "MiMo"],
+  [/\bVl\b/g, "VL"],
+  [/\bFp8\b/g, "FP8"],
+  [/\bAi\b/g, "AI"]
+];
+const titleCase = (s) => s.replace(/\b\w/g, (c) => c.toUpperCase()).trim();
+function vendorCase(s) {
+  let out = s.replace(/\b(a?)(\d+(?:\.\d+)?)b\b/gi, (_m, a, n) => `${a.toUpperCase()}${n}B`);
+  for (const [re, to] of VENDOR) out = out.replace(re, to);
+  return out;
+}
+function prettify(base) {
+  if (/^claude-/i.test(base)) return vendorCase(titleCase(base.replace(/^claude-/i, "").replace(/(\d)-(?=\d)/g, "$1.").replace(/-/g, " ")));
+  if (/^gpt-/i.test(base)) return base.replace(/^gpt-/i, "GPT-");
+  if (/^gemini-/i.test(base)) return vendorCase(titleCase(base.replace(/^gemini-/i, "Gemini ").replace(/-/g, " ")));
+  return vendorCase(titleCase(base.replace(/-/g, " ")));
+}
+function modelDisplayName(model) {
+  const id = model.trim();
+  if (!id) return "";
+  let base = id.slice(id.lastIndexOf("/") + 1);
+  let variant = "";
+  for (const [re, label] of VARIANTS) {
+    if (re.test(base)) {
+      variant = label;
+      base = base.replace(re, "");
+      break;
+    }
+  }
+  const ctx = base.match(/\[(\d+[mk])\]$/i);
+  const tags = [variant];
+  if (ctx) {
+    tags.push(ctx[1].toUpperCase());
+    base = base.slice(0, -ctx[0].length);
+  }
+  base = base.replace(/-\d{8}$/, "");
+  const name = prettify(base) || id;
+  const tag = tags.filter(Boolean).join(" ");
+  return tag ? `${name} · ${tag}` : name;
+}
+const EFFORT_LABELS = {
+  none: "Off",
+  minimal: "Min",
+  low: "Low",
+  medium: "Med",
+  high: "High",
+  xhigh: "XHigh",
+  max: "Max",
+  ultra: "Ultra"
+};
+function effortLabel(m) {
+  if (m.effortPending || !m.effort) return "";
+  return EFFORT_LABELS[m.effort.toLowerCase()] ?? m.effort;
+}
+function sessionModelLabel(m) {
+  const name = modelDisplayName(m.model);
+  if (!name) return "";
+  const effort = effortLabel(m);
+  return effort ? `${name} · ${effort}` : name;
+}
+const PRESETS_KEY = "hb.modelPresets";
+const presetKey = (provider, model) => `${provider.trim().toLowerCase()}::${model.trim()}`;
+function readPresets(storage) {
+  try {
+    const v = JSON.parse(storage?.getItem(PRESETS_KEY) || "{}");
+    return v && typeof v === "object" && !Array.isArray(v) ? v : {};
+  } catch {
+    return {};
+  }
+}
+function writePreset(storage, provider, model, patch) {
+  if (!storage) return;
+  const all = readPresets(storage);
+  const key = presetKey(provider, model);
+  all[key] = { ...all[key], ...patch };
+  const keys = Object.keys(all);
+  for (const k of keys.slice(0, Math.max(0, keys.length - 60))) delete all[k];
+  try {
+    storage.setItem(PRESETS_KEY, JSON.stringify(all));
+  } catch {
+  }
+}
+const store = () => {
+  try {
+    return window.localStorage;
+  } catch {
+    return null;
+  }
+};
+function useSessionModel(doc, opts) {
+  const storedId = doc.session?.id ?? null;
+  const [model, setModel] = useState(NO_MODEL);
+  const [sid, setSid] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const docRef = useRef(doc);
+  docRef.current = doc;
+  const modelRef = useRef(model);
+  modelRef.current = model;
+  const live = !!hostRpc();
+  useEffect(() => {
+    let on = true;
+    setModel(NO_MODEL);
+    setSid(null);
+    if (!storedId) return;
+    if (live) {
+      let timer = 0;
+      const attempt = (n) => {
+        liveSession(docRef.current).then((r) => {
+          if (!on || !r) return;
+          setSid(r.sid);
+          setModel((m) => mergeSessionInfo(m, r.info));
+        }).catch((err) => {
+          if (!on) return;
+          if (n >= 4) {
+            console.warn("[home-dashboard] board session model unavailable:", err);
+            return;
+          }
+          timer = window.setTimeout(() => attempt(n + 1), 1500 * 2 ** n);
+        });
+      };
+      attempt(0);
+      return () => {
+        on = false;
+        window.clearTimeout(timer);
+      };
+    } else {
+      fetchJSON(`/api/sessions/${encodeURIComponent(storedId)}`).then((row2) => {
+        if (on) setModel(modelFromSessionRow(row2));
+      }).catch(() => {
+      });
+    }
+    return () => {
+      on = false;
+    };
+  }, [storedId, live, opts.refreshKey]);
+  useEffect(() => {
+    if (!sid) return;
+    const off = onGatewayEvent("session.info", (ev) => {
+      if (ev?.session_id === sid) setModel((m) => mergeSessionInfo(m, ev.payload));
+    });
+    return () => {
+      off?.();
+    };
+  }, [sid]);
+  const request = useCallback(async (method, params) => {
+    const rpc = hostRpc();
+    if (!rpc) throw new Error("no gateway");
+    const d = docRef.current;
+    let cur = sid ?? (await liveSession(d))?.sid;
+    if (!cur) throw new Error("no live session");
+    try {
+      return await rpc(method, { ...params, session_id: cur });
+    } catch (err) {
+      if (!/session not found|4001/i.test(String(err?.message ?? err))) throw err;
+      dropLiveSession(d);
+      const again = await liveSession(d, { fresh: true });
+      if (!again || again.sid === cur) throw err;
+      cur = again.sid;
+      setSid(cur);
+      return rpc(method, { ...params, session_id: cur });
+    }
+  }, [sid]);
+  const writeOption = useCallback(async (patch) => {
+    const before = modelRef.current;
+    if (patch.effort) {
+      setModel((m) => ({ ...m, effort: patch.effort, effortPending: false, effortWire: "" }));
+      try {
+        await request("config.set", { key: "reasoning", value: patch.effort });
+      } catch (err) {
+        setModel((m) => ({ ...m, effort: before.effort, effortPending: before.effortPending }));
+        hostModelMenu()?.notifyError?.(err, opts.failureMessage);
+      }
+    }
+    const tier = patch.serviceTier ?? (patch.fast === void 0 ? void 0 : patch.fast ? "priority" : "normal");
+    if (tier !== void 0) {
+      setModel((m) => ({ ...m, serviceTier: tier, fast: tier !== "normal" }));
+      try {
+        await request("config.set", { key: "fast", value: speedValue(tier) });
+      } catch (err) {
+        setModel((m) => ({ ...m, serviceTier: before.serviceTier, fast: before.fast }));
+        hostModelMenu()?.notifyError?.(err, opts.failureMessage);
+      }
+    }
+  }, [request, opts.failureMessage]);
+  const select = useCallback(async (next, provider) => {
+    const before = modelRef.current;
+    const paint = () => setModel((m) => ({ ...m, model: next, provider, effortWire: "" }));
+    const rollback = () => setModel(before);
+    const send = (confirm = false) => request("config.set", {
+      key: "model",
+      value: modelSwitchValue(next, provider),
+      ...confirm ? { confirm_expensive_model: true } : {}
+    });
+    paint();
+    setBusy(true);
+    try {
+      const r = await send();
+      if (r?.confirm_required) {
+        rollback();
+        const menu = hostModelMenu();
+        if (!menu?.confirm) return false;
+        const ok = await menu.confirm({
+          model: next,
+          message: r.confirm_message,
+          failureMessage: opts.failureMessage,
+          requestConfirmed: async () => {
+            paint();
+            return send(true);
+          }
+        });
+        if (!ok) rollback();
+        return ok;
+      }
+      return true;
+    } catch (err) {
+      rollback();
+      hostModelMenu()?.notifyError?.(err, opts.failureMessage);
+      return false;
+    } finally {
+      setBusy(false);
+    }
+  }, [request, opts.failureMessage]);
+  const canSwitch = live && !!storedId && !!sid && !!hostModelMenu();
+  const controller = canSwitch ? {
+    allowSpeed: true,
+    current: {
+      model: model.model,
+      provider: model.provider,
+      effort: model.effort,
+      effortPending: model.effortPending,
+      effortWire: model.effortWire,
+      fast: model.fast,
+      serviceTier: model.serviceTier
+    },
+    // Selecting a row restores what this board last used for that model (the menu passes the
+    // preset it read from presetFor, or the defaults). Only what differs is written.
+    applyPreset: (preset, row2) => {
+      const m = modelRef.current;
+      const patch = {};
+      if (preset.effort !== void 0 && preset.effort !== m.effort) patch.effort = preset.effort;
+      const tier = preset.serviceTier ?? (preset.fast === void 0 ? void 0 : preset.fast ? "priority" : "normal");
+      if (tier !== void 0 && tier !== (m.serviceTier || "normal")) patch.serviceTier = tier;
+      writePreset(store(), row2.provider, row2.model, preset);
+      if (Object.keys(patch).length) void writeOption(patch);
+    },
+    presetFor: (provider, m) => readPresets(store())[presetKey(provider, m)] ?? {},
+    select,
+    // Like the composer: an edit on the active row goes to the session; on another row it is
+    // only remembered for when that model is picked.
+    setOptions: (patch, row2) => {
+      writePreset(store(), row2.provider, row2.model, patch);
+      if (row2.isActive) void writeOption(patch);
+    }
+  } : null;
+  return { model, sid, controller, busy };
+}
 const CHAT_MIN_W = 300;
+function SessionModelPill({ doc, t: t2, refreshKey }) {
+  const { model, sid, controller } = useSessionModel(doc, { refreshKey, failureMessage: t2("board.chat.model.switchFailed") });
+  const label = modelDisplayName(model.model);
+  const menu = hostModelMenu();
+  const detail = sessionModelLabel(model);
+  const title = model.provider ? t2("board.chat.model.title", { provider: model.provider, model: detail }) : t2("board.chat.model.titleNoProvider", { model: detail });
+  if (controller && menu && sid && label) {
+    const Picker = menu.Picker;
+    return /* @__PURE__ */ jsx(Picker, { controller, sessionId: sid, profile: doc.session?.profile || "default", label, title, refreshLabel: t2("board.chat.model.refresh") });
+  }
+  if (!label) return null;
+  return /* @__PURE__ */ jsx("span", { className: "hb-model ro", "data-tip": `${title} — ${t2("board.chat.model.readonly")}`, "aria-label": title, children: label });
+}
 const CHAT_MAX_W = 640;
 function inline(text) {
   return text.split(/(\*\*[^*\n]+\*\*|`[^`\n]+`)/g).map((p, i) => {
@@ -4332,6 +4693,7 @@ function ChatPanel({ doc, t: t2, width, selected, sentAt, onWidth, onClose, onCo
               sessionId.slice(-4)
             ] })
           ] }),
+          sessionId && /* @__PURE__ */ jsx(SessionModelPill, { doc, t: t2, refreshKey: mode === "live" ? 0 : sentAt }),
           /* @__PURE__ */ jsx("button", { className: "ib", "data-tip": t2("board.continue"), "data-kbd": `${modKey()}↵`, "aria-label": t2("board.continue"), onClick: onContinue, children: /* @__PURE__ */ jsx(Icon, { name: "open" }) }),
           /* @__PURE__ */ jsx("button", { className: "ib", "data-tip": t2("board.chat.close"), "data-kbd": "Esc", "aria-label": t2("board.chat.close"), onClick: onClose, children: /* @__PURE__ */ jsx(Icon, { name: "closePanel" }) })
         ] }),
@@ -9451,11 +9813,22 @@ const boardCss = `/* Board — "Mesa de despacho" (hd-canvas-plan/mockup-v2). Ev
 .hb-chat .grip::after { content: ""; position: absolute; left: 3px; top: 0; bottom: 0; width: 2px; background: transparent; transition: background-color .14s var(--out); }
 .hb-chat .grip:hover::after, .hb-chat .grip:active::after { background: var(--rule-3); }
 .hb-chat .ch-top { height: 40px; flex: none; display: flex; align-items: center; gap: 2px; padding: 0 6px 0 14px; border-bottom: 1px solid var(--rule); }
-.hb-chat .ch-top .hd { flex: 1; min-width: 0; }
+.hb-chat .ch-top .hd { flex: 1 0 auto; min-width: auto; }
+.hb-chat .ch-top .hd:has(+ .hb-model) { flex-grow: 0; }
 .hb-chat .ch-top .hd::after { display: none; }
 .hb-chat .ch-top .who { display: inline-flex; align-items: center; gap: 6px; color: var(--accent); }
 .hb-chat .ch-top .who svg { width: 8px; height: 10px; }
 .hb-chat .ch-top .n { text-transform: none; letter-spacing: .04em; }
+/* the session's model: Desktop's composer pill (its menu is Desktop's own), or quiet text where
+   this surface can't switch it */
+.hb-chat .hb-model { display: inline-flex; align-items: center; gap: 4px; height: 26px; min-width: 0; max-width: 60%; flex: 0 1 auto; margin: 0 4px 0 auto;
+  padding: 0 8px; border-radius: 6px; font: 400 12px/1 var(--sans); color: var(--ink-3); white-space: nowrap; background: transparent;
+  transition: background-color .14s var(--out), color .14s var(--out); }
+.hb-chat .hb-model .truncate { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hb-chat button.hb-model { cursor: pointer; }
+.hb-chat button.hb-model:hover, .hb-chat button.hb-model[data-state="open"] { background: var(--hover); color: var(--ink); }
+.hb-chat .hb-model.ro { display: block; overflow: hidden; text-overflow: ellipsis; line-height: 26px; cursor: default; }
+.hb-chat .hb-model-caret { width: 0; height: 0; border: 3px solid transparent; border-top-color: currentColor; margin-top: 3px; opacity: .5; flex: none; }
 .hb-chat .ch-list { flex: 1; min-height: 0; overflow-y: auto; padding: 14px 16px 10px; display: flex; flex-direction: column; gap: 12px;
   scrollbar-width: thin; scrollbar-color: var(--rule-2) transparent; }
 .hb-chat .ch-empty { margin: auto 0; display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 24px 12px; text-align: center; color: var(--ink-3); }
@@ -9884,8 +10257,108 @@ function createDesktopHomeHost(ctx, desktop, extras = {}) {
       return false;
     },
     rpc: typeof desktop.request === "function" ? (method, params) => desktop.request(method, params) : void 0,
-    SandboxedFrame: extras.SandboxedFrame
+    SandboxedFrame: extras.SandboxedFrame,
+    modelMenu: extras.modelMenu
   };
+}
+const isComponent = (v) => typeof v === "function" || !!v && typeof v === "object" && "$$typeof" in v;
+const fn = (v) => typeof v === "function" ? v : void 0;
+function pickerSdk(ns) {
+  const sdk = ns ?? {};
+  const close = sdk.ModelMenuCloseContext;
+  const { ModelCatalogMenu, DropdownMenu, DropdownMenuTrigger, DropdownMenuContent } = sdk;
+  if (!isComponent(ModelCatalogMenu) || !isComponent(close?.Provider) || !isComponent(DropdownMenu) || !isComponent(DropdownMenuTrigger) || !isComponent(DropdownMenuContent)) return null;
+  const host2 = sdk.host ?? {};
+  const icons = sdk.icons ?? {};
+  const request = fn(host2.request);
+  const notifyError = fn(host2.notifyError);
+  return {
+    ModelCatalogMenu,
+    CloseProvider: close.Provider,
+    DropdownMenu,
+    DropdownMenuTrigger,
+    DropdownMenuContent,
+    Button: isComponent(sdk.Button) ? sdk.Button : void 0,
+    Chevron: isComponent(icons.ChevronDown) ? icons.ChevronDown : void 0,
+    DropdownMenuItem: isComponent(sdk.DropdownMenuItem) ? sdk.DropdownMenuItem : void 0,
+    Codicon: isComponent(sdk.Codicon) ? sdk.Codicon : void 0,
+    useQueryClient: fn(sdk.useQueryClient),
+    surfaceModelSwitchConfirm: fn(sdk.surfaceModelSwitchConfirm),
+    request: request ? (m, p) => request.call(host2, m, p) : void 0,
+    notifyError: notifyError ? (e, f) => notifyError.call(host2, e, f) : void 0
+  };
+}
+const PILL = "min-w-0 shrink gap-1 rounded-md px-2 text-xs font-normal text-(--ui-text-tertiary) hover:bg-(--chrome-action-hover) hover:text-foreground";
+function createModelMenuHost(ns) {
+  const sdk = pickerSdk(ns);
+  if (!sdk) return void 0;
+  const { ModelCatalogMenu, CloseProvider, DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, Codicon, Button, Chevron } = sdk;
+  function Picker({ controller, sessionId, profile, label, title, refreshLabel, className }) {
+    const [open, setOpen] = useState(false);
+    const [refreshing, setRefreshing] = useState(false);
+    const queryClient = sdk.useQueryClient?.();
+    const ctl = {
+      ...controller,
+      select: async (model, provider) => {
+        const ok = await controller.select(model, provider);
+        if (ok !== false) void queryClient?.invalidateQueries({ queryKey: ["model-options"] });
+        return ok;
+      }
+    };
+    const refresh = async () => {
+      if (refreshing || !sdk.request) return;
+      setRefreshing(true);
+      try {
+        await sdk.request("model.options", { session_id: sessionId, refresh: true, explicit_only: true });
+      } catch {
+      } finally {
+        setRefreshing(false);
+        void queryClient?.invalidateQueries({ queryKey: ["model-options"] });
+      }
+    };
+    const footer = DropdownMenuItem && sdk.request ? /* @__PURE__ */ jsxs(
+      DropdownMenuItem,
+      {
+        className: "gap-2 rounded-none px-2.5 py-1 text-xs text-(--ui-text-tertiary)",
+        disabled: refreshing,
+        onSelect: (e) => {
+          e.preventDefault();
+          void refresh();
+        },
+        children: [
+          Codicon ? /* @__PURE__ */ jsx(Codicon, { name: "sync", size: "0.75rem", spinning: refreshing }) : null,
+          refreshLabel
+        ]
+      }
+    ) : void 0;
+    const body = /* @__PURE__ */ jsxs(Fragment, { children: [
+      /* @__PURE__ */ jsx("span", { className: "truncate", children: label }),
+      Chevron ? /* @__PURE__ */ jsx(Chevron, { className: "size-2.5 shrink-0 opacity-50" }) : /* @__PURE__ */ jsx("span", { "aria-hidden": "true", className: "hb-model-caret" })
+    ] });
+    const triggerProps = {
+      "aria-label": title,
+      "data-tip": title,
+      className: `${PILL} hb-model ${className ?? ""}`,
+      type: "button"
+    };
+    return /* @__PURE__ */ jsxs(DropdownMenu, { open, onOpenChange: (v) => setOpen(!!v), children: [
+      /* @__PURE__ */ jsx(DropdownMenuTrigger, { asChild: true, children: Button ? /* @__PURE__ */ jsx(Button, { ...triggerProps, variant: "ghost", children: body }) : /* @__PURE__ */ jsx("button", { ...triggerProps, children: body }) }),
+      /* @__PURE__ */ jsx(DropdownMenuContent, { align: "end", className: "w-72 p-0", side: "bottom", sideOffset: 6, children: /* @__PURE__ */ jsx(CloseProvider, { value: () => setOpen(false), children: /* @__PURE__ */ jsx(ModelCatalogMenu, { controller: ctl, footer, includeMoa: true, profile, request: sdk.request, sessionId }) }) })
+    ] });
+  }
+  const confirm = sdk.surfaceModelSwitchConfirm ? (o) => sdk.surfaceModelSwitchConfirm({
+    confirmMessage: o.message,
+    failureMessage: o.failureMessage,
+    model: o.model,
+    requestConfirmed: o.requestConfirmed
+  }) : void 0;
+  const notifyError = sdk.notifyError ? (error, fallback) => {
+    try {
+      sdk.notifyError(error, fallback);
+    } catch {
+    }
+  } : void 0;
+  return { Picker, confirm, notifyError };
 }
 function DesktopHomePage() {
   return /* @__PURE__ */ jsxs(Fragment, { children: [
@@ -9900,7 +10373,7 @@ function DesktopBoardsPage() {
     /* @__PURE__ */ jsx("div", { className: "home-board-page desktop", children: /* @__PURE__ */ jsx(BoardApp, { route: route2 ?? null, onHome: () => host.navigate("/home") }) })
   ] });
 }
-const LANGUAGE_PROBE = "home.language";
+const LANGUAGE_PROBE = "homeLanguageProbe";
 function followDesktopLanguage(ctx) {
   const i18n = ctx.i18n;
   if (!i18n || typeof i18n.register !== "function" || typeof i18n.t !== "function") return;
@@ -9921,7 +10394,8 @@ const plugin = {
   defaultEnabled: true,
   register(ctx) {
     const SandboxedFrame = PluginSdk.SandboxedFrame;
-    configureHomeHost(createDesktopHomeHost(ctx, host, { SandboxedFrame }));
+    const modelMenu = createModelMenuHost(PluginSdk);
+    configureHomeHost(createDesktopHomeHost(ctx, host, { SandboxedFrame, modelMenu }));
     followDesktopLanguage(ctx);
     ctx.registerMany(
       createHomeContributions(
