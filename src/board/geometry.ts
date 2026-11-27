@@ -152,3 +152,46 @@ export function resizePatch(kind: string, w: number, h: number): { w: number; h?
   if (RESIZE_H.has(kind)) p.h = Math.round(Math.max(40, h));
   return p;
 }
+
+// ── wheel: mouse wheels zoom, trackpads pan, pinch zooms ─────────────────
+
+export const ZOOM_MIN = 0.2;
+export const ZOOM_MAX = 2.4;
+
+export interface WheelLike {
+  deltaX: number; deltaY: number; deltaMode: number;
+  ctrlKey?: boolean; metaKey?: boolean; shiftKey?: boolean;
+  /** Chrome's legacy field: multiples of 120 for a wheel notch. */
+  wheelDeltaY?: number;
+}
+
+/** "zoom" for a mouse wheel or a pinch (Chrome sends pinch as ctrl+wheel), "pan" for a
+ *  two-finger trackpad scroll. A wheel notch is line/page mode, or a whole, vertical-only pixel
+ *  delta of 50+ (or a wheelDelta that is a multiple of 120). Trackpads send small, fractional or
+ *  two-axis pixel deltas, and keep doing so through their momentum, so a recent trackpad event
+ *  (`trackpadRecent`) keeps the gesture panning. */
+export function wheelIntent(e: WheelLike, trackpadRecent = false): "zoom" | "pan" {
+  if (e.ctrlKey || e.metaKey) return "zoom";
+  if (e.deltaMode !== 0) return "zoom";
+  const notch = e.deltaX === 0 && e.deltaY !== 0 && (
+    (typeof e.wheelDeltaY === "number" && e.wheelDeltaY !== 0 && Math.abs(e.wheelDeltaY) % 120 === 0)
+    || (Number.isInteger(e.deltaY) && Math.abs(e.deltaY) >= 50));
+  if (notch && !trackpadRecent) return "zoom";
+  return "pan";
+}
+
+/** Zoom factor for one wheel event: pixel-normalised, clamped per event so one fast spin
+ *  can't jump the whole range. A pinch is finer than a wheel notch. */
+export function wheelZoomFactor(e: WheelLike): number {
+  const unit = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? 800 : 1;
+  const px = Math.max(-240, Math.min(240, e.deltaY * unit));
+  const k = e.ctrlKey || e.metaKey ? 0.01 : 0.0015;
+  return Math.exp(-px * k);
+}
+
+/** The view after zooming by `f` around screen point (sx, sy): that point stays put. */
+export function zoomView(v: View, f: number, sx: number, sy: number, min = ZOOM_MIN, max = ZOOM_MAX): View {
+  const z = Math.min(max, Math.max(min, v.z * f));
+  const wx = (sx - v.x) / v.z, wy = (sy - v.y) / v.z;
+  return { z, x: sx - wx * z, y: sy - wy * z };
+}

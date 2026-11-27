@@ -20,6 +20,53 @@ clone, they never build).
 
 ---
 
+## 1.8.1
+
+Board polish, after seeing 1.8.0 in Hermes Desktop.
+
+- **Icons and tooltips.** Every tool in the bottom bar, every selection and
+  menu action, the board list and the Board widget's hover controls now use
+  lucide icons, the same set and version Hermes Desktop draws its chrome with
+  (bundled and tree-shaken, 2 px stroke). Names and shortcuts moved from
+  permanent text into one tooltip style: a short delay, then the name and its
+  key (`Ctrl+` or `⌘` by platform), flipped and clamped to the window. Every
+  keyboard shortcut still works.
+- **Selection bar, rebuilt.** It lives in screen space now, so it keeps one
+  size at any zoom, sits above the selection, flips below it near the top and
+  never leaves the view. Hermes' verbs keep their label, and edit, open,
+  connect, duplicate and delete are icon buttons with separators. This fixes
+  the crowded bar where "duplicate" and "delete" ran together.
+- **Right-click menus.** On a card: Hermes' verbs, then edit, open, connect,
+  duplicate, delete. On the table: add any kind of item right there, select
+  all, fit, chat. Arrow keys move through it, Esc closes it.
+- **Connect to…** from the bar or the menu: click the card to link to.
+- **Fix: mouse-wheel zoom.** The wheel listener was attached before the board
+  had loaded, so it never reached the table. Now a mouse wheel zooms around
+  the pointer with a short ease, Ctrl/⌘+wheel and trackpad pinch zoom
+  directly, a two-finger trackpad scroll pans (Shift+wheel pans sideways),
+  all clamped to 20-240 %. HTML embeds sit behind a click-to-interact shield,
+  so the wheel zooms over them too until you click into one.
+- **Chat panel instead of the `hermes ›` prompt.** A collapsible panel docked
+  on the right shows the linked session's recent turns styled like the
+  Desktop chat, with a composer that sends into that session. Toggle with the
+  header button or `/`, close with Esc, drag to resize; it remembers both, and
+  floats over the board when the window is narrow. Desktop and the Webapp read
+  with `session.transcript` and send with `prompt.submit`; the web dashboard
+  reads `/api/sessions/{id}/messages` and hands off to the session to send.
+- **Two typefaces, both the host's.** Card text and controls use Hermes
+  Desktop's UI sans (`--dt-font-sans`, or the dashboard's sans), and headers,
+  counts and keys use the Home's mono. Atkinson Hyperlegible, Departure Mono
+  and Architects Daughter are gone, along with their embedded files: about
+  66 KB of font data left `desktop/plugin.js`, and the dashboard stylesheet
+  went from 118 KB to 60 KB. Sketch labels now use the UI sans in italic.
+- **Native surface.** On Desktop the board takes the app's editor surface and
+  elevated popover colors instead of a hardcoded teal, so it matches the rest
+  of the window in every theme.
+- **Smaller touches.** An empty board shows an icon and one line. The bottom
+  bar gains undo and redo, and a hint for the active tool. The minimap hides
+  on an empty board and highlights on hover. Transitions run 120-200 ms
+  ease-out, and reduced motion turns them off, tooltips included.
+
 ## 1.8.0
 
 - **Board.** An infinite canvas where Hermes works with you. Cards, to-do

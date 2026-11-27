@@ -283,28 +283,50 @@ two regenerated bundles.
 ![Board — an infinite canvas Hermes draws on with you](assets/screenshot-board.png)
 
 An infinite canvas for one idea per board, built like Milanote but in the
-Home's own dark, monospaced style. You get cards, to-do lists, columns, link
-and video cards, images, sandboxed HTML embeds, nested boards, connectors and
-freehand sketches.
+Home's own style: your host's UI font for text, the Home's mono for structure,
+and the same lucide icons Hermes Desktop uses. You get cards, to-do lists,
+columns, link and video cards, images, sandboxed HTML embeds, nested boards,
+connectors and freehand sketches.
 
-**Hermes works on it with you.** Ask from the `hermes ›` prompt at the bottom,
-from the selection menu ("turn into a diagram", "sort by date"…) or in the
-board's session. His cursor walks over the board as his edits land. A
-dot-matrix border marks what he made; your work stays solid.
+**Hermes works on it with you.** Ask in the chat panel on the right (`/`),
+from the selection bar or the right-click menu ("Split into cards", "Turn
+into a diagram"…), or in the board's session. His cursor walks over the board
+as his edits land. A dot-matrix border and his caduceus signature mark what he
+made; your work stays solid.
 
 ![Your sketch on the left, Hermes' clean version on the right](assets/screenshot-board-flow.png)
 
 - **Paste anything.** A URL becomes a link card with title, description,
   favicon and image. A YouTube, Vimeo, Loom or X link, or a direct video file,
   becomes a playable card. An image, or an image URL, becomes an image card.
-- **One session per board.** *Continue in session* (⌘↵) opens the session
-  linked to the board. There, Hermes knows the board, and whatever you ask him
-  gets drawn on it.
-- **Keys:** `N` note · `T` to-do · `C` column · `L` link · `I` image · `B`
-  board · `E` embed · `A` arrow · `D` draw · `/` ask Hermes · `F` fit ·
-  `⌘Z` / `⌘⇧Z` undo / redo.
-- **On the Home** the Board widget shows a live preview of a board (the arrows
-  cycle boards); click it to open the page. On Desktop, *Boards* is in the
+- **One session per board.** *Continue in session* (⌘↵ / Ctrl+↵) opens the
+  session linked to the board. There, Hermes knows the board, and whatever you
+  ask him gets drawn on it.
+- **Chat panel.** A collapsible panel docked on the right shows the linked
+  session's recent turns, your messages in the Desktop user bubble and Hermes'
+  replies as plain text, with tool calls folded into one line. Toggle it with
+  the header button or `/`, close it with `Esc`, drag its edge to resize; it
+  remembers both. Selected items ride along with what you send.
+  - *Hermes Desktop and the Webapp:* reads with the gateway's
+    `session.transcript` (it never attaches the session to a pane) and sends
+    with `prompt.submit`; the first message starts the board's session.
+  - *Web dashboard:* reads the public `/api/sessions/{id}/messages` route. The
+    web dashboard gives plugins no way to submit a turn, so sending copies
+    your message and opens the session (the panel says so).
+- **Tools and menus.** Every tool, action and menu row carries its lucide
+  icon; the name and shortcut show in a tooltip after a short hover. Right-
+  click a card for its actions, or the table to add something right there.
+  The selection bar stays a fixed size at any zoom and never leaves the view.
+- **Zoom and pan.** The mouse wheel zooms around the pointer, and so do
+  Ctrl/⌘+wheel and a trackpad pinch. A two-finger trackpad scroll, Space+drag
+  or a drag on the empty table pans; Shift+wheel pans sideways.
+- **Keys:** `V` select · `H` pan · `N` note · `T` to-do · `C` column · `L` link ·
+  `I` image · `B` board · `E` embed · `A` arrow · `D` draw · `/` chat · `F` fit ·
+  `⌘Z` / `⌘⇧Z` undo / redo (Ctrl on Windows and Linux).
+
+![Right-click menu: Hermes' verbs first, then edit, connect, duplicate and delete](assets/screenshot-board-menu.png)
+- **On the Home** the Board widget shows a live preview of a board; its hover
+  controls cycle boards, create one or open the list. Click it to open the page. On Desktop, *Boards* is in the
   sidebar and the command palette.
 
 ![Board widget on the Home](assets/screenshot-board-widget.png)

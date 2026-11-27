@@ -6,6 +6,7 @@ import type { SandboxedFrameComponent } from "../sdk";
 import { assetHtml, assetUrl, boardsApi } from "./api";
 import { Cad, RichText, Sig, ago, dueLabel } from "./bits";
 import { fromStroke, strokePath } from "./geometry";
+import { Icon } from "./icons";
 import { drawPreview, accentOf } from "./preview";
 import { classifyUrl, hostOf, playerUrl } from "./urlKind";
 import type { BoardDoc, Item, Op, TodoItem } from "./model";
@@ -151,12 +152,12 @@ export function TodoView({ id, item, c }: { id: string; item: Item; c: ItemCtx }
             {x.due ? <span className={`side${dueLabel(c.t, x.due).today ? " due" : ""}`}>{dueLabel(c.t, x.due).text}</span>
               : x.by === "h" ? <span className="side sig"><Cad /></span> : null}
             <button className="rm" data-nodrag="" aria-label={c.t("board.todo.remove")}
-              onClick={() => set(items.filter((_, j) => j !== i))}>×</button>
+              onClick={() => set(items.filter((_, j) => j !== i))}><Icon name="close" size={12} /></button>
           </li>
         ))}
       </ul>
       <label className="addrow" data-nodrag="">
-        <b>+</b>
+        <b><Icon name="plus" size={13} /></b>
         <input value={draft} placeholder={c.t("board.todo.add")} onChange={(e) => setDraft(e.target.value)}
           onKeyDown={(e) => {
             e.stopPropagation();
@@ -187,7 +188,7 @@ export function ColumnView({ id, item, c, dropIndex }: { id: string; item: Item;
         {dropIndex != null && dropIndex >= kids.length && <div className="drop-line" />}
       </div>
       <button className="add" data-nodrag="" onClick={() => c.addToColumn(id)}>
-        <b>+</b>{c.t("board.col.add")}<span className="k">N</span>
+        <Icon name="plus" size={13} />{c.t("board.col.add")}
       </button>
     </div>
   );
@@ -289,7 +290,7 @@ function toDataUrl(html: string): string {
   return `data:text/html;charset=utf-8;base64,${btoa(bin)}`;
 }
 
-export function EmbedView({ item, c }: { item: Item; c: ItemCtx }) {
+export function EmbedView({ id, item, c }: { id: string; item: Item; c: ItemCtx }) {
   const [html, setHtml] = useState<string | null>(null);
   const [nonce, setNonce] = useState(0);
   const [tall, setTall] = useState(false);
@@ -299,6 +300,7 @@ export function EmbedView({ item, c }: { item: Item; c: ItemCtx }) {
     return () => { live = false; };
   }, [item.asset]);
   const Frame = c.Frame;
+  const active = c.playing === id;
   const height = tall ? 520 : (item.h ? Math.max(120, item.h - 80) : 240);
   return (
     <div className={`hb-card hb-embed${item.by === "h" ? " dm" : ""}`} style={{ width: item.w ?? 452 }}>
@@ -306,11 +308,15 @@ export function EmbedView({ item, c }: { item: Item; c: ItemCtx }) {
         <span className="file">{item.title || c.t("board.embed.title")}</span>
         <span className="sb">{c.t("board.embed.sandbox")}</span>
         <span className="tools">
-          <button className="kbtn" data-nodrag="" title={c.t("board.embed.reload")} onClick={() => setNonce((n) => n + 1)}>↻</button>
-          <button className="kbtn" data-nodrag="" title={c.t("board.embed.taller")} onClick={() => setTall((v) => !v)}>⤢</button>
+          <button className="kbtn" data-nodrag="" data-tip={c.t("board.embed.reload")} aria-label={c.t("board.embed.reload")} onClick={() => setNonce((n) => n + 1)}><Icon name="reload" size={13} /></button>
+          <button className="kbtn" data-nodrag="" data-tip={c.t("board.embed.taller")} aria-label={c.t("board.embed.taller")} onClick={() => setTall((v) => !v)}><Icon name="taller" size={13} /></button>
         </span>
       </div>
-      <div data-nodrag="" style={{ height }}>
+      <div data-nodrag="" style={{ height, position: "relative" }}>
+        {/* Until it's clicked, a shield keeps the wheel and drags on the board (an iframe eats
+            them); clicking hands it the pointer, clicking elsewhere takes it back. */}
+        {!active && <button className="shield" aria-label={c.t("board.embed.activate")} onClick={() => c.setPlaying(id)}>
+          <span>{c.t("board.embed.activate")}</span></button>}
         {html == null ? <div className="frame" style={{ height }} /> : Frame
           ? <Frame key={nonce} src={toDataUrl(html)} title={item.title || "embed"} className="frame" style={{ height }} />
           : <iframe key={nonce} className="frame" style={{ height }} sandbox="allow-scripts" srcDoc={html}
@@ -363,7 +369,7 @@ export function BoardRefView({ item, c }: { item: Item; c: ItemCtx }) {
       <div className="pv"><BoardPreview doc={child} /></div>
       <div className="ttl">
         <b>{child?.name ?? item.title ?? c.t("board.ref.missing")}</b>
-        <span><button data-nodrag="" onClick={() => item.ref && c.openBoard(item.ref)}>{c.t("board.ref.open")} ↗</button></span>
+        <span><button data-nodrag="" data-tip={c.t("board.index.open")} aria-label={c.t("board.index.open")} onClick={() => item.ref && c.openBoard(item.ref)}><Icon name="openBoard" size={13} /></button></span>
       </div>
       <div className="meta"><span>{c.t("board.ref.meta", { n: count, when: ago(c.t, child?.updated) })}</span></div>
     </div>
@@ -436,7 +442,7 @@ export function ItemBody({ id, item, c, dropIndex, selected }: {
     case "link": return <LinkView id={id} item={item} c={c} />;
     case "video": return <VideoView id={id} item={item} c={c} />;
     case "image": return <ImageView id={id} item={item} c={c} />;
-    case "embed": return <EmbedView item={item} c={c} />;
+    case "embed": return <EmbedView id={id} item={item} c={c} />;
     case "board": return <BoardRefView item={item} c={c} />;
     case "frame": return <FrameView id={id} item={item} c={c} />;
     case "box": return <BoxView id={id} item={item} c={c} />;

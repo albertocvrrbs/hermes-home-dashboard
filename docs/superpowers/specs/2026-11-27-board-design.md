@@ -42,10 +42,16 @@ Follow `mockup-v2/board.html` closely; the rules below are the ones code must no
   Daughter for sketches, no mark. Hermes = dot-matrix frame (2 px dots every 4 px), dotted
   arrows, pixel caduceus + `hermes` signature in Departure Mono, reverse-video `▚ HERMES` tag.
   The mark goes on the outermost thing Hermes made.
-- **Type, four voices**: Atkinson Hyperlegible Next (card titles/body), JetBrains Mono (headers,
-  meta, keys, status line), Departure Mono (Hermes only), Architects Daughter (sketch only).
-  Fonts are subset to Latin and embedded as `data:` woff2 (works under the Webapp CSP
-  `font-src 'self' data:` and needs no static route). All OFL; licenses shipped in `fonts/`.
+- **Type, four voices** (1.8.0; **superseded in 1.8.1**, decision 19): Atkinson Hyperlegible
+  Next (card titles/body), JetBrains Mono (headers, meta, keys, status line), Departure Mono
+  (Hermes only), Architects Daughter (sketch only), embedded as `data:` woff2.
+  **1.8.1:** two families, both the host's and none embedded: the Desktop UI sans
+  (`--dt-font-sans`, the dashboard's `--theme-font-sans` on the web) for text and controls, and
+  the Home's mono (`--theme-font-mono, ui-monospace, monospace`) for structure. Sketch labels
+  use the sans in italic; Hermes stays distinct by material (dot matrix + caduceus).
+- **1.8.1 chrome**: lucide icons (Desktop's set) with one tooltip style for names and keys; the
+  `hermes ›` prompt is replaced by a collapsible chat panel docked on the right; the selection
+  bar lives in screen space; right-click menus on cards and on the table.
 - **Cards**: solid sheet, 1 px rule at 13 %, 3 px radius, no resting shadow; hover brightens
   the rule and shows the Home resize corner (no lift). Shadow only on what floats (dragged
   items, menus). Radii: chrome 0, panels 4, cards/buttons 3, checkboxes 2.

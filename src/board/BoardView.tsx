@@ -1,12 +1,21 @@
 // The board page: title line, infinite table, status line, map, Hermes log and cursor.
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useT, type MessageKey } from "../home/i18n";
-import { hostRpc, hostSandboxedFrame, newChatWithDraft, openSession } from "../sdk";
+import { hostSandboxedFrame, newChatWithDraft, openSession } from "../sdk";
 import { boardsApi, prepareImage } from "./api";
 import { Cad, clock } from "./bits";
-import { boundsOf, fitView, intersects, RESIZE_H, resizePatch, simplify, strokePath, toStroke, type Rect, type View } from "./geometry";
+import { boardPrompt, sendToSession } from "./chat";
+import { CHAT_MAX_W, CHAT_MIN_W, ChatPanel } from "./ChatPanel";
+import { modKey, placeBar } from "./float";
+import {
+  boundsOf, fitView, intersects, RESIZE_H, resizePatch, simplify, strokePath, toStroke, wheelIntent, wheelZoomFactor,
+  zoomView, ZOOM_MAX, ZOOM_MIN, type Rect, type View,
+} from "./geometry";
 import { HermesCursor, type CursorHandle, type CursorStep } from "./HermesCursor";
+import { Icon, type IconName } from "./icons";
 import { ItemBody, itemForUrl, type ItemCtx } from "./items";
+import { BoardMenu, type MenuEntry } from "./Menu";
+import { installTips } from "./tips";
 import { drawPreview } from "./preview";
 import { approxRect, DEFAULT_SIZE, itemLabel, newRef, type BoardDoc, type Entry, type Item, type Op, type Point } from "./model";
 import { extractUrl } from "./urlKind";
@@ -15,14 +24,26 @@ import { Wires } from "./Wires";
 
 type Tool = "select" | "pan" | "note" | "todo" | "link" | "image" | "col" | "board" | "embed" | "arrow" | "draw";
 
-const TOOLS: { tool: Tool; key: string; label: MessageKey }[][] = [
-  [{ tool: "select", key: "V", label: "board.tool.select" }, { tool: "pan", key: "H", label: "board.tool.pan" }],
-  [{ tool: "note", key: "N", label: "board.tool.note" }, { tool: "todo", key: "T", label: "board.tool.todo" },
-   { tool: "link", key: "L", label: "board.tool.link" }, { tool: "image", key: "I", label: "board.tool.image" },
-   { tool: "col", key: "C", label: "board.tool.col" }, { tool: "board", key: "B", label: "board.tool.board" },
-   { tool: "embed", key: "E", label: "board.tool.embed" }],
-  [{ tool: "arrow", key: "A", label: "board.tool.arrow" }, { tool: "draw", key: "D", label: "board.tool.draw" }],
+const TOOLS: { tool: Tool; key: string; label: MessageKey; icon: IconName }[][] = [
+  [{ tool: "select", key: "V", label: "board.tool.select", icon: "select" }, { tool: "pan", key: "H", label: "board.tool.pan", icon: "pan" }],
+  [{ tool: "note", key: "N", label: "board.tool.note", icon: "note" }, { tool: "todo", key: "T", label: "board.tool.todo", icon: "todo" },
+   { tool: "link", key: "L", label: "board.tool.link", icon: "link" }, { tool: "image", key: "I", label: "board.tool.image", icon: "image" },
+   { tool: "col", key: "C", label: "board.tool.col", icon: "col" }, { tool: "board", key: "B", label: "board.tool.board", icon: "board" },
+   { tool: "embed", key: "E", label: "board.tool.embed", icon: "embed" }],
+  [{ tool: "arrow", key: "A", label: "board.tool.arrow", icon: "arrow" }, { tool: "draw", key: "D", label: "board.tool.draw", icon: "draw" }],
 ];
+const TOOL_HINT: Partial<Record<Tool, MessageKey>> = {
+  pan: "board.hint.pan", note: "board.hint.place", todo: "board.hint.place", col: "board.hint.place", board: "board.hint.place",
+  arrow: "board.hint.arrow", draw: "board.hint.draw",
+};
+const VERB_ICON: Record<string, IconName> = {
+  "board.verb.diagram": "diagram", "board.verb.sortDate": "sortDate", "board.verb.split": "split", "board.verb.expand": "expand",
+  "board.verb.flow": "flow", "board.verb.group": "group", "board.verb.summarize": "summarize", "board.verb.improve": "improve",
+};
+const CHAT_OPEN_KEY = "hb.chat.open";
+const CHAT_W_KEY = "hb.chat.w";
+const readLocal = (k: string): string | null => { try { return localStorage.getItem(k); } catch { return null; } };
+const writeLocal = (k: string, v: string) => { try { localStorage.setItem(k, v); } catch { /* private mode */ } };
 const KEY_TOOL: Record<string, Tool> = Object.fromEntries(TOOLS.flat().map((x) => [x.key.toLowerCase(), x.tool]));
 const PLACE: Tool[] = ["note", "todo", "col", "link", "board", "embed", "image"];
 const EDITABLE = new Set(["card", "todo", "col", "frame", "box", "text", "image"]);
@@ -58,7 +79,9 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
   const gridRef = useRef<HTMLDivElement>(null);
   const pctRef = useRef<HTMLSpanElement>(null);
   const mapRef = useRef<HTMLCanvasElement>(null);
-  const promptRef = useRef<HTMLInputElement>(null);
+  const chatInputRef = useRef<HTMLTextAreaElement>(null);
+  const ctxEl = useRef<HTMLDivElement>(null);
+  const selRef = useRef<Rect | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const cursorRef = useRef<CursorHandle>(null);
   const els = useRef(new Map<string, HTMLElement>());
@@ -87,7 +110,12 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
   const [ask, setAsk] = useState<null | { kind: "link" | "embed"; at: { x: number; y: number } }>(null);
   const [askValue, setAskValue] = useState("");
   const [toast, setToast] = useState<string | null>(null);
-  const [prompt, setPrompt] = useState("");
+  const [chatOpen, setChatOpen] = useState(() => readLocal(CHAT_OPEN_KEY) === "1");
+  const [chatW, setChatW] = useState(() => Math.min(CHAT_MAX_W, Math.max(CHAT_MIN_W, Number(readLocal(CHAT_W_KEY)) || 380)));
+  const [chatSentAt, setChatSentAt] = useState(0);
+  const [rootW, setRootW] = useState(1400);
+  const [menu, setMenu] = useState<null | { x: number; y: number; at: { x: number; y: number }; onItem: boolean }>(null);
+  const [connectFrom, setConnectFrom] = useState<string | null>(null);
   const [narrow, setNarrow] = useState<"" | "narrow" | "narrow tiny">("");
   const [cursorAct, setCursorAct] = useState<string | null>(null);
   const [renaming, setRenaming] = useState(false);
@@ -211,32 +239,69 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
     }
   }, []);
 
+  // The selection bar lives in screen space (fixed size at every zoom), above the selection,
+  // flipped below it when the top is covered, and clamped to the viewport.
+  const placeCtx = useCallback(() => {
+    const el = ctxEl.current, vp = vpRef.current, r = selRef.current;
+    if (!el || !vp) return;
+    const v = view.current;
+    const p = r ? placeBar({ x: v.x + r.x * v.z, y: vp.offsetTop + v.y + r.y * v.z, w: r.w * v.z, h: r.h * v.z },
+      { w: el.offsetWidth, h: el.offsetHeight }, { x: 0, y: vp.offsetTop, w: vp.clientWidth, h: vp.clientHeight }) : null;
+    if (!p) { el.style.visibility = "hidden"; return; }
+    el.style.visibility = "visible";
+    el.style.transform = `translate(${p.x}px, ${p.y}px)`;
+    el.dataset.below = p.below ? "1" : "0";
+  }, []);
+
   const applyView = useCallback(() => {
     const v = view.current, world = worldRef.current, grid = gridRef.current;
     if (!world || !grid) return;
     world.style.transform = `translate(${v.x}px, ${v.y}px) scale(${v.z})`;
     world.style.setProperty("--iz", String(1 / v.z));
     const g = 24 * v.z, G = g * 5, c = 4.5;
-    const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='${G}' height='${G}'><path d='M${-c} 0H${c}M0 ${-c}V${c}M${G - c} 0H${G + c}M${G} ${-c}V${c}M${-c} ${G}H${c}M0 ${G - c}V${G + c}M${G - c} ${G}H${G + c}M${G} ${G - c}V${G + c}' stroke='rgba(255,227,196,0.16)' stroke-width='1'/></svg>`;
+    if (!accentRef.current) accentRef.current = accentColor(rootRef.current);
+    const cross = withAlpha(accentRef.current, 0.16);
+    const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='${G}' height='${G}'><path d='M${-c} 0H${c}M0 ${-c}V${c}M${G - c} 0H${G + c}M${G} ${-c}V${c}M${-c} ${G}H${c}M0 ${G - c}V${G + c}M${G - c} ${G}H${G + c}M${G} ${G - c}V${G + c}' stroke='${cross}' stroke-width='1'/></svg>`;
     grid.style.backgroundImage = `url("data:image/svg+xml,${encodeURIComponent(svg)}"), radial-gradient(circle, color-mix(in srgb, var(--accent) 8%, transparent) .9px, transparent 1.2px)`;
     grid.style.backgroundSize = `${G}px ${G}px, ${g}px ${g}px`;
     grid.style.backgroundPosition = `${v.x}px ${v.y}px, ${v.x}px ${v.y}px`;
     if (pctRef.current) pctRef.current.textContent = `${Math.round(v.z * 100)}%`;
     drawMap();
-  }, [drawMap]);
+    placeCtx();
+  }, [drawMap, placeCtx]);
 
   const saveView = useCallback(() => {
     try { sessionStorage.setItem(`hb.view.${bid}`, JSON.stringify(view.current)); } catch { /* private mode */ }
   }, [bid]);
 
   const zoomAt = useCallback((f: number, sx: number, sy: number) => {
-    const v = view.current;
-    const nz = Math.min(2.4, Math.max(0.2, v.z * f));
-    const wx = (sx - v.x) / v.z, wy = (sy - v.y) / v.z;
-    view.current = { z: nz, x: sx - wx * nz, y: sy - wy * nz };
+    view.current = zoomView(view.current, f, sx, sy);
     applyView();
     saveView();
   }, [applyView, saveView]);
+
+  // Wheel zoom eases toward its target (~120 ms) around the pointer; notches accumulate.
+  const zoomAnim = useRef<{ z: number; sx: number; sy: number; raf: number } | null>(null);
+  const zoomSmooth = useCallback((f: number, sx: number, sy: number) => {
+    if (reduced()) { zoomAt(f, sx, sy); return; }
+    const a = zoomAnim.current;
+    const base = a ? a.z : view.current.z;
+    const target = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, base * f));
+    if (a) { cancelAnimationFrame(a.raf); }
+    const anim = { z: target, sx, sy, raf: 0 };
+    zoomAnim.current = anim;
+    const step = () => {
+      const v = view.current;
+      const next = v.z + (anim.z - v.z) * 0.38;
+      const done = Math.abs(anim.z - next) < anim.z * 0.002;
+      view.current = zoomView(v, (done ? anim.z : next) / v.z, anim.sx, anim.sy);
+      applyView();
+      if (done) { zoomAnim.current = null; saveView(); return; }
+      anim.raf = requestAnimationFrame(step);
+    };
+    anim.raf = requestAnimationFrame(step);
+  }, [applyView, saveView, zoomAt]);
+  useEffect(() => () => { if (zoomAnim.current) cancelAnimationFrame(zoomAnim.current.raf); }, []);
 
   const contentBounds = useCallback((): Rect | null => {
     const d = docRef.current;
@@ -280,7 +345,10 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
     const el = rootRef.current;
     const RO = (globalThis as { ResizeObserver?: typeof ResizeObserver }).ResizeObserver;
     if (!el || !RO) return;
-    const ro = new RO(() => setNarrow(el.clientWidth < 760 ? "narrow tiny" : el.clientWidth < 1180 ? "narrow" : ""));
+    const ro = new RO(() => {
+      setNarrow(el.clientWidth < 760 ? "narrow tiny" : el.clientWidth < 1180 ? "narrow" : "");
+      setRootW(el.clientWidth);
+    });
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
@@ -372,42 +440,35 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
     if (!ok) flash(t("board.toast.promptCopied"));
   }, [flash, t]);
 
+  const openChat = useCallback((focus: boolean) => {
+    setChatOpen(true);
+    writeLocal(CHAT_OPEN_KEY, "1");
+    if (focus) window.setTimeout(() => chatInputRef.current?.focus(), 30);
+  }, []);
+  const closeChat = useCallback(() => {
+    setChatOpen(false);
+    writeLocal(CHAT_OPEN_KEY, "0");
+    vpRef.current?.focus({ preventScroll: true });
+  }, []);
+  const resizeChat = useCallback((w: number) => {
+    const max = Math.min(CHAT_MAX_W, Math.max(CHAT_MIN_W, (rootRef.current?.clientWidth ?? 1200) - 620));
+    const next = Math.round(Math.min(max, Math.max(CHAT_MIN_W, w)));
+    setChatW(next);
+    writeLocal(CHAT_W_KEY, String(next));
+  }, []);
+
+  /** Context-bar verbs: send to the board's session and show the reply in the chat panel. */
   const sendToHermes = useCallback(async (text: string) => {
     const d = docRef.current;
     if (!d || !text.trim()) return;
-    const sel = [...selected].filter((id) => d.items[id]);
-    const body = `[board:${d.id}] ${text.trim()}${sel.length ? ` (${t("board.prompt.selection")}: ${sel.join(", ")})` : ""}`;
-    setLog((l) => [...l.slice(-3), { key: `y${Date.now()}`, t: Date.now() / 1000, who: "you", msg: text.trim() }]);
-    setLogOn(true);
-    const rpc = hostRpc();
-    if (rpc) {
-      try {
-        let sid: string | undefined;
-        if (d.session?.id) {
-          const r = await rpc<{ session_id?: string }>("session.resume", { session_id: d.session.id, omit_messages: true, lazy: true });
-          sid = r?.session_id;
-        } else {
-          const r = await rpc<{ session_id?: string }>("session.create", {});
-          sid = r?.session_id;
-        }
-        if (sid) {
-          await rpc("prompt.submit", { session_id: sid, text: body });
-          flash(t("board.toast.sent"));
-          return;
-        }
-      } catch {
-        // fall back to opening the chat with the prompt
-      }
-    }
-    if (d.session?.id) {
-      try { await navigator.clipboard?.writeText(body); } catch { /* ignore */ }
-      openSession(d.session.id);
-      flash(t("board.toast.promptCopied"));
-    } else {
-      const ok = await newChatWithDraft(body);
-      if (!ok) flash(t("board.toast.promptCopied"));
-    }
-  }, [flash, selected, t]);
+    const how = await sendToSession(d, boardPrompt(d, text, [...selected], t("board.prompt.selection")));
+    if (how === "sent") { openChat(false); setChatSentAt(Date.now()); }
+    else flash(t("board.toast.promptCopied"));
+  }, [flash, openChat, selected, t]);
+
+  const onChatSent = useCallback((_text: string, how: "sent" | "handoff") => {
+    if (how === "handoff") flash(t("board.toast.promptCopied"));
+  }, [flash, t]);
 
   // ── pointer interaction ─────────────────────────────────────────────────
   const onPointerDown = (e: React.PointerEvent) => {
@@ -415,7 +476,16 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
     if (!d || e.button === 2) return;
     const target = e.target as HTMLElement;
     if (target.closest("[data-nodrag], .hb-ctx, input, textarea, a, iframe, video")) return;
+    if (connectFrom) {
+      const hit = target.closest("[data-kid], [data-iid]") as HTMLElement | null;
+      const to = hit?.dataset.kid ?? hit?.dataset.iid;
+      if (to && to !== connectFrom && d.items[connectFrom]) commit([{ op: "add", ref: newRef(), item: { k: "line", a: connectFrom, b: to } }]);
+      setConnectFrom(null);
+      return;
+    }
     if (editing && !target.closest(`[data-iid="${editing}"]`)) setEditing(null);
+    // an active embed gives the pointer back to the board when you click outside it
+    if (playing && d.items[playing]?.k === "embed" && !target.closest(`[data-iid="${playing}"], [data-kid="${playing}"]`)) setPlaying(null);
     const w = toWorld(e.clientX, e.clientY);
     lastPoint.current = w;
     const itemEl = target.closest("[data-iid]") as HTMLElement | null;
@@ -639,24 +709,42 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
     }
   };
 
+  // Mouse wheel and pinch zoom around the pointer; a two-finger trackpad scroll pans
+  // (geometry.wheelIntent). Shift+wheel pans sideways. A scrollable textarea being edited
+  // keeps its own scroll; an active embed or playing video gets the wheel inside its iframe.
+  const lastTrackpad = useRef(0);
   const onWheel = useCallback((e: WheelEvent) => {
-    if ((e.target as HTMLElement).closest?.(".hb-embed .frame, .hb-video .stage, textarea")) return;
+    const target = e.target as HTMLElement;
+    const ta = target.closest?.("textarea") as HTMLTextAreaElement | null;
+    if (ta && ta.scrollHeight > ta.clientHeight + 1 && !e.ctrlKey && !e.metaKey) return;
+    // an active embed or a playing video owns the wheel (inactive ones sit behind a shield)
+    if (target.tagName === "IFRAME" || target.tagName === "VIDEO") return;
     e.preventDefault();
     const rect = vpRef.current!.getBoundingClientRect();
-    if (e.ctrlKey || e.metaKey) zoomAt(Math.exp(-e.deltaY * 0.01), e.clientX - rect.left, e.clientY - rect.top);
-    else {
-      view.current = { ...view.current, x: view.current.x - e.deltaX, y: view.current.y - e.deltaY };
-      applyView();
-      saveView();
+    const sx = e.clientX - rect.left, sy = e.clientY - rect.top;
+    const now = performance.now();
+    const intent = e.shiftKey && !e.ctrlKey && !e.metaKey ? "pan" : wheelIntent(e, now - lastTrackpad.current < 400);
+    if (intent === "zoom") {
+      if (e.ctrlKey || e.metaKey) zoomAt(wheelZoomFactor(e), sx, sy);
+      else zoomSmooth(wheelZoomFactor(e), sx, sy);
+      return;
     }
-  }, [applyView, saveView, zoomAt]);
+    if (!e.shiftKey) lastTrackpad.current = now;
+    const dx = e.shiftKey && !e.deltaX ? e.deltaY : e.deltaX;
+    const dy = e.shiftKey && !e.deltaX ? 0 : e.deltaY;
+    view.current = { ...view.current, x: view.current.x - dx, y: view.current.y - dy };
+    applyView();
+    saveView();
+  }, [applyView, saveView, zoomAt, zoomSmooth]);
 
+  // The viewport only exists once the board has loaded: (re)attach then.
+  const hasDoc = !!doc;
   useEffect(() => {
     const vp = vpRef.current;
     if (!vp) return;
     vp.addEventListener("wheel", onWheel, { passive: false });
     return () => vp.removeEventListener("wheel", onWheel);
-  }, [onWheel]);
+  }, [onWheel, hasDoc]);
 
   // ── keyboard, paste, drop ───────────────────────────────────────────────
   useEffect(() => {
@@ -677,14 +765,17 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
       if (mod && e.key === "Enter") { e.preventDefault(); void continueInSession(); return; }
       if (mod || e.altKey) return;
       if (e.key === "Delete" || e.key === "Backspace") { e.preventDefault(); deleteSelection(); return; }
-      if (e.key === "Escape") { setSelected(new Set()); setTool("select"); setEditing(null); return; }
+      if (e.key === "Escape") {
+        if (connectFrom) { setConnectFrom(null); return; }
+        setSelected(new Set()); setTool("select"); setEditing(null); return;
+      }
       if (e.key === "Enter" && selected.size === 1) {
         const id = [...selected][0];
         const it = docRef.current?.items[id];
         if (it && EDITABLE.has(it.k)) { e.preventDefault(); setEditing(id); }
         return;
       }
-      if (e.key === "/") { e.preventDefault(); promptRef.current?.focus(); return; }
+      if (e.key === "/") { e.preventDefault(); openChat(true); return; }
       if (e.key === "f" || e.key === "F") { fit(); return; }
       if (e.key === "+" || e.key === "=") { const vp = vpRef.current!; zoomAt(1.2, vp.clientWidth / 2, vp.clientHeight / 2); return; }
       if (e.key === "-") { const vp = vpRef.current!; zoomAt(1 / 1.2, vp.clientWidth / 2, vp.clientHeight / 2); return; }
@@ -707,7 +798,7 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
     window.addEventListener("keydown", onKey);
     window.addEventListener("keyup", onKey);
     return () => { window.removeEventListener("keydown", onKey); window.removeEventListener("keyup", onKey); };
-  }, [ask, center, commit, continueInSession, deleteSelection, duplicate, fit, selected, sync, zoomAt]);
+  }, [ask, center, commit, connectFrom, continueInSession, deleteSelection, duplicate, fit, openChat, selected, sync, zoomAt]);
 
   useEffect(() => {
     const onPaste = (e: ClipboardEvent) => {
@@ -805,7 +896,85 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
     }
   })();
 
-  const rootCls = `hb ${narrow}`.trim();
+  // ── selection actions (shared by the selection bar and the right-click menu) ──
+  const selIds = doc ? [...selected].filter((id) => doc.items[id]) : [];
+  const single = selIds.length === 1 ? doc!.items[selIds[0]] : null;
+  const canEdit = !!single && EDITABLE.has(single.k);
+  const canDuplicate = !!doc && selIds.some((id) => doc.items[id].k !== "line" && doc.items[id].k !== "col");
+  const canConnect = !!single && single.k !== "line";
+  const openTarget: { board: string } | { url: string } | null = single?.k === "board" && single.ref ? { board: single.ref } : single && (single.k === "link" || single.k === "video") && (single.url || single.src) ? { url: (single.url || single.src)! } : null;
+  const mod = modKey();
+  const runOpen = () => {
+    if (!openTarget) return;
+    if ("board" in openTarget) onOpenBoard(openTarget.board);
+    else window.open(openTarget.url, "_blank", "noopener,noreferrer");
+  };
+  const startConnect = () => { if (selIds.length === 1) { setConnectFrom(selIds[0]); setTool("select"); } };
+
+  useLayoutEffect(() => {
+    selRef.current = selBounds && selKinds.length && tool === "select" && !connectFrom && !menu ? selBounds : null;
+    placeCtx();
+  });
+  useEffect(() => (rootRef.current ? installTips(rootRef.current) : undefined), [!!doc]);
+
+  const onContextMenu = (e: React.MouseEvent) => {
+    const target = e.target as HTMLElement;
+    if (target.closest("input, textarea, a, iframe, video, [contenteditable]")) return;
+    e.preventDefault();
+    const d = docRef.current, root = rootRef.current;
+    if (!d || !root) return;
+    const hit = target.closest("[data-kid], [data-iid]") as HTMLElement | null;
+    const id = hit?.dataset.kid ?? hit?.dataset.iid;
+    if (id && d.items[id] && !selected.has(id)) setSelected(new Set([id]));
+    if (!id && !target.closest(".hb-wires .hit")) setSelected(new Set());
+    const rr = root.getBoundingClientRect();
+    const at = toWorld(e.clientX, e.clientY);
+    lastPoint.current = at;
+    setTool("select");
+    setEditing(null);
+    setMenu({ x: e.clientX - rr.left, y: e.clientY - rr.top, at, onItem: !!id || selected.size > 0 && !!target.closest(".hb-wires .hit") });
+  };
+
+  const menuEntries = (): MenuEntry[] => {
+    if (!menu) return [];
+    if (menu.onItem && selIds.length) {
+      const out: MenuEntry[] = [];
+      if (hermesVerbs.length) {
+        out.push({ head: t("board.menu.askHermes"), hermes: true });
+        hermesVerbs.forEach((v) => out.push({ id: v, label: t(v), icon: VERB_ICON[v], hermes: true, run: () => void sendToHermes(t(v)) }));
+        out.push({ sep: true });
+      }
+      if (canEdit) out.push({ id: "edit", label: t("board.ctx.edit"), icon: "edit", kbd: "↵", run: () => setEditing(selIds[0]) });
+      if (openTarget) out.push({ id: "open", label: t("board.ctx.open"), icon: "board" in openTarget ? "openBoard" : "open", run: runOpen });
+      if (canConnect) out.push({ id: "connect", label: t("board.ctx.connect"), icon: "connect", run: startConnect });
+      if (canDuplicate) out.push({ id: "dup", label: t("board.ctx.duplicate"), icon: "duplicate", kbd: `${mod}D`, run: duplicate });
+      out.push({ sep: true });
+      out.push({ id: "del", label: t("board.ctx.delete"), icon: "delete", kbd: "Del", danger: true, run: deleteSelection });
+      return out;
+    }
+    const at = menu.at;
+    const place = (tl: Tool) => () => {
+      lastPoint.current = at;
+      if (tl === "note") add({ k: "card", w: 256 }, at, true);
+      else if (tl === "todo") add({ k: "todo", title: t("board.todo.title"), items: [] }, at, false);
+      else if (tl === "col") add({ k: "col", title: t("board.col.title") }, at, true);
+      else if (tl === "link" || tl === "embed") { setAskValue(""); setAsk({ kind: tl, at }); }
+      else if (tl === "image") fileRef.current?.click();
+      else if (tl === "board") void boardsApi.create(t("board.untitled"), bid).then((child) => add({ k: "board", ref: child.id }, at)).catch((err) => flash(String(err?.message ?? err)));
+    };
+    const out: MenuEntry[] = [{ head: t("board.menu.addHere") }];
+    for (const x of TOOLS[1]) out.push({ id: x.tool, label: t(x.label), icon: x.icon, kbd: x.key, run: place(x.tool) });
+    out.push({ sep: true });
+    out.push({ id: "all", label: t("board.menu.selectAll"), kbd: `${mod}A`, run: () => setSelected(new Set(Object.keys(docRef.current?.items ?? {}).filter((k) => !docRef.current!.items[k].in))) });
+    out.push({ id: "fit", label: t("board.fit"), icon: "fit", kbd: "F", run: fit });
+    out.push({ id: "chat", label: chatOpen ? t("board.chat.close") : t("board.chat.open"), icon: chatOpen ? "closePanel" : "chat", kbd: "/", run: () => (chatOpen ? closeChat() : openChat(true)) });
+    return out;
+  };
+
+  // The board keeps at least 620 px beside the chat; below that the chat floats over it.
+  const chatFloat = rootW - CHAT_MIN_W < 620;
+  const chatWidth = chatFloat ? Math.min(chatW, Math.max(260, rootW - 48)) : Math.min(chatW, rootW - 620);
+  const rootCls = `hb ${narrow}${chatOpen ? (chatFloat ? " chat-float" : " chat-open") : ""}`.trim();
   if (!doc || !ctx) {
     return (
       <div ref={rootRef} className={rootCls}>
@@ -822,12 +991,15 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
   items.sort(([, a], [, b]) => (a.k === "frame" ? -1 : 0) - (b.k === "frame" ? -1 : 0));
   const sessionShort = doc.session?.id ? doc.session.id.slice(-4) : null;
   const savedTs = sync.savedAt ? sync.savedAt / 1000 : doc.updated;
-  const vpCls = `hb-viewport${tool === "pan" ? " tool-pan" : ""}${tool === "draw" ? " tool-draw" : ""}${tool === "arrow" ? " tool-arrow" : ""}${PLACE.includes(tool) ? " tool-place" : ""}`;
+  const vpCls = `hb-viewport${tool === "pan" ? " tool-pan" : ""}${tool === "draw" ? " tool-draw" : ""}${tool === "arrow" || connectFrom ? " tool-arrow" : ""}${PLACE.includes(tool) ? " tool-place" : ""}`;
+  const hint = connectFrom ? t("board.hint.connect") : TOOL_HINT[tool] ? t(TOOL_HINT[tool]!) : "";
+  const zoomBy = (f: number) => { const vp = vpRef.current!; zoomAt(f, vp.clientWidth / 2, vp.clientHeight / 2); };
 
   return (
-    <div ref={rootRef} className={rootCls}>
+    <div ref={rootRef} className={rootCls} style={{ ["--chat-w" as string]: `${chatWidth}px` }}>
       <div className={vpCls} ref={vpRef} tabIndex={-1}
         onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerCancel={onPointerUp}
+        onContextMenu={onContextMenu}
         onDoubleClick={(e) => {
           const target = e.target as HTMLElement;
           const iid = (target.closest("[data-iid]") as HTMLElement | null)?.dataset.iid;
@@ -850,7 +1022,7 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
             const [dw] = DEFAULT_SIZE[it.k] ?? [200, 100];
             const width = it.k === "draw" ? undefined : (rs?.w ?? it.w ?? (it.k === "text" ? undefined : dw));
             const height = RESIZE_H.has(it.k) ? (rs?.h ?? it.h ?? (it.k === "frame" ? 320 : it.k === "box" ? 62 : undefined)) : undefined;
-            const cls = `hb-item${sel ? " sel" : ""}${moving ? " dragging" : ""}${hidden.has(id) ? " reveal-wait" : ""}${fresh.has(id) && !reduced() ? " just-placed" : ""}`;
+            const cls = `hb-item${sel ? " sel" : ""}${moving ? " dragging" : ""}${hidden.has(id) ? " reveal-wait" : ""}${fresh.has(id) && !reduced() ? " just-placed" : ""}${connectFrom === id ? " connect-from" : ""}`;
             const dropIndex = kidDrag?.col === id ? kidDrag.index : null;
             return (
               <div key={id} className={cls} data-iid={id} ref={regEl(id)}
@@ -873,34 +1045,40 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
             </svg>
           )}
           {marquee && <div className="hb-marquee" style={{ left: marquee.x, top: marquee.y, width: marquee.w, height: marquee.h }} />}
-          {selBounds && selKinds.length > 0 && tool === "select" && (
-            <div className="hb-ctx" style={{ left: selBounds.x, top: selBounds.y - 8, transform: "translateY(-100%) scale(var(--iz, 1))" }}
-              onPointerDown={(e) => e.stopPropagation()}>
-              <span className="kind">{ctxLabel}</span>
-              {hermesVerbs.length > 0 && (
-                <span className="hm" style={{ padding: 0 }}>
-                  {hermesVerbs.map((v, i) => (
-                    <button key={v} style={{ height: "100%", padding: i === 0 ? "0 6px 0 10px" : "0 10px 0 6px", display: "flex", alignItems: "center", gap: 6 }}
-                      onClick={() => void sendToHermes(t(v))}>
-                      {i === 0 && <Cad />}{i > 0 && <em>/</em>}{t(v)}
-                    </button>
-                  ))}
-                </span>
-              )}
-              <button onClick={duplicate}>{t("board.ctx.duplicate")}</button>
-              <button onClick={deleteSelection}>{t("board.ctx.delete")}</button>
-            </div>
-          )}
           <HermesCursor ref={cursorRef} reducedMotion={reduced()} onActive={(on, act) => setCursorAct(on ? act : null)} />
         </div>
         {items.length === 0 && (
           <div className="hb-empty">
+            <span className="ico"><Icon name="note" size={18} /></span>
             <div className="hd">{t("board.empty.title")}</div>
             <p>{t("board.empty.body")}</p>
-            <p>{t("board.empty.keys")}</p>
           </div>
         )}
       </div>
+
+      {selKinds.length > 0 && (
+        <div className="hb-ctx" ref={ctxEl} role="toolbar" aria-label={ctxLabel} style={{ visibility: "hidden" }}
+          onPointerDown={(e) => e.stopPropagation()} onContextMenu={(e) => e.preventDefault()}>
+          <span className="kind">{ctxLabel}</span>
+          {hermesVerbs.length > 0 && (
+            <>
+              <i className="sep" />
+              <span className="hm-mark" data-tip={t("board.menu.askHermes")}><Cad /></span>
+              {hermesVerbs.map((v) => (
+                <button key={v} className="act hm" data-tip={t("board.ctx.askTip", { verb: t(v) })} onClick={() => void sendToHermes(t(v))}>
+                  <Icon name={VERB_ICON[v]} />{t(v)}
+                </button>
+              ))}
+            </>
+          )}
+          <i className="sep" />
+          {canEdit && <button className="ib" data-tip={t("board.ctx.edit")} data-kbd="↵" aria-label={t("board.ctx.edit")} onClick={() => setEditing(selIds[0])}><Icon name="edit" /></button>}
+          {openTarget && <button className="ib" data-tip={t("board.ctx.open")} aria-label={t("board.ctx.open")} onClick={runOpen}><Icon name={"board" in openTarget ? "openBoard" : "open"} /></button>}
+          {canConnect && <button className="ib" data-tip={t("board.ctx.connect")} aria-label={t("board.ctx.connect")} onClick={startConnect}><Icon name="connect" /></button>}
+          {canDuplicate && <button className="ib" data-tip={t("board.ctx.duplicate")} data-kbd={`${mod}D`} aria-label={t("board.ctx.duplicate")} onClick={duplicate}><Icon name="duplicate" /></button>}
+          <button className="ib danger" data-tip={t("board.ctx.delete")} data-kbd="Del" aria-label={t("board.ctx.delete")} onClick={deleteSelection}><Icon name="delete" /></button>
+        </div>
+      )}
 
       <header className="hb-top">
         <nav className="hb-path">
@@ -909,7 +1087,7 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
           <button onClick={() => onOpenBoard(null)}>{t("board.path.boards")}</button><span className="sl">/</span>
           {doc.parent && <><button onClick={() => onOpenBoard(doc.parent)}>{t("board.path.parent")}</button><span className="sl">/</span></>}
         </nav>
-        <span className="hb-btitle" onDoubleClick={() => setRenaming(true)} title={t("board.renameHint")}>
+        <span className="hb-btitle" onDoubleClick={() => setRenaming(true)} data-tip={t("board.renameHint")}>
           {renaming
             ? <input autoFocus defaultValue={doc.name}
                 onBlur={(e) => { setRenaming(false); const v = e.target.value.trim(); if (v && v !== doc.name) commit([{ op: "board", p: { name: v } }]); }}
@@ -927,46 +1105,47 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
           <span>{t("board.state.saved", { time: clock(savedTs) })}</span>
           <span className="sess">{sessionShort ? <>{t("board.state.session")} <b>#{sessionShort}</b></> : t("board.state.noSession")}</span>
         </span>
-        <button className="btn text" onClick={fit}>{t("board.fit")}</button>
-        <button className="btn primary" onClick={() => void continueInSession()}>{t("board.continue")}<kbd>⌘↵</kbd></button>
+        <button className={`ib lg${chatOpen ? " on" : ""}`} aria-pressed={chatOpen} aria-label={chatOpen ? t("board.chat.close") : t("board.chat.open")}
+          data-tip={chatOpen ? t("board.chat.close") : t("board.chat.open")} data-kbd="/"
+          onClick={() => (chatOpen ? closeChat() : openChat(true))}>
+          <Icon name="chat" size={15} />
+        </button>
+        <button className="btn primary" data-tip={t("board.continueTip")} data-kbd={`${mod}↵`} onClick={() => void continueInSession()}>
+          <Icon name="open" />{t("board.continue")}
+        </button>
       </header>
 
       <footer className="hb-status">
         {TOOLS.map((group, gi) => (
           <div className="seg" key={gi}>
             {group.map((x) => (
-              <button key={x.tool} className={`tool${tool === x.tool ? " on" : ""}`} title={`${t(x.label)} (${x.key})`}
+              <button key={x.tool} className={`tool${tool === x.tool ? " on" : ""}`} aria-label={t(x.label)} aria-pressed={tool === x.tool}
+                data-tip={t(x.label)} data-kbd={x.key}
                 onClick={() => {
+                  setConnectFrom(null);
                   if (x.tool === "image") { fileRef.current?.click(); return; }
                   if (x.tool === "link" || x.tool === "embed") { setAskValue(""); setAsk({ kind: x.tool, at: center() }); return; }
                   setTool(x.tool);
                 }}>
-                <u>{x.key}</u><span className="nm">{t(x.label)}</span>
+                <Icon name={x.icon} size={15} />
               </button>
             ))}
           </div>
         ))}
-        <label className="hb-prompt">
-          <span className="who"><Cad />hermes ›</span>
-          <span className="ph-block" />
-          <input ref={promptRef} value={prompt} placeholder={t("board.prompt.placeholder")}
-            onChange={(e) => setPrompt(e.target.value)}
-            onKeyDown={(e) => {
-              e.stopPropagation();
-              if (e.key === "Enter" && prompt.trim()) { void sendToHermes(prompt); setPrompt(""); }
-              if (e.key === "Escape") (e.target as HTMLInputElement).blur();
-            }} />
-          <kbd>/</kbd>
-        </label>
+        <span className="hint" aria-live="polite">{hint}</span>
+        <div className="seg">
+          <button className="tool" disabled={!sync.canUndo} aria-label={t("board.undo")} data-tip={t("board.undo")} data-kbd={`${mod}Z`} onClick={sync.undo}><Icon name="undo" size={15} /></button>
+          <button className="tool" disabled={!sync.canRedo} aria-label={t("board.redo")} data-tip={t("board.redo")} data-kbd={`${mod}⇧Z`} onClick={sync.redo}><Icon name="redo" size={15} /></button>
+        </div>
         <div className="seg zoom">
-          <button className="tool" aria-label={t("board.zoomOut")} onClick={() => { const vp = vpRef.current!; zoomAt(1 / 1.2, vp.clientWidth / 2, vp.clientHeight / 2); }}>−</button>
+          <button className="tool" aria-label={t("board.zoomOut")} data-tip={t("board.zoomOut")} data-kbd="−" onClick={() => zoomBy(1 / 1.2)}><Icon name="zoomOut" size={15} /></button>
           <span className="pct" ref={pctRef}>{Math.round(view.current.z * 100)}%</span>
-          <button className="tool" aria-label={t("board.zoomIn")} onClick={() => { const vp = vpRef.current!; zoomAt(1.2, vp.clientWidth / 2, vp.clientHeight / 2); }}>+</button>
-          <button className="tool" onClick={fit}><u>F</u><span className="nm">{t("board.fit")}</span></button>
+          <button className="tool" aria-label={t("board.zoomIn")} data-tip={t("board.zoomIn")} data-kbd="+" onClick={() => zoomBy(1.2)}><Icon name="zoomIn" size={15} /></button>
+          <button className="tool" aria-label={t("board.fit")} data-tip={t("board.fit")} data-kbd="F" onClick={fit}><Icon name="fit" size={15} /></button>
         </div>
       </footer>
 
-      <div className="hb-map" onClick={(e) => {
+      <div className={`hb-map${items.length ? "" : " off"}`} data-tip={t("board.map")} onClick={(e) => {
         const b = contentBounds();
         const canvas = mapRef.current, vp = vpRef.current;
         if (!b || !canvas || !vp) return;
@@ -983,21 +1162,29 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
       </div>
 
       <div className={`hb-log${logOn && log.length ? "" : " off"}`} role="log">
-        <button className="x" aria-label={t("board.log.close")} onClick={() => setLogOn(false)}>×</button>
-        {log.slice(-2).map((l) => (
+        <button className="x ib" aria-label={t("board.log.close")} data-tip={t("board.log.close")} onClick={() => setLogOn(false)}><Icon name="close" size={13} /></button>
+        {log.filter((l) => l.who === "hermes").slice(-2).map((l) => (
           <div className="row" key={l.key}>
             <span className="t">{clock(l.t)}</span>
-            <span className={`who${l.who === "you" ? " u" : ""}`}>{l.who === "you" ? t("board.log.you") : "hermes"}</span>
+            <span className="who"><Cad />hermes</span>
             <span className="msg">{l.msg}</span>
-            {l.who === "hermes" && (
-              <span className="acts">
-                {l.s != null && <button onClick={() => sync.undoEntry(l.s!)}><u>Z</u> {t("board.log.undo")}</button>}
-                <button onClick={() => void continueInSession()}>{t("board.log.openSession")}</button>
-              </span>
-            )}
+            <span className="acts">
+              {l.s != null && <button onClick={() => sync.undoEntry(l.s!)}><Icon name="undo" size={13} />{t("board.log.undo")}</button>}
+              <button onClick={() => openChat(false)}><Icon name="chat" size={13} />{t("board.log.openChat")}</button>
+            </span>
           </div>
         ))}
       </div>
+
+      {chatOpen && (
+        <ChatPanel doc={doc} t={t} width={chatWidth} selected={selIds} sentAt={chatSentAt} inputRef={chatInputRef}
+          onWidth={resizeChat} onClose={closeChat} onContinue={() => void continueInSession()} onSent={onChatSent} />
+      )}
+
+      {menu && rootRef.current && (
+        <BoardMenu at={{ x: menu.x, y: menu.y }} entries={menuEntries()} onClose={() => setMenu(null)}
+          bounds={{ x: 0, y: 0, w: rootRef.current.clientWidth, h: rootRef.current.clientHeight }} />
+      )}
 
       {ask && (
         <div className="hb-ask" onPointerDown={(e) => e.stopPropagation()}>
@@ -1008,7 +1195,7 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
             : <textarea autoFocus value={askValue} placeholder="<!doctype html>…" onChange={(e) => setAskValue(e.target.value)}
                 onKeyDown={(e) => { e.stopPropagation(); if (e.key === "Escape") setAsk(null); if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) submitAsk(); }} />}
           <div className="row">
-            <span className="hint">{ask.kind === "link" ? t("board.ask.linkHint") : t("board.ask.embedHint")}</span>
+            <span className="hint">{ask.kind === "link" ? t("board.ask.linkHint") : t("board.ask.embedHint", { mod })}</span>
             <button className="btn text" onClick={() => setAsk(null)}>{t("board.ask.cancel")}</button>
             <button className="btn primary" onClick={submitAsk}>{t("board.ask.add")}</button>
           </div>
@@ -1035,6 +1222,12 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
     void boardsApi.uploadHtml(v).then((r) => add({ k: "embed", asset: r.asset, title: t("board.embed.title") }, at))
       .catch((e) => flash(String(e?.message ?? e)));
   }
+}
+
+/** "rgb(r, g, b)" / "rgba(…)" → the same colour at `a` alpha (the grid crosses follow the theme). */
+function withAlpha(color: string, a: number): string {
+  const m = /rgba?\(\s*([\d.]+)[,\s]+([\d.]+)[,\s]+([\d.]+)/.exec(color);
+  return m ? `rgba(${m[1]},${m[2]},${m[3]},${a})` : `rgba(255,227,196,${a})`;
 }
 
 function accentColor(el: HTMLElement | null): string {
