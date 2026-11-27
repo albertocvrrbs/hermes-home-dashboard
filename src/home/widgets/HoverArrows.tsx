@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 import { useT } from "../i18n";
 
 /** Stops a control's clicks/pointer from bubbling to the WidgetShell, whose
@@ -19,8 +19,36 @@ interface HoverCtlProps {
  *  both behaviours come from the `.hover-ctl` CSS in home.css. Render any
  *  contextual control inside it (a toggle, a stepper, a menu). */
 export function HoverCtl({ children, className }: HoverCtlProps) {
+  const ref = useRef<HTMLDivElement>(null);
+  // Publish the controls' width on the widget so the header rule can stop short of them,
+  // and flag the widget as tight when title + controls don't fit side by side.
+  useEffect(() => {
+    const el = ref.current;
+    const widget = el?.closest(".home-widget") as HTMLElement | null;
+    if (!el || !widget || el.classList.contains("pomo-set")) return;
+    const measure = () => {
+      const w = el.scrollWidth;
+      widget.style.setProperty("--ctl-w", `${w}px`);
+      const title = widget.querySelector(".hd .hd-t") as HTMLElement | null;
+      const inner = widget.clientWidth - 24; // .home-widget horizontal padding
+      const need = 12 + 10 + (title?.offsetWidth ?? 0) + 16 + w;
+      if (need > inner) widget.setAttribute("data-ctl-tight", "");
+      else widget.removeAttribute("data-ctl-tight");
+    };
+    measure();
+    const RO = (globalThis as { ResizeObserver?: typeof ResizeObserver }).ResizeObserver;
+    const ro = RO ? new RO(measure) : null;
+    ro?.observe(el);
+    ro?.observe(widget);
+    return () => {
+      ro?.disconnect();
+      widget.style.removeProperty("--ctl-w");
+      widget.removeAttribute("data-ctl-tight");
+    };
+  });
   return (
     <div
+      ref={ref}
       className={`hover-ctl${className ? ` ${className}` : ""}`}
       onClick={swallow}
       onPointerDown={swallow}

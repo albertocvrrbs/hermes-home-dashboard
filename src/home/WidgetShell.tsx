@@ -1,4 +1,4 @@
-import { useEffect, useRef, type CSSProperties, type ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import type { WidgetState } from "./widget-state";
 import { useT, type MessageKey } from "./i18n";
 
@@ -32,14 +32,6 @@ export function WidgetShell({
 }: Props) {
   const t = useT();
   const stateKey = STATE_COPY[state];
-  // The hover controls float over the header row; publishing the title's width lets the CSS
-  // keep them clear of it (they wrap under the header instead of covering the title).
-  const rootRef = useRef<HTMLDivElement>(null);
-  const titleRef = useRef<HTMLSpanElement>(null);
-  useEffect(() => {
-    const el = titleRef.current;
-    if (el && rootRef.current) rootRef.current.style.setProperty("--hd-title-w", `${el.offsetWidth}px`);
-  }, [title, state]);
   const cls = [
     "home-widget",
     dragging ? "dragging" : "",
@@ -48,14 +40,13 @@ export function WidgetShell({
   ].filter(Boolean).join(" ");
   return (
     <div
-      ref={rootRef}
       className={cls}
       style={style}
       onClick={!editing && onClickThrough ? onClickThrough : undefined}
       role={!editing && onClickThrough ? "link" : undefined}
     >
       <b className="hd" onPointerDown={editing ? onHeaderPointerDown : undefined}>
-        <span className="hd-t" ref={titleRef}>
+        <span className="hd-t">
           {title}
           {state === "stale" && <span className="hd-stale" title={t("shell.staleTitle")}> · {t("shell.stale")}</span>}
         </span>

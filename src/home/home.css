@@ -162,32 +162,38 @@
  * fades in while hovering the widget, and fully suppressed in edit mode so it
  * never fights drag/resize. Widgets opt in by rendering <HoverCtl>/<HoverArrows>. */
 .hover-ctl {
+  /* Sits IN the header row: same top as the widget padding, same height as .hd,
+   * right-aligned at the end of the header rule. No chip: bare glyphs, like the rest. */
   position: absolute;
-  top: 4px;
-  right: 6px;
+  top: 10px;
+  right: 12px;
+  height: 16px;
   z-index: 4;
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
+  white-space: nowrap;
   opacity: 0;
   pointer-events: none;
-  transition: opacity 0.18s ease;
-  /* A solid chip so the header rule never runs through the controls;
-   * the soft shadow on its left fades the rule out before it reaches them. */
-  padding: 2px 8px;
-  border-radius: 7px;
-  border: 1px solid var(--home-border);
-  background: linear-gradient(var(--home-surface), var(--home-surface)), rgb(12 12 17);
-  box-shadow: -18px 0 14px -6px rgb(10 10 14 / 0.9);
-  /* Never over the title: lead rule (12px) + gaps + title width + breathing room.
-   * When the controls need more room they wrap onto a second row instead. */
-  max-width: calc(100% - var(--hd-title-w, 80px) - 52px);
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  row-gap: 2px;
+  transition: opacity 0.16s ease;
 }
+/* Visible only while the pointer is over the widget. Keyboard users still get them
+ * (:focus-visible), but a mouse click no longer leaves them stuck on screen. */
 .home-widget:hover .hover-ctl,
-.hover-ctl:focus-within { opacity: 1; pointer-events: auto; }
+.hover-ctl:has(:focus-visible) { opacity: 1; pointer-events: auto; }
+/* While the controls show, the header rule stops short of them... */
+.home-widget:hover .hd::after,
+.home-widget:has(.hover-ctl :focus-visible) .hd::after {
+  margin-right: calc(var(--ctl-w, 0px) + 10px);
+}
+/* ...and when the widget is too narrow for title + controls, the title steps aside. */
+.home-widget[data-ctl-tight]:hover .hd .hd-t,
+.home-widget[data-ctl-tight]:hover .hd::before { opacity: 0; }
+.home-widget .hd .hd-t,
+.home-widget .hd::before,
+.home-widget .hd::after { transition: opacity 0.16s ease, margin-right 0.16s ease; }
+/* Multi-row controls (Pomodoro steppers) don't fit the header: they sit below it. */
+.hover-ctl.pomo-set { top: 30px; height: auto; }
 .home-root.editing .hover-ctl { display: none; }
 @media (hover: none) {
   /* Touch: no hover, so keep controls reachable but understated. */
