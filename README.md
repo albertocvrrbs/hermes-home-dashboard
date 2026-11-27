@@ -148,7 +148,7 @@ they never fight drag/resize.
 | **Spend** | switch range (today / 7 days / this month) · rank top sessions by **all costs / real spend** · step a monthly cap · click a session to open it |
 | **Sessions** | paginate recent sessions · sort **recent / tokens** · minimum-token filter (all / ≥10K / ≥100K / ≥1M) |
 | **Projects** | status board from `~/projects/<name>/status.json` · click a row for next action + alerts |
-| **Agent** | live agent scene · take control (fullscreen agent theater) |
+| **Board** | live preview of a board · cycle boards · click to open it (see [Board](#board)) |
 | **Cron** | paginate upcoming jobs |
 | **Logs** | switch log file: agent / errors / gateway (multi-line records grouped, level-colored) |
 | **Notes** | quick to-dos · clear completed |
@@ -278,6 +278,61 @@ The build picks it up automatically (no registration anywhere else). Run
 placeholder. Rebuild (`npm run build`) and open a PR with the locale file and the
 two regenerated bundles.
 
+## Board
+
+![Board — an infinite canvas Hermes draws on with you](assets/screenshot-board.png)
+
+An infinite canvas for one idea per board, built like Milanote but in the
+Home's own dark, monospaced style. You get cards, to-do lists, columns, link
+and video cards, images, sandboxed HTML embeds, nested boards, connectors and
+freehand sketches.
+
+**Hermes works on it with you.** Ask from the `hermes ›` prompt at the bottom,
+from the selection menu ("turn into a diagram", "sort by date"…) or in the
+board's session. His cursor walks over the board as his edits land. A
+dot-matrix border marks what he made; your work stays solid.
+
+![Your sketch on the left, Hermes' clean version on the right](assets/screenshot-board-flow.png)
+
+- **Paste anything.** A URL becomes a link card with title, description,
+  favicon and image. A YouTube, Vimeo, Loom or X link, or a direct video file,
+  becomes a playable card. An image, or an image URL, becomes an image card.
+- **One session per board.** *Continue in session* (⌘↵) opens the session
+  linked to the board. There, Hermes knows the board, and whatever you ask him
+  gets drawn on it.
+- **Keys:** `N` note · `T` to-do · `C` column · `L` link · `I` image · `B`
+  board · `E` embed · `A` arrow · `D` draw · `/` ask Hermes · `F` fit ·
+  `⌘Z` / `⌘⇧Z` undo / redo.
+- **On the Home** the Board widget shows a live preview of a board (the arrows
+  cycle boards); click it to open the page. On Desktop, *Boards* is in the
+  sidebar and the command palette.
+
+![Board widget on the Home](assets/screenshot-board-widget.png)
+
+### What the Board adds to your Hermes (disclosure)
+
+- **Agent tools** (toolset `board`, enabled by default like other plugin
+  toolsets; turn it off with `hermes tools`): `board_read`, `board_apply`,
+  `board_render`. They read and write board files only.
+- **A `pre_llm_call` hook.** It only acts on sessions linked to a board, which
+  means sessions started from the board or containing its `[board:<id>]`
+  marker. It adds a few lines saying what you changed on the board since
+  Hermes' last turn. Every other session is left untouched.
+- **File storage** under `~/.hermes/plugin-data/home-dashboard/boards/`. There
+  is one JSON file per board, an append-only op log (compacted at 2000
+  entries) and `assets/` for images and embedded HTML. Deleted boards move to
+  a trash folder there.
+- **Network:** link previews are fetched **server-side by the plugin
+  backend** when you paste or add a link: the page HTML, its oEmbed JSON, its
+  image and favicon. The fetch is SSRF-guarded: http(s) only, private,
+  loopback, link-local and metadata addresses blocked (re-checked after every
+  redirect), at most 3 redirects, a 5 s deadline, size caps, and HTML only for
+  metadata. Results are cached, and images are stored as assets so the board
+  never hotlinks. Video players load from the provider (youtube-nocookie,
+  player.vimeo, loom, platform.twitter) only when you press play. Embedded
+  HTML runs in a sandboxed iframe with scripts only, no network and no
+  same-origin.
+
 ## How it works
 
 - Ships two self-contained React + Vite bundles: a **dashboard plugin**
@@ -291,7 +346,9 @@ two regenerated bundles.
   `~/.hermes/plugins/home-dashboard/layout.json`, exposes plugin-scoped,
   read-only adapters for Desktop's widgets (`/system`, `/analytics`, `/models`,
   `/cron`, `/sessions`), reads the Projects board (`/projects`) and computes
-  Spend (`/spend`, a read-only query on `state.db`). It makes no network calls.
+  Spend (`/spend`, a read-only query on `state.db`). It also serves the Board
+  (`/boards…`): board files, assets and link previews (the only network calls
+  it makes, see [Board](#board)).
 - UI strings go through a small translation layer (`src/home/i18n/`); see
   [Languages](#languages).
 - Hover controls are pure CSS reveal (`:hover`), suppressed in edit mode — no
@@ -302,10 +359,11 @@ two regenerated bundles.
 ```
 hermes-home-dashboard/
 ├── plugin.yaml              # pins the install folder name (home-dashboard)
-├── __init__.py              # no-op register(ctx); the agent plugin loader requires it
+├── __init__.py              # register(ctx): Board agent tools + pre_llm_call hook
 ├── dashboard/               # everything the Hermes host consumes
 │   ├── manifest.json        # tab/entry/css/api the dashboard reads
-│   ├── plugin_api.py        # layout.json + read-only data routes (+ /spend)
+│   ├── plugin_api.py        # layout.json + read-only data routes (+ /spend, /boards)
+│   ├── boardkit/            # Board engine: ops, store, link previews, assets, agent
 │   └── dist/                # prebuilt bundle (committed — installer doesn't build)
 │       ├── index.js
 │       └── style.css

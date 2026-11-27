@@ -20,6 +20,42 @@ clone, they never build).
 
 ---
 
+## 1.8.0
+
+- **Board.** An infinite canvas where Hermes works with you. Cards, to-do
+  lists, columns, link cards, images, sandboxed HTML embeds, video cards,
+  nested boards, connectors and freehand sketches. Undo/redo, a minimap, and a
+  terminal-style status line with keys and a `hermes ›` prompt.
+- **Hermes draws on it.** New agent tools `board_read` (outline, or only what
+  changed since his last read), `board_apply` (one batched call of ops) and
+  `board_render` (a PNG of a region, so he can read your sketches). His edits
+  show up live with a visible cursor and his name. A dot-matrix border marks
+  what he made.
+- **One session per board.** "Continue in session" opens the board's linked
+  session. In that session a `pre_llm_call` hook tells Hermes, in a few lines,
+  what you changed on the board since his last turn. Unlinked sessions are
+  never touched.
+- **Paste a link, get a card.** Pasted or dropped URLs become link cards. The
+  plugin backend fetches the title, description, site, favicon and image
+  server-side (Open Graph, Twitter card, oEmbed) with an SSRF guard: http(s)
+  only, private, loopback, link-local and metadata addresses blocked (also
+  after redirects), at most 3 redirects, a 5 s deadline and byte caps. Images
+  are copied into the board's assets, never hotlinked.
+- **Video cards.** YouTube (including Shorts and youtu.be), Vimeo, Loom, X
+  posts and direct `.mp4/.webm/.mov` play inline. The poster shows first and
+  the player loads on click, one at a time, via youtube-nocookie and
+  player.vimeo. Resizing keeps the aspect ratio. Pasted image URLs become
+  image cards.
+- **Board widget + Boards page.** A live dot-matrix preview of a board on the
+  Home (arrows cycle boards). Click it to open the full page. On Desktop,
+  "Boards" sits in the sidebar and in the command palette.
+- **Agent widget retired.** The Board takes its place. A saved layout that
+  had the Agent widget gets the Board in the same slot, and other unknown
+  widget ids are dropped without breaking the layout.
+- **Header controls (1.7.2, folded in).** Hover controls sit inside the header
+  row, without a box, show only on hover and never stay stuck after a click.
+  The title hides when space is tight, and the Pomodoro sits below the header.
+
 ## 1.7.1
 
 - **Cleaner widget headers.** The header rule is now drawn in CSS instead of

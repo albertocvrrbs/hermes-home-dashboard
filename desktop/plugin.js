@@ -3321,6 +3321,12 @@ function fitView(b, vp, pad2 = 60, maxZ = 1.25) {
 function intersects(a, b) {
   return a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
 }
+const RESIZE_H = /* @__PURE__ */ new Set(["frame", "box", "embed", "text"]);
+function resizePatch(kind, w, h) {
+  const p = { w: Math.round(Math.max(120, w)) };
+  if (RESIZE_H.has(kind)) p.h = Math.round(Math.max(40, h));
+  return p;
+}
 const MOVE_MS = 300;
 const DWELL_MS = 110;
 const TRAIL = 16;
@@ -4528,7 +4534,6 @@ const KEY_TOOL = Object.fromEntries(TOOLS.flat().map((x) => [x.key.toLowerCase()
 const PLACE = ["note", "todo", "col", "link", "board", "embed", "image"];
 const EDITABLE = /* @__PURE__ */ new Set(["card", "todo", "col", "frame", "box", "text", "image"]);
 const INTO_COLUMN = /* @__PURE__ */ new Set(["card", "todo", "link", "image", "video", "board"]);
-const RESIZE_H = /* @__PURE__ */ new Set(["frame", "box", "embed", "text"]);
 const reduced = () => typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
 function isTyping(target) {
   const el = target;
@@ -5071,10 +5076,7 @@ function BoardView({ bid, onOpenBoard, onHome }) {
       const r = resize;
       setResize(null);
       if (!r) return;
-      const it = d.items[r.id];
-      const p = { w: Math.round(r.w) };
-      if (RESIZE_H.has(it.k)) p.h = Math.round(r.h);
-      commit([{ op: "set", id: r.id, p }]);
+      commit([{ op: "set", id: r.id, p: resizePatch(d.items[r.id].k, r.w, r.h) }]);
       return;
     }
     if (g.kind === "marquee") {
@@ -7213,7 +7215,7 @@ const boardCss = `/* Board — "Mesa de despacho" (hd-canvas-plan/mockup-v2). Ev
 .hb-widget { display: flex; flex-direction: column; gap: 8px; height: calc(100% - 22px); min-height: 0; cursor: pointer; }
 .hb-widget .pvw { position: relative; flex: 1; min-height: 40px; border: 1px solid var(--home-border, rgb(255 227 196 / .13)); border-radius: 3px; overflow: hidden; background: rgb(0 0 0 / .18); }
 .hb-widget canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
-.hb-widget .foot { display: flex; align-items: baseline; gap: 8px; min-width: 0; font-size: 10.5px; color: var(--color-muted-foreground, #9aa3b5); }
+.hb-widget .foot { display: flex; align-items: baseline; gap: 8px; min-width: 0; padding: 0 2px; font-size: 10.5px; color: var(--color-muted-foreground, #9aa3b5); }
 .hb-widget .foot b { font: 600 13px/1.2 "HB Atkinson", ui-sans-serif, sans-serif; color: var(--color-foreground, #e8e3dc); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .hb-widget .foot .sp { flex: 1; }
 .hb-widget .tagh { display: inline-flex; align-items: center; gap: 4px; height: 15px; padding: 0 5px; background: var(--home-accent, #ffe3c4); color: #072120; font: 400 11px/1 "HB Departure", monospace; letter-spacing: .05em; white-space: nowrap; }
