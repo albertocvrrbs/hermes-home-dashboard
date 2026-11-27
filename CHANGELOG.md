@@ -20,6 +20,63 @@ clone, they never build).
 
 ---
 
+## 1.9.0
+
+Live cards, and posters for every video.
+
+- **Live cards.** A new board card that stays bound to something running: a
+  training run, a backup, a scraper, a deploy. Hermes builds it from a short
+  declarative spec of blocks (header with a status pill, progress with ETA,
+  metrics with deltas, a sparkline, an image or video, a log tail, buttons),
+  or from a template (`training`, `job`, `stat`). Any value is a literal or a
+  `"$key"` read from the card's data, so after that only the data changes:
+  - from the agent, with the new `live` op in `board_apply` (`data`, `push`
+    for series, `keep`, `replace`);
+  - from a script on the same machine, through the plugin's local store
+    (`examples/live-cards/live_push.py`, no network, no token);
+  - over HTTP, `POST /api/plugins/home-dashboard/boards/{board}/live/{card}/data`,
+    behind the dashboard's own auth.
+  Data updates are system writes: they stay out of your undo history and out
+  of what Hermes hears as "the user changed the board". The card shows
+  "updated 12 s ago" and says **stale** when a running job goes quiet past the
+  card's TTL; running, paused, done, error and idle each have their own pill.
+  Metrics reflow from four columns to pairs on narrow cards, buttons go
+  icon-only, wide cards get a taller chart. Hermes-made cards wear his
+  dot-matrix edge like everything else he writes.
+- **Actions, safe by design.** Buttons name an action id from an allowlist the
+  machine owner writes in `~/.hermes/plugin-data/home-dashboard/live-actions/*.json`
+  (or registers from Python in the dashboard process). Commands are argv lists
+  run without a shell, with an absolute program path, a minimal environment and
+  a timeout; arguments come from the card and are checked against the action's
+  schema on every press. Destructive actions open a confirm dialog and the
+  server refuses them without it; disabled ones stay greyed out with the
+  owner's note. Every press, allowed or refused, is logged to
+  `live-actions.log.jsonl`, and the card shows the result in a toast. Cards
+  that try to carry a `command`, `url` or `shell` are rejected; the agent sees
+  ids and descriptions (`board_read {"actions": true}`), never commands, and
+  can't run them.
+- **Examples.** `examples/README.md` (block reference, curl and Python),
+  `examples/live-cards/actions.example.json`, and
+  `examples/training-run/spider_adapter.py`, a complete adapter for a
+  reinforcement-learning run folder (status, chapter, success %, elapsed,
+  cost, success sparkline, latest evaluation clip, log tail) whose Stop action
+  ships disabled in `actions.spider.json`.
+- **Video posters.** Uploaded and linked video cards show a still frame and
+  the duration before anyone presses play. Drop or paste an MP4, WebM or MOV
+  (up to 100 MB, sent in chunks) and the server grabs a frame ~1 s in (10 %
+  into short clips) with `ffmpeg`; video links get theirs the first time a card
+  is shown, so cards made before 1.9.0 fill in by themselves without editing
+  the board. Posters are image assets plus a small index in `posters/`. With
+  no `ffmpeg`, or when the server can't fetch the video, the browser grabs the
+  frame (`<video preload=metadata>` + canvas) and stores it, or shows the
+  paused video element. Uploaded videos play from the board's own storage.
+- **Menu polish.** *Select all* in the table's right-click menu has its icon,
+  like every other row.
+
+Needs a restart of whatever serves the board API (the `hermes dashboard`
+process, and the gateway for the Webapp) so the new routes load; until then
+the cards render, but their buttons say the action list isn't available.
+
 ## 1.8.1
 
 Board polish, after seeing 1.8.0 in Hermes Desktop.

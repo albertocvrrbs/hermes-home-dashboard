@@ -31,9 +31,11 @@ except ImportError:  # pragma: no cover - allows standalone unit tests
         return Path(val) if val else Path.home() / ".hermes"
 
 try:
-    from fastapi import APIRouter, HTTPException
+    from fastapi import APIRouter, HTTPException, Request
     from pydantic import BaseModel
 except Exception:  # pragma: no cover - allows local unit tests
+    Request = Any  # type: ignore[misc,assignment]
+
     class APIRouter:  # type: ignore
         def get(self, *_a, **_k):
             return lambda fn: fn
@@ -668,12 +670,18 @@ def board_service() -> Any:
 
 
 def _board_call(fn: Any, *args: Any, **kwargs: Any) -> Any:
-    """Map board errors to HTTP: bad input 400, unknown board/asset 404."""
+    """Map board errors to HTTP: bad input 400, unknown board/asset 404, refused action 403/409."""
     engine = _boardkit("engine")
     store = _boardkit("store")
     assets = _boardkit("assets")
+    actions = _boardkit("actions")
     try:
         return fn(*args, **kwargs)
+    except actions.ActionError as e:
+        status = {"busy": 409, "confirm": 428, "unknown": 404, "not_on_card": 404}.get(e.code, 403)
+        if e.code == "bad_args":
+            status = 400
+        raise HTTPException(status_code=status, detail={"code": e.code, "message": str(e)})
     except store.NotFound as e:
         raise HTTPException(status_code=404, detail=str(e) or "not found")
     except assets.AssetError as e:
@@ -704,6 +712,33 @@ class BoardAssetBody(BaseModel):
 
 class BoardUrlBody(BaseModel):
     url: str
+
+
+class LiveDataBody(BaseModel):
+    data: Optional[dict] = None
+    push: Optional[dict] = None
+    keep: Optional[int] = None
+    replace: bool = False
+
+
+class LiveActionBody(BaseModel):
+    action: str
+    index: Optional[int] = None
+    confirm: bool = False
+
+
+class VideoChunkBody(BaseModel):
+    upload: str
+    i: int
+    n: int
+    data: str
+
+
+class PosterBody(BaseModel):
+    src: Optional[str] = None
+    asset: Optional[str] = None
+    data: Optional[str] = None
+    dur: Optional[float] = None
 
 
 @router.get("/boards")
@@ -741,6 +776,48 @@ def upload_board_asset(body: "BoardAssetBody") -> Dict[str, Any]:
     return out
 
 
+@router.post("/boards/assets/video")
+def upload_board_video(body: "VideoChunkBody") -> Dict[str, Any]:
+    """Chunked video upload (base64 chunks of <= 4 MB, in order). The last chunk returns the
+    asset id and its poster (ffmpeg frame + duration)."""
+    return _board_call(board_service().upload_video_chunk, body.upload, body.i, body.n, body.data)
+
+
+@router.get("/boards/media/{aid}")
+def get_board_media(aid: str, off: int = 0, n: int = 4 * 1024 * 1024) -> Dict[str, Any]:
+    """A byte range of a video asset, base64 (the hosts' fetch is JSON-only)."""
+    import base64
+    mime, total, data = _board_call(board_service().assets.read_range, aid, off, n)
+    return {"mime": mime, "size": total, "off": off, "data": base64.b64encode(data).decode("ascii")}
+
+
+@router.post("/boards/video-poster")
+def board_video_poster(body: "PosterBody") -> Dict[str, Any]:
+    """Poster + duration for a video card (asset or URL), made on first request and cached
+    beside the assets. Never edits the board."""
+    return {"poster": _board_call(board_service().poster, body.src, body.asset)}
+
+
+@router.put("/boards/video-poster")
+def board_video_poster_client(body: "PosterBody") -> Dict[str, Any]:
+    """Fallback when the server can't decode: a frame the browser grabbed itself."""
+    if not body.data:
+        raise HTTPException(status_code=400, detail="data required")
+    svc = board_service()
+    return {"poster": _board_call(svc.posters.put_client, body.src, body.asset, body.data, body.dur)}
+
+
+@router.get("/boards/live/actions")
+def list_live_actions() -> Dict[str, Any]:
+    """The owner's action allowlist, public view (no commands, URLs or env)."""
+    return board_service().actions.list_public()
+
+
+@router.get("/boards/live/history")
+def live_action_history(limit: int = 50) -> Dict[str, Any]:
+    return {"history": board_service().actions.history(limit)}
+
+
 @router.post("/boards/link-preview")
 def board_link_preview(body: "BoardUrlBody") -> Dict[str, Any]:
     return {"preview": board_service().preview(body.url)}
@@ -762,6 +839,24 @@ def get_board(bid: str, since: int = -1) -> Dict[str, Any]:
 def post_board_ops(bid: str, body: "BoardOpsBody") -> Dict[str, Any]:
     doc, entry = _board_call(board_service().commit, bid, body.ops, "u", body.note)
     return {"seq": doc["seq"], "entry": entry}
+
+
+@router.post("/boards/{bid}/live/{iid}/data")
+def post_live_data(bid: str, iid: str, body: "LiveDataBody") -> Dict[str, Any]:
+    """Update a live card's data (scripts, cron jobs). ``data`` sets keys (null deletes),
+    ``push`` appends to series, ``replace`` starts from empty. Behind the dashboard's own auth."""
+    doc, entry = _board_call(board_service().live_update, bid, iid, body.data, body.push, body.keep, body.replace)
+    item = doc["items"].get(iid) or {}
+    return {"seq": doc["seq"], "at": item.get("at"), "noop": bool(entry.get("noop"))}
+
+
+@router.post("/boards/{bid}/live/{iid}/action")
+def post_live_action(bid: str, iid: str, body: "LiveActionBody", request: Request) -> Dict[str, Any]:
+    """Press a live card button. Only allowlisted ids run; args come from the card."""
+    client = getattr(request, "client", None)
+    who = f"dashboard {getattr(client, 'host', '') or ''}".strip()
+    res = _board_call(board_service().live_action, bid, iid, body.action, body.index, body.confirm, who)
+    return {"result": res}
 
 
 @router.post("/boards/{bid}/undo")

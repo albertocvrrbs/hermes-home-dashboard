@@ -2,10 +2,11 @@
 // The server is authoritative and logs normalised ops (put / set / del / board); the client
 // replays them, and applies its own pending batches optimistically (`add` with a $ref id).
 // Kept free of React/SDK imports so node --test can load it.
+import type { LiveBlock } from "./live";
 
 export type Kind =
   | "card" | "todo" | "col" | "link" | "image" | "embed" | "video" | "board"
-  | "frame" | "box" | "text" | "draw" | "line";
+  | "frame" | "box" | "text" | "draw" | "line" | "live";
 
 export type Point = [number, number];
 export type End = string | Point;
@@ -24,6 +25,8 @@ export interface Item {
   asset?: string; cap?: string; iw?: number; ih?: number; src?: string;
   ref?: string; note?: string; sub?: string; num?: string; size?: "h" | "p" | "s";
   d?: string; sw?: number; a?: End; b?: End; label?: string;
+  /** video: duration (s); live: block spec, data bag, freshness TTL (s), last update (epoch s) */
+  dur?: number; blocks?: LiveBlock[]; data?: Record<string, unknown>; ttl?: number; at?: number; tpl?: string;
 }
 
 export interface Presence { at: number; act: string; on?: string }
@@ -201,8 +204,18 @@ export function itemLabel(item: Item): string {
 export const DEFAULT_SIZE: Record<string, [number, number]> = {
   card: [256, 120], todo: [304, 240], col: [276, 320], link: [276, 250], image: [372, 260],
   embed: [452, 320], video: [400, 260], board: [212, 170], frame: [480, 320], box: [196, 62],
-  text: [420, 40], draw: [120, 80],
+  text: [420, 40], draw: [120, 80], live: [360, 300],
 };
+
+/** Rough height of a live card from its blocks (previews and auto layout only). */
+export function liveHeight(item: Item): number {
+  const w = item.w ?? 360;
+  let h = 40;
+  for (const b of item.blocks ?? []) {
+    h += { header: 60, progress: 46, metrics: 74, spark: 66, media: Math.round(w * 9 / 16) + 26, text: 22 + 16 * (b.t === "text" ? b.lines ?? 6 : 0), actions: 46 }[b.t] ?? 40;
+  }
+  return h;
+}
 
 export function approxRect(item: Item): { x: number; y: number; w: number; h: number } | null {
   if (item.k === "line" || item.in || item.x == null || item.y == null) return null;
@@ -210,6 +223,7 @@ export function approxRect(item: Item): { x: number; y: number; w: number; h: nu
   let h = item.h ?? dh;
   if (item.k === "col") h = 60 + 96 * (item.kids?.length ?? 0);
   if (item.k === "todo") h = 110 + 26 * (item.items?.length ?? 0);
+  if (item.k === "live") h = item.h ?? liveHeight(item);
   if (item.k === "draw" && item.d) {
     const pts = item.d.split(" ").map((p) => p.split(",").map(Number));
     const xs = pts.map((p) => p[0]), ys = pts.map((p) => p[1]);

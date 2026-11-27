@@ -2,7 +2,8 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useT, type MessageKey } from "../home/i18n";
 import { hostSandboxedFrame, newChatWithDraft, openSession } from "../sdk";
-import { boardsApi, prepareImage } from "./api";
+import { boardsApi, prepareImage, rememberPoster, uploadVideo, VIDEO_TYPES, type ActionResult } from "./api";
+import type { LiveActionInfo, LiveActionRef } from "./live";
 import { Cad, clock } from "./bits";
 import { boardPrompt, sendToSession } from "./chat";
 import { CHAT_MAX_W, CHAT_MIN_W, ChatPanel } from "./ChatPanel";
@@ -120,12 +121,48 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
   const [cursorAct, setCursorAct] = useState<string | null>(null);
   const [renaming, setRenaming] = useState(false);
   const [, setNow] = useState(0);
+  const [liveActions, setLiveActions] = useState<Record<string, LiveActionInfo> | null>(null);
+  const [liveActionsDown, setLiveActionsDown] = useState(false);
+  const [confirmReq, setConfirmReq] = useState<null | {
+    iid: string; ref: LiveActionRef; index: number; info: LiveActionInfo; resolve: (ok: boolean) => void;
+  }>(null);
   const Frame = hostSandboxedFrame();
 
   const flash = useCallback((msg: string) => {
     setToast(msg);
     window.setTimeout(() => setToast((cur) => (cur === msg ? null : cur)), 3200);
   }, []);
+
+  // ── live cards: the owner's action allowlist, refreshed now and then ─────
+  const loadActions = useCallback(() => {
+    boardsApi.liveActions()
+      .then((r) => { setLiveActions(Object.fromEntries(r.actions.map((a) => [a.id, a]))); setLiveActionsDown(false); })
+      .catch(() => { setLiveActions((cur) => cur ?? {}); setLiveActionsDown(true); });
+  }, []);
+  useEffect(() => {
+    loadActions();
+    const h = window.setInterval(() => { if (!document.hidden) loadActions(); }, 60000);
+    return () => window.clearInterval(h);
+  }, [loadActions]);
+
+  const runLiveAction = useCallback(async (iid: string, ref: LiveActionRef, index: number): Promise<ActionResult | null> => {
+    const info = liveActionsRef.current?.[ref.action];
+    if (!info || !info.enabled) throw new Error(t("board.live.notRegistered", { id: ref.action }));
+    let confirm = false;
+    if (info.destructive) {
+      confirm = await new Promise<boolean>((resolve) => setConfirmReq({ iid, ref, index, info, resolve }));
+      setConfirmReq(null);
+      if (!confirm) return null;
+    }
+    try {
+      return await boardsApi.liveAction(bid, iid, ref.action, index, confirm);
+    } catch (e) {
+      loadActions();
+      throw e;
+    }
+  }, [bid, loadActions, t]);
+  const liveActionsRef = useRef(liveActions);
+  liveActionsRef.current = liveActions;
 
   // ── Hermes' op stream drives his cursor ─────────────────────────────────
   const onHermes = useCallback((entries: Entry[], doc: BoardDoc) => {
@@ -384,6 +421,23 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
   const addImageFiles = useCallback(async (files: File[], at?: { x: number; y: number }) => {
     let p = at ?? center();
     for (const f of files.slice(0, 8)) {
+      if (VIDEO_TYPES.test(f.type)) {
+        try {
+          flash(t("board.toast.uploadingVideo", { pct: 0 }));
+          const res = await uploadVideo(f, (fr) => setToast(t("board.toast.uploadingVideo", { pct: Math.round(fr * 100) })));
+          rememberPoster({ asset: res.asset }, { st: res.st ?? "none", img: res.img, dur: res.dur, iw: res.iw, ih: res.ih });
+          const item: Item = { k: "video", asset: res.asset, title: f.name.replace(/\.[a-z0-9]+$/i, "").slice(0, 200), w: 400 };
+          if (res.img) item.img = res.img;
+          if (res.dur) item.dur = res.dur;
+          if (res.iw && res.ih) { item.iw = res.iw; item.ih = res.ih; }
+          add(item, p);
+          p = { x: p.x + 24, y: p.y + 24 };
+          setToast(null);
+        } catch (e) {
+          flash(t("board.toast.videoFailed", { error: String((e as Error)?.message ?? e) }));
+        }
+        continue;
+      }
       if (!f.type.startsWith("image/")) continue;
       try {
         flash(t("board.toast.uploading"));
@@ -749,7 +803,7 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
   // ── keyboard, paste, drop ───────────────────────────────────────────────
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (!rootRef.current?.isConnected || ask) return;
+      if (!rootRef.current?.isConnected || ask || confirmReq) return;
       if (e.key === " " && !isTyping(e.target)) { space.current = e.type === "keydown"; if (e.type === "keydown") e.preventDefault(); return; }
       if (e.type !== "keydown" || isTyping(e.target)) return;
       const mod = e.metaKey || e.ctrlKey;
@@ -798,12 +852,12 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
     window.addEventListener("keydown", onKey);
     window.addEventListener("keyup", onKey);
     return () => { window.removeEventListener("keydown", onKey); window.removeEventListener("keyup", onKey); };
-  }, [ask, center, commit, connectFrom, continueInSession, deleteSelection, duplicate, fit, openChat, selected, sync, zoomAt]);
+  }, [ask, center, commit, confirmReq, connectFrom, continueInSession, deleteSelection, duplicate, fit, openChat, selected, sync, zoomAt]);
 
   useEffect(() => {
     const onPaste = (e: ClipboardEvent) => {
       if (!rootRef.current?.isConnected || isTyping(e.target) || ask) return;
-      const files = [...(e.clipboardData?.files ?? [])].filter((f) => f.type.startsWith("image/"));
+      const files = [...(e.clipboardData?.files ?? [])].filter((f) => f.type.startsWith("image/") || VIDEO_TYPES.test(f.type));
       if (files.length) { e.preventDefault(); void addImageFiles(files); return; }
       const text = e.clipboardData?.getData("text/plain") ?? "";
       const url = extractUrl(text);
@@ -817,7 +871,7 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
   const onDrop = (e: React.DragEvent) => {
     e.preventDefault();
     const at = toWorld(e.clientX, e.clientY);
-    const files = [...e.dataTransfer.files].filter((f) => f.type.startsWith("image/"));
+    const files = [...e.dataTransfer.files].filter((f) => f.type.startsWith("image/") || VIDEO_TYPES.test(f.type));
     if (files.length) { void addImageFiles(files, at); return; }
     const url = extractUrl(e.dataTransfer.getData("text/uri-list").split("\n")[0] || e.dataTransfer.getData("text/plain"));
     if (url) addUrl(url, at);
@@ -844,7 +898,7 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
   }, []);
 
   const ctx: ItemCtx | null = useMemo(() => (doc ? {
-    doc, t, editing, setEditing, update, commit, playing, setPlaying, Frame,
+    doc, t, editing, setEditing, update, commit, playing, setPlaying, Frame, liveActions, liveActionsDown, runLiveAction,
     openBoard: (id) => onOpenBoard(id),
     addToColumn: (col) => {
       const ref = newRef();
@@ -863,7 +917,7 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
         </div>
       );
     },
-  } : null), [Frame, commit, doc, editing, hidden, kidDrag, onOpenBoard, playing, regEl, selected, t, update]);
+  } : null), [Frame, commit, doc, editing, hidden, kidDrag, liveActions, liveActionsDown, onOpenBoard, playing, regEl, runLiveAction, selected, t, update]);
   const ctxRef = useRef(ctx);
   ctxRef.current = ctx;
 
@@ -891,7 +945,7 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
       case "todo": return ["board.verb.sortDate", "board.verb.split"] as MessageKey[];
       case "card": return ["board.verb.expand", "board.verb.split"] as MessageKey[];
       case "col": return ["board.verb.flow"] as MessageKey[];
-      case "link": case "video": return ["board.verb.summarize"] as MessageKey[];
+      case "link": case "video": case "live": return ["board.verb.summarize"] as MessageKey[];
       default: return ["board.verb.improve"] as MessageKey[];
     }
   })();
@@ -965,7 +1019,7 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
     const out: MenuEntry[] = [{ head: t("board.menu.addHere") }];
     for (const x of TOOLS[1]) out.push({ id: x.tool, label: t(x.label), icon: x.icon, kbd: x.key, run: place(x.tool) });
     out.push({ sep: true });
-    out.push({ id: "all", label: t("board.menu.selectAll"), kbd: `${mod}A`, run: () => setSelected(new Set(Object.keys(docRef.current?.items ?? {}).filter((k) => !docRef.current!.items[k].in))) });
+    out.push({ id: "all", label: t("board.menu.selectAll"), icon: "selectAll", kbd: `${mod}A`, run: () => setSelected(new Set(Object.keys(docRef.current?.items ?? {}).filter((k) => !docRef.current!.items[k].in))) });
     out.push({ id: "fit", label: t("board.fit"), icon: "fit", kbd: "F", run: fit });
     out.push({ id: "chat", label: chatOpen ? t("board.chat.close") : t("board.chat.open"), icon: chatOpen ? "closePanel" : "chat", kbd: "/", run: () => (chatOpen ? closeChat() : openChat(true)) });
     return out;
@@ -1201,8 +1255,29 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
           </div>
         </div>
       )}
+      {confirmReq && (
+        <div className="hb-scrim" onPointerDown={(e) => { e.stopPropagation(); if (e.target === e.currentTarget) confirmReq.resolve(false); }}>
+          <div className="hb-confirm" role="alertdialog" aria-modal="true" aria-labelledby="hb-confirm-t"
+            onKeyDown={(e) => { e.stopPropagation(); if (e.key === "Escape") confirmReq.resolve(false); }}>
+            <div className="hd">{t("board.live.confirmHead")}</div>
+            <h3 id="hb-confirm-t"><span className="ico"><Icon name="alert" size={16} /></span>
+              {t("board.live.confirmTitle", { action: confirmReq.ref.label || confirmReq.info.label })}</h3>
+            <p>{confirmReq.info.confirm || confirmReq.info.description || t("board.live.confirmBody")}</p>
+            <div className="facts">
+              <span>{t("board.live.confirmCard")} <b>{doc.items[confirmReq.iid]?.title || itemLabel(doc.items[confirmReq.iid] ?? { k: "live" }) || confirmReq.iid}</b></span>
+              <span>{t("board.live.confirmId")} <b>{confirmReq.info.id}</b></span>
+              <span>{t("board.live.confirmTimeout", { s: confirmReq.info.timeout })}</span>
+            </div>
+            <div className="row">
+              <button className="btn text" autoFocus onClick={() => confirmReq.resolve(false)}>{t("board.ask.cancel")}</button>
+              <button className="btn danger" onClick={() => confirmReq.resolve(true)}>
+                <Icon name="alert" />{confirmReq.ref.label || confirmReq.info.label}</button>
+            </div>
+          </div>
+        </div>
+      )}
       {(toast || sync.error) && <div className="hb-toast" role="status">{toast || t("board.toast.offline")}</div>}
-      <input ref={fileRef} type="file" accept="image/png,image/jpeg,image/gif,image/webp" multiple hidden
+      <input ref={fileRef} type="file" accept="image/png,image/jpeg,image/gif,image/webp,video/mp4,video/webm,video/quicktime" multiple hidden
         onChange={(e) => { const files = [...(e.target.files ?? [])]; e.target.value = ""; void addImageFiles(files, lastPoint.current ?? undefined); }} />
     </div>
   );

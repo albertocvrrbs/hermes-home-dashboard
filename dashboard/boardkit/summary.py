@@ -72,6 +72,8 @@ def item_line(iid: str, it: Dict[str, Any], text_len: int = 80) -> str:
         parts.append(f"<{_clip(it['src'], 90)}>")
     elif k == "board":
         parts.append(f"board={it.get('ref')}")
+    elif k == "live":
+        parts.append(_live_bits(it))
     elif k == "frame" and it.get("note"):
         parts.append(_clip(it["note"], 60))
     elif k == "draw":
@@ -82,6 +84,29 @@ def item_line(iid: str, it: Dict[str, Any], text_len: int = 80) -> str:
     if it.get("due"):
         parts.append(f"due:{it['due']}")
     return " ".join(parts)
+
+
+def _live_bits(it: Dict[str, Any]) -> str:
+    from .live import action_refs, status_of
+    data = it.get("data") or {}
+    bits = [f"status:{status_of(it) or '-'}"]
+    shown = 0
+    for key, v in data.items():
+        if shown >= 6:
+            bits.append("…")
+            break
+        if isinstance(v, (int, float, bool)) or (isinstance(v, str) and len(v) <= 40 and "\n" not in v):
+            bits.append(f"{key}={v}")
+            shown += 1
+        elif isinstance(v, list):
+            bits.append(f"{key}=[{len(v)}]")
+            shown += 1
+    acts = [r.get("action") for r in action_refs(it)]
+    if acts:
+        bits.append("actions:" + ",".join(a for a in acts if a))
+    if it.get("ttl"):
+        bits.append(f"ttl={it['ttl']}s")
+    return " ".join(bits)
 
 
 def header(doc: Dict[str, Any]) -> str:

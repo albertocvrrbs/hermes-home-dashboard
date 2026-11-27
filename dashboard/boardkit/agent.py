@@ -21,7 +21,14 @@ _OPS_HELP = (
     "box{num,title,sub} (diagram node, ~196x62) · line{a,b,label} (connector; a/b = ids or [x,y]) · "
     "frame{title,note,w,h} (titled region) · text{text,size:'h'|'p'} · link{url} (preview fetched for you; video "
     "and image URLs become players/images) · embed{title,html} (sandboxed HTML, scripts only, no network) · "
-    "board{ref}. Coordinates are world px; leave ~60px gaps; columns are 276 wide."
+    "board{ref} · live{title, tpl:'training'|'job'|'stat' or blocks:[...], data:{...}, ttl, actions:[{action, label?, "
+    "args?}]} (a card bound to your own job: blocks header{title,sub,status,icon} progress{value 0-1,label,eta} "
+    "metrics{items:[{label,value,fmt,delta,good}]} spark{series,label,fmt} media{video|image,poster,caption} "
+    "text{value,lines} actions{items:[{action,label?,args?}]}; any value may be '$key' read from data; fmt num|int|pct|"
+    "usd|dur; status running|paused|done|error|idle). Update a live card later with {op:'live', id, data:{k:v} "
+    "(null deletes), push:{series:[n]}, keep?} - cheap, no layout. Buttons can only name action ids the owner "
+    "registered (board_read actions:true lists them); never put commands in a card. "
+    "Coordinates are world px; leave ~60px gaps; columns are 276 wide."
 )
 
 SCHEMAS: Dict[str, Dict[str, Any]] = {
@@ -36,6 +43,8 @@ SCHEMAS: Dict[str, Dict[str, Any]] = {
             "board": {"type": "string", "description": "Board id or name."},
             "full": {"type": "boolean", "description": "Whole outline instead of changes."},
             "create": {"type": "boolean", "description": "Create the board if no board has this name."},
+            "actions": {"type": "boolean", "description": "Also list the live-card actions the owner registered "
+                        "(ids you may put on live card buttons)."},
         }},
     },
     "board_apply": {
@@ -106,12 +115,29 @@ class BoardAgent:
         what = f"no board named {args.get('board')!r}" if args.get("board") else "this session has no linked board"
         return _dump({"error": what + " (pass create:true to make one)", "boards": boards})
 
+    def _actions(self) -> Dict[str, Any]:
+        reg = self.svc.actions.list_public()
+        rows = [{k: a[k] for k in ("id", "label", "description", "destructive", "enabled", "args") if k in a}
+                for a in reg["actions"]]
+        out: Dict[str, Any] = {"actions": rows}
+        if not rows:
+            out["hint"] = ("none registered; the owner adds them as JSON in " + reg["dir"] +
+                           " (see the plugin README, 'Live cards')")
+        if reg["problems"]:
+            out["problems"] = reg["problems"][:5]
+        return out
+
     # ── tools ────────────────────────────────────────────────────────────
     def board_read(self, args: Dict[str, Any], session_id: Optional[str] = None, **_: Any) -> str:
         try:
-            doc, created, linked = self._resolve(args or {}, session_id)
+            args = args or {}
+            if args.get("actions") and not args.get("board") and not session_id:
+                return _dump({"live_actions": self._actions()})
+            doc, created, linked = self._resolve(args, session_id)
             if doc is None:
-                return self._missing(args or {})
+                if args.get("actions"):
+                    return _dump({"live_actions": self._actions()})
+                return self._missing(args)
             bid = doc["id"]
             out: Dict[str, Any] = {"board": bid, "name": doc["name"], "seq": doc["seq"]}
             if created:
@@ -127,6 +153,8 @@ class BoardAgent:
                     out["outline"] = summary.outline(doc, only=[t for t in touched if t in doc["items"]])
                 else:
                     out["outline"] = summary.header(doc) + "\n(nothing changed since your last read; full:true for everything)"
+            if args.get("actions"):
+                out["live_actions"] = self._actions()
             self.svc.store.mark_seen(bid, doc["seq"])
             self.svc.store.set_presence(bid, "reading the board")
             return _dump(out)

@@ -146,7 +146,7 @@ class BoardStore:
         self._path(bid, ".json")
         with self._lock(bid):
             doc = self._read_doc(bid)
-            new, inv, refs, fwd = engine.apply_batch_ex(doc, ops, by)
+            new, inv, refs, fwd = engine.apply_batch_ex(doc, ops, by, now)
             if not fwd:
                 return doc, {"s": doc["seq"], "noop": True}
             new["seq"] = doc["seq"] + 1

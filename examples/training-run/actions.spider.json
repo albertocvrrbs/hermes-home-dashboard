@@ -1,0 +1,19 @@
+{
+  "_readme": "Example only. Copy to ~/.hermes/plugin-data/home-dashboard/live-actions/spider.json, replace the two /ABSOLUTE/PATH placeholders, read the note, and only then set enabled to true. While enabled is false the Stop button on the card stays greyed out and the server refuses the action.",
+  "actions": [
+    {
+      "id": "spider.stop",
+      "label": "Stop run",
+      "description": "Asks the trainer to stop cleanly (control.json). It finishes the current iteration and keeps its last checkpoint.",
+      "confirm": "The training run stops after the current iteration. Its last checkpoint stays, so it can be resumed.",
+      "destructive": true,
+      "enabled": false,
+      "note": "example; disabled until you edit the paths and enable it",
+      "command": ["/usr/bin/python3", "/ABSOLUTE/PATH/examples/training-run/spider_adapter.py", "stop",
+                  "--runs-dir", "/ABSOLUTE/PATH/runs", "--run", "{run}"],
+      "args": { "run": { "type": "string", "pattern": "^[a-z0-9][a-z0-9_-]{0,31}$" } },
+      "timeout": 15,
+      "icon": "square"
+    }
+  ]
+}

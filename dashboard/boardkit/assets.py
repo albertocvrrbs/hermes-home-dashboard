@@ -4,7 +4,9 @@ from __future__ import annotations
 import base64
 import binascii
 import hashlib
+import json
 import os
+import re
 import struct
 from pathlib import Path
 from typing import Optional, Tuple
@@ -13,8 +15,23 @@ from . import ids
 
 MAX_IMAGE = 5 * 1024 * 1024
 MAX_HTML = 512 * 1024
+MAX_VIDEO = 100 * 1024 * 1024
+MAX_CHUNK = 4 * 1024 * 1024
+MAX_RANGE = 4 * 1024 * 1024
 MIME = {"png": "image/png", "jpg": "image/jpeg", "gif": "image/gif", "webp": "image/webp",
-        "ico": "image/x-icon", "html": "text/html"}
+        "ico": "image/x-icon", "html": "text/html",
+        "mp4": "video/mp4", "webm": "video/webm", "mov": "video/quicktime"}
+VIDEO_EXT = ("mp4", "webm", "mov")
+_UPLOAD = re.compile(r"[a-f0-9]{16}")
+
+
+def sniff_video(head: bytes) -> Optional[str]:
+    """mp4/mov from the ISO-BMFF ``ftyp`` box, webm from the EBML magic."""
+    if len(head) >= 12 and head[4:8] == b"ftyp":
+        return "mov" if head[8:12] == b"qt  " else "mp4"
+    if head[:4] == b"\x1a\x45\xdf\xa3":
+        return "webm"
+    return None
 
 
 class AssetError(ValueError):
@@ -131,8 +148,84 @@ class AssetStore:
 
     def get(self, aid: str) -> Tuple[str, bytes]:
         path = self._path(aid)
+        if aid.rsplit(".", 1)[1] in VIDEO_EXT:
+            raise AssetError("videos are read in ranges (media route)")
         try:
             data = path.read_bytes()
         except FileNotFoundError:
             raise AssetError("no such asset") from None
         return MIME[aid.rsplit(".", 1)[1]], data
+
+    def path_of(self, aid: str) -> Path:
+        path = self._path(aid)
+        if not path.exists():
+            raise AssetError("no such asset")
+        return path
+
+    def read_range(self, aid: str, off: int, n: int) -> Tuple[str, int, bytes]:
+        """``(mime, total size, bytes)`` of a video asset, at most MAX_RANGE per call."""
+        path = self.path_of(aid)
+        ext = aid.rsplit(".", 1)[1]
+        if ext not in VIDEO_EXT:
+            raise AssetError("not a video asset")
+        total = path.stat().st_size
+        off = max(0, min(total, int(off)))
+        n = max(0, min(MAX_RANGE, int(n), total - off))
+        with open(path, "rb") as fh:
+            fh.seek(off)
+            data = fh.read(n)
+        return MIME[ext], total, data
+
+    # ── chunked video upload: begin implicitly at chunk 0, finish on the last ──
+    def put_video_chunk(self, upload: str, index: int, total: int, b64: str) -> Optional[str]:
+        """Append chunk ``index`` of ``total``; returns the asset id after the last one."""
+        if not isinstance(upload, str) or not _UPLOAD.fullmatch(upload):
+            raise AssetError("upload id must be 16 hex characters")
+        if not (isinstance(index, int) and isinstance(total, int) and 0 <= index < total <= 64):
+            raise AssetError("bad chunk index")
+        if not isinstance(b64, str) or len(b64) > (MAX_CHUNK * 4) // 3 + 16:
+            raise AssetError("chunk too large")
+        try:
+            data = base64.b64decode("".join(b64.split(",", 1)[-1].split()), validate=True)
+        except (binascii.Error, ValueError):
+            raise AssetError("chunk is not valid base64") from None
+        self.root.mkdir(parents=True, exist_ok=True)
+        part = self.root / f".up-{upload}"
+        meta = self.root / f".up-{upload}.json"
+        state = {"next": 0, "size": 0}
+        if index == 0:
+            part.unlink(missing_ok=True)
+        else:
+            try:
+                state = json.loads(meta.read_text("utf-8"))
+            except (OSError, ValueError):
+                raise AssetError("upload not started") from None
+        if state["next"] != index:
+            raise AssetError(f"expected chunk {state['next']}")
+        if state["size"] + len(data) > MAX_VIDEO:
+            part.unlink(missing_ok=True)
+            meta.unlink(missing_ok=True)
+            raise AssetError(f"videos are limited to {MAX_VIDEO // (1024 * 1024)} MB")
+        if index == 0 and sniff_video(data[:16]) is None:
+            raise AssetError("only MP4, WebM and MOV videos are accepted")
+        with open(part, "ab") as fh:
+            fh.write(data)
+        state = {"next": index + 1, "size": state["size"] + len(data)}
+        if index + 1 < total:
+            meta.write_text(json.dumps(state), encoding="utf-8")
+            return None
+        meta.unlink(missing_ok=True)
+        h = hashlib.sha256()
+        with open(part, "rb") as fh:
+            head = fh.read(16)
+            fh.seek(0)
+            for block in iter(lambda: fh.read(1 << 20), b""):
+                h.update(block)
+        ext = sniff_video(head) or "mp4"
+        aid = f"{h.hexdigest()[:16]}.{ext}"
+        dest = self._path(aid)
+        if dest.exists():
+            part.unlink(missing_ok=True)
+        else:
+            os.replace(part, dest)
+        return aid

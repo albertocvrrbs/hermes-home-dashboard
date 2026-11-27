@@ -1,5 +1,6 @@
 // REST client for the board backend (dashboard/plugin_api.py, /api/plugins/home-dashboard/boards).
 import { fetchJSON } from "../sdk";
+import type { LiveActionInfo } from "./live";
 import type { BoardDoc, Entry, Op, Presence } from "./model";
 
 const BASE = "/api/plugins/home-dashboard/boards";
@@ -10,6 +11,9 @@ export interface BoardRow {
 }
 
 export interface SinceResult { seq: number; hermes?: Presence; entries?: Entry[]; doc?: BoardDoc }
+
+export interface VideoPoster { st: "ok" | "fail" | "none"; img?: string; dur?: number; iw?: number; ih?: number; by?: string; reason?: string }
+export interface ActionResult { ok: boolean; code: number | string; out: string; ms: number; action: string }
 
 export interface LinkPreview {
   kind: "link" | "image" | "video"; st: "ok" | "fail"; title?: string; desc?: string; site?: string;
@@ -38,7 +42,115 @@ export const boardsApi = {
   asset: (aid: string) => fetchJSON<{ mime: string; data?: string; text?: string }>(`${BASE}/assets/${aid}`),
   preview: (url: string) =>
     fetchJSON<{ preview: LinkPreview }>(`${BASE}/link-preview`, json("POST", { url })).then((r) => r.preview),
+  poster: (ref: { src?: string; asset?: string }) =>
+    fetchJSON<{ poster: VideoPoster }>(`${BASE}/video-poster`, json("POST", ref)).then((r) => r.poster),
+  posterFromClient: (ref: { src?: string; asset?: string }, data: string, dur?: number) =>
+    fetchJSON<{ poster: VideoPoster }>(`${BASE}/video-poster`, json("PUT", { ...ref, data, dur: dur ?? null })).then((r) => r.poster),
+  videoChunk: (upload: string, i: number, n: number, data: string) =>
+    fetchJSON<{ next?: number; asset?: string } & Partial<VideoPoster>>(`${BASE}/assets/video`, json("POST", { upload, i, n, data })),
+  media: (aid: string, off: number, n: number) =>
+    fetchJSON<{ mime: string; size: number; off: number; data: string }>(`${BASE}/media/${aid}?off=${off}&n=${n}`),
+  liveActions: () => fetchJSON<{ actions: LiveActionInfo[]; problems: string[]; dir: string }>(`${BASE}/live/actions`),
+  liveAction: (bid: string, iid: string, action: string, index: number, confirm: boolean) =>
+    fetchJSON<{ result: ActionResult }>(`${BASE}/${bid}/live/${iid}/action`, json("POST", { action, index, confirm })).then((r) => r.result),
 };
+
+// ── video: posters (cached per source), uploaded files as blob URLs, chunked upload ──
+
+const posterCache = new Map<string, Promise<VideoPoster>>();
+
+export function videoPoster(ref: { src?: string; asset?: string }): Promise<VideoPoster> {
+  const key = ref.asset ? `a:${ref.asset}` : `u:${ref.src}`;
+  let p = posterCache.get(key);
+  if (!p) {
+    p = boardsApi.poster(ref);
+    p.catch(() => posterCache.delete(key));
+    posterCache.set(key, p);
+  }
+  return p;
+}
+
+export function rememberPoster(ref: { src?: string; asset?: string }, poster: VideoPoster): void {
+  posterCache.set(ref.asset ? `a:${ref.asset}` : `u:${ref.src}`, Promise.resolve(poster));
+}
+
+const mediaCache = new Map<string, Promise<string>>();
+const RANGE = 4 * 1024 * 1024;
+
+/** An uploaded video as a blob URL (the hosts' fetch speaks JSON, so it arrives in ranges). */
+export function mediaUrl(aid: string): Promise<string> {
+  let p = mediaCache.get(aid);
+  if (!p) {
+    p = (async () => {
+      const parts: Blob[] = [];
+      let off = 0, size = Infinity, mime = "video/mp4";
+      while (off < size) {
+        const r = await boardsApi.media(aid, off, RANGE);
+        size = r.size;
+        mime = r.mime;
+        if (!r.data) break;
+        parts.push(b64ToBlob(r.data, r.mime));
+        off += parts[parts.length - 1].size;
+      }
+      return URL.createObjectURL(new Blob(parts, { type: mime }));
+    })();
+    p.catch(() => mediaCache.delete(aid));
+    mediaCache.set(aid, p);
+  }
+  return p;
+}
+
+export const VIDEO_TYPES = /^video\/(mp4|webm|quicktime)$/;
+export const MAX_VIDEO = 100 * 1024 * 1024;
+const CHUNK = 3 * 1024 * 1024;
+
+/** Uploads a video file in chunks; the server answers with the asset and its poster. */
+export async function uploadVideo(file: File, onProgress?: (f: number) => void): Promise<{ asset: string } & Partial<VideoPoster>> {
+  if (!VIDEO_TYPES.test(file.type)) throw new Error("unsupported video type");
+  if (file.size > MAX_VIDEO) throw new Error("video is over 100 MB");
+  const bytes = new Uint8Array(16);
+  crypto.getRandomValues(bytes);
+  const upload = [...bytes.slice(0, 8)].map((b) => b.toString(16).padStart(2, "0")).join("");
+  const n = Math.max(1, Math.ceil(file.size / CHUNK));
+  for (let i = 0; i < n; i++) {
+    const data = await blobToB64(file.slice(i * CHUNK, (i + 1) * CHUNK));
+    const r = await boardsApi.videoChunk(upload, i, n, data);
+    onProgress?.((i + 1) / n);
+    if (r.asset) return r as { asset: string } & Partial<VideoPoster>;
+  }
+  throw new Error("upload did not finish");
+}
+
+/** Client fallback: seek a <video preload=metadata> and draw one frame to a canvas. */
+export function grabFrame(src: string): Promise<{ data: string; dur: number }> {
+  return new Promise((resolve, reject) => {
+    const v = document.createElement("video");
+    v.preload = "metadata";
+    v.muted = true;
+    v.crossOrigin = "anonymous";
+    v.playsInline = true;
+    const done = setTimeout(() => { cleanup(); reject(new Error("timeout")); }, 15000);
+    const cleanup = () => { clearTimeout(done); v.removeAttribute("src"); v.load(); };
+    v.onloadedmetadata = () => {
+      const d = Number.isFinite(v.duration) ? v.duration : 0;
+      v.currentTime = d > 0 && d < 10 ? d * 0.1 : Math.min(1, d || 1);
+    };
+    v.onseeked = () => {
+      try {
+        const w = Math.min(960, v.videoWidth || 640), h = Math.round(w * ((v.videoHeight || 360) / (v.videoWidth || 640)));
+        const c = document.createElement("canvas");
+        c.width = w; c.height = h;
+        c.getContext("2d")!.drawImage(v, 0, 0, w, h);
+        const data = c.toDataURL("image/jpeg", 0.82).split(",", 2)[1] ?? "";
+        const dur = Number.isFinite(v.duration) ? v.duration : 0;
+        cleanup();
+        if (!data) reject(new Error("empty frame")); else resolve({ data, dur });
+      } catch (e) { cleanup(); reject(e); }
+    };
+    v.onerror = () => { cleanup(); reject(new Error("video failed to load")); };
+    v.src = src;
+  });
+}
 
 // ── asset cache: blob URLs for images, text for HTML ──────────────────────
 

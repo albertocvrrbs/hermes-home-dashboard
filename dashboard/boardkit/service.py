@@ -6,8 +6,9 @@ import threading
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
+from . import actions as actions_mod
 from . import assets as assets_mod
-from . import engine, ids, links, store as store_mod, urls
+from . import engine, ids, links, live as live_mod, posters as posters_mod, store as store_mod, urls
 from .fetch import Fetcher
 
 PREVIEW_BUDGET_S = 9.0
@@ -20,6 +21,58 @@ class BoardService:
         self.assets = assets_mod.AssetStore(self.root / "assets")
         self.link_cache = self.root / "links"
         self.fetcher = fetcher or Fetcher()
+        self.posters = posters_mod.Posters(self.root, self.assets)
+        # the allowlist sits beside the boards folder, in the plugin data dir
+        self.actions = actions_mod.Registry(self.root.parent)
+
+    # ── live cards ───────────────────────────────────────────────────────
+    def live_update(self, bid: str, iid: str, data: Any = None, push: Any = None, keep: Any = None,
+                    replace: bool = False, by: str = "s") -> Tuple[Dict[str, Any], Dict[str, Any]]:
+        """Patch a live card's data. Scripts and the REST route write as ``s`` (system), so the
+        change never counts as the user's edit nor lands in anyone's undo stack."""
+        op: Dict[str, Any] = {"op": "live", "id": iid}
+        if data is not None:
+            op["data"] = data
+        if push is not None:
+            op["push"] = push
+        if keep is not None:
+            op["keep"] = keep
+        if replace:
+            op["replace"] = True
+        return self.store.commit(bid, [op], by=by)
+
+    def live_action(self, bid: str, iid: str, action: str, index: Optional[int] = None,
+                    confirm: bool = False, who: str = "dashboard") -> Dict[str, Any]:
+        """Press a button: the action id must be on that card, and its args come from the card
+        (never from the request)."""
+        doc = self.store.load(bid)
+        item = doc["items"].get(iid) if ids.valid_item_id(iid) else None
+        if not item or item.get("k") != "live":
+            raise store_mod.NotFound("no such live card")
+        refs = live_mod.action_refs(item)
+        ref = None
+        if index is not None and 0 <= index < len(refs) and refs[index].get("action") == action:
+            ref = refs[index]
+        if ref is None:
+            ref = next((r for r in refs if r.get("action") == action), None)
+        if ref is None:
+            raise actions_mod.ActionError("not_on_card", f"this card has no {str(action)[:64]!r} button")
+        args = live_mod.bound_args(ref, item.get("data") or {})
+        title = (item.get("title") or "")[:60]
+        return self.actions.invoke(action, args, confirm=confirm, who=who, board=bid,
+                                   card=f"{iid} {title}".strip())
+
+    # ── video ────────────────────────────────────────────────────────────
+    def poster(self, src: Optional[str] = None, asset: Optional[str] = None, generate: bool = True) -> Dict[str, Any]:
+        return self.posters.get(src=src, asset=asset, generate=generate)
+
+    def upload_video_chunk(self, upload: str, index: int, total: int, data: str) -> Dict[str, Any]:
+        aid = self.assets.put_video_chunk(upload, index, total, data)
+        if aid is None:
+            return {"next": index + 1}
+        out: Dict[str, Any] = {"asset": aid}
+        out.update({k: v for k, v in self.posters.get(asset=aid).items() if k in ("img", "dur", "iw", "ih", "st")})
+        return out
 
     # ── op preparation (runs before the engine) ──────────────────────────
     def prepare(self, ops: Any) -> Tuple[Any, List[Tuple[str, str]]]:

@@ -9,9 +9,11 @@ from __future__ import annotations
 import copy
 import math
 import re
+import time
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from . import ids
+from . import live as live_mod
 
 MAX_OPS = 200
 MAX_ITEMS = 2000
@@ -25,6 +27,7 @@ DEFAULT_SIZE: Dict[str, Tuple[int, int]] = {
     "card": (256, 120), "todo": (304, 240), "col": (276, 320), "link": (276, 250),
     "image": (372, 260), "embed": (452, 320), "video": (400, 260), "board": (212, 170),
     "frame": (480, 320), "box": (196, 62), "text": (420, 40), "draw": (120, 80),
+    "live": (360, 300),
 }
 
 _COMMON = ("x", "y", "w", "h", "in")
@@ -35,13 +38,14 @@ FIELDS: Dict[str, Tuple[str, ...]] = {
     "link": _COMMON + ("url", "title", "desc", "site", "icon", "img", "st", "video"),
     "image": _COMMON + ("asset", "cap", "iw", "ih", "url"),
     "embed": _COMMON + ("asset", "title"),
-    "video": _COMMON + ("src", "title"),
+    "video": _COMMON + ("src", "title", "asset", "img", "dur", "iw", "ih"),
     "board": _COMMON + ("ref", "title"),
     "frame": ("x", "y", "w", "h", "title", "note"),
     "box": ("x", "y", "w", "h", "title", "sub", "num"),
     "text": ("x", "y", "w", "h", "text", "size"),
     "draw": ("x", "y", "w", "h", "d", "sw"),
     "line": ("a", "b", "label"),
+    "live": ("x", "y", "w", "h", "title", "blocks", "data", "ttl", "at", "tpl"),
 }
 KINDS = frozenset(FIELDS)
 
@@ -183,6 +187,19 @@ def _sw(value: Any) -> float:
     return round(max(0.5, min(24.0, _num(value))), 1)
 
 
+def _live(fn: Callable[[Any], Any]) -> Callable[[Any], Any]:
+    def conv(value: Any) -> Any:
+        try:
+            return fn(value)
+        except live_mod.LiveError as e:
+            raise OpError(str(e)) from None
+    return conv
+
+
+def _dur(value: Any) -> float:
+    return round(max(0.0, min(360_000.0, _num(value))), 2)
+
+
 SANITIZE: Dict[str, Callable[[Any], Any]] = {
     "x": _int(-COORD, COORD), "y": _int(-COORD, COORD),
     "w": _int(1, 100_000), "h": _int(1, 100_000),
@@ -194,16 +211,19 @@ SANITIZE: Dict[str, Callable[[Any], Any]] = {
     "st": _enum("wait", "ok", "fail"), "size": _enum("h", "p", "s"),
     "asset": _asset, "icon": _asset, "img": _asset, "ref": _bid,
     "tags": _tags, "items": _todo_items, "d": _stroke, "video": _video, "sw": _sw,
+    "dur": _dur, "blocks": _live(live_mod.clean_blocks), "data": _live(live_mod.clean_data),
+    "ttl": _int(5, 7 * 86400), "at": _int(0, 2**42), "tpl": _enum(*live_mod.TEMPLATES),
 }
 
 
 # ── batch application ────────────────────────────────────────────────────
 
 class _Batch:
-    def __init__(self, doc: Dict[str, Any], by: str):
+    def __init__(self, doc: Dict[str, Any], by: str, now: Optional[float] = None):
         self.doc = doc
         self.items: Dict[str, Dict[str, Any]] = doc["items"]
         self.by = by
+        self.now = int(now if now is not None else time.time())
         self.refs: Dict[str, str] = {}
         self._place: Optional[List[int]] = None
 
@@ -292,6 +312,16 @@ class _Batch:
         item: Dict[str, Any] = {"k": kind, **self.clean_fields(kind, raw)}
         if kind == "line" and ("a" not in item or "b" not in item):
             raise OpError("line needs a and b")
+        if kind == "live":
+            if "blocks" not in item:
+                try:
+                    item["blocks"] = live_mod.template(raw.get("tpl") or "job", raw.get("actions"))
+                except live_mod.LiveError as e:
+                    raise OpError(str(e)) from None
+            # the server stamps freshness; a client-sent `at` is ignored
+            item.pop("at", None)
+            if item.get("data"):
+                item["at"] = self.now
         iid = self.next_id()
         ref = op.get("ref")
         if ref is not None:
@@ -440,6 +470,22 @@ class _Batch:
             self.items.pop(kid, None)
         return inv, {"op": "del", "id": iid}
 
+    def live(self, op: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """Patch a live card's data. Normalised to a ``set`` of the whole bag + ``at``."""
+        iid = self.resolve(op.get("id"))
+        item = self.items[iid]
+        if item["k"] != "live":
+            raise OpError(f"{iid} is not a live card")
+        try:
+            data = live_mod.merge_data(item.get("data"), op.get("data"), op.get("push"), op.get("keep"),
+                                       replace=op.get("replace") is True)
+        except (live_mod.LiveError, OpError, TypeError, ValueError) as e:
+            raise OpError(str(e)) from None
+        inv = {"op": "set", "id": iid, "p": {"data": copy.deepcopy(item.get("data")), "at": item.get("at")}}
+        item["data"] = data
+        item["at"] = self.now
+        return [inv], {"op": "set", "id": iid, "p": {"data": copy.deepcopy(data), "at": self.now}}
+
     def board(self, op: Dict[str, Any]) -> List[Dict[str, Any]]:
         patch = op.get("p")
         if not isinstance(patch, dict):
@@ -453,7 +499,8 @@ class _Batch:
         return [{"op": "board", "p": inv_p}], {"op": "board", "p": {"name": self.doc["name"]}}
 
 
-_OPS = {"add": _Batch.add, "put": _Batch.put, "set": _Batch.set, "del": _Batch.delete, "board": _Batch.board}
+_OPS = {"add": _Batch.add, "put": _Batch.put, "set": _Batch.set, "del": _Batch.delete, "board": _Batch.board,
+        "live": _Batch.live}
 
 
 def apply_batch(doc: Dict[str, Any], ops: Any, by: str = "u") -> Tuple[Dict[str, Any], List[Dict[str, Any]], Dict[str, str]]:
@@ -462,7 +509,7 @@ def apply_batch(doc: Dict[str, Any], ops: Any, by: str = "u") -> Tuple[Dict[str,
     return work, inverse, refs
 
 
-def apply_batch_ex(doc: Dict[str, Any], ops: Any, by: str = "u") -> Tuple[
+def apply_batch_ex(doc: Dict[str, Any], ops: Any, by: str = "u", now: Optional[float] = None) -> Tuple[
         Dict[str, Any], List[Dict[str, Any]], Dict[str, str], List[Dict[str, Any]]]:
     """Like apply_batch, plus the normalised forward ops (ids resolved, values sanitised:
     ``add`` becomes ``put``). Replaying them on the previous document gives the same result,
@@ -472,12 +519,12 @@ def apply_batch_ex(doc: Dict[str, Any], ops: Any, by: str = "u") -> Tuple[
     if len(ops) > MAX_OPS:
         raise OpError(f"at most {MAX_OPS} ops per batch")
     work = copy.deepcopy(doc)
-    batch = _Batch(work, "h" if by == "h" else "u")
+    batch = _Batch(work, "h" if by == "h" else "u", now)
     parts: List[List[Dict[str, Any]]] = []
     forward: List[Dict[str, Any]] = []
     for i, op in enumerate(ops):
         if not isinstance(op, dict) or op.get("op") not in _OPS:
-            raise OpError(f"op {i}: unknown op (use add, set, del, board)")
+            raise OpError(f"op {i}: unknown op (use add, set, del, board, live)")
         try:
             inv, fwd = _OPS[op["op"]](batch, op)
         except OpError as e:

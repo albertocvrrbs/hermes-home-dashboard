@@ -299,6 +299,13 @@ made; your work stays solid.
 - **Paste anything.** A URL becomes a link card with title, description,
   favicon and image. A YouTube, Vimeo, Loom or X link, or a direct video file,
   becomes a playable card. An image, or an image URL, becomes an image card.
+- **Videos without playing them.** Drop an MP4, WebM or MOV (up to 100 MB) on
+  the board, or paste a link to one: the card shows a poster frame and the
+  duration right away and only plays when you press play. Posters are made on
+  the server with `ffmpeg` (a frame ~1 s in) and stored beside the board's
+  assets; video cards made before 1.9.0 get theirs the first time they're
+  shown, without editing the board. With no `ffmpeg`, the browser grabs the
+  frame itself.
 - **One session per board.** *Continue in session* (⌘↵ / Ctrl+↵) opens the
   session linked to the board. There, Hermes knows the board, and whatever you
   ask him gets drawn on it.
@@ -331,26 +338,88 @@ made; your work stays solid.
 
 ![Board widget on the Home](assets/screenshot-board-widget.png)
 
+## Live cards
+
+![Live cards: a training run, a finished backup, a stale scraper, a failed deploy](assets/screenshot-live-cards.png)
+
+Cards that stay connected to something running: a training run, a backup, a scraper, a
+deploy. Hermes creates one from a short declarative spec (header with status, progress with
+ETA, metrics with deltas, a sparkline, an image or video with its poster, a log tail, and
+buttons), then the agent or any script keeps it current by sending only **data**. The card
+says how fresh that data is ("updated 12 s ago") and turns **stale** when a running job
+stops reporting for longer than the card's TTL.
+
+- **Made by Hermes, or by you.** `board_apply` takes a `live` item (`tpl: "training"`,
+  `"job"` or `"stat"`, or your own `blocks`), and a `live` op that patches its data. Values
+  are literals or `"$key"` reads from the data bag, so one spec serves the whole life of a job.
+- **Fed by anything.** The agent's `live` op; a script on the same machine through the
+  plugin's local store (no network, no token); or
+  `POST /api/plugins/home-dashboard/boards/{board}/live/{card}/data` over HTTP, behind the
+  dashboard's own auth. Data updates don't enter your undo history and Hermes doesn't read
+  them as your edits.
+- **Buttons that can only do what you allowed.** See the security model below.
+- **Looks right at any width:** metrics reflow from four columns to pairs, narrow cards keep
+  icon-only buttons, wide cards get a taller chart. Hermes-made cards wear his dot-matrix edge.
+
+![A destructive action asks first, then reports on the card](assets/screenshot-live-confirm.png)
+
+Full guide with curl and Python examples, the block reference, a sample action list, and a
+complete adapter for a reinforcement-learning run folder (with a Stop button that ships
+disabled): [`examples/README.md`](examples/README.md).
+
+### Live card actions: security model
+
+- **Allowlist only.** A button names an action **id**. The id has to exist in a JSON file
+  the machine owner writes in `~/.hermes/plugin-data/home-dashboard/live-actions/` (or be
+  registered in-process by Python code in the dashboard process). Cards, agents and HTML
+  embeds can only point at ids; a card that tries to carry a `command`, `url` or `shell`
+  field is rejected, and the agent sees ids and descriptions, never commands.
+- **No shell.** Commands are argv lists with an absolute program path, run with
+  `shell=False`, a minimal environment, stdin closed and a timeout (default 30 s, max 600).
+  HTTP actions go only to the URL in the registry.
+- **Checked arguments.** Each action declares its argument schema (`string` with a regex,
+  `int`/`number` with bounds, `bool`, `enum`). Values come from the card, are validated on
+  every press, and fill placeholders as whole text. The default string pattern refuses
+  spaces, shell metacharacters and a leading dash.
+- **Confirmation.** `destructive` actions open a confirm dialog (Cancel focused, Esc cancels)
+  and the server refuses them without that confirmation. Disabled actions stay greyed out.
+- **One at a time, all logged.** A running action can't be started twice. Every press,
+  allowed or refused, goes to `live-actions.log.jsonl` with time, who (dashboard + client
+  address), board, card, args, result, exit code, output tail and duration; the card shows the
+  result in a toast.
+- **Auth.** The action and data routes sit behind the same authentication as the rest of the
+  dashboard. There is no separate per-card token.
+
 ### What the Board adds to your Hermes (disclosure)
 
 - **Agent tools** (toolset `board`, enabled by default like other plugin
   toolsets; turn it off with `hermes tools`): `board_read`, `board_apply`,
-  `board_render`. They read and write board files only.
+  `board_render`. They read and write board files only; `board_read` can also
+  list the ids and descriptions of the live card actions you registered. The
+  agent cannot run an action.
 - **A `pre_llm_call` hook.** It only acts on sessions linked to a board, which
   means sessions started from the board or containing its `[board:<id>]`
   marker. It adds a few lines saying what you changed on the board since
   Hermes' last turn. Every other session is left untouched.
 - **File storage** under `~/.hermes/plugin-data/home-dashboard/boards/`. There
   is one JSON file per board, an append-only op log (compacted at 2000
-  entries) and `assets/` for images and embedded HTML. Deleted boards move to
-  a trash folder there.
+  entries), `assets/` for images, videos and embedded HTML, and `posters/` for
+  the video poster index. Deleted boards move to a trash folder there. Live
+  card actions live in `../live-actions/*.json` (written by you, read by the
+  plugin) and their log in `../live-actions.log.jsonl`.
+- **Commands it can run:** only the live card actions you register (see
+  [Live card actions: security model](#live-card-actions-security-model)), and
+  `ffmpeg`/`ffprobe` (if installed) to read a video's length and grab its
+  poster frame.
 - **Network:** link previews are fetched **server-side by the plugin
   backend** when you paste or add a link: the page HTML, its oEmbed JSON, its
   image and favicon. The fetch is SSRF-guarded: http(s) only, private,
   loopback, link-local and metadata addresses blocked (re-checked after every
   redirect), at most 3 redirects, a 5 s deadline, size caps, and HTML only for
   metadata. Results are cached, and images are stored as assets so the board
-  never hotlinks. Video players load from the provider (youtube-nocookie,
+  never hotlinks. For the poster of a video *link*, the backend downloads the
+  video once with the same guard (public addresses only, 45 s, 80 MB cap)
+  into a temporary file that is deleted after the frame is taken. Video players load from the provider (youtube-nocookie,
   player.vimeo, loom, platform.twitter) only when you press play. Embedded
   HTML runs in a sandboxed iframe with scripts only, no network and no
   same-origin.
@@ -385,12 +454,14 @@ hermes-home-dashboard/
 ├── dashboard/               # everything the Hermes host consumes
 │   ├── manifest.json        # tab/entry/css/api the dashboard reads
 │   ├── plugin_api.py        # layout.json + read-only data routes (+ /spend, /boards)
-│   ├── boardkit/            # Board engine: ops, store, link previews, assets, agent
+│   ├── boardkit/            # Board engine: ops, store, link previews, assets, agent,
+│   │                        #   live cards (live.py), action allowlist (actions.py), posters
 │   └── dist/                # prebuilt bundle (committed — installer doesn't build)
 │       ├── index.js
 │       └── style.css
 ├── desktop/
 │   └── plugin.js            # prebuilt native Desktop runtime plugin
+├── examples/                # live cards: push helper, action list, training-run adapter
 ├── src/                     # widget source (only needed to modify the plugin)
 │   └── home/i18n/locales/   # one file per UI language (en.ts, es.ts)
 ├── vite.config.ts           # builds src/ → dashboard/dist/

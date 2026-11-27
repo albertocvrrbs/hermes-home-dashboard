@@ -452,7 +452,54 @@ const en = {
   "board.chat.hintHandoff": "Send opens the session, message copied",
   "board.chat.send": "Send",
   "board.index.open": "Open board",
-  "board.widget.empty": "No boards yet."
+  "board.widget.empty": "No boards yet.",
+  "board.kind.live": "live card",
+  "board.video.uploaded": "uploaded video",
+  "board.video.noPoster": "no preview yet",
+  "board.video.loading": "Loading…",
+  "board.toast.uploadingVideo": "uploading video… {pct} %",
+  "board.toast.videoFailed": "video not added: {error}",
+  "board.live.st.running": "running",
+  "board.live.st.paused": "paused",
+  "board.live.st.done": "done",
+  "board.live.st.error": "error",
+  "board.live.st.idle": "idle",
+  "board.live.st.stale": "stale",
+  "board.live.staleTip": "No update within this card's time limit; the job may have stopped reporting",
+  "board.live.updated": "updated {age} ago",
+  "board.live.staleFor": "no update for {age}",
+  "board.live.noData": "waiting for data",
+  "board.live.age.s": "{n} s",
+  "board.live.age.min": "{n} min",
+  "board.live.age.h": "{n} h",
+  "board.live.age.d": "{n} d",
+  "board.live.eta": "ETA {eta}",
+  "board.live.l.success": "Success",
+  "board.live.l.elapsed": "Elapsed",
+  "board.live.l.cost": "Cost",
+  "board.live.l.falls": "Falls",
+  "board.live.l.successTrend": "Success over time",
+  "board.live.l.level": "Level",
+  "board.live.l.eta": "ETA",
+  "board.live.l.progress": "Progress",
+  "board.live.l.steps": "Steps",
+  "board.live.l.log": "Log",
+  "board.live.l.reward": "Reward",
+  "board.live.l.loss": "Loss",
+  "board.live.actionsDown": "The action list can't be read here yet: the server answering this page runs an older plugin backend (restart Hermes to load it)",
+  "board.live.actionsLoading": "Checking the action list…",
+  "board.live.notRegistered": "Not in the action list: {id}",
+  "board.live.disabled": "Turned off in the action list",
+  "board.live.disabledNote": "Turned off: {note}",
+  "board.live.actionOk": "{action}: done in {s} s",
+  "board.live.actionFailed": "{action} failed ({code})",
+  "board.live.actionError": "{action} not run: {error}",
+  "board.live.confirmHead": "Confirm action",
+  "board.live.confirmTitle": "{action}?",
+  "board.live.confirmBody": "This action can't be undone from the board.",
+  "board.live.confirmCard": "card",
+  "board.live.confirmId": "action",
+  "board.live.confirmTimeout": "stops after {s} s"
 };
 const __vite_glob_0_0 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
@@ -813,7 +860,54 @@ const es = {
   "board.chat.hintHandoff": "Enviar abre la sesión con el mensaje copiado",
   "board.chat.send": "Enviar",
   "board.index.open": "Abrir pizarrón",
-  "board.widget.empty": "Todavía no hay pizarrones."
+  "board.widget.empty": "Todavía no hay pizarrones.",
+  "board.kind.live": "tarjeta viva",
+  "board.video.uploaded": "video subido",
+  "board.video.noPoster": "sin vista previa aún",
+  "board.video.loading": "Cargando…",
+  "board.toast.uploadingVideo": "subiendo video… {pct} %",
+  "board.toast.videoFailed": "no se agregó el video: {error}",
+  "board.live.st.running": "corriendo",
+  "board.live.st.paused": "en pausa",
+  "board.live.st.done": "terminado",
+  "board.live.st.error": "error",
+  "board.live.st.idle": "inactivo",
+  "board.live.st.stale": "sin señal",
+  "board.live.staleTip": "No llegó ninguna actualización dentro del límite de esta tarjeta; puede que el proceso dejó de reportar",
+  "board.live.updated": "actualizado hace {age}",
+  "board.live.staleFor": "sin actualizar desde hace {age}",
+  "board.live.noData": "esperando datos",
+  "board.live.age.s": "{n} s",
+  "board.live.age.min": "{n} min",
+  "board.live.age.h": "{n} h",
+  "board.live.age.d": "{n} d",
+  "board.live.eta": "faltan {eta}",
+  "board.live.l.success": "Éxito",
+  "board.live.l.elapsed": "Tiempo",
+  "board.live.l.cost": "Costo",
+  "board.live.l.falls": "Caídas",
+  "board.live.l.successTrend": "Éxito en el tiempo",
+  "board.live.l.level": "Nivel",
+  "board.live.l.eta": "Falta",
+  "board.live.l.progress": "Avance",
+  "board.live.l.steps": "Pasos",
+  "board.live.l.log": "Registro",
+  "board.live.l.reward": "Recompensa",
+  "board.live.l.loss": "Pérdida",
+  "board.live.actionsDown": "Aún no se puede leer la lista de acciones aquí: el servidor de esta página corre un backend anterior del plugin (reinicia Hermes para cargarlo)",
+  "board.live.actionsLoading": "Revisando la lista de acciones…",
+  "board.live.notRegistered": "No está en la lista de acciones: {id}",
+  "board.live.disabled": "Apagada en la lista de acciones",
+  "board.live.disabledNote": "Apagada: {note}",
+  "board.live.actionOk": "{action}: listo en {s} s",
+  "board.live.actionFailed": "{action} falló ({code})",
+  "board.live.actionError": "{action} no se ejecutó: {error}",
+  "board.live.confirmHead": "Confirmar acción",
+  "board.live.confirmTitle": "¿{action}?",
+  "board.live.confirmBody": "Esta acción no se puede deshacer desde el pizarrón.",
+  "board.live.confirmCard": "tarjeta",
+  "board.live.confirmId": "acción",
+  "board.live.confirmTimeout": "se corta a los {s} s"
 };
 const __vite_glob_0_1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
@@ -1807,7 +1901,7 @@ function formatUptime(seconds) {
   return d > 0 ? `${d}d ${h}h` : `${h}h ${Math.floor(seconds % 3600 / 60)}m`;
 }
 let gradSeq = 0;
-function Spark({ values, fixedMax, label, readout, gid }) {
+function Spark$1({ values, fixedMax, label, readout, gid }) {
   const max = signalMax(values, fixedMax);
   const H = 100, W2 = 100, PAD2 = 6;
   const line = seriesPath(values, max, W2, H, PAD2);
@@ -1887,7 +1981,7 @@ function HostWidget({ system, widgetProps, onWidgetPropsChange }) {
       const values = seriesOf(buf, sig.key);
       const last = [...values].reverse().find((v) => v !== null);
       return /* @__PURE__ */ jsx(
-        Spark,
+        Spark$1,
         {
           values,
           fixedMax: sig.fixedMax,
@@ -3120,8 +3214,113 @@ const boardsApi = {
   uploadImage: (data) => fetchJSON(`${BASE}/assets`, json("POST", { data })),
   uploadHtml: (html) => fetchJSON(`${BASE}/assets`, json("POST", { html })),
   asset: (aid) => fetchJSON(`${BASE}/assets/${aid}`),
-  preview: (url) => fetchJSON(`${BASE}/link-preview`, json("POST", { url })).then((r) => r.preview)
+  preview: (url) => fetchJSON(`${BASE}/link-preview`, json("POST", { url })).then((r) => r.preview),
+  poster: (ref) => fetchJSON(`${BASE}/video-poster`, json("POST", ref)).then((r) => r.poster),
+  posterFromClient: (ref, data, dur) => fetchJSON(`${BASE}/video-poster`, json("PUT", { ...ref, data, dur: dur ?? null })).then((r) => r.poster),
+  videoChunk: (upload, i, n, data) => fetchJSON(`${BASE}/assets/video`, json("POST", { upload, i, n, data })),
+  media: (aid, off, n) => fetchJSON(`${BASE}/media/${aid}?off=${off}&n=${n}`),
+  liveActions: () => fetchJSON(`${BASE}/live/actions`),
+  liveAction: (bid, iid, action, index, confirm) => fetchJSON(`${BASE}/${bid}/live/${iid}/action`, json("POST", { action, index, confirm })).then((r) => r.result)
 };
+const posterCache = /* @__PURE__ */ new Map();
+function videoPoster(ref) {
+  const key = ref.asset ? `a:${ref.asset}` : `u:${ref.src}`;
+  let p = posterCache.get(key);
+  if (!p) {
+    p = boardsApi.poster(ref);
+    p.catch(() => posterCache.delete(key));
+    posterCache.set(key, p);
+  }
+  return p;
+}
+function rememberPoster(ref, poster) {
+  posterCache.set(ref.asset ? `a:${ref.asset}` : `u:${ref.src}`, Promise.resolve(poster));
+}
+const mediaCache = /* @__PURE__ */ new Map();
+const RANGE = 4 * 1024 * 1024;
+function mediaUrl(aid) {
+  let p = mediaCache.get(aid);
+  if (!p) {
+    p = (async () => {
+      const parts = [];
+      let off = 0, size = Infinity, mime = "video/mp4";
+      while (off < size) {
+        const r = await boardsApi.media(aid, off, RANGE);
+        size = r.size;
+        mime = r.mime;
+        if (!r.data) break;
+        parts.push(b64ToBlob(r.data, r.mime));
+        off += parts[parts.length - 1].size;
+      }
+      return URL.createObjectURL(new Blob(parts, { type: mime }));
+    })();
+    p.catch(() => mediaCache.delete(aid));
+    mediaCache.set(aid, p);
+  }
+  return p;
+}
+const VIDEO_TYPES = /^video\/(mp4|webm|quicktime)$/;
+const MAX_VIDEO = 100 * 1024 * 1024;
+const CHUNK = 3 * 1024 * 1024;
+async function uploadVideo(file, onProgress) {
+  if (!VIDEO_TYPES.test(file.type)) throw new Error("unsupported video type");
+  if (file.size > MAX_VIDEO) throw new Error("video is over 100 MB");
+  const bytes = new Uint8Array(16);
+  crypto.getRandomValues(bytes);
+  const upload = [...bytes.slice(0, 8)].map((b) => b.toString(16).padStart(2, "0")).join("");
+  const n = Math.max(1, Math.ceil(file.size / CHUNK));
+  for (let i = 0; i < n; i++) {
+    const data = await blobToB64(file.slice(i * CHUNK, (i + 1) * CHUNK));
+    const r = await boardsApi.videoChunk(upload, i, n, data);
+    onProgress?.((i + 1) / n);
+    if (r.asset) return r;
+  }
+  throw new Error("upload did not finish");
+}
+function grabFrame(src) {
+  return new Promise((resolve2, reject) => {
+    const v = document.createElement("video");
+    v.preload = "metadata";
+    v.muted = true;
+    v.crossOrigin = "anonymous";
+    v.playsInline = true;
+    const done = setTimeout(() => {
+      cleanup();
+      reject(new Error("timeout"));
+    }, 15e3);
+    const cleanup = () => {
+      clearTimeout(done);
+      v.removeAttribute("src");
+      v.load();
+    };
+    v.onloadedmetadata = () => {
+      const d = Number.isFinite(v.duration) ? v.duration : 0;
+      v.currentTime = d > 0 && d < 10 ? d * 0.1 : Math.min(1, d || 1);
+    };
+    v.onseeked = () => {
+      try {
+        const w = Math.min(960, v.videoWidth || 640), h = Math.round(w * ((v.videoHeight || 360) / (v.videoWidth || 640)));
+        const c = document.createElement("canvas");
+        c.width = w;
+        c.height = h;
+        c.getContext("2d").drawImage(v, 0, 0, w, h);
+        const data = c.toDataURL("image/jpeg", 0.82).split(",", 2)[1] ?? "";
+        const dur = Number.isFinite(v.duration) ? v.duration : 0;
+        cleanup();
+        if (!data) reject(new Error("empty frame"));
+        else resolve2({ data, dur });
+      } catch (e) {
+        cleanup();
+        reject(e);
+      }
+    };
+    v.onerror = () => {
+      cleanup();
+      reject(new Error("video failed to load"));
+    };
+    v.src = src;
+  });
+}
 const imageCache = /* @__PURE__ */ new Map();
 const htmlCache = /* @__PURE__ */ new Map();
 function b64ToBlob(b64, mime) {
@@ -3154,9 +3353,9 @@ function assetHtml(aid) {
 const MAX_SIDE = 2560;
 const MAX_BYTES = 3 * 1024 * 1024;
 function blobToB64(blob) {
-  return new Promise((resolve, reject) => {
+  return new Promise((resolve2, reject) => {
     const r = new FileReader();
-    r.onload = () => resolve(String(r.result).split(",", 2)[1] ?? "");
+    r.onload = () => resolve2(String(r.result).split(",", 2)[1] ?? "");
     r.onerror = () => reject(r.error);
     r.readAsDataURL(blob);
   });
@@ -3429,6 +3628,14 @@ function placeMenu(at, menu, bounds) {
 function modKey(platform = typeof navigator !== "undefined" ? navigator.platform || "" : "") {
   return /mac|iphone|ipad/i.test(platform) ? "⌘" : "Ctrl+";
 }
+const Activity = [
+  [
+    "path",
+    {
+      d: "M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2"
+    }
+  ]
+];
 const ArrowUpRight = [
   ["path", { d: "M7 7h10v10" }],
   ["path", { d: "M7 17 17 7" }]
@@ -3436,6 +3643,33 @@ const ArrowUpRight = [
 const ArrowUp = [
   ["path", { d: "m5 12 7-7 7 7" }],
   ["path", { d: "M12 19V5" }]
+];
+const Bell = [
+  ["path", { d: "M10.268 21a2 2 0 0 0 3.464 0" }],
+  [
+    "path",
+    {
+      d: "M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326"
+    }
+  ]
+];
+const Bot = [
+  ["path", { d: "M12 8V4H8" }],
+  ["rect", { width: "16", height: "12", x: "4", y: "8", rx: "2" }],
+  ["path", { d: "M2 14h2" }],
+  ["path", { d: "M20 14h2" }],
+  ["path", { d: "M15 13v2" }],
+  ["path", { d: "M9 13v2" }]
+];
+const Brain = [
+  ["path", { d: "M12 18V5" }],
+  ["path", { d: "M15 13a4.17 4.17 0 0 1-3-4 4.17 4.17 0 0 1-3 4" }],
+  ["path", { d: "M17.598 6.5A3 3 0 1 0 12 5a3 3 0 1 0-5.598 1.5" }],
+  ["path", { d: "M17.997 5.125a4 4 0 0 1 2.526 5.77" }],
+  ["path", { d: "M18 18a4 4 0 0 0 2-7.464" }],
+  ["path", { d: "M19.967 17.483A4 4 0 1 1 12 18a4 4 0 1 1-7.967-.517" }],
+  ["path", { d: "M6 18a4 4 0 0 1-2-7.464" }],
+  ["path", { d: "M6.003 5.125a4 4 0 0 0-2.526 5.77" }]
 ];
 const BrushCleaning = [
   ["path", { d: "m16 22-1-4" }],
@@ -3456,8 +3690,22 @@ const CalendarArrowDown = [
   ["path", { d: "M3 10h18" }],
   ["path", { d: "M8 2v4" }]
 ];
+const ChartLine = [
+  ["path", { d: "M3 3v16a2 2 0 0 0 2 2h16" }],
+  ["path", { d: "m19 9-5 5-4-4-3 3" }]
+];
+const Check = [["path", { d: "M20 6 9 17l-5-5" }]];
 const ChevronRight = [["path", { d: "m9 18 6-6-6-6" }]];
 const ChevronLeft = [["path", { d: "m15 18-6-6 6-6" }]];
+const CircleAlert = [
+  ["circle", { cx: "12", cy: "12", r: "10" }],
+  ["line", { x1: "12", x2: "12", y1: "8", y2: "12" }],
+  ["line", { x1: "12", x2: "12.01", y1: "16", y2: "16" }]
+];
+const CircleCheck = [
+  ["circle", { cx: "12", cy: "12", r: "10" }],
+  ["path", { d: "m9 12 2 2 4-4" }]
+];
 const CodeXml = [
   ["path", { d: "m18 16 4-4-4-4" }],
   ["path", { d: "m6 8-4 4 4 4" }],
@@ -3471,6 +3719,51 @@ const Columns3 = [
 const Copy = [
   ["rect", { width: "14", height: "14", x: "8", y: "8", rx: "2", ry: "2" }],
   ["path", { d: "M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" }]
+];
+const Cpu = [
+  ["path", { d: "M12 20v2" }],
+  ["path", { d: "M12 2v2" }],
+  ["path", { d: "M17 20v2" }],
+  ["path", { d: "M17 2v2" }],
+  ["path", { d: "M2 12h2" }],
+  ["path", { d: "M2 17h2" }],
+  ["path", { d: "M2 7h2" }],
+  ["path", { d: "M20 12h2" }],
+  ["path", { d: "M20 17h2" }],
+  ["path", { d: "M20 7h2" }],
+  ["path", { d: "M7 20v2" }],
+  ["path", { d: "M7 2v2" }],
+  ["rect", { x: "4", y: "4", width: "16", height: "16", rx: "2" }],
+  ["rect", { x: "8", y: "8", width: "8", height: "8", rx: "1" }]
+];
+const Database = [
+  ["ellipse", { cx: "12", cy: "5", rx: "9", ry: "3" }],
+  ["path", { d: "M3 5V19A9 3 0 0 0 21 19V5" }],
+  ["path", { d: "M3 12A9 3 0 0 0 21 12" }]
+];
+const Download = [
+  ["path", { d: "M12 15V3" }],
+  ["path", { d: "M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" }],
+  ["path", { d: "m7 10 5 5 5-5" }]
+];
+const FlaskConical = [
+  [
+    "path",
+    {
+      d: "M14 2v6a2 2 0 0 0 .245.96l5.51 10.08A2 2 0 0 1 18 22H6a2 2 0 0 1-1.755-2.96l5.51-10.08A2 2 0 0 0 10 8V2"
+    }
+  ],
+  ["path", { d: "M6.453 15h11.094" }],
+  ["path", { d: "M8.5 2h7" }]
+];
+const Gauge = [
+  ["path", { d: "m12 14 4-4" }],
+  ["path", { d: "M3.34 19a10 10 0 1 1 17.32 0" }]
+];
+const GitBranch = [
+  ["path", { d: "M15 6a9 9 0 0 0-9 9V3" }],
+  ["circle", { cx: "18", cy: "6", r: "3" }],
+  ["circle", { cx: "6", cy: "18", r: "3" }]
 ];
 const Group = [
   ["path", { d: "M3 7V5c0-1.1.9-2 2-2h2" }],
@@ -3490,6 +3783,17 @@ const Hand = [
       d: "M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"
     }
   ]
+];
+const HardDrive = [
+  ["path", { d: "M10 16h.01" }],
+  [
+    "path",
+    {
+      d: "M2.212 11.577a2 2 0 0 0-.212.896V18a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-5.527a2 2 0 0 0-.212-.896L18.55 5.11A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"
+    }
+  ],
+  ["path", { d: "M21.946 12.013H2.054" }],
+  ["path", { d: "M6 16h.01" }]
 ];
 const Image = [
   ["rect", { width: "18", height: "18", x: "3", y: "3", rx: "2", ry: "2" }],
@@ -3554,6 +3858,10 @@ const PanelRightClose = [
   ["path", { d: "M15 3v18" }],
   ["path", { d: "m8 9 3 3-3 3" }]
 ];
+const Pause = [
+  ["rect", { x: "14", y: "3", width: "5", height: "18", rx: "1" }],
+  ["rect", { x: "5", y: "3", width: "5", height: "18", rx: "1" }]
+];
 const PencilLine = [
   ["path", { d: "M13 21h8" }],
   ["path", { d: "m15 5 4 4" }],
@@ -3573,13 +3881,45 @@ const Pencil = [
   ],
   ["path", { d: "m15 5 4 4" }]
 ];
+const Play = [
+  [
+    "path",
+    { d: "M5 5a2 2 0 0 1 3.008-1.728l11.997 6.998a2 2 0 0 1 .003 3.458l-12 7A2 2 0 0 1 5 19z" }
+  ]
+];
 const Plus = [
   ["path", { d: "M5 12h14" }],
   ["path", { d: "M12 5v14" }]
 ];
+const Power = [
+  ["path", { d: "M12 2v10" }],
+  ["path", { d: "M18.4 6.6a9 9 0 1 1-12.77.04" }]
+];
 const Redo2 = [
   ["path", { d: "m15 14 5-5-5-5" }],
   ["path", { d: "M20 9H9.5A5.5 5.5 0 0 0 4 14.5A5.5 5.5 0 0 0 9.5 20H13" }]
+];
+const RefreshCw = [
+  ["path", { d: "M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" }],
+  ["path", { d: "M21 3v5h-5" }],
+  ["path", { d: "M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" }],
+  ["path", { d: "M8 16H3v5" }]
+];
+const Rocket = [
+  ["path", { d: "M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5" }],
+  [
+    "path",
+    {
+      d: "M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09"
+    }
+  ],
+  [
+    "path",
+    {
+      d: "M9 12a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.4 22.4 0 0 1-4 2z"
+    }
+  ],
+  ["path", { d: "M9 12H4s.55-3.03 2-4c1.62-1.08 5 .05 5 .05" }]
 ];
 const RotateCw = [
   ["path", { d: "M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8" }],
@@ -3596,6 +3936,12 @@ const Scan = [
   ["path", { d: "M21 17v2a2 2 0 0 1-2 2h-2" }],
   ["path", { d: "M7 21H5a2 2 0 0 1-2-2v-2" }]
 ];
+const Server = [
+  ["rect", { width: "20", height: "8", x: "2", y: "2", rx: "2", ry: "2" }],
+  ["rect", { width: "20", height: "8", x: "2", y: "14", rx: "2", ry: "2" }],
+  ["line", { x1: "6", x2: "6.01", y1: "6", y2: "6" }],
+  ["line", { x1: "6", x2: "6.01", y1: "18", y2: "18" }]
+];
 const Split = [
   ["path", { d: "M16 3h5v5" }],
   ["path", { d: "M8 3H3v5" }],
@@ -3607,6 +3953,29 @@ const SquareArrowOutUpRight = [
   ["path", { d: "m21 3-9 9" }],
   ["path", { d: "M15 3h6v6" }]
 ];
+const SquareDashedMousePointer = [
+  [
+    "path",
+    {
+      d: "M12.034 12.681a.498.498 0 0 1 .647-.647l9 3.5a.5.5 0 0 1-.033.943l-3.444 1.068a1 1 0 0 0-.66.66l-1.067 3.443a.5.5 0 0 1-.943.033z"
+    }
+  ],
+  ["path", { d: "M5 3a2 2 0 0 0-2 2" }],
+  ["path", { d: "M19 3a2 2 0 0 1 2 2" }],
+  ["path", { d: "M5 21a2 2 0 0 1-2-2" }],
+  ["path", { d: "M9 3h1" }],
+  ["path", { d: "M9 21h2" }],
+  ["path", { d: "M14 3h1" }],
+  ["path", { d: "M3 9v1" }],
+  ["path", { d: "M21 9v2" }],
+  ["path", { d: "M3 14v1" }]
+];
+const SquareTerminal = [
+  ["path", { d: "m7 11 2-2-2-2" }],
+  ["path", { d: "M11 13h4" }],
+  ["rect", { width: "18", height: "18", x: "3", y: "3", rx: "2", ry: "2" }]
+];
+const Square = [["rect", { width: "18", height: "18", x: "3", y: "3", rx: "2" }]];
 const StickyNote = [
   [
     "path",
@@ -3622,6 +3991,11 @@ const TextQuote = [
   ["path", { d: "M21 19H8" }],
   ["path", { d: "M3 12v7" }]
 ];
+const Timer = [
+  ["line", { x1: "10", x2: "14", y1: "2", y2: "2" }],
+  ["line", { x1: "12", x2: "15", y1: "14", y2: "11" }],
+  ["circle", { cx: "12", cy: "14", r: "8" }]
+];
 const Trash2 = [
   ["path", { d: "M10 11v6" }],
   ["path", { d: "M14 11v6" }],
@@ -3633,6 +4007,15 @@ const Undo2 = [
   ["path", { d: "M9 14 4 9l5-5" }],
   ["path", { d: "M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5a5.5 5.5 0 0 1-5.5 5.5H11" }]
 ];
+const Upload = [
+  ["path", { d: "M12 3v12" }],
+  ["path", { d: "m17 8-5-5-5 5" }],
+  ["path", { d: "M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" }]
+];
+const Video = [
+  ["path", { d: "m16 13 5.223 3.482a.5.5 0 0 0 .777-.416V7.87a.5.5 0 0 0-.752-.432L16 10.5" }],
+  ["rect", { x: "2", y: "6", width: "14", height: "12", rx: "2" }]
+];
 const Workflow = [
   ["rect", { width: "8", height: "8", x: "3", y: "3", rx: "2" }],
   ["path", { d: "M7 11v4a2 2 0 0 0 2 2h4" }],
@@ -3641,6 +4024,14 @@ const Workflow = [
 const X = [
   ["path", { d: "M18 6 6 18" }],
   ["path", { d: "m6 6 12 12" }]
+];
+const Zap = [
+  [
+    "path",
+    {
+      d: "M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z"
+    }
+  ]
 ];
 const ZoomIn = [
   ["circle", { cx: "11", cy: "11", r: "8" }],
@@ -3693,10 +4084,47 @@ const ICONS = {
   flow: Route,
   group: Group,
   summarize: TextQuote,
-  improve: BrushCleaning
+  improve: BrushCleaning,
+  selectAll: SquareDashedMousePointer,
+  video: Video,
+  ok: CircleCheck,
+  alert: CircleAlert,
+  check: Check
 };
-function Icon({ name, size = 14, className }) {
-  const node2 = ICONS[name];
+const LIVE_ICONS = {
+  activity: Activity,
+  gauge: Gauge,
+  cpu: Cpu,
+  "square-terminal": SquareTerminal,
+  terminal: SquareTerminal,
+  timer: Timer,
+  rocket: Rocket,
+  bot: Bot,
+  brain: Brain,
+  server: Server,
+  database: Database,
+  "flask-conical": FlaskConical,
+  flask: FlaskConical,
+  "chart-line": ChartLine,
+  chart: ChartLine,
+  "hard-drive": HardDrive,
+  "git-branch": GitBranch,
+  bell: Bell,
+  zap: Zap,
+  video: Video,
+  square: Square,
+  stop: Square,
+  play: Play,
+  pause: Pause,
+  "refresh-cw": RefreshCw,
+  refresh: RefreshCw,
+  power: Power,
+  upload: Upload,
+  download: Download,
+  check: Check
+};
+function Icon({ name, size = 14, className, node: given }) {
+  const node2 = given ?? ICONS[name ?? "plus"];
   return /* @__PURE__ */ jsx(
     "svg",
     {
@@ -4393,14 +4821,24 @@ const DEFAULT_SIZE = {
   frame: [480, 320],
   box: [196, 62],
   text: [420, 40],
-  draw: [120, 80]
+  draw: [120, 80],
+  live: [360, 300]
 };
+function liveHeight(item) {
+  const w = item.w ?? 360;
+  let h = 40;
+  for (const b of item.blocks ?? []) {
+    h += { header: 60, progress: 46, metrics: 74, spark: 66, media: Math.round(w * 9 / 16) + 26, text: 22 + 16 * (b.t === "text" ? b.lines ?? 6 : 0), actions: 46 }[b.t] ?? 40;
+  }
+  return h;
+}
 function approxRect(item) {
   if (item.k === "line" || item.in || item.x == null || item.y == null) return null;
   const [dw, dh] = DEFAULT_SIZE[item.k] ?? [200, 100];
   let h = item.h ?? dh;
   if (item.k === "col") h = 60 + 96 * (item.kids?.length ?? 0);
   if (item.k === "todo") h = 110 + 26 * (item.items?.length ?? 0);
+  if (item.k === "live") h = item.h ?? liveHeight(item);
   if (item.k === "draw" && item.d) {
     const pts = item.d.split(" ").map((p) => p.split(",").map(Number));
     const xs = pts.map((p) => p[0]), ys = pts.map((p) => p[1]);
@@ -4553,6 +4991,506 @@ function hostOf(url) {
   } catch {
     return url;
   }
+}
+const PLAY$1 = /* @__PURE__ */ jsx("svg", { viewBox: "0 0 10 12", "aria-hidden": "true", children: /* @__PURE__ */ jsx("path", { d: "M0 0 10 6 0 12z" }) });
+function clockDuration(s) {
+  if (!s || !Number.isFinite(s) || s <= 0) return "";
+  const t2 = Math.round(s), h = Math.floor(t2 / 3600), m = Math.floor(t2 % 3600 / 60), sec = t2 % 60;
+  return h ? `${h}:${String(m).padStart(2, "0")}:${String(sec).padStart(2, "0")}` : `${m}:${String(sec).padStart(2, "0")}`;
+}
+function useVideoPoster(src, asset, posterAsset, posterUrl, knownDur) {
+  const [st, setSt] = useState({ url: posterUrl ?? null, dur: knownDur });
+  useEffect(() => {
+    let live = true;
+    setSt({ url: posterUrl ?? null, dur: knownDur });
+    const set = (p) => {
+      if (live) setSt((s) => ({ ...s, ...p }));
+    };
+    if (posterAsset) {
+      assetUrl(posterAsset).then((u) => set({ url: u }), () => void 0);
+      if (knownDur || !src && !asset) return () => {
+        live = false;
+      };
+    }
+    if (!src && !asset) return () => {
+      live = false;
+    };
+    const ref = asset ? { asset } : { src };
+    const fromPoster = (p) => {
+      if (p.dur) set({ dur: p.dur });
+      if (p.st === "ok" && p.img && !posterAsset && !posterUrl) assetUrl(p.img).then((u) => set({ url: u }), () => void 0);
+    };
+    videoPoster(ref).then(async (p) => {
+      if (p.st === "ok") {
+        fromPoster(p);
+        return;
+      }
+      if (posterAsset || posterUrl) return;
+      try {
+        const url = asset ? await mediaUrl(asset) : src;
+        const f = await grabFrame(url);
+        const saved = await boardsApi.posterFromClient(ref, f.data, f.dur);
+        rememberPoster(ref, saved);
+        fromPoster(saved);
+      } catch {
+        if (src) set({ live: src });
+      }
+    }, () => {
+      if (src && !posterAsset && !posterUrl) set({ live: src });
+    });
+    return () => {
+      live = false;
+    };
+  }, [src, asset, posterAsset, posterUrl, knownDur]);
+  return { ...st, setDur: (d) => setSt((s) => s.dur ? s : { ...s, dur: d }) };
+}
+function VideoStage({ playId, c, src, asset, posterAsset, posterUrl, dur, title, vert }) {
+  const poster = useVideoPoster(src, asset, posterAsset, posterUrl, dur);
+  const playing = c.playing === playId;
+  const [blob, setBlob] = useState(null);
+  const [loading, setLoading] = useState(false);
+  useEffect(() => {
+    if (!playing || !asset || blob) return;
+    let live = true;
+    setLoading(true);
+    mediaUrl(asset).then((u) => {
+      if (live) {
+        setBlob(u);
+        setLoading(false);
+      }
+    }, () => live && setLoading(false));
+    return () => {
+      live = false;
+    };
+  }, [playing, asset, blob]);
+  const playable = src || asset;
+  const length = clockDuration(poster.dur);
+  const url = asset ? blob : src;
+  return /* @__PURE__ */ jsxs("div", { className: `stage${vert ? " vert" : ""}`, children: [
+    playing && url && /* @__PURE__ */ jsx("video", { src: url, controls: true, autoPlay: true, preload: "metadata", "data-nodrag": "", title }),
+    !(playing && url) && (poster.url ? /* @__PURE__ */ jsx("img", { src: poster.url, alt: "", draggable: false }) : poster.live ? /* @__PURE__ */ jsx(
+      "video",
+      {
+        className: "still",
+        src: `${poster.live}#t=1`,
+        preload: "metadata",
+        muted: true,
+        playsInline: true,
+        tabIndex: -1,
+        "aria-hidden": "true",
+        onLoadedMetadata: (e) => {
+          const d = e.currentTarget.duration;
+          if (Number.isFinite(d) && d > 0) poster.setDur(d);
+        }
+      }
+    ) : /* @__PURE__ */ jsx("div", { className: "poster-empty", children: c.t("board.video.noPoster") })),
+    !(playing && url) && length && /* @__PURE__ */ jsx("span", { className: "dur", children: length }),
+    !(playing && url) && playable && /* @__PURE__ */ jsxs("button", { className: "play", "data-nodrag": "", onClick: () => c.setPlaying(playId), disabled: loading, children: [
+      PLAY$1,
+      loading ? c.t("board.video.loading") : c.t("board.video.play")
+    ] })
+  ] });
+}
+const STATUSES = ["running", "paused", "done", "error", "idle"];
+const KEY = /^[A-Za-z_][A-Za-z0-9_.-]{0,39}$/;
+function isBinding(v) {
+  return typeof v === "string" && v.length > 1 && v[0] === "$" && v[1] !== "$" && KEY.test(v.slice(1));
+}
+function resolve(v, data) {
+  if (isBinding(v)) return data?.[v.slice(1)] ?? void 0;
+  if (typeof v === "string" && v.startsWith("$$")) return v.slice(1);
+  return v;
+}
+function present(v) {
+  if (v == null) return false;
+  if (typeof v === "string") return v.trim().length > 0;
+  if (Array.isArray(v)) return v.length > 0;
+  return true;
+}
+function asStatus(v) {
+  return typeof v === "string" && STATUSES.includes(v) ? v : null;
+}
+function canStale(status) {
+  return status === null || status === "running" || status === "paused";
+}
+function freshness(at, ttl, status, now) {
+  if (!at) return { age: null, stale: false };
+  const age = Math.max(0, Math.round(now - at));
+  return { age, stale: canStale(status) && age > (ttl ?? 300) };
+}
+function shortAge(s) {
+  if (s < 60) return { n: s, unit: "s" };
+  if (s < 3600) return { n: Math.floor(s / 60), unit: "min" };
+  if (s < 86400) return { n: Math.floor(s / 3600), unit: "h" };
+  return { n: Math.floor(s / 86400), unit: "d" };
+}
+function fmtDuration(s) {
+  if (!Number.isFinite(s) || s < 0) return "—";
+  s = Math.round(s);
+  const d = Math.floor(s / 86400), h = Math.floor(s % 86400 / 3600), m = Math.floor(s % 3600 / 60), sec = s % 60;
+  if (d) return `${d}d ${h}h`;
+  if (h) return `${h}h ${String(m).padStart(2, "0")}m`;
+  if (m >= 10) return `${m}m`;
+  if (m) return `${m}m ${String(sec).padStart(2, "0")}s`;
+  return `${sec}s`;
+}
+function trimNum(n, digits) {
+  return n.toFixed(digits).replace(/\.0+$|(\.\d*?)0+$/, "$1");
+}
+function fmtValue(v, fmt) {
+  if (v == null || v === "") return "—";
+  if (typeof v === "boolean") return v ? "yes" : "no";
+  if (Array.isArray(v)) return v.length ? fmtValue(v[v.length - 1], fmt) : "—";
+  if (typeof v === "string") return v;
+  switch (fmt) {
+    case "int":
+      return Math.round(v).toLocaleString("en-US");
+    case "pct":
+      return `${trimNum(v, Math.abs(v) >= 100 ? 0 : 1)} %`;
+    case "usd":
+      return `$${v.toFixed(2)}`;
+    case "dur":
+      return fmtDuration(v);
+    case "text":
+      return String(v);
+    default: {
+      const a = Math.abs(v);
+      if (a >= 1e9) return `${trimNum(v / 1e9, 2)} B`;
+      if (a >= 1e6) return `${trimNum(v / 1e6, 2)} M`;
+      if (a >= 1e4) return `${trimNum(v / 1e3, 1)} k`;
+      return trimNum(v, a >= 100 ? 0 : a >= 10 ? 1 : 2);
+    }
+  }
+}
+function fmtDelta(v, fmt) {
+  if (v == null || v === "") return null;
+  if (typeof v === "number") {
+    if (!Number.isFinite(v)) return null;
+    const dir = v > 0 ? "up" : v < 0 ? "down" : "flat";
+    const body = fmt === "pct" ? `${trimNum(Math.abs(v), 1)}` : fmt === "usd" ? `$${Math.abs(v).toFixed(2)}` : fmt === "dur" ? fmtDuration(Math.abs(v)) : trimNum(Math.abs(v), 2);
+    return { text: `${v > 0 ? "+" : v < 0 ? "−" : "±"}${body}`, dir };
+  }
+  const s = String(v).trim();
+  return { text: s, dir: /^[+▲↑]/.test(s) ? "up" : /^[-−▼↓]/.test(s) ? "down" : "flat" };
+}
+function progressOf(value, max) {
+  if (typeof value !== "number" || !Number.isFinite(value)) return null;
+  const m = typeof max === "number" && max > 0 ? max : value > 1 ? 100 : 1;
+  return Math.max(0, Math.min(1, value / m));
+}
+function numbers(v) {
+  return Array.isArray(v) ? v.filter((x) => typeof x === "number" && Number.isFinite(x)) : [];
+}
+function sparkPaths(series, w, h, lo, hi, pad2 = 3) {
+  const pts = series.slice(-240);
+  if (pts.length === 0) return { line: "", area: "", last: null, min: 0, max: 0 };
+  let min = lo ?? Math.min(...pts), max = hi ?? Math.max(...pts);
+  if (max - min < 1e-9) {
+    min -= 1;
+    max += 1;
+  }
+  const n = pts.length;
+  const xy = pts.map((v, i) => {
+    const x = n === 1 ? w / 2 : pad2 + i * (w - pad2 * 2) / (n - 1);
+    const y = pad2 + (1 - (Math.max(min, Math.min(max, v)) - min) / (max - min)) * (h - pad2 * 2);
+    return [Math.round(x * 10) / 10, Math.round(y * 10) / 10];
+  });
+  const line = xy.map(([x, y], i) => `${i ? "L" : "M"}${x} ${y}`).join(" ");
+  const area = n > 1 ? `${line} L${xy[n - 1][0]} ${h} L${xy[0][0]} ${h} Z` : "";
+  return { line, area, last: xy[n - 1], min: lo ?? Math.min(...pts), max: hi ?? Math.max(...pts) };
+}
+function tailLines(v, n) {
+  const lines = Array.isArray(v) ? v.map(String) : typeof v === "string" ? v.replace(/\s+$/, "").split("\n") : [];
+  return lines.slice(-Math.max(1, n));
+}
+function mediaRef(v) {
+  if (typeof v !== "string") return null;
+  if (/^[a-f0-9]{16}\.(png|jpg|gif|webp|mp4|webm|mov)$/.test(v)) return { asset: v };
+  if (/^https?:\/\//i.test(v)) return { url: v };
+  return null;
+}
+function labelKey(label) {
+  return /^@[A-Za-z]{1,32}$/.test(label) ? label.slice(1) : null;
+}
+const LABELS = /* @__PURE__ */ new Set(["success", "elapsed", "cost", "falls", "successTrend", "level", "eta", "progress", "steps", "log", "reward", "loss"]);
+function useNow(ms) {
+  const [now, setNow] = useState(() => Date.now() / 1e3);
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now() / 1e3), ms);
+    return () => clearInterval(id);
+  }, [ms]);
+  return now;
+}
+function lbl(t2, label) {
+  if (typeof label !== "string") return label == null ? "" : String(label);
+  const k = labelKey(label);
+  if (!k) return label;
+  return LABELS.has(k) ? t2(`board.live.l.${k}`) : k;
+}
+function ageText(t2, age) {
+  const a = shortAge(age);
+  return t2(`board.live.age.${a.unit}`, { n: a.n });
+}
+function Pill({ status, stale, t: t2 }) {
+  if (stale) return /* @__PURE__ */ jsxs("span", { className: "lv-pill stale", "data-tip": t2("board.live.staleTip"), children: [
+    /* @__PURE__ */ jsx(Icon, { name: "alert", size: 11 }),
+    t2("board.live.st.stale")
+  ] });
+  if (!status) return null;
+  return /* @__PURE__ */ jsxs("span", { className: `lv-pill ${status}`, children: [
+    status === "running" && /* @__PURE__ */ jsx("i", { className: "caret" }),
+    status === "paused" && /* @__PURE__ */ jsx("i", { className: "bars" }),
+    status === "done" && /* @__PURE__ */ jsx(Icon, { name: "check", size: 11 }),
+    status === "error" && /* @__PURE__ */ jsx(Icon, { name: "alert", size: 11 }),
+    t2(`board.live.st.${status}`)
+  ] });
+}
+function Header({ b, data, status, stale, t: t2, fallbackTitle }) {
+  const title = resolve(b.title, data);
+  const sub = resolve(b.sub, data);
+  const node2 = LIVE_ICONS[b.icon ?? "activity"] ?? LIVE_ICONS.activity;
+  return /* @__PURE__ */ jsxs("div", { className: "lv-head", children: [
+    /* @__PURE__ */ jsx("span", { className: "ico", children: /* @__PURE__ */ jsx(Icon, { node: node2, size: 15 }) }),
+    /* @__PURE__ */ jsxs("div", { className: "tt", children: [
+      /* @__PURE__ */ jsx("b", { children: present(title) ? String(title) : fallbackTitle || t2("board.kind.live") }),
+      present(sub) && /* @__PURE__ */ jsx("small", { children: String(sub) })
+    ] }),
+    /* @__PURE__ */ jsx(Pill, { status, stale, t: t2 })
+  ] });
+}
+function Progress({ b, data, t: t2 }) {
+  const frac = progressOf(resolve(b.value, data), resolve(b.max, data));
+  if (frac == null) return null;
+  const label = resolve(b.label, data);
+  const eta = resolve(b.eta, data);
+  const cells = 24;
+  const on = Math.round(frac * cells);
+  return /* @__PURE__ */ jsxs("div", { className: "lv-prog", children: [
+    /* @__PURE__ */ jsxs("div", { className: "row", children: [
+      /* @__PURE__ */ jsx("span", { className: "lb", children: present(label) ? lbl(t2, label) : t2("board.live.l.progress") }),
+      /* @__PURE__ */ jsxs("span", { className: "pc", children: [
+        Math.round(frac * 100),
+        " %"
+      ] }),
+      present(eta) && /* @__PURE__ */ jsx("span", { className: "eta", children: t2("board.live.eta", { eta: typeof eta === "number" ? fmtValue(eta, "dur") : String(eta) }) })
+    ] }),
+    /* @__PURE__ */ jsx("div", { className: "cells", role: "progressbar", "aria-valuenow": Math.round(frac * 100), "aria-valuemin": 0, "aria-valuemax": 100, children: Array.from({ length: cells }, (_, i) => /* @__PURE__ */ jsx("i", { className: i < on ? "on" : void 0 }, i)) })
+  ] });
+}
+function Metric({ m, data, t: t2 }) {
+  const v = resolve(m.value, data);
+  const d = fmtDelta(resolve(m.delta, data), m.fmt);
+  const good = d && m.good && d.dir !== "flat" ? d.dir === m.good ? "good" : "bad" : "";
+  return /* @__PURE__ */ jsxs("div", { className: "m", children: [
+    /* @__PURE__ */ jsx("span", { className: "k", children: lbl(t2, resolve(m.label, data)) }),
+    /* @__PURE__ */ jsxs("span", { className: "v", children: [
+      fmtValue(v, m.fmt),
+      m.unit && present(v) && /* @__PURE__ */ jsx("em", { children: m.unit })
+    ] }),
+    d && /* @__PURE__ */ jsx("span", { className: `d ${good}`.trim(), children: d.text })
+  ] });
+}
+function Spark({ b, data, t: t2 }) {
+  const gid = useRef(`lvg${Math.random().toString(36).slice(2, 8)}`).current;
+  const series = numbers(resolve(b.series, data));
+  if (series.length < 2) return null;
+  const lo = resolve(b.min, data), hi = resolve(b.max, data);
+  const W2 = 300, H = 44;
+  const s = sparkPaths(series, W2, H, typeof lo === "number" ? lo : void 0, typeof hi === "number" ? hi : void 0);
+  const last = series[series.length - 1];
+  return /* @__PURE__ */ jsxs("div", { className: "lv-spark", children: [
+    /* @__PURE__ */ jsxs("div", { className: "row", children: [
+      /* @__PURE__ */ jsx("span", { className: "k", children: lbl(t2, resolve(b.label, data)) }),
+      /* @__PURE__ */ jsx("span", { className: "sp" }),
+      /* @__PURE__ */ jsxs("span", { className: "rng", children: [
+        fmtValue(s.min, b.fmt),
+        " – ",
+        fmtValue(s.max, b.fmt)
+      ] }),
+      /* @__PURE__ */ jsx("b", { children: fmtValue(last, b.fmt) })
+    ] }),
+    /* @__PURE__ */ jsxs("div", { className: "plot", children: [
+      /* @__PURE__ */ jsxs("svg", { viewBox: `0 0 ${W2} ${H}`, preserveAspectRatio: "none", "aria-hidden": "true", children: [
+        /* @__PURE__ */ jsx("defs", { children: /* @__PURE__ */ jsxs("linearGradient", { id: gid, x1: "0", y1: "0", x2: "0", y2: "1", children: [
+          /* @__PURE__ */ jsx("stop", { offset: "0", stopColor: "currentColor", stopOpacity: ".22" }),
+          /* @__PURE__ */ jsx("stop", { offset: "1", stopColor: "currentColor", stopOpacity: "0" })
+        ] }) }),
+        /* @__PURE__ */ jsx("path", { className: "area", d: s.area, fill: `url(#${gid})` }),
+        /* @__PURE__ */ jsx("path", { className: "line", d: s.line, vectorEffect: "non-scaling-stroke" })
+      ] }),
+      s.last && /* @__PURE__ */ jsx("i", { className: "dot", style: { left: `${s.last[0] / W2 * 100}%`, top: `${s.last[1] / H * 100}%` } })
+    ] })
+  ] });
+}
+function useImage(ref) {
+  const [url, setUrl] = useState(null);
+  const key = ref ? "asset" in ref ? ref.asset : ref.url : "";
+  useEffect(() => {
+    let live = true;
+    setUrl(null);
+    if (ref && "url" in ref) setUrl(ref.url);
+    else if (ref) assetUrl(ref.asset).then((u) => live && setUrl(u), () => void 0);
+    return () => {
+      live = false;
+    };
+  }, [key]);
+  return url;
+}
+function Media({ id, b, data, c }) {
+  const video = mediaRef(resolve(b.video, data));
+  const image = mediaRef(resolve(b.image, data));
+  const poster = mediaRef(resolve(b.poster, data));
+  const caption = resolve(b.caption, data);
+  const img = useImage(!video ? image : null);
+  if (!video && !image) return null;
+  return /* @__PURE__ */ jsxs("div", { className: "lv-media", children: [
+    video ? /* @__PURE__ */ jsx(
+      VideoStage,
+      {
+        playId: `${id}:media`,
+        c,
+        title: present(caption) ? String(caption) : "",
+        src: "url" in video ? video.url : void 0,
+        asset: "asset" in video ? video.asset : void 0,
+        posterAsset: poster && "asset" in poster ? poster.asset : void 0,
+        posterUrl: poster && "url" in poster ? poster.url : void 0
+      }
+    ) : /* @__PURE__ */ jsx("div", { className: "still", children: img && /* @__PURE__ */ jsx("img", { src: img, alt: "", draggable: false }) }),
+    present(caption) && /* @__PURE__ */ jsx("div", { className: "cap", children: String(caption) })
+  ] });
+}
+function Log({ b, data, t: t2 }) {
+  const lines = tailLines(resolve(b.value, data), b.lines ?? 6);
+  if (!lines.length || lines.length === 1 && !lines[0].trim()) return null;
+  return /* @__PURE__ */ jsxs("div", { className: `lv-log${b.mono === false ? " prose" : ""}`, children: [
+    b.label && /* @__PURE__ */ jsx("span", { className: "k", children: lbl(t2, resolve(b.label, data)) }),
+    /* @__PURE__ */ jsx("pre", { children: lines.map((l, i) => /* @__PURE__ */ jsxs("span", { className: i === lines.length - 1 ? "last" : void 0, children: [
+      l,
+      "\n"
+    ] }, i)) })
+  ] });
+}
+function ActionButton({ iid, a, index, c, onResult }) {
+  const [busy, setBusy] = useState(false);
+  const info = c.liveActions?.[a.action];
+  const label = a.label || info?.label || a.action;
+  const known = !!info;
+  const disabled = !known || !info.enabled || busy;
+  const tip = c.liveActionsDown ? c.t("board.live.actionsDown") : !c.liveActions ? c.t("board.live.actionsLoading") : !known ? c.t("board.live.notRegistered", { id: a.action }) : !info.enabled ? info.note ? c.t("board.live.disabledNote", { note: info.note }) : c.t("board.live.disabled") : info.description || label;
+  const iconName = a.icon ?? info?.icon ?? (info ? info.destructive ? "stop" : "play" : null);
+  const node2 = iconName ? LIVE_ICONS[iconName] ?? LIVE_ICONS.play : null;
+  return /* @__PURE__ */ jsx("span", { className: "lv-bw", "data-tip": tip, children: /* @__PURE__ */ jsxs(
+    "button",
+    {
+      className: `lv-btn${info?.destructive ? " danger" : ""}${busy ? " busy" : ""}`,
+      "data-nodrag": "",
+      disabled,
+      "aria-label": label,
+      onClick: async () => {
+        setBusy(true);
+        try {
+          const r = await c.runLiveAction(iid, a, index);
+          onResult(r, label);
+        } catch (e) {
+          onResult(null, label, String(e?.message ?? e));
+        } finally {
+          setBusy(false);
+        }
+      },
+      children: [
+        busy ? /* @__PURE__ */ jsx("i", { className: "spin" }) : node2 ? /* @__PURE__ */ jsx(Icon, { node: node2, size: 13 }) : null,
+        /* @__PURE__ */ jsx("span", { children: label })
+      ]
+    }
+  ) });
+}
+function LiveView({ id, item, c }) {
+  const t2 = c.t;
+  const data = item.data ?? {};
+  const blocks = item.blocks ?? [];
+  const now = useNow(1e3);
+  const header = blocks.find((b) => b.t === "header");
+  const status = asStatus(resolve(header?.status, data));
+  const fresh = freshness(item.at, item.ttl, status, now);
+  const acts = blocks.flatMap((b) => b.t === "actions" ? b.items : []);
+  const [tick, setTick] = useState(false);
+  const [toast, setToast] = useState(null);
+  const lastAt = useRef(item.at);
+  useEffect(() => {
+    if (item.at && lastAt.current && item.at !== lastAt.current) {
+      setTick(true);
+      const h = setTimeout(() => setTick(false), 900);
+      lastAt.current = item.at;
+      return () => clearTimeout(h);
+    }
+    lastAt.current = item.at;
+  }, [item.at]);
+  useEffect(() => {
+    if (!toast) return;
+    const h = setTimeout(() => setToast(null), toast.ok ? 5e3 : 9e3);
+    return () => clearTimeout(h);
+  }, [toast]);
+  const onResult = (r, label, err) => {
+    if (!r && !err) return;
+    const key = Date.now();
+    if (err) {
+      setToast({ ok: false, text: t2("board.live.actionError", { action: label, error: err }), key });
+      return;
+    }
+    const secs = (r.ms / 1e3).toFixed(r.ms < 1e4 ? 1 : 0);
+    const out = r.out ? r.out.split("\n").filter(Boolean).pop() ?? "" : "";
+    setToast(r.ok ? { ok: true, text: t2("board.live.actionOk", { action: label, s: secs }) + (out ? ` · ${out.slice(0, 80)}` : ""), key } : { ok: false, text: t2("board.live.actionFailed", { action: label, code: String(r.code) }) + (out ? ` · ${out.slice(0, 80)}` : ""), key });
+  };
+  const body = [];
+  let mediaSeen = 0;
+  blocks.forEach((b, i) => {
+    switch (b.t) {
+      case "header":
+        body.push(/* @__PURE__ */ jsx(Header, { b, data, status, stale: fresh.stale, t: t2, fallbackTitle: item.title ?? "" }, i));
+        break;
+      case "progress":
+        body.push(/* @__PURE__ */ jsx(Progress, { b, data, t: t2 }, i));
+        break;
+      case "metrics":
+        body.push(/* @__PURE__ */ jsx("div", { className: "lv-metrics", children: b.items.map((m, j) => /* @__PURE__ */ jsx(Metric, { m, data, t: t2 }, j)) }, i));
+        break;
+      case "spark":
+        body.push(/* @__PURE__ */ jsx(Spark, { b, data, t: t2 }, i));
+        break;
+      case "media":
+        body.push(/* @__PURE__ */ jsx(Media, { id: `${id}:${mediaSeen++}`, b, data, c }, i));
+        break;
+      case "text":
+        body.push(/* @__PURE__ */ jsx(Log, { b, data, t: t2 }, i));
+        break;
+    }
+  });
+  const terminal = status === "done" || status === "error" || status === "idle";
+  const age = fresh.age;
+  return /* @__PURE__ */ jsxs(
+    "div",
+    {
+      className: `hb-card hb-live${item.by === "h" ? " dm" : ""}${fresh.stale ? " stale" : ""}${status ? ` st-${status}` : ""}`,
+      style: { width: item.w ?? 360 },
+      children: [
+        !header && /* @__PURE__ */ jsx(Header, { b: { t: "header" }, data, status, stale: fresh.stale, t: t2, fallbackTitle: item.title ?? "" }),
+        body,
+        /* @__PURE__ */ jsxs("div", { className: "lv-foot", children: [
+          /* @__PURE__ */ jsxs("span", { className: `fr${tick ? " tick" : ""}${fresh.stale ? " stale" : terminal ? " rest" : ""}`, children: [
+            /* @__PURE__ */ jsx("i", {}),
+            age == null ? t2("board.live.noData") : fresh.stale ? t2("board.live.staleFor", { age: ageText(t2, age) }) : t2("board.live.updated", { age: ageText(t2, age) })
+          ] }),
+          /* @__PURE__ */ jsx("span", { className: "sp" }),
+          item.by === "h" && (acts.length ? /* @__PURE__ */ jsx("span", { className: "sig", children: /* @__PURE__ */ jsx(Cad, {}) }) : /* @__PURE__ */ jsx(Sig, {})),
+          acts.map((a, i) => /* @__PURE__ */ jsx(ActionButton, { iid: id, a, index: i, c, onResult }, `${a.action}${i}`))
+        ] }),
+        toast && /* @__PURE__ */ jsxs("div", { className: `lv-toast${toast.ok ? "" : " err"}`, role: "status", "data-nodrag": "", onClick: () => setToast(null), children: [
+          /* @__PURE__ */ jsx(Icon, { name: toast.ok ? "ok" : "alert", size: 14 }),
+          /* @__PURE__ */ jsx("span", { children: toast.text })
+        ] }, toast.key)
+      ]
+    }
+  );
 }
 function useAsset(aid) {
   const [url, setUrl] = useState(null);
@@ -4756,16 +5694,17 @@ function ColumnView({ id, item, c, dropIndex }) {
 }
 const PLAY = /* @__PURE__ */ jsx("svg", { viewBox: "0 0 10 12", "aria-hidden": "true", children: /* @__PURE__ */ jsx("path", { d: "M0 0 10 6 0 12z" }) });
 function VideoView({ id, item, c }) {
-  const poster = useAsset(item.img);
+  const poster = useAsset(item.video ? item.img : void 0);
   const playing = c.playing === id;
   const direct = item.k === "video" ? item.src : void 0;
+  const asset = item.k === "video" ? item.asset : void 0;
   const player = item.video ? playerUrl(item.video) : null;
   const vert = !!item.video?.vert;
-  const site = item.site || (item.url ? hostOf(item.url) : direct ? hostOf(direct) : "");
+  const site = item.site || (item.url ? hostOf(item.url) : direct ? hostOf(direct) : asset ? c.t("board.video.uploaded") : "");
   const title = item.title || (direct ? direct.split("/").pop() : "") || c.t("board.video.untitled");
   return /* @__PURE__ */ jsxs("div", { className: `hb-card hb-video${vert ? " vert" : ""}${item.by === "h" ? " dm" : ""}`, children: [
-    /* @__PURE__ */ jsxs("div", { className: "stage", children: [
-      playing && player && /* @__PURE__ */ jsx(
+    player ? /* @__PURE__ */ jsxs("div", { className: "stage", children: [
+      playing && /* @__PURE__ */ jsx(
         "iframe",
         {
           src: player,
@@ -4777,13 +5716,12 @@ function VideoView({ id, item, c }) {
           referrerPolicy: "strict-origin-when-cross-origin"
         }
       ),
-      playing && direct && /* @__PURE__ */ jsx("video", { src: direct, controls: true, autoPlay: true, preload: "metadata", "data-nodrag": "" }),
       !playing && (poster ? /* @__PURE__ */ jsx("img", { src: poster, alt: "", draggable: false }) : /* @__PURE__ */ jsx("div", { className: "poster-empty", children: site })),
-      !playing && (player || direct) && /* @__PURE__ */ jsxs("button", { className: "play", "data-nodrag": "", onClick: () => c.setPlaying(id), children: [
+      !playing && /* @__PURE__ */ jsxs("button", { className: "play", "data-nodrag": "", onClick: () => c.setPlaying(id), children: [
         PLAY,
         c.t("board.video.play")
       ] })
-    ] }),
+    ] }) : /* @__PURE__ */ jsx(VideoStage, { playId: id, c, src: direct, asset, posterAsset: item.img, dur: item.dur, title }),
     /* @__PURE__ */ jsx("div", { className: "hb-link", children: /* @__PURE__ */ jsxs("div", { className: "body", children: [
       /* @__PURE__ */ jsx("div", { className: "dom", children: /* @__PURE__ */ jsx("span", { children: site }) }),
       /* @__PURE__ */ jsx("h4", { children: item.url ? /* @__PURE__ */ jsx("a", { href: item.url, target: "_blank", rel: "noopener noreferrer", "data-nodrag": "", children: title }) : title }),
@@ -5043,6 +5981,8 @@ function ItemBody({ id, item, c, dropIndex, selected }) {
       return /* @__PURE__ */ jsx(TextView, { id, item, c });
     case "draw":
       return /* @__PURE__ */ jsx(DrawView, { item, selected });
+    case "live":
+      return /* @__PURE__ */ jsx(LiveView, { id, item, c });
     default:
       return null;
   }
@@ -5602,11 +6542,48 @@ function BoardView({ bid, onOpenBoard, onHome }) {
   const [cursorAct, setCursorAct] = useState(null);
   const [renaming, setRenaming] = useState(false);
   const [, setNow] = useState(0);
+  const [liveActions, setLiveActions] = useState(null);
+  const [liveActionsDown, setLiveActionsDown] = useState(false);
+  const [confirmReq, setConfirmReq] = useState(null);
   const Frame = hostSandboxedFrame();
   const flash = useCallback((msg) => {
     setToast(msg);
     window.setTimeout(() => setToast((cur) => cur === msg ? null : cur), 3200);
   }, []);
+  const loadActions = useCallback(() => {
+    boardsApi.liveActions().then((r) => {
+      setLiveActions(Object.fromEntries(r.actions.map((a) => [a.id, a])));
+      setLiveActionsDown(false);
+    }).catch(() => {
+      setLiveActions((cur) => cur ?? {});
+      setLiveActionsDown(true);
+    });
+  }, []);
+  useEffect(() => {
+    loadActions();
+    const h = window.setInterval(() => {
+      if (!document.hidden) loadActions();
+    }, 6e4);
+    return () => window.clearInterval(h);
+  }, [loadActions]);
+  const runLiveAction = useCallback(async (iid, ref, index) => {
+    const info = liveActionsRef.current?.[ref.action];
+    if (!info || !info.enabled) throw new Error(t2("board.live.notRegistered", { id: ref.action }));
+    let confirm = false;
+    if (info.destructive) {
+      confirm = await new Promise((resolve2) => setConfirmReq({ iid, ref, index, info, resolve: resolve2 }));
+      setConfirmReq(null);
+      if (!confirm) return null;
+    }
+    try {
+      return await boardsApi.liveAction(bid, iid, ref.action, index, confirm);
+    } catch (e) {
+      loadActions();
+      throw e;
+    }
+  }, [bid, loadActions, t2]);
+  const liveActionsRef = useRef(liveActions);
+  liveActionsRef.current = liveActions;
   const onHermes = useCallback((entries, doc2) => {
     const steps = [];
     const hide2 = /* @__PURE__ */ new Set();
@@ -5887,6 +6864,26 @@ function BoardView({ bid, onOpenBoard, onHome }) {
   const addImageFiles = useCallback(async (files, at) => {
     let p = at ?? center();
     for (const f of files.slice(0, 8)) {
+      if (VIDEO_TYPES.test(f.type)) {
+        try {
+          flash(t2("board.toast.uploadingVideo", { pct: 0 }));
+          const res = await uploadVideo(f, (fr) => setToast(t2("board.toast.uploadingVideo", { pct: Math.round(fr * 100) })));
+          rememberPoster({ asset: res.asset }, { st: res.st ?? "none", img: res.img, dur: res.dur, iw: res.iw, ih: res.ih });
+          const item = { k: "video", asset: res.asset, title: f.name.replace(/\.[a-z0-9]+$/i, "").slice(0, 200), w: 400 };
+          if (res.img) item.img = res.img;
+          if (res.dur) item.dur = res.dur;
+          if (res.iw && res.ih) {
+            item.iw = res.iw;
+            item.ih = res.ih;
+          }
+          add(item, p);
+          p = { x: p.x + 24, y: p.y + 24 };
+          setToast(null);
+        } catch (e) {
+          flash(t2("board.toast.videoFailed", { error: String(e?.message ?? e) }));
+        }
+        continue;
+      }
       if (!f.type.startsWith("image/")) continue;
       try {
         flash(t2("board.toast.uploading"));
@@ -6254,7 +7251,7 @@ function BoardView({ bid, onOpenBoard, onHome }) {
   }, [onWheel, hasDoc]);
   useEffect(() => {
     const onKey = (e) => {
-      if (!rootRef.current?.isConnected || ask) return;
+      if (!rootRef.current?.isConnected || ask || confirmReq) return;
       if (e.key === " " && !isTyping(e.target)) {
         space.current = e.type === "keydown";
         if (e.type === "keydown") e.preventDefault();
@@ -6361,11 +7358,11 @@ function BoardView({ bid, onOpenBoard, onHome }) {
       window.removeEventListener("keydown", onKey);
       window.removeEventListener("keyup", onKey);
     };
-  }, [ask, center, commit, connectFrom, continueInSession, deleteSelection, duplicate, fit, openChat, selected, sync, zoomAt]);
+  }, [ask, center, commit, confirmReq, connectFrom, continueInSession, deleteSelection, duplicate, fit, openChat, selected, sync, zoomAt]);
   useEffect(() => {
     const onPaste = (e) => {
       if (!rootRef.current?.isConnected || isTyping(e.target) || ask) return;
-      const files = [...e.clipboardData?.files ?? []].filter((f) => f.type.startsWith("image/"));
+      const files = [...e.clipboardData?.files ?? []].filter((f) => f.type.startsWith("image/") || VIDEO_TYPES.test(f.type));
       if (files.length) {
         e.preventDefault();
         void addImageFiles(files);
@@ -6389,7 +7386,7 @@ function BoardView({ bid, onOpenBoard, onHome }) {
   const onDrop = (e) => {
     e.preventDefault();
     const at = toWorld(e.clientX, e.clientY);
-    const files = [...e.dataTransfer.files].filter((f) => f.type.startsWith("image/"));
+    const files = [...e.dataTransfer.files].filter((f) => f.type.startsWith("image/") || VIDEO_TYPES.test(f.type));
     if (files.length) {
       void addImageFiles(files, at);
       return;
@@ -6424,6 +7421,9 @@ function BoardView({ bid, onOpenBoard, onHome }) {
     playing,
     setPlaying,
     Frame,
+    liveActions,
+    liveActionsDown,
+    runLiveAction,
     openBoard: (id) => onOpenBoard(id),
     addToColumn: (col) => {
       const ref = newRef();
@@ -6450,7 +7450,7 @@ function BoardView({ bid, onOpenBoard, onHome }) {
         id
       );
     }
-  } : null, [Frame, commit, doc, editing, hidden, kidDrag, onOpenBoard, playing, regEl, selected, t2, update]);
+  } : null, [Frame, commit, doc, editing, hidden, kidDrag, liveActions, liveActionsDown, onOpenBoard, playing, regEl, runLiveAction, selected, t2, update]);
   const ctxRef = useRef(ctx);
   ctxRef.current = ctx;
   const selBounds = useMemo(() => {
@@ -6481,6 +7481,7 @@ function BoardView({ bid, onOpenBoard, onHome }) {
         return ["board.verb.flow"];
       case "link":
       case "video":
+      case "live":
         return ["board.verb.summarize"];
       default:
         return ["board.verb.improve"];
@@ -6558,7 +7559,7 @@ function BoardView({ bid, onOpenBoard, onHome }) {
     const out = [{ head: t2("board.menu.addHere") }];
     for (const x of TOOLS[1]) out.push({ id: x.tool, label: t2(x.label), icon: x.icon, kbd: x.key, run: place(x.tool) });
     out.push({ sep: true });
-    out.push({ id: "all", label: t2("board.menu.selectAll"), kbd: `${mod}A`, run: () => setSelected(new Set(Object.keys(docRef.current?.items ?? {}).filter((k) => !docRef.current.items[k].in))) });
+    out.push({ id: "all", label: t2("board.menu.selectAll"), icon: "selectAll", kbd: `${mod}A`, run: () => setSelected(new Set(Object.keys(docRef.current?.items ?? {}).filter((k) => !docRef.current.items[k].in))) });
     out.push({ id: "fit", label: t2("board.fit"), icon: "fit", kbd: "F", run: fit });
     out.push({ id: "chat", label: chatOpen ? t2("board.chat.close") : t2("board.chat.open"), icon: chatOpen ? "closePanel" : "chat", kbd: "/", run: () => chatOpen ? closeChat() : openChat(true) });
     return out;
@@ -6911,13 +7912,57 @@ function BoardView({ bid, onOpenBoard, onHome }) {
         /* @__PURE__ */ jsx("button", { className: "btn primary", onClick: submitAsk, children: t2("board.ask.add") })
       ] })
     ] }),
+    confirmReq && /* @__PURE__ */ jsx("div", { className: "hb-scrim", onPointerDown: (e) => {
+      e.stopPropagation();
+      if (e.target === e.currentTarget) confirmReq.resolve(false);
+    }, children: /* @__PURE__ */ jsxs(
+      "div",
+      {
+        className: "hb-confirm",
+        role: "alertdialog",
+        "aria-modal": "true",
+        "aria-labelledby": "hb-confirm-t",
+        onKeyDown: (e) => {
+          e.stopPropagation();
+          if (e.key === "Escape") confirmReq.resolve(false);
+        },
+        children: [
+          /* @__PURE__ */ jsx("div", { className: "hd", children: t2("board.live.confirmHead") }),
+          /* @__PURE__ */ jsxs("h3", { id: "hb-confirm-t", children: [
+            /* @__PURE__ */ jsx("span", { className: "ico", children: /* @__PURE__ */ jsx(Icon, { name: "alert", size: 16 }) }),
+            t2("board.live.confirmTitle", { action: confirmReq.ref.label || confirmReq.info.label })
+          ] }),
+          /* @__PURE__ */ jsx("p", { children: confirmReq.info.confirm || confirmReq.info.description || t2("board.live.confirmBody") }),
+          /* @__PURE__ */ jsxs("div", { className: "facts", children: [
+            /* @__PURE__ */ jsxs("span", { children: [
+              t2("board.live.confirmCard"),
+              " ",
+              /* @__PURE__ */ jsx("b", { children: doc.items[confirmReq.iid]?.title || itemLabel(doc.items[confirmReq.iid] ?? {}) || confirmReq.iid })
+            ] }),
+            /* @__PURE__ */ jsxs("span", { children: [
+              t2("board.live.confirmId"),
+              " ",
+              /* @__PURE__ */ jsx("b", { children: confirmReq.info.id })
+            ] }),
+            /* @__PURE__ */ jsx("span", { children: t2("board.live.confirmTimeout", { s: confirmReq.info.timeout }) })
+          ] }),
+          /* @__PURE__ */ jsxs("div", { className: "row", children: [
+            /* @__PURE__ */ jsx("button", { className: "btn text", autoFocus: true, onClick: () => confirmReq.resolve(false), children: t2("board.ask.cancel") }),
+            /* @__PURE__ */ jsxs("button", { className: "btn danger", onClick: () => confirmReq.resolve(true), children: [
+              /* @__PURE__ */ jsx(Icon, { name: "alert" }),
+              confirmReq.ref.label || confirmReq.info.label
+            ] })
+          ] })
+        ]
+      }
+    ) }),
     (toast || sync.error) && /* @__PURE__ */ jsx("div", { className: "hb-toast", role: "status", children: toast || t2("board.toast.offline") }),
     /* @__PURE__ */ jsx(
       "input",
       {
         ref: fileRef,
         type: "file",
-        accept: "image/png,image/jpeg,image/gif,image/webp",
+        accept: "image/png,image/jpeg,image/gif,image/webp,video/mp4,video/webm,video/quicktime",
         multiple: true,
         hidden: true,
         onChange: (e) => {
@@ -8556,6 +9601,141 @@ const boardCss = `/* Board — "Mesa de despacho" (hd-canvas-plan/mockup-v2). Ev
   background: color-mix(in srgb, var(--color-background, #111) 10%, transparent); border: 1px solid color-mix(in srgb, var(--color-background, #111) 18%, transparent); }
 .hb-tip kbd + kbd { margin-left: -4px; }
 @media (prefers-reduced-motion: reduce) { .hb-tip { transition: none; transform: none; } }
+
+/* ── live card: a terminal status panel, one accent, data in mono ── */
+.hb-live { overflow: hidden; container-type: inline-size; cursor: default; }
+.hb-live > * + * { border-top: 1px solid var(--rule); }
+.hb-live .lv-head { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 11px; align-items: center; padding: 13px 14px 12px 14px; }
+.hb-live .lv-head .ico { width: 28px; height: 28px; display: grid; place-items: center; border-radius: var(--r-ctl); border: 1px solid var(--rule-2); color: var(--accent-soft); }
+.hb-live .lv-head .tt { min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.hb-live .lv-head b { font: 600 14px/1.2 var(--sans); color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hb-live .lv-head small { font: 400 10.5px/1.2 var(--mono); color: var(--ink-3); letter-spacing: .02em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* status pill: the Hermes-cursor name tag idiom (solid block, mono caps) */
+.hb .lv-pill { display: inline-flex; align-items: center; gap: 5px; height: 19px; padding: 0 7px; border-radius: 2px; border: 1px solid var(--rule-3);
+  font: 700 9.5px/1 var(--mono); letter-spacing: .14em; text-transform: uppercase; color: var(--ink-2); white-space: nowrap; }
+.hb .lv-pill.running { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.hb .lv-pill .caret { width: 5px; height: 9px; background: currentColor; animation: hb-caret 1.06s steps(1) infinite; }
+.hb .lv-pill .bars { width: 6px; height: 8px; border-left: 2px solid currentColor; border-right: 2px solid currentColor; }
+.hb .lv-pill.done { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 55%, transparent); }
+.hb .lv-pill.error { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 60%, transparent); background: color-mix(in srgb, var(--danger) 10%, transparent); }
+.hb .lv-pill.idle { color: var(--ink-3); border-color: var(--rule-2); }
+.hb .lv-pill.stale { color: var(--warn); border-color: color-mix(in srgb, var(--warn) 55%, transparent); background: color-mix(in srgb, var(--warn) 8%, transparent); }
+
+.hb-live .lv-prog { padding: 11px 14px 12px; }
+.hb-live .lv-prog .row { display: flex; align-items: baseline; gap: 10px; min-width: 0; }
+.hb-live .lv-prog .lb { flex: 1; min-width: 0; font: 400 12.5px/1.2 var(--sans); color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hb-live .lv-prog .pc { font: 600 12px/1 var(--mono); color: var(--ink); font-variant-numeric: tabular-nums; }
+.hb-live .lv-prog .eta { font: 400 10.5px/1 var(--mono); color: var(--ink-3); white-space: nowrap; }
+.hb-live .lv-prog .cells { margin-top: 9px; gap: 2px; }
+.hb-live .lv-prog .cells i { height: 5px; }
+
+.hb-live .lv-metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(84px, 1fr)); }
+.hb-live .lv-metrics .m { display: flex; flex-direction: column; gap: 5px; padding: 10px 14px 11px; min-width: 0; box-shadow: inset -1px 0 0 var(--rule), inset 0 -1px 0 var(--rule); margin: 0 -1px -1px 0; }
+.hb-live .lv-metrics .k { font: 700 9px/1 var(--mono); letter-spacing: .15em; text-transform: uppercase; color: var(--ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hb-live .lv-metrics .v { font: 600 18px/1.05 var(--mono); color: var(--ink); font-variant-numeric: tabular-nums; letter-spacing: -.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hb-live .lv-metrics .v em { font: 400 11px/1 var(--mono); font-style: normal; color: var(--ink-3); margin-left: 3px; }
+.hb-live .lv-metrics .d { font: 400 10.5px/1 var(--mono); color: var(--ink-3); font-variant-numeric: tabular-nums; }
+.hb-live .lv-metrics .d.good { color: var(--accent); }
+.hb-live .lv-metrics .d.bad { color: var(--warn); }
+
+.hb-live .lv-spark { padding: 10px 14px 12px; }
+.hb-live .lv-spark .row { display: flex; align-items: baseline; gap: 10px; min-width: 0; }
+.hb-live .lv-spark .k { font: 700 9px/1 var(--mono); letter-spacing: .15em; text-transform: uppercase; color: var(--ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hb-live .lv-spark .sp { flex: 1; }
+.hb-live .lv-spark .rng { font: 400 10px/1 var(--mono); color: var(--ink-3); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.hb-live .lv-spark b { font: 600 12px/1 var(--mono); color: var(--ink); font-variant-numeric: tabular-nums; }
+.hb-live .lv-spark .plot { position: relative; height: 44px; margin-top: 8px; color: var(--accent);
+  background: repeating-linear-gradient(0deg, transparent 0 10px, color-mix(in srgb, var(--accent) 5%, transparent) 10px 11px); }
+.hb-live .lv-spark svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.hb-live .lv-spark .line { fill: none; stroke: currentColor; stroke-width: 1.4; stroke-linejoin: round; stroke-linecap: round; }
+.hb-live .lv-spark .dot { position: absolute; width: 7px; height: 7px; margin: -3.5px 0 0 -3.5px; background: var(--accent); box-shadow: 0 0 0 2px var(--sheet); }
+
+.hb-live .lv-media .stage, .hb-live .lv-media .still { position: relative; aspect-ratio: 16 / 9; background: #000; overflow: hidden; }
+.hb-live .lv-media .still img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.hb-live .lv-media .cap { padding: 8px 14px 9px; font: 400 10.5px/1.35 var(--mono); color: var(--ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; border-top: 1px solid var(--rule); }
+
+.hb-live .lv-log { position: relative; padding: 9px 14px 10px; background: var(--well); }
+.hb-live .lv-log .k { display: block; margin-bottom: 6px; font: 700 9px/1 var(--mono); letter-spacing: .15em; text-transform: uppercase; color: var(--ink-3); }
+.hb-live .lv-log pre { margin: 0; font: 400 10.5px/1.6 var(--mono); color: var(--ink-3); white-space: pre-wrap; overflow-wrap: anywhere;
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 14px); mask-image: linear-gradient(to bottom, transparent 0, #000 14px); user-select: text; }
+.hb-live .lv-log pre .last { color: var(--ink-2); }
+.hb-live .lv-log.prose pre { font: 400 12px/1.5 var(--sans); -webkit-mask-image: none; mask-image: none; }
+
+.hb-live .lv-foot { display: flex; align-items: center; gap: 6px; min-height: 40px; padding: 6px 8px 6px 14px; flex-wrap: wrap; }
+.hb-live .lv-foot .fr { display: inline-flex; align-items: center; gap: 7px; font: 400 10.5px/1 var(--mono); color: var(--ink-3); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.hb-live .lv-foot .fr i { width: 6px; height: 6px; background: var(--accent); flex: none; transition: box-shadow .5s var(--out); }
+.hb-live .lv-foot .fr.tick i { box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 35%, transparent); }
+.hb-live .lv-foot .fr.rest i { background: var(--ink-3); }
+.hb-live .lv-foot .fr.stale { color: var(--warn); }
+.hb-live .lv-foot .fr.stale i { background: var(--warn); }
+.hb-live .lv-foot .sp { flex: 1; }
+.hb-live .lv-foot .sig { margin-right: 4px; }
+.hb-live .lv-bw { display: inline-flex; }
+.hb-live .lv-btn { height: 28px; display: inline-flex; align-items: center; gap: 7px; padding: 0 11px 0 9px; border-radius: var(--r-ctl); border: 1px solid var(--rule-2);
+  font: 600 12px/1 var(--sans) !important; color: var(--ink) !important; transition: background-color .14s var(--out), border-color .14s var(--out), color .14s var(--out); }
+.hb-live .lv-btn .ic { color: var(--accent-soft); }
+.hb-live .lv-btn:hover { background: var(--hover); border-color: var(--rule-3); }
+.hb-live .lv-btn.danger .ic { color: var(--danger); }
+.hb-live .lv-btn.danger:hover { background: color-mix(in srgb, var(--danger) 12%, transparent); border-color: color-mix(in srgb, var(--danger) 55%, transparent); color: var(--danger) !important; }
+.hb-live .lv-btn:disabled { opacity: .45; }
+.hb-live .lv-btn .spin { width: 12px; height: 12px; border: 1.5px solid var(--rule-3); border-top-color: var(--accent); border-radius: 50%; animation: hb-spin .8s linear infinite; }
+@keyframes hb-spin { to { transform: rotate(360deg); } }
+
+/* stale: the numbers fade back, the pill and the footer say why */
+.hb-live.stale .lv-metrics .v, .hb-live.stale .lv-prog .pc, .hb-live.stale .lv-spark b { color: var(--ink-2); }
+.hb-live.stale .lv-prog .cells i.on, .hb-live.stale .lv-spark .dot { background: color-mix(in srgb, var(--accent) 45%, transparent); }
+.hb-live.stale .lv-spark .plot { color: color-mix(in srgb, var(--accent) 50%, transparent); }
+.hb-live.st-error .lv-head .ico { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 45%, transparent); }
+
+/* result toast on the card itself */
+.hb-live .lv-toast { position: absolute; left: 10px; right: 10px; bottom: 46px; z-index: 3; display: flex; align-items: flex-start; gap: 8px; padding: 9px 11px;
+  border-radius: var(--r-float); background: var(--float-bg); border: 1px solid var(--float-line); box-shadow: var(--lift); font: 500 12px/1.35 var(--sans); color: var(--ink);
+  cursor: pointer; animation: hb-toast-in .18s var(--out); overflow-wrap: anywhere; }
+.hb-live .lv-toast .ic { color: var(--accent); margin-top: 1px; }
+.hb-live .lv-toast.err { border-color: color-mix(in srgb, var(--danger) 45%, transparent); }
+.hb-live .lv-toast.err .ic { color: var(--danger); }
+@keyframes hb-toast-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+
+/* sizes: narrow cards stack metrics in pairs, wide ones get room to breathe */
+@container (max-width: 280px) {
+  .hb-live .lv-metrics { grid-template-columns: 1fr 1fr; }
+  .hb-live .lv-head { grid-template-columns: minmax(0, 1fr) auto; gap: 9px; padding: 11px 12px 10px; }
+  .hb-live .lv-head .ico { display: none; }
+  .hb-live .lv-spark .rng { display: none; }
+  .hb-live .lv-btn span { display: none; }
+  .hb-live .lv-btn { padding: 0 8px; }
+}
+@container (min-width: 520px) {
+  .hb-live .lv-head { padding: 15px 16px 14px; }
+  .hb-live .lv-head b { font-size: 15.5px; }
+  .hb-live .lv-metrics .v { font-size: 21px; }
+  .hb-live .lv-metrics .m { padding: 12px 16px 13px; }
+  .hb-live .lv-spark .plot { height: 58px; }
+}
+
+/* video: duration badge, the paused-element fallback */
+.hb-video .stage video.still, .hb-live .stage video.still { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; pointer-events: none; opacity: .86; }
+.hb .stage .dur { position: absolute; right: 10px; top: 10px; font: 500 10.5px/1 var(--mono); color: #f3ece3; background: rgb(0 0 0 / .62); padding: 4px 6px; border-radius: 2px; letter-spacing: .02em; font-variant-numeric: tabular-nums; pointer-events: none; }
+.hb .stage { position: relative; }
+.hb-live .stage img { width: 100%; height: 100%; object-fit: cover; display: block; opacity: .9; }
+.hb-live .stage video:not(.still) { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; display: block; background: #000; }
+.hb-live .stage .play { position: absolute; left: 12px; bottom: 12px; display: inline-flex; align-items: center; gap: 8px; height: 28px; padding: 0 11px 0 9px; border-radius: var(--r-ctl); background: var(--accent); color: var(--on-accent) !important; font: 600 12.5px/1 var(--sans) !important; }
+.hb-live .stage .play svg { width: 9px; height: 11px; fill: currentColor; }
+.hb-live .stage .poster-empty { position: absolute; inset: 0; display: grid; place-items: center; font: 400 11px/1 var(--mono); color: var(--ink-3);
+  background: repeating-linear-gradient(90deg, color-mix(in srgb, var(--accent) 6%, transparent) 0 1px, transparent 1px 24px), var(--well); }
+
+/* confirm dialog for destructive actions: modal, Cancel focused, Esc cancels */
+.hb-scrim { position: absolute; inset: 0; z-index: 50; background: rgb(0 0 0 / .42); display: grid; place-items: center; animation: hb-pop .14s var(--out); }
+.hb-confirm { width: min(440px, calc(100% - 40px)); padding: 16px 16px 14px; border-radius: var(--r-float); background: var(--float-bg); border: 1px solid var(--float-line); box-shadow: var(--lift); }
+.hb-confirm .hd { color: var(--danger); margin-bottom: 12px; }
+.hb-confirm h3 { margin: 0; display: flex; align-items: center; gap: 10px; font: 600 16px/1.3 var(--sans); color: var(--ink); }
+.hb-confirm h3 .ico { width: 28px; height: 28px; display: grid; place-items: center; flex: none; border-radius: var(--r-ctl); color: var(--danger); background: color-mix(in srgb, var(--danger) 12%, transparent); }
+.hb-confirm p { margin: 10px 0 0 38px; font: 400 13px/1.5 var(--sans); color: var(--ink-2); }
+.hb-confirm .facts { margin: 12px 0 0 38px; display: flex; flex-wrap: wrap; gap: 4px 14px; font: 400 10.5px/1.4 var(--mono); color: var(--ink-3); }
+.hb-confirm .facts b { font-weight: 400; color: var(--ink-2); }
+.hb-confirm .row { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
+.hb .btn.danger { background: var(--danger); color: #fff; padding: 0 12px 0 10px; }
+.hb .btn.danger:hover { background: color-mix(in srgb, var(--danger) 86%, #fff); }
 
 @media (prefers-reduced-motion: reduce) {
   .hb *, .hb *::before, .hb *::after { animation: none !important; transition: none !important; }

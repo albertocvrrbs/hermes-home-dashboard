@@ -20,11 +20,12 @@ from urllib.parse import urljoin, urlsplit
 DEADLINE_S = 5.0
 MAX_REDIRECTS = 3
 ALLOWED_PORTS = {None, 80, 443, 8080, 8443}
-CAPS = {"html": 1024 * 1024, "json": 512 * 1024, "image": 5 * 1024 * 1024}
+CAPS = {"html": 1024 * 1024, "json": 512 * 1024, "image": 5 * 1024 * 1024, "video": 80 * 1024 * 1024}
 TYPES = {
     "html": ("text/html", "application/xhtml+xml"),
     "json": ("application/json", "text/json", "application/json+oembed", "text/javascript", "text/plain"),
     "image": ("image/",),
+    "video": ("video/", "application/octet-stream", "binary/octet-stream"),
 }
 USER_AGENT = ("Mozilla/5.0 (compatible; HermesBoard/1.0; "
               "+https://github.com/albertocvrrbs/hermes-home-dashboard)")
@@ -154,7 +155,7 @@ class Fetcher:
             headers = {
                 "User-Agent": USER_AGENT,
                 "Accept": {"html": "text/html,application/xhtml+xml;q=0.9,*/*;q=0.5",
-                           "json": "application/json", "image": "image/*"}[want],
+                           "json": "application/json", "image": "image/*", "video": "video/*"}[want],
                 "Accept-Encoding": "gzip, identity",
                 "Accept-Language": "en,*;q=0.5",
             }

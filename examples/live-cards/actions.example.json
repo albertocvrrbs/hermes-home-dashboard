@@ -1,0 +1,42 @@
+{
+  "_readme": "Copy to ~/.hermes/plugin-data/home-dashboard/live-actions/<name>.json and edit. Cards can only name these ids. command is an argv list run WITHOUT a shell; {name} placeholders are filled with args checked against the schema below. Unknown keys starting with _ are ignored.",
+  "actions": [
+    {
+      "id": "demo.hello",
+      "label": "Say hello",
+      "description": "Prints a greeting. Harmless; good for a first test.",
+      "command": ["/bin/echo", "hello from", "{who}"],
+      "args": { "who": { "type": "string", "pattern": "^[a-z]{1,16}$", "default": "hermes" } },
+      "timeout": 5
+    },
+    {
+      "id": "backup.run",
+      "label": "Back up now",
+      "description": "Runs the nightly backup script once.",
+      "command": ["/usr/local/bin/backup-now"],
+      "timeout": 600,
+      "icon": "hard-drive"
+    },
+    {
+      "id": "jobs.stop",
+      "label": "Stop job",
+      "description": "Stops a systemd user unit.",
+      "confirm": "The job stops right away. Its unit can be started again later.",
+      "destructive": true,
+      "command": ["/usr/bin/systemctl", "--user", "stop", "{unit}"],
+      "args": { "unit": { "type": "string", "pattern": "^job-[a-z0-9-]{1,40}\\.service$" } },
+      "timeout": 30,
+      "icon": "square"
+    },
+    {
+      "id": "ci.retry",
+      "label": "Retry build",
+      "description": "Asks the local CI runner to retry the last build.",
+      "http": { "method": "POST", "url": "http://127.0.0.1:8088/builds/{build}/retry", "headers": { "Authorization": "Bearer <your token>" } },
+      "args": { "build": { "type": "int", "min": 1 } },
+      "timeout": 10,
+      "enabled": false,
+      "note": "set the token and enable it"
+    }
+  ]
+}

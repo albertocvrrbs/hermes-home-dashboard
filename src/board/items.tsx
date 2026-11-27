@@ -3,12 +3,15 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import type { Translate } from "../home/i18n";
 import type { SandboxedFrameComponent } from "../sdk";
-import { assetHtml, assetUrl, boardsApi } from "./api";
+import { assetHtml, assetUrl, boardsApi, type ActionResult } from "./api";
+import type { LiveActionInfo, LiveActionRef } from "./live";
 import { Cad, RichText, Sig, ago, dueLabel } from "./bits";
 import { fromStroke, strokePath } from "./geometry";
 import { Icon } from "./icons";
 import { drawPreview, accentOf } from "./preview";
 import { classifyUrl, hostOf, playerUrl } from "./urlKind";
+import { LiveView } from "./LiveCard";
+import { VideoStage } from "./video";
 import type { BoardDoc, Item, Op, TodoItem } from "./model";
 
 export interface ItemCtx {
@@ -24,6 +27,12 @@ export interface ItemCtx {
   openBoard: (id: string) => void;
   renderKid: (id: string) => ReactNode;
   addToColumn: (col: string) => void;
+  /** Live cards: the owner's action allowlist (null while loading) and the button handler
+   *  (resolves null when the user cancels the confirm dialog). */
+  liveActions: Record<string, LiveActionInfo> | null;
+  /** The action list could not be read (an older backend still serving this page). */
+  liveActionsDown: boolean;
+  runLiveAction: (iid: string, ref: LiveActionRef, index: number) => Promise<ActionResult | null>;
 }
 
 function useAsset(aid: string | undefined): string | null {
@@ -199,28 +208,30 @@ export function ColumnView({ id, item, c, dropIndex }: { id: string; item: Item;
 const PLAY = <svg viewBox="0 0 10 12" aria-hidden="true"><path d="M0 0 10 6 0 12z" /></svg>;
 
 export function VideoView({ id, item, c }: { id: string; item: Item; c: ItemCtx }) {
-  const poster = useAsset(item.img);
+  const poster = useAsset(item.video ? item.img : undefined);
   const playing = c.playing === id;
   const direct = item.k === "video" ? item.src : undefined;
+  const asset = item.k === "video" ? item.asset : undefined;
   const player = item.video ? playerUrl(item.video) : null;
   const vert = !!item.video?.vert;
-  const site = item.site || (item.url ? hostOf(item.url) : direct ? hostOf(direct) : "");
+  const site = item.site || (item.url ? hostOf(item.url) : direct ? hostOf(direct) : asset ? c.t("board.video.uploaded") : "");
   const title = item.title || (direct ? direct.split("/").pop() : "") || c.t("board.video.untitled");
   return (
     <div className={`hb-card hb-video${vert ? " vert" : ""}${item.by === "h" ? " dm" : ""}`}>
-      <div className="stage">
-        {playing && player && (
-          <iframe src={player} title={title} data-nodrag=""
-            sandbox="allow-scripts allow-same-origin allow-presentation"
-            allow="autoplay; fullscreen; picture-in-picture; encrypted-media"
-            allowFullScreen referrerPolicy="strict-origin-when-cross-origin" />
-        )}
-        {playing && direct && <video src={direct} controls autoPlay preload="metadata" data-nodrag="" />}
-        {!playing && (poster ? <img src={poster} alt="" draggable={false} /> : <div className="poster-empty">{site}</div>)}
-        {!playing && (player || direct) && (
-          <button className="play" data-nodrag="" onClick={() => c.setPlaying(id)}>{PLAY}{c.t("board.video.play")}</button>
-        )}
-      </div>
+      {player ? (
+        <div className="stage">
+          {playing && (
+            <iframe src={player} title={title} data-nodrag=""
+              sandbox="allow-scripts allow-same-origin allow-presentation"
+              allow="autoplay; fullscreen; picture-in-picture; encrypted-media"
+              allowFullScreen referrerPolicy="strict-origin-when-cross-origin" />
+          )}
+          {!playing && (poster ? <img src={poster} alt="" draggable={false} /> : <div className="poster-empty">{site}</div>)}
+          {!playing && <button className="play" data-nodrag="" onClick={() => c.setPlaying(id)}>{PLAY}{c.t("board.video.play")}</button>}
+        </div>
+      ) : (
+        <VideoStage playId={id} c={c} src={direct} asset={asset} posterAsset={item.img} dur={item.dur} title={title} />
+      )}
       <div className="hb-link"><div className="body">
         <div className="dom"><span>{site}</span></div>
         <h4>{item.url ? <a href={item.url} target="_blank" rel="noopener noreferrer" data-nodrag="">{title}</a> : title}</h4>
@@ -448,6 +459,7 @@ export function ItemBody({ id, item, c, dropIndex, selected }: {
     case "box": return <BoxView id={id} item={item} c={c} />;
     case "text": return <TextView id={id} item={item} c={c} />;
     case "draw": return <DrawView item={item} selected={selected} />;
+    case "live": return <LiveView id={id} item={item} c={c} />;
     default: return null;
   }
 }
