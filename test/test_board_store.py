@@ -145,6 +145,17 @@ class SummaryTest(unittest.TestCase):
         self.assertEqual(text.count("~ 0"), 1)
         self.assertNotIn("hermes again", text)
 
+    def test_changes_since_names_connector_ends_and_edited_text(self):
+        self.store.commit(self.bid, [{"op": "add", "item": {"k": "card", "x": 0, "y": 0, "title": "Ship"}}], by="h")
+        seen = self.store.load(self.bid)["seq"]
+        self.store.commit(self.bid, [
+            {"op": "add", "ref": "$x", "item": {"k": "card", "x": 900, "y": 0, "text": "Announce on X"}},
+            {"op": "add", "item": {"k": "line", "a": "0", "b": "$x"}},
+            {"op": "set", "id": "0", "p": {"text": "Ship v1.8"}}], by="u")
+        text = summary.changes_since(self.store.load(self.bid), self.store.entries(self.bid), seen)
+        self.assertIn('+ line 2 0 "Ship" -> 1 "Announce on X"', text)
+        self.assertIn('~ 0 edited text "Ship"', text)
+
     def test_changes_since_is_capped(self):
         for i in range(120):
             self.store.commit(self.bid, [{"op": "add", "item": {"k": "card", "x": i, "y": 0, "text": "note number %d with words" % i}}], by="u")

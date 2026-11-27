@@ -158,6 +158,17 @@ def changes_since(doc: Dict[str, Any], entries: List[Dict[str, Any]], seen: int,
             continue
         if it is None:
             continue
+        if st["added"] and it.get("k") == "line":
+            ends = []
+            for end in ("a", "b"):
+                v = it.get(end)
+                if isinstance(v, str):
+                    lab = label(items.get(v) or {}, 30)
+                    ends.append(f'{v} "{lab}"' if lab else v)
+                else:
+                    ends.append(f"[{v[0]},{v[1]}]" if isinstance(v, list) and len(v) == 2 else "?")
+            lines.append(f"+ line {iid} " + " -> ".join(ends))
+            continue
         if st["added"]:
             lab = label(it)
             lines.append(f"+ {it['k']} {iid}" + (f' "{lab}"' if lab else "") + (f" in {it['in']}" if it.get("in") else ""))
