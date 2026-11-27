@@ -135,7 +135,7 @@ they never fight drag/resize.
 
 ## Widgets
 
-18 widgets, each with a hover control that fits what it does:
+19 widgets, each with a hover control that fits what it does:
 
 | Widget | Hover control |
 |---|---|
@@ -145,6 +145,7 @@ they never fight drag/resize.
 | **Tokens** | switch range (7 days / 1 month / 6 months) · line ↔ bars chart · show/hide totals · group usage **all / by provider / by model** · hover a point for an animated tooltip |
 | **Host** | cycle meters ↔ numeric detail ↔ live graphs (four rolling one-minute sparklines: cpu, ram, load, proc) |
 | **Gateway** | hover expands read-only detail (pid, health, config) |
+| **Spend** | switch range (today / 7 days / this month) · rank top sessions by **all costs / real spend** · step a monthly cap · click a session to open it |
 | **Sessions** | paginate recent sessions · sort **recent / tokens** · minimum-token filter (all / ≥10K / ≥100K / ≥1M) |
 | **Projects** | status board from `~/projects/<name>/status.json` · click a row for next action + alerts |
 | **Agent** | live agent scene · take control (fullscreen agent theater) |
@@ -169,6 +170,53 @@ the chart you get one row per provider or model for the selected range, with its
 tokens, share and (on hover) cost. Provider identity comes from the host's
 per-model analytics (`/api/analytics/models`, the data behind the Models page);
 on a Hermes without it, the widget falls back to the per-model list and says so.
+
+### Spend: real money vs what your subscriptions cover
+
+![Spend widget — real spend, subscription-covered value, projection against a cap and the priciest sessions](assets/screenshot-spend.png)
+
+*Real data from a Hermes install on a Claude subscription plus DeepSeek API; the cap is set to $3 to show the warning state.*
+
+The Tokens widget counts tokens; Spend counts dollars, and keeps two kinds of
+dollars apart:
+
+- **Real spend** (the headline) — pay-per-use money on API-key providers
+  (DeepSeek, OpenRouter, OpenAI API, …), split by provider.
+- **Covered by subscriptions** — what calls on a flat-fee plan would cost at
+  API list prices, e.g. *"Claude subscription covered $1,821"*. You don't pay it
+  per token, so it is never added to real spend.
+- **Month line** — real spend this month and a straight-line month-end
+  projection. Set a monthly cap from the hover stepper (saved with the layout):
+  the line turns amber at 80% of the cap or when the projection passes it, and
+  red once spend reaches it.
+- **Most expensive sessions** in the range (all costs, or real spend only);
+  click one to open it (chat resume on the web, the session on Desktop).
+- `est.` marks amounts Hermes estimated from list prices rather than an
+  invoice. Unclassified cost, unpriced sessions and sessions without cost data
+  are counted in the footer instead of hidden.
+
+How a cost is classified, per call (first match wins):
+
+1. Hermes marked the route `included` (e.g. `openai-codex`) → subscription.
+2. A flat-fee provider (`openai-codex`, Copilot) or a provider id containing
+   `subscription` → subscription.
+3. Anthropic with **only OAuth credentials** configured (a Claude Pro/Max
+   login) → subscription. Hermes itself prices these calls as estimated API
+   spend; this is the plugin's inference.
+4. A provider with **only API keys** configured → real spend.
+5. Anything else (mixed or removed credentials, unknown cost) →
+   `unclassified`.
+
+Limits: credentials are read as they are configured *now* (an old call made
+with a since-removed API key follows today's setup) and from the active profile.
+"Today" and "this month" follow your clock; like the host's own analytics, a
+session's cost lands on the day it started.
+
+Data comes from a read-only `/spend` route that opens `state.db` with
+`mode=ro`, reads at most ~31 days and caps the rows. It uses the per-call usage
+table, so a session that switched provider mid-way is split correctly (the
+session row alone would bill all of it to the last provider). `?profile=<name>`
+reads another profile's store.
 
 ### Sessions: sort and filter by tokens
 
@@ -238,12 +286,12 @@ two regenerated bundles.
 - All data comes from the host's existing API (status, system, analytics,
   sessions, cron, logs) through one polling loop. A few widgets fetch on
   demand for their own controls — the Tokens range and grouping, the Logs file
-  selector and the Projects board.
+  selector, the Projects board and Spend.
 - The Python side (`dashboard/plugin_api.py`) persists the widget layout to
   `~/.hermes/plugins/home-dashboard/layout.json`, exposes plugin-scoped,
   read-only adapters for Desktop's widgets (`/system`, `/analytics`, `/models`,
-  `/cron`, `/sessions`) and reads the Projects board (`/projects`). It makes no
-  network calls.
+  `/cron`, `/sessions`), reads the Projects board (`/projects`) and computes
+  Spend (`/spend`, a read-only query on `state.db`). It makes no network calls.
 - UI strings go through a small translation layer (`src/home/i18n/`); see
   [Languages](#languages).
 - Hover controls are pure CSS reveal (`:hover`), suppressed in edit mode — no
@@ -257,7 +305,7 @@ hermes-home-dashboard/
 ├── __init__.py              # no-op register(ctx); the agent plugin loader requires it
 ├── dashboard/               # everything the Hermes host consumes
 │   ├── manifest.json        # tab/entry/css/api the dashboard reads
-│   ├── plugin_api.py        # layout.json + read-only data routes
+│   ├── plugin_api.py        # layout.json + read-only data routes (+ /spend)
 │   └── dist/                # prebuilt bundle (committed — installer doesn't build)
 │       ├── index.js
 │       └── style.css
