@@ -3,7 +3,7 @@
 // endpoints, and fetchJSON. We only declare the slice we use.
 import type {
   StatusResponse, SystemStats, AnalyticsResponse, ModelsAnalyticsResponse,
-  PaginatedSessions, LogsResponse, CronJob, ProjectsResponse,
+  PaginatedSessions, LogsResponse, CronJob, ProjectsResponse, SpendResponse,
 } from "./api-types";
 
 export interface HermesApi {
@@ -33,6 +33,9 @@ export interface GatewayRpcEvent<T = unknown> {
 
 export interface HermesHomeHost extends HermesPluginSDK {
   navigateTo: (routePath: string) => void;
+  /** Open one stored session (chat resume on the web, the session view on
+   *  Desktop). */
+  openSession: (sessionId: string) => void;
   /** Live gateway events (desktop only). Absent on the web dashboard. */
   onEvent?: (type: string, listener: (event: GatewayRpcEvent) => void) => () => void;
 }
@@ -53,6 +56,8 @@ function getDashboardHost(): HermesHomeHost {
   return {
     ...dashboard,
     navigateTo: (routePath) => window.location.assign(routePath),
+    // Same target as the core Sessions page's "resume in chat" button.
+    openSession: (id) => window.location.assign(`/chat?resume=${encodeURIComponent(id)}`),
   };
 }
 
@@ -90,6 +95,14 @@ export function getProjects(): Promise<ProjectsResponse> {
   return fetchJSON<ProjectsResponse>("/api/plugins/home-dashboard/projects");
 }
 
+/** Spend widget data (money spent vs value covered by subscriptions), served
+ *  by this plugin's own backend. `utcOffset` is local minus UTC in minutes,
+ *  so "today" and "this month" follow the viewer's clock. */
+export function getSpend(period: string, utcOffset: number): Promise<SpendResponse> {
+  const q = new URLSearchParams({ period, utc_offset: String(Math.round(utcOffset)) });
+  return fetchJSON<SpendResponse>(`/api/plugins/home-dashboard/spend?${q}`);
+}
+
 /** Web dashboard only: the language chosen in the dashboard's own picker,
  *  read through the SDK's `useI18n` hook. Returns null on Desktop (it reports
  *  `display.language` through `ctx.i18n` instead) and on hosts without i18n.
@@ -108,6 +121,11 @@ export function useDashboardLocale(): string | null {
  *  widget click-through). */
 export function navigateTo(routePath: string): void {
   getHost().navigateTo(routePath);
+}
+
+/** Open a stored session from a widget row. */
+export function openSession(sessionId: string): void {
+  getHost().openSession(sessionId);
 }
 
 /** Subscribe to live gateway events (desktop only). Returns null on the web

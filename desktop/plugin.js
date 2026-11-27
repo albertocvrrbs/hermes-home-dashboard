@@ -7,7 +7,9 @@ function getDashboardHost() {
   const dashboard = sdk;
   return {
     ...dashboard,
-    navigateTo: (routePath) => window.location.assign(routePath)
+    navigateTo: (routePath) => window.location.assign(routePath),
+    // Same target as the core Sessions page's "resume in chat" button.
+    openSession: (id) => window.location.assign(`/chat?resume=${encodeURIComponent(id)}`)
   };
 }
 let configuredHost = null;
@@ -35,6 +37,10 @@ function fetchJSON(url, init) {
 function getProjects() {
   return fetchJSON("/api/plugins/home-dashboard/projects");
 }
+function getSpend(period, utcOffset) {
+  const q = new URLSearchParams({ period, utc_offset: String(Math.round(utcOffset)) });
+  return fetchJSON(`/api/plugins/home-dashboard/spend?${q}`);
+}
 function useDashboardLocale() {
   if (configuredHost) return null;
   const sdk = window.__HERMES_PLUGIN_SDK__;
@@ -44,6 +50,9 @@ function useDashboardLocale() {
 }
 function navigateTo(routePath) {
   getHost().navigateTo(routePath);
+}
+function openSession(sessionId) {
+  getHost().openSession(sessionId);
 }
 function onGatewayEvent(type, listener) {
   const h = getHost();
@@ -97,6 +106,7 @@ const en = {
   "widget.calendar": "calendar",
   "widget.agent": "agent",
   "widget.projects": "projects",
+  "widget.spend": "spend",
   // ── ascii ──
   "ascii.art.caduceus": "caduceus",
   "ascii.art.pyramid": "pyramid",
@@ -216,6 +226,49 @@ const en = {
   "projects.next": "next:",
   "projects.alerts": "alerts:",
   "projects.updated": "updated {when}",
+  // ── spend ──
+  "spend.range.today": "today",
+  "spend.range.week": "7 days",
+  "spend.range.month": "this month",
+  "spend.real": "real spend",
+  "spend.realTitle": "pay-per-use money (API keys), split by provider",
+  "spend.est": "est.",
+  "spend.estTitle": "estimated from list prices, not an invoice",
+  "spend.partEst": "part est.",
+  "spend.partEstTitle": "some providers reported invoiced costs, the rest is estimated",
+  "spend.noReal": "no pay-per-use spend in this range",
+  "spend.plan": "{brand} subscription",
+  "spend.covered": "{plan} covered {amount}",
+  "spend.coveredTitle": "what these calls would cost at API list prices; paid by your plan, not per token",
+  "spend.month": "month {spent}",
+  "spend.projected": "→ {amount} projected",
+  "spend.projectedTitle": "real spend so far, extrapolated to the end of the month",
+  "spend.cap": "cap",
+  "spend.capOf": "of {cap}",
+  "spend.capTitle": "monthly cap for real spend",
+  "spend.capOff": "off",
+  "spend.state.near": "near cap",
+  "spend.state.pace": "on pace to pass cap",
+  "spend.state.over": "over cap",
+  "spend.top.all": "top: all",
+  "spend.top.real": "top: real",
+  "spend.topTitle": "rank sessions by every cost / by real spend only",
+  "spend.topHead": "most expensive sessions",
+  "spend.topHeadReal": "most real spend",
+  "spend.topEmpty": "no costed sessions in this range",
+  "spend.tag.metered": "real",
+  "spend.tag.subscription": "plan",
+  "spend.tag.unclassified": "?",
+  "spend.tag.mixed": "mix",
+  "spend.openTitle": "{title} · {cost} · {provider} — open session",
+  "spend.untitled": "untitled",
+  "spend.unclassified": "unclassified {amount}",
+  "spend.unclassifiedTitle": "cost from providers whose billing could not be told apart (mixed or removed credentials)",
+  "spend.unpriced": "{n} unpriced",
+  "spend.unpricedTitle": "sessions Hermes could not price",
+  "spend.noCost": "{n} sessions without cost data",
+  "spend.empty": "no cost data in this range",
+  "spend.noStore": "session store unavailable",
   // ── agent widget ──
   "agent.working": "working",
   "agent.thinking": "thinking",
@@ -359,6 +412,7 @@ const es = {
   "widget.calendar": "calendario",
   "widget.agent": "agente",
   "widget.projects": "proyectos",
+  "widget.spend": "gasto",
   // ── ascii ──
   "ascii.art.caduceus": "caduceo",
   "ascii.art.pyramid": "pirámide",
@@ -478,6 +532,49 @@ const es = {
   "projects.next": "sigue:",
   "projects.alerts": "alertas:",
   "projects.updated": "actualizado {when}",
+  // ── spend ──
+  "spend.range.today": "hoy",
+  "spend.range.week": "7 días",
+  "spend.range.month": "este mes",
+  "spend.real": "gasto real",
+  "spend.realTitle": "dinero de pago por uso (llaves de API), por proveedor",
+  "spend.est": "est.",
+  "spend.estTitle": "estimado con precios de lista, no es una factura",
+  "spend.partEst": "parte est.",
+  "spend.partEstTitle": "algunos proveedores reportaron costos facturados; el resto es estimado",
+  "spend.noReal": "sin gasto de pago por uso en este rango",
+  "spend.plan": "suscripción de {brand}",
+  "spend.covered": "{plan} cubrió {amount}",
+  "spend.coveredTitle": "lo que costarían estas llamadas a precio de lista de la API; lo paga tu plan, no por token",
+  "spend.month": "mes {spent}",
+  "spend.projected": "→ {amount} proyectado",
+  "spend.projectedTitle": "gasto real hasta hoy, extrapolado al fin de mes",
+  "spend.cap": "tope",
+  "spend.capOf": "de {cap}",
+  "spend.capTitle": "tope mensual de gasto real",
+  "spend.capOff": "sin tope",
+  "spend.state.near": "cerca del tope",
+  "spend.state.pace": "vas a pasar el tope",
+  "spend.state.over": "tope rebasado",
+  "spend.top.all": "top: todo",
+  "spend.top.real": "top: real",
+  "spend.topTitle": "ordenar sesiones por todo el costo / solo por gasto real",
+  "spend.topHead": "sesiones más caras",
+  "spend.topHeadReal": "más gasto real",
+  "spend.topEmpty": "sin sesiones con costo en este rango",
+  "spend.tag.metered": "real",
+  "spend.tag.subscription": "plan",
+  "spend.tag.unclassified": "?",
+  "spend.tag.mixed": "mixto",
+  "spend.openTitle": "{title} · {cost} · {provider} — abrir sesión",
+  "spend.untitled": "sin título",
+  "spend.unclassified": "sin clasificar {amount}",
+  "spend.unclassifiedTitle": "costo de proveedores cuyo cobro no se pudo distinguir (credenciales mixtas o eliminadas)",
+  "spend.unpriced": "{n} sin precio",
+  "spend.unpricedTitle": "sesiones a las que Hermes no pudo ponerles precio",
+  "spend.noCost": "{n} sesiones sin datos de costo",
+  "spend.empty": "sin datos de costo en este rango",
+  "spend.noStore": "almacén de sesiones no disponible",
   // ── agent widget ──
   "agent.working": "trabajando",
   "agent.thinking": "pensando",
@@ -2976,7 +3073,7 @@ function AgentWidget({ data }) {
     !live.live && /* @__PURE__ */ jsx("div", { className: "home-agent-dim", children: t2("agent.polling") })
   ] });
 }
-const POLL_MS$1 = 3e4;
+const POLL_MS$2 = 3e4;
 function statusTone(status) {
   const s = status.toLowerCase();
   if (s === "active" || s === "healthy" || s === "online" || s === "ok") return "ok";
@@ -3015,7 +3112,7 @@ function ProjectsWidget() {
     load();
     const id = setInterval(() => {
       if (!document.hidden) load();
-    }, POLL_MS$1);
+    }, POLL_MS$2);
     return () => {
       cancelled = true;
       clearInterval(id);
@@ -3092,6 +3189,270 @@ function ProjectsWidget() {
       ] })
     ] }, p.id);
   }) });
+}
+const SPEND_RANGES = ["today", "week", "month"];
+function coerceSpendRange(value) {
+  return SPEND_RANGES.includes(value) ? value : "month";
+}
+const TOP_MODES = ["all", "real"];
+function coerceTopMode(value) {
+  return TOP_MODES.includes(value) ? value : "all";
+}
+const CAP_STEPS = [0, 5, 10, 25, 50, 100, 250, 500, 1e3, 2500];
+function coerceCap(value) {
+  return typeof value === "number" && Number.isFinite(value) && value > 0 ? value : 0;
+}
+function stepCap(current2, dir) {
+  if (dir > 0) return CAP_STEPS.find((s) => s > current2) ?? CAP_STEPS[CAP_STEPS.length - 1];
+  for (let i = CAP_STEPS.length - 1; i >= 0; i--) if (CAP_STEPS[i] < current2) return CAP_STEPS[i];
+  return 0;
+}
+const NEAR_CAP = 0.8;
+function capState(spent, projection, cap) {
+  if (!(cap > 0)) return "off";
+  if (spent >= cap) return "over";
+  if (projection >= cap) return "pace";
+  if (spent >= cap * NEAR_CAP) return "near";
+  return "ok";
+}
+function formatUsd(n) {
+  if (!Number.isFinite(n) || n <= 0) return "$0";
+  if (n < 0.01) return "<$0.01";
+  if (n >= 1e3) return `$${Math.round(n).toLocaleString("en-US")}`;
+  return `$${n.toFixed(2)}`;
+}
+function formatCap(n) {
+  return `$${Math.round(n).toLocaleString("en-US")}`;
+}
+const PLAN_BRANDS = {
+  anthropic: "Claude",
+  "claude-code": "Claude",
+  "openai-codex": "ChatGPT",
+  copilot: "Copilot",
+  "copilot-acp": "Copilot"
+};
+function planBrand(provider) {
+  const p = provider.trim().toLowerCase();
+  if (PLAN_BRANDS[p]) return PLAN_BRANDS[p];
+  if (p.includes("claude")) return "Claude";
+  return provider || "?";
+}
+function coveredByBrand(rows) {
+  const acc = /* @__PURE__ */ new Map();
+  for (const r of rows) acc.set(planBrand(r.provider), (acc.get(planBrand(r.provider)) ?? 0) + (r.cost ?? 0));
+  return [...acc.entries()].map(([brand, cost]) => ({ brand, cost })).filter((r) => r.cost > 0).sort((a, b) => b.cost - a.cost);
+}
+function amountBasis(b) {
+  if (b.actual > 0 && b.estimated > 0) return "mixed";
+  return b.actual > 0 ? "actual" : "estimated";
+}
+const POLL_MS$1 = 6e4;
+const RANGE_LABEL = {
+  today: "spend.range.today",
+  week: "spend.range.week",
+  month: "spend.range.month"
+};
+function SpendWidget({ widgetProps, onWidgetPropsChange, editing, gridSize }) {
+  const t2 = useT();
+  const range = coerceSpendRange(widgetProps.range);
+  const topMode = coerceTopMode(widgetProps.top);
+  const cap = coerceCap(widgetProps.cap);
+  const [data, setData] = useState(null);
+  const [failed, setFailed] = useState(false);
+  useEffect(() => {
+    let cancelled = false;
+    setData(null);
+    setFailed(false);
+    const load = () => {
+      getSpend(range, -(/* @__PURE__ */ new Date()).getTimezoneOffset()).then((r) => {
+        if (!cancelled) {
+          setData(r);
+          setFailed(false);
+        }
+      }).catch(() => {
+        if (!cancelled) setFailed(true);
+      });
+    };
+    load();
+    const id = setInterval(() => {
+      if (!document.hidden) load();
+    }, POLL_MS$1);
+    return () => {
+      cancelled = true;
+      clearInterval(id);
+    };
+  }, [range]);
+  const setProp = (patch) => onWidgetPropsChange({ ...widgetProps, ...patch });
+  const idx = SPEND_RANGES.indexOf(range);
+  const cycle = (dir) => setProp({ range: SPEND_RANGES[(idx + dir + SPEND_RANGES.length) % SPEND_RANGES.length] });
+  const controls = /* @__PURE__ */ jsxs(HoverCtl, { className: "tok-ctl", children: [
+    /* @__PURE__ */ jsx("button", { className: "hv-arrow", "aria-label": t2("common.previous"), onClick: () => cycle(-1), children: "‹" }),
+    /* @__PURE__ */ jsx("span", { className: "hv-label", children: t2(RANGE_LABEL[range]) }),
+    /* @__PURE__ */ jsx("button", { className: "hv-arrow", "aria-label": t2("common.next"), onClick: () => cycle(1), children: "›" }),
+    /* @__PURE__ */ jsx("span", { className: "tok-div" }),
+    /* @__PURE__ */ jsx(
+      "button",
+      {
+        className: `hv-opt${topMode === "real" ? " on" : ""}`,
+        onClick: () => setProp({ top: TOP_MODES[(TOP_MODES.indexOf(topMode) + 1) % TOP_MODES.length] }),
+        title: t2("spend.topTitle"),
+        "data-top": topMode,
+        children: t2(`spend.top.${topMode}`)
+      }
+    ),
+    /* @__PURE__ */ jsx("span", { className: "tok-div" }),
+    /* @__PURE__ */ jsx("span", { className: "hv-label", title: t2("spend.capTitle"), children: t2("spend.cap") }),
+    /* @__PURE__ */ jsx(
+      "button",
+      {
+        className: "hv-arrow",
+        "aria-label": t2("common.previous"),
+        disabled: cap <= 0,
+        onClick: () => setProp({ cap: stepCap(cap, -1) }),
+        children: "‹"
+      }
+    ),
+    /* @__PURE__ */ jsx("span", { className: "hv-label spend-cap-val", "data-cap": cap, children: cap > 0 ? formatCap(cap) : t2("spend.capOff") }),
+    /* @__PURE__ */ jsx(
+      "button",
+      {
+        className: "hv-arrow",
+        "aria-label": t2("common.next"),
+        onClick: () => setProp({ cap: stepCap(cap, 1) }),
+        children: "›"
+      }
+    )
+  ] });
+  if (!data) {
+    return /* @__PURE__ */ jsxs("div", { children: [
+      controls,
+      /* @__PURE__ */ jsx("span", { className: "dim", children: failed ? t2("common.unavailable") : t2("common.loading") })
+    ] });
+  }
+  if (!data.available) {
+    return /* @__PURE__ */ jsxs("div", { children: [
+      controls,
+      /* @__PURE__ */ jsx("span", { className: "dim", children: t2("spend.noStore") })
+    ] });
+  }
+  const real = data.real;
+  const covered = data.covered;
+  const unclassified = data.unclassified;
+  const month = data.month;
+  const state = capState(month.real, month.projection, cap);
+  const top = (topMode === "real" ? data.top_real : data.top) ?? [];
+  const providerRows = gridSize.gh >= 4 ? Math.min(3, real.by_provider.length) : 0;
+  const topRows = Math.max(0, Math.min(5, gridSize.gh * 2 - 6 - providerRows));
+  const plans = coveredByBrand(covered.by_provider);
+  const noCost = data.sessions?.without_cost ?? 0;
+  return /* @__PURE__ */ jsxs("div", { className: "home-spend", "data-cap-state": state, children: [
+    controls,
+    /* @__PURE__ */ jsxs("div", { className: "spend-head", children: [
+      /* @__PURE__ */ jsx("span", { className: "bigval", children: formatUsd(real.total) }),
+      /* @__PURE__ */ jsxs("span", { className: "dim", title: t2("spend.realTitle"), children: [
+        " ",
+        t2("spend.real"),
+        " · ",
+        t2(RANGE_LABEL[range])
+      ] }),
+      real.total > 0 && /* @__PURE__ */ jsx(BasisTag, { bucket: real })
+    ] }),
+    !data.has_data ? /* @__PURE__ */ jsx("div", { className: "dim", children: t2("spend.empty") }) : /* @__PURE__ */ jsxs(Fragment, { children: [
+      providerRows > 0 && real.by_provider.length > 0 && /* @__PURE__ */ jsx("div", { className: "spend-providers", children: real.by_provider.slice(0, providerRows).map((p) => /* @__PURE__ */ jsxs(
+        "div",
+        {
+          className: "row tok-group",
+          style: { "--share": `${Math.max(1, Math.min(100, real.total > 0 ? p.cost / real.total * 100 : 0))}%` },
+          title: `${p.provider} · ${p.sessions} · ${p.basis}`,
+          children: [
+            /* @__PURE__ */ jsx("span", { className: "row-name", children: p.provider || t2("tokens.unknownProvider") }),
+            /* @__PURE__ */ jsx("span", { children: formatUsd(p.cost) })
+          ]
+        },
+        p.provider || "\0"
+      )) }),
+      real.total <= 0 && /* @__PURE__ */ jsx("div", { className: "dim", children: t2("spend.noReal") }),
+      plans.length > 0 && /* @__PURE__ */ jsx("div", { className: "spend-covered", title: t2("spend.coveredTitle"), children: plans.map((p) => /* @__PURE__ */ jsxs("div", { children: [
+        t2("spend.covered", {
+          plan: t2("spend.plan", { brand: p.brand }),
+          amount: formatUsd(p.cost)
+        }),
+        covered.actual <= 0 && /* @__PURE__ */ jsxs("span", { className: "dim", children: [
+          " · ",
+          t2("spend.est")
+        ] })
+      ] }, p.brand)) })
+    ] }),
+    /* @__PURE__ */ jsxs("div", { className: `spend-month spend-${state}`, children: [
+      /* @__PURE__ */ jsx("span", { children: t2("spend.month", { spent: formatUsd(month.real) }) }),
+      /* @__PURE__ */ jsxs("span", { className: "dim", title: t2("spend.projectedTitle"), children: [
+        " ",
+        t2("spend.projected", { amount: formatUsd(month.projection) })
+      ] }),
+      cap > 0 && /* @__PURE__ */ jsxs("span", { className: "dim", children: [
+        " ",
+        t2("spend.capOf", { cap: formatCap(cap) })
+      ] }),
+      (state === "near" || state === "pace" || state === "over") && /* @__PURE__ */ jsxs("span", { className: "spend-flag", children: [
+        " · ",
+        t2(`spend.state.${state}`)
+      ] })
+    ] }),
+    topRows > 0 && data.has_data && /* @__PURE__ */ jsx(TopSessions, { sessions: top.slice(0, topRows), editing, real: topMode === "real" }),
+    (unclassified.total > 0 || unclassified.unknown_cost_sessions > 0 || gridSize.gh >= 6 && noCost > 0) && /* @__PURE__ */ jsxs("div", { className: "spend-foot dim", children: [
+      unclassified.total > 0 && /* @__PURE__ */ jsx("span", { title: t2("spend.unclassifiedTitle"), children: t2("spend.unclassified", { amount: formatUsd(unclassified.total) }) }),
+      unclassified.unknown_cost_sessions > 0 && /* @__PURE__ */ jsx("span", { title: t2("spend.unpricedTitle"), children: t2("spend.unpriced", { n: unclassified.unknown_cost_sessions }) }),
+      gridSize.gh >= 6 && noCost > 0 && /* @__PURE__ */ jsx("span", { children: t2("spend.noCost", { n: noCost }) })
+    ] })
+  ] });
+}
+function BasisTag({ bucket }) {
+  const t2 = useT();
+  const basis = amountBasis(bucket);
+  if (basis === "actual") return null;
+  return basis === "mixed" ? /* @__PURE__ */ jsx("span", { className: "spend-est", title: t2("spend.partEstTitle"), children: t2("spend.partEst") }) : /* @__PURE__ */ jsx("span", { className: "spend-est", title: t2("spend.estTitle"), children: t2("spend.est") });
+}
+function TopSessions({ sessions, editing, real }) {
+  const t2 = useT();
+  if (sessions.length === 0) return /* @__PURE__ */ jsx("div", { className: "spend-top dim", children: t2("spend.topEmpty") });
+  return /* @__PURE__ */ jsxs("div", { className: "spend-top", children: [
+    /* @__PURE__ */ jsx("div", { className: "spend-top-head dim", children: t2(real ? "spend.topHeadReal" : "spend.topHead") }),
+    sessions.map((s) => {
+      const title = s.title || s.source || t2("spend.untitled");
+      const open = () => {
+        if (!editing) openSession(s.id);
+      };
+      return /* @__PURE__ */ jsxs(
+        "div",
+        {
+          className: "row spend-session",
+          role: "button",
+          tabIndex: editing ? -1 : 0,
+          onClick: (e) => {
+            e.stopPropagation();
+            open();
+          },
+          onPointerDown: (e) => {
+            if (!editing) e.stopPropagation();
+          },
+          onKeyDown: (e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              open();
+            }
+          },
+          title: t2("spend.openTitle", { title, cost: formatUsd(s.cost), provider: s.provider || "?" }),
+          "data-session-id": s.id,
+          children: [
+            /* @__PURE__ */ jsx("span", { className: "row-name", children: title }),
+            /* @__PURE__ */ jsx("span", { className: `spend-tag spend-tag-${s.class}`, children: t2(`spend.tag.${s.class}`) }),
+            /* @__PURE__ */ jsx("span", { className: "spend-cost", children: formatUsd(s.cost) })
+          ]
+        },
+        s.id
+      );
+    })
+  ] });
 }
 const WIDGET_REGISTRY = {
   ascii: {
@@ -3279,6 +3640,22 @@ const WIDGET_REGISTRY = {
     component: () => /* @__PURE__ */ jsx(ProjectsWidget, {}),
     defaultSize: { gw: 4, gh: 3 },
     minSize: { gw: 3, gh: 2 },
+    navigateTo: null,
+    dataSource: null
+  },
+  spend: {
+    titleKey: "widget.spend",
+    component: ({ widgetProps, onWidgetPropsChange, editing, gridSize }) => /* @__PURE__ */ jsx(
+      SpendWidget,
+      {
+        widgetProps,
+        onWidgetPropsChange,
+        editing,
+        gridSize
+      }
+    ),
+    defaultSize: { gw: 4, gh: 6 },
+    minSize: { gw: 3, gh: 3 },
     navigateTo: null,
     dataSource: null
   }
@@ -4756,6 +5133,60 @@ const homeCss = `/* Home page — rice-style widget grid.
 .tok-share { min-width: 3ch; text-align: right; }
 .tok-group-note,
 .tok-group-more { font-size: 9.5px; padding-top: 1px; }
+
+/* ── spend widget ── */
+.home-spend { font-variant-numeric: tabular-nums; }
+.spend-head { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.spend-est {
+  margin-left: 6px;
+  padding: 0 4px;
+  border: 1px solid var(--home-border);
+  border-radius: 3px;
+  font-size: 9px;
+  letter-spacing: 0.06em;
+  color: var(--color-muted-foreground, #6b7387);
+  vertical-align: 2px;
+}
+.spend-providers { padding-top: 2px; }
+.spend-covered {
+  margin-top: 4px;
+  padding: 2px 0 2px 6px;
+  border-left: 2px solid color-mix(in srgb, var(--home-accent) 35%, transparent);
+  color: var(--home-accent-soft, var(--home-accent));
+}
+.spend-covered > div { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.spend-month {
+  margin-top: 4px;
+  padding-top: 3px;
+  border-top: 1px solid rgb(255 255 255 / 0.06);
+}
+.spend-month .spend-flag { white-space: nowrap; }
+.spend-top-head {
+  font-size: 9.5px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 2px 0 1px;
+}
+.spend-month.spend-near .spend-flag,
+.spend-month.spend-pace .spend-flag { color: color-mix(in srgb, var(--home-accent) 50%, var(--home-error)); }
+.spend-month.spend-over,
+.spend-month.spend-over .spend-flag { color: var(--home-error); }
+.spend-top { margin-top: 3px; }
+.home-widget .row.spend-session { cursor: pointer; border-radius: 2px; }
+.home-widget .row.spend-session:hover { background: color-mix(in srgb, var(--home-accent) 10%, transparent); }
+.home-widget .row.spend-session:hover .row-name { color: var(--home-accent); }
+.home-root.editing .home-widget .row.spend-session { cursor: inherit; }
+.spend-tag {
+  font-size: 9px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-muted-foreground, #6b7387);
+  align-self: center;
+}
+.spend-tag-metered { color: var(--home-accent); }
+.spend-cost { min-width: 6ch; text-align: right; }
+.spend-foot { display: flex; flex-wrap: wrap; gap: 0 10px; font-size: 9.5px; padding-top: 2px; }
+.spend-cap-val { min-width: 4ch; text-align: center; color: var(--home-accent); }
 
 /* Sessions widget: per-row token count (shown while sorting/filtering by it). */
 .ses-tok { font-variant-numeric: tabular-nums; color: var(--home-accent-soft); }
@@ -6242,6 +6673,13 @@ function createDesktopHomeHost(ctx, desktop) {
       return ctx.rest(path, options);
     },
     navigateTo: (path) => desktop.navigate(desktopRoute(path)),
+    openSession: (id) => {
+      if (typeof desktop.openSession === "function") {
+        void Promise.resolve(desktop.openSession(id)).catch(() => desktop.navigate(desktopRoute("/sessions")));
+      } else {
+        desktop.navigate(desktopRoute("/sessions"));
+      }
+    },
     onEvent: (type, listener) => desktop.onEvent(type, listener)
   };
 }

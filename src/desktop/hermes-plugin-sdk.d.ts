@@ -56,6 +56,8 @@ declare module "@hermes/plugin-sdk" {
       component?: string;
     }): Promise<unknown>;
     navigate(path: string): void;
+    /** Open a stored session core-style (newer Desktop builds). */
+    openSession?(id: string, options?: { profile?: string; intent?: "in-place" | "stack" | "tab" | "window" }): unknown;
     /** Subscribe to live gateway events by type ('*' = everything). Returns a disposer. */
     onEvent(type: string, listener: (event: RpcEvent) => void): () => void;
   };

@@ -191,3 +191,58 @@ export interface CronJob {
   next_run_at?: string | null;
   last_error?: string | null;
 }
+// ── Spend widget (this plugin's /spend route) ──
+
+/** "metered" = real pay-per-use money; "subscription" = covered by a flat-fee
+ *  plan (list-price value, not an invoice); "unclassified" = undecidable. */
+export type SpendClass = "metered" | "subscription" | "unclassified";
+
+export interface SpendProvider {
+  provider: string;
+  cost: number;
+  estimated: number;
+  actual: number;
+  sessions: number;
+  /** Why it was classified so: hermes | provider | oauth | api_key | ... */
+  basis: string;
+}
+
+export interface SpendBucket {
+  total: number;
+  estimated: number;
+  actual: number;
+  by_provider: SpendProvider[];
+}
+
+export interface SpendSession {
+  id: string;
+  title: string | null;
+  source: string | null;
+  model: string | null;
+  started_at: number | null;
+  provider: string;
+  cost: number;
+  class: SpendClass | "mixed";
+  actual: boolean;
+}
+
+export interface SpendResponse {
+  period: "today" | "week" | "month";
+  currency: "USD";
+  window: { start: number; end: number };
+  /** False when the session store could not be read. */
+  available: boolean;
+  /** True when at least one session in range has a cost. */
+  has_data: boolean;
+  real?: SpendBucket;
+  covered?: SpendBucket;
+  unclassified?: SpendBucket & { unknown_cost_sessions: number };
+  month?: {
+    start: number; end: number; days: number; elapsed_days: number;
+    real: number; covered: number; unclassified: number; projection: number;
+  };
+  sessions?: { in_range: number; with_cost: number; without_cost: number };
+  top?: SpendSession[];
+  top_real?: SpendSession[];
+  classification?: Record<string, string>;
+}

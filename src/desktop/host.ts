@@ -13,6 +13,8 @@ interface DesktopSdkHost {
     component?: string;
   }): Promise<unknown>;
   navigate(path: string): void;
+  /** Newer Desktop builds; feature-detected. */
+  openSession?(id: string, options?: { profile?: string; intent?: string }): unknown;
   onEvent(type: string, listener: (event: GatewayRpcEvent) => void): () => void;
 }
 
@@ -67,6 +69,13 @@ export function createDesktopHomeHost(
       return ctx.rest<T>(path, options);
     },
     navigateTo: (path) => desktop.navigate(desktopRoute(path)),
+    openSession: (id) => {
+      if (typeof desktop.openSession === "function") {
+        void Promise.resolve(desktop.openSession(id)).catch(() => desktop.navigate(desktopRoute("/sessions")));
+      } else {
+        desktop.navigate(desktopRoute("/sessions"));
+      }
+    },
     onEvent: (type, listener) => desktop.onEvent(type, listener),
   };
 }

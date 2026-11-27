@@ -19,6 +19,7 @@ import { CountdownWidget } from "./CountdownWidget";
 import { CalendarWidget } from "./CalendarWidget";
 import { AgentWidget } from "./AgentWidget";
 import { ProjectsWidget } from "./ProjectsWidget";
+import { SpendWidget } from "./SpendWidget";
 
 export interface WidgetRenderProps {
   data: HomeData;
@@ -206,6 +207,19 @@ export const WIDGET_REGISTRY: Record<string, WidgetDef> = {
     titleKey: "widget.projects",
     component: () => <ProjectsWidget />,
     defaultSize: { gw: 4, gh: 3 }, minSize: { gw: 3, gh: 2 },
+    navigateTo: null, dataSource: null,
+  },
+  spend: {
+    titleKey: "widget.spend",
+    component: ({ widgetProps, onWidgetPropsChange, editing, gridSize }) => (
+      <SpendWidget
+        widgetProps={widgetProps}
+        onWidgetPropsChange={onWidgetPropsChange}
+        editing={editing}
+        gridSize={gridSize}
+      />
+    ),
+    defaultSize: { gw: 4, gh: 6 }, minSize: { gw: 3, gh: 3 },
     navigateTo: null, dataSource: null,
   },
 };

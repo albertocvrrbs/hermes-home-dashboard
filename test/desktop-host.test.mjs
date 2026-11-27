@@ -39,3 +39,34 @@ test("Desktop host routes widget data, layout persistence, and navigation throug
   ]);
   assert.deepEqual(calls.at(-1), ["navigate", "/command-center?section=system"]);
 });
+
+test("Desktop host opens a session through host.openSession, else falls back to the sessions route", async () => {
+  const calls = [];
+  const ctx = { rest: async (path) => ({ source: path }) };
+  const withOpen = createDesktopHomeHost(ctx, {
+    navigate: (path) => calls.push(["navigate", path]),
+    openSession: async (id, options) => calls.push(["open", id, options]),
+  });
+  withOpen.openSession("s-1");
+  await Promise.resolve();
+  assert.deepEqual(calls.at(-1), ["open", "s-1", undefined]);
+
+  const failing = createDesktopHomeHost(ctx, {
+    navigate: (path) => calls.push(["navigate", path]),
+    openSession: async () => { throw new Error("no such session"); },
+  });
+  failing.openSession("gone");
+  await new Promise((r) => setTimeout(r, 0));
+  assert.deepEqual(calls.at(-1), ["navigate", "/"]);
+
+  const older = createDesktopHomeHost(ctx, { navigate: (path) => calls.push(["navigate", path]) });
+  older.openSession("s-2");
+  assert.deepEqual(calls.at(-1), ["navigate", "/"]);
+
+  // The Spend widget's own route goes through ctx.rest with its query intact.
+  assert.deepEqual(
+    await withOpen.fetchJSON("/api/plugins/home-dashboard/spend?period=month&utc_offset=-360"),
+    { source: "/spend?period=month&utc_offset=-360" },
+  );
+});
+

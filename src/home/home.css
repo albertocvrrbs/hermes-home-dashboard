@@ -492,6 +492,60 @@
 .tok-group-note,
 .tok-group-more { font-size: 9.5px; padding-top: 1px; }
 
+/* ── spend widget ── */
+.home-spend { font-variant-numeric: tabular-nums; }
+.spend-head { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.spend-est {
+  margin-left: 6px;
+  padding: 0 4px;
+  border: 1px solid var(--home-border);
+  border-radius: 3px;
+  font-size: 9px;
+  letter-spacing: 0.06em;
+  color: var(--color-muted-foreground, #6b7387);
+  vertical-align: 2px;
+}
+.spend-providers { padding-top: 2px; }
+.spend-covered {
+  margin-top: 4px;
+  padding: 2px 0 2px 6px;
+  border-left: 2px solid color-mix(in srgb, var(--home-accent) 35%, transparent);
+  color: var(--home-accent-soft, var(--home-accent));
+}
+.spend-covered > div { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.spend-month {
+  margin-top: 4px;
+  padding-top: 3px;
+  border-top: 1px solid rgb(255 255 255 / 0.06);
+}
+.spend-month .spend-flag { white-space: nowrap; }
+.spend-top-head {
+  font-size: 9.5px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 2px 0 1px;
+}
+.spend-month.spend-near .spend-flag,
+.spend-month.spend-pace .spend-flag { color: color-mix(in srgb, var(--home-accent) 50%, var(--home-error)); }
+.spend-month.spend-over,
+.spend-month.spend-over .spend-flag { color: var(--home-error); }
+.spend-top { margin-top: 3px; }
+.home-widget .row.spend-session { cursor: pointer; border-radius: 2px; }
+.home-widget .row.spend-session:hover { background: color-mix(in srgb, var(--home-accent) 10%, transparent); }
+.home-widget .row.spend-session:hover .row-name { color: var(--home-accent); }
+.home-root.editing .home-widget .row.spend-session { cursor: inherit; }
+.spend-tag {
+  font-size: 9px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-muted-foreground, #6b7387);
+  align-self: center;
+}
+.spend-tag-metered { color: var(--home-accent); }
+.spend-cost { min-width: 6ch; text-align: right; }
+.spend-foot { display: flex; flex-wrap: wrap; gap: 0 10px; font-size: 9.5px; padding-top: 2px; }
+.spend-cap-val { min-width: 4ch; text-align: center; color: var(--home-accent); }
+
 /* Sessions widget: per-row token count (shown while sorting/filtering by it). */
 .ses-tok { font-variant-numeric: tabular-nums; color: var(--home-accent-soft); }
 

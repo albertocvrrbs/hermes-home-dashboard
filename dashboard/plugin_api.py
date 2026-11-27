@@ -8,10 +8,14 @@ outside the repo that `git reset --hard` touches).
 from __future__ import annotations
 
 import asyncio
+import calendar
 import importlib
 import inspect
 import json
 import os
+import sqlite3
+import time
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -308,3 +312,315 @@ def scan_projects(root: Path) -> List[Dict[str, Any]]:
 async def get_projects() -> Dict[str, Any]:
     """Project status board for the Projects widget (contributed in #4)."""
     return {"projects": await asyncio.to_thread(scan_projects, projects_dir())}
+
+
+# ── Spend (Spend widget) ────────────────────────────────────────────────────
+#
+# What Hermes costs in money, not tokens. Hermes records a cost per session
+# and per (session, model, provider) in ``state.db`` but exposes no analytics
+# route that carries the cost *status* and billing mode per provider, so this
+# reads the store directly: read-only (``mode=ro``), bounded windows (at most
+# ~31 days) and a hard row cap.
+#
+# Classification of every cost row, first match wins:
+#
+# 1. ``subscription`` — Hermes itself marked it ``cost_status='included'`` /
+#    ``billing_mode='subscription_included'`` (e.g. the ChatGPT-backed
+#    ``openai-codex`` route).
+# 2. ``subscription`` — a flat-fee provider (``SUBSCRIPTION_PROVIDERS``), or a
+#    provider id that says so (contains "subscription").
+# 3. ``subscription`` — a provider in ``SUBSCRIPTION_WHEN_OAUTH`` (Anthropic:
+#    Claude Pro/Max) whose configured credentials are *all* OAuth. Hermes
+#    prices those calls at API list price (``estimated``) because it does not
+#    distinguish them, so the dollars are "value covered", not an invoice.
+# 4. ``metered`` — the provider's configured credentials are all API keys
+#    (pay per token: DeepSeek, OpenRouter, OpenAI API, ...).
+# 5. ``unclassified`` — anything else (mixed credentials, no credential
+#    configured any more, unknown cost status).
+#
+# Limits: the credential check reflects the credentials configured *now*, not
+# at the time of the call, and comes from the active profile even when another
+# profile's store is read.
+SPEND_PERIODS = ("today", "week", "month")
+SUBSCRIPTION_PROVIDERS = frozenset({"openai-codex", "copilot", "copilot-acp", "claude-code"})
+SUBSCRIPTION_WHEN_OAUTH = frozenset({"anthropic"})
+_SPEND_MAX_ROWS = 50_000
+_SPEND_TOP = 5
+_MAX_UTC_OFFSET_MIN = 14 * 60
+
+
+def spend_db_path(profile: Optional[str] = None) -> Path:
+    """``state.db`` of ``profile`` (None = the serving profile)."""
+    if not profile:
+        return get_hermes_home() / "state.db"
+    try:
+        resolve = getattr(importlib.import_module("hermes_cli.web_server_sessions"), "_session_db_path_for_profile")
+    except (ImportError, AttributeError):
+        raise HTTPException(status_code=404, detail="profile stores not available on this Hermes")
+    try:
+        return Path(resolve(profile))
+    except HTTPException:
+        raise
+    except Exception:
+        raise HTTPException(status_code=404, detail="unknown profile")
+
+
+def credential_auth_types() -> Dict[str, set]:
+    """Provider id -> set of credential auth types (``oauth`` / ``api_key``).
+
+    Uses Hermes' own ``read_credential_pool``; only the ``auth_type`` field is
+    read, never a secret. Any failure means "unknown" (an empty map).
+    """
+    try:
+        read_pool = getattr(importlib.import_module("hermes_cli.auth"), "read_credential_pool")
+        pool = read_pool()
+    except Exception:
+        return {}
+    kinds: Dict[str, set] = {}
+    if not isinstance(pool, dict):
+        return kinds
+    for provider, entries in pool.items():
+        if not isinstance(provider, str) or not isinstance(entries, list):
+            continue
+        types_ = {str(e.get("auth_type") or "api_key") for e in entries if isinstance(e, dict)}
+        if types_:
+            kinds[provider.strip().lower()] = types_
+    return kinds
+
+
+def classify_cost(provider: str, billing_mode: str, cost_status: str, auth: Dict[str, set]) -> tuple:
+    """(class, basis) for one cost row. See the section comment for the rules."""
+    p = (provider or "").strip().lower()
+    status = (cost_status or "").strip().lower()
+    if status == "included" or (billing_mode or "").strip().lower() == "subscription_included":
+        return "subscription", "hermes"
+    if status == "unknown":
+        return "unclassified", "unknown_cost"
+    if p in SUBSCRIPTION_PROVIDERS or "subscription" in p:
+        return "subscription", "provider"
+    kinds = auth.get(p) or set()
+    if p in SUBSCRIPTION_WHEN_OAUTH and kinds == {"oauth"}:
+        return "subscription", "oauth"
+    if kinds == {"api_key"}:
+        return "metered", "api_key"
+    if not p:
+        return "unclassified", "no_provider"
+    return "unclassified", "mixed_credentials" if len(kinds) > 1 else "no_credentials"
+
+
+def spend_window(period: str, now: float, utc_offset_min: int) -> Dict[str, float]:
+    """Window start for ``period`` plus the current calendar month's bounds,
+    in the client's local time (``utc_offset_min`` = local minus UTC)."""
+    off = max(-_MAX_UTC_OFFSET_MIN, min(_MAX_UTC_OFFSET_MIN, int(utc_offset_min))) * 60
+    local = datetime.fromtimestamp(now + off, tz=timezone.utc)
+    day_start = local.replace(hour=0, minute=0, second=0, microsecond=0)
+    month_start = day_start.replace(day=1)
+    days_in_month = calendar.monthrange(local.year, local.month)[1]
+    starts = {
+        "today": day_start.timestamp() - off,
+        "week": now - 7 * 86400,
+        "month": month_start.timestamp() - off,
+    }
+    return {
+        "start": starts[period],
+        "end": now,
+        "month_start": starts["month"],
+        "month_end": (month_start + timedelta(days=days_in_month)).timestamp() - off,
+        "days_in_month": float(days_in_month),
+    }
+
+
+def _num(value: Any) -> float:
+    if isinstance(value, bool) or not isinstance(value, (int, float)) or value != value:
+        return 0.0
+    return max(0.0, float(value))
+
+
+# Per-call usage for sessions in the window, grouped per (session, route):
+# session_model_usage splits a session that switched model or provider and
+# carries auxiliary calls; sessions without any such rows (older data) fall
+# back to their own aggregate. Mirrors how Hermes' Models analytics counts.
+_SPEND_USAGE_SQL = """
+SELECT u.session_id, COALESCE(u.billing_provider, ''), COALESCE(u.billing_mode, ''),
+       COALESCE(u.cost_status, ''), SUM(COALESCE(u.estimated_cost_usd, 0)),
+       SUM(COALESCE(u.actual_cost_usd, 0))
+FROM session_model_usage u JOIN sessions s ON s.id = u.session_id
+WHERE s.started_at >= ? AND s.started_at < ?
+GROUP BY 1, 2, 3, 4
+LIMIT ?
+"""
+_SPEND_SESSIONS_SQL = """
+SELECT s.id, COALESCE(s.billing_provider, ''), COALESCE(s.billing_mode, ''),
+       COALESCE(s.cost_status, ''), COALESCE(s.estimated_cost_usd, 0), COALESCE(s.actual_cost_usd, 0)
+FROM sessions s
+WHERE s.started_at >= ? AND s.started_at < ?
+  AND NOT EXISTS (SELECT 1 FROM session_model_usage u WHERE u.session_id = s.id)
+LIMIT ?
+"""
+_SPEND_COUNT_SQL = "SELECT COUNT(*) FROM sessions WHERE started_at >= ? AND started_at < ?"
+
+
+def _spend_rows(conn: sqlite3.Connection, start: float, end: float) -> List[tuple]:
+    has_usage = bool(conn.execute(
+        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='session_model_usage'").fetchone())
+    rows: List[tuple] = []
+    if has_usage:
+        rows += conn.execute(_SPEND_USAGE_SQL, (start, end, _SPEND_MAX_ROWS)).fetchall()
+        rows += conn.execute(_SPEND_SESSIONS_SQL, (start, end, _SPEND_MAX_ROWS)).fetchall()
+    else:
+        rows += conn.execute(_SPEND_SESSIONS_SQL.replace(
+            "\n  AND NOT EXISTS (SELECT 1 FROM session_model_usage u WHERE u.session_id = s.id)", ""),
+            (start, end, _SPEND_MAX_ROWS)).fetchall()
+    return rows
+
+
+def _empty_bucket() -> Dict[str, Any]:
+    return {"total": 0.0, "estimated": 0.0, "actual": 0.0, "providers": {}}
+
+
+def _summarize(rows: List[tuple], auth: Dict[str, set]) -> Dict[str, Any]:
+    """Fold cost rows into real / covered / unclassified buckets + per session."""
+    buckets = {"metered": _empty_bucket(), "subscription": _empty_bucket(), "unclassified": _empty_bucket()}
+    sessions: Dict[str, Dict[str, Any]] = {}
+    basis: Dict[str, str] = {}
+    unknown: set = set()
+    for sid, provider, mode, status, est, act in rows:
+        est, act = _num(est), _num(act)
+        # Actual (invoiced) beats the estimate when the provider reported one.
+        amount, kind = (act, "actual") if act > 0 else (est, "estimated")
+        if amount <= 0:
+            if (status or "").lower() == "unknown":
+                unknown.add(sid)  # usage Hermes could not price
+            continue
+        cls, why = classify_cost(provider, mode, status, auth)
+        name = provider or ""
+        basis.setdefault(name, why)
+        b = buckets[cls]
+        b["total"] += amount
+        b[kind] += amount
+        p = b["providers"].setdefault(name, {"provider": name, "cost": 0.0, "estimated": 0.0,
+                                               "actual": 0.0, "sessions": set(), "basis": why})
+        p["cost"] += amount
+        p[kind] += amount
+        p["sessions"].add(sid)
+        s = sessions.setdefault(sid, {"cost": 0.0, "metered": 0.0, "subscription": 0.0, "unclassified": 0.0,
+                                      "actual": 0.0, "providers": {}})
+        s["cost"] += amount
+        s[cls] += amount
+        s["actual"] += amount if kind == "actual" else 0.0
+        s["providers"][name] = s["providers"].get(name, 0.0) + amount
+        by_class = s.setdefault("class_providers", {}).setdefault(cls, {})
+        by_class[name] = by_class.get(name, 0.0) + amount
+    return {"buckets": buckets, "sessions": sessions, "basis": basis,
+            "unknown_sessions": len(unknown - set(sessions))}
+
+
+def _bucket_json(b: Dict[str, Any]) -> Dict[str, Any]:
+    providers = sorted(b["providers"].values(), key=lambda p: (-p["cost"], p["provider"]))
+    return {
+        "total": round(b["total"], 4),
+        "estimated": round(b["estimated"], 4),
+        "actual": round(b["actual"], 4),
+        "by_provider": [
+            {**p, "cost": round(p["cost"], 4), "estimated": round(p["estimated"], 4),
+             "actual": round(p["actual"], 4), "sessions": len(p["sessions"])}
+            for p in providers
+        ],
+    }
+
+
+def _top_sessions(conn: sqlite3.Connection, sessions: Dict[str, Dict[str, Any]], key: str) -> List[Dict[str, Any]]:
+    ranked = sorted(((sid, s) for sid, s in sessions.items() if s[key] > 0),
+                    key=lambda item: (-item[1][key], item[0]))[:_SPEND_TOP]
+    if not ranked:
+        return []
+    ids = [sid for sid, _ in ranked]
+    meta = {
+        r[0]: r[1:]
+        for r in conn.execute(
+            f"SELECT id, title, display_name, source, started_at, model FROM sessions WHERE id IN ({','.join('?' * len(ids))})",
+            ids,
+        ).fetchall()
+    }
+    out = []
+    for sid, s in ranked:
+        title, display, source, started, model = meta.get(sid, (None, None, None, None, None))
+        # The provider behind the ranked amount: the largest metered one when
+        # ranking real spend, else the largest overall.
+        pool = s.get("class_providers", {}).get(key) if key in ("metered", "subscription", "unclassified") else None
+        pool = pool or s["providers"]
+        main = max(pool.items(), key=lambda kv: kv[1])[0] if pool else ""
+        classes = [c for c in ("metered", "subscription", "unclassified") if s[c] > 0]
+        out.append({
+            "id": sid,
+            "title": _text(title) or _text(display) or None,
+            "source": _text(source, 40) or None,
+            "model": _text(model, 80) or None,
+            "started_at": started,
+            "provider": main,
+            "cost": round(s[key], 4),
+            "class": classes[0] if len(classes) == 1 else "mixed",
+            "actual": s["actual"] > 0,
+        })
+    return out
+
+
+def compute_spend(db_path: Path, period: str = "week", utc_offset_min: int = 0,
+                  now: Optional[float] = None, auth: Optional[Dict[str, set]] = None) -> Dict[str, Any]:
+    """The Spend widget payload. Pure apart from the read-only store read."""
+    if period not in SPEND_PERIODS:
+        period = "week"
+    now = time.time() if now is None else now
+    auth = credential_auth_types() if auth is None else auth
+    win = spend_window(period, now, utc_offset_min)
+    base = {"period": period, "currency": "USD", "window": {"start": win["start"], "end": win["end"]}}
+    if not db_path.is_file():
+        return {**base, "available": False, "has_data": False}
+    uri = f"file:{db_path}?mode=ro"
+    conn = sqlite3.connect(uri, uri=True, timeout=5)
+    try:
+        conn.execute("PRAGMA query_only = ON")
+        cur = _summarize(_spend_rows(conn, win["start"], win["end"]), auth)
+        month = cur if period == "month" else _summarize(
+            _spend_rows(conn, win["month_start"], win["end"]), auth)
+        sessions_in_range = conn.execute(_SPEND_COUNT_SQL, (win["start"], win["end"])).fetchone()[0]
+        top = _top_sessions(conn, cur["sessions"], "cost")
+        top_real = _top_sessions(conn, cur["sessions"], "metered")
+    except sqlite3.Error:
+        return {**base, "available": False, "has_data": False}
+    finally:
+        conn.close()
+
+    elapsed_days = max(1.0, (now - win["month_start"]) / 86400)
+    month_real = month["buckets"]["metered"]["total"]
+    costed = len(cur["sessions"])
+    return {
+        **base,
+        "available": True,
+        "has_data": costed > 0,
+        "real": _bucket_json(cur["buckets"]["metered"]),
+        "covered": _bucket_json(cur["buckets"]["subscription"]),
+        "unclassified": {**_bucket_json(cur["buckets"]["unclassified"]), "unknown_cost_sessions": cur["unknown_sessions"]},
+        "month": {
+            "start": win["month_start"],
+            "end": win["month_end"],
+            "days": int(win["days_in_month"]),
+            "elapsed_days": round(elapsed_days, 3),
+            "real": round(month_real, 4),
+            "covered": round(month["buckets"]["subscription"]["total"], 4),
+            "unclassified": round(month["buckets"]["unclassified"]["total"], 4),
+            "projection": round(month_real / elapsed_days * win["days_in_month"], 4),
+        },
+        "sessions": {"in_range": sessions_in_range, "with_cost": costed,
+                     "without_cost": max(0, sessions_in_range - costed)},
+        "top": top,
+        "top_real": top_real,
+        "classification": cur["basis"],
+    }
+
+
+@router.get("/spend")
+async def get_spend(period: str = "week", utc_offset: int = 0, profile: str | None = None) -> Dict[str, Any]:
+    """Money spent vs value covered by subscriptions, for the Spend widget."""
+    path = spend_db_path(profile)
+    return await asyncio.to_thread(compute_spend, path, period, utc_offset)

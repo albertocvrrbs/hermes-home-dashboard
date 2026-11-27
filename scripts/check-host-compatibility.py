@@ -23,6 +23,8 @@ ROUTES = {
     "/analytics?days=7": (dict, "totals"),
     "/cron?profile=default": (list, None),
     "/sessions?limit=2&offset=0&profile=default": (dict, "sessions"),
+    "/models?days=7": (dict, "models"),
+    "/spend?period=month&utc_offset=-360": (dict, "available"),
 }
 
 
