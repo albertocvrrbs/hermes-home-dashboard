@@ -113,7 +113,7 @@ export function fmtDelta(v: LiveValue, fmt: LiveFmt | undefined): { text: string
   if (typeof v === "number") {
     if (!Number.isFinite(v)) return null;
     const dir = v > 0 ? "up" : v < 0 ? "down" : "flat";
-    const body = fmt === "pct" ? `${trimNum(Math.abs(v), 1)}` : fmt === "usd" ? `$${Math.abs(v).toFixed(2)}` : fmt === "dur" ? fmtDuration(Math.abs(v)) : trimNum(Math.abs(v), 2);
+    const body = fmt === "pct" ? `${trimNum(Math.abs(v), 1)} %` : fmt === "usd" ? `$${Math.abs(v).toFixed(2)}` : fmt === "dur" ? fmtDuration(Math.abs(v)) : trimNum(Math.abs(v), 2);
     return { text: `${v > 0 ? "+" : v < 0 ? "−" : "±"}${body}`, dir };
   }
   const s = String(v).trim();

@@ -266,7 +266,7 @@ export function LiveView({ id, item, c }: { id: string; item: Item; c: ItemCtx }
     switch (b.t) {
       case "header": body.push(<Header key={i} b={b} data={data} status={status} stale={fresh.stale} t={t} fallbackTitle={item.title ?? ""} />); break;
       case "progress": body.push(<Progress key={i} b={b} data={data} t={t} />); break;
-      case "metrics": body.push(<div key={i} className="lv-metrics">{b.items.map((m, j) => <Metric key={j} m={m} data={data} t={t} />)}</div>); break;
+      case "metrics": body.push(<div key={i} className="lv-metrics" data-n={b.items.length}>{b.items.map((m, j) => <Metric key={j} m={m} data={data} t={t} />)}</div>); break;
       case "spark": body.push(<Spark key={i} b={b} data={data} t={t} />); break;
       case "media": body.push(<Media key={i} id={`${id}:${mediaSeen++}`} b={b} data={data} c={c} />); break;
       case "text": body.push(<Log key={i} b={b} data={data} t={t} />); break;
@@ -278,7 +278,7 @@ export function LiveView({ id, item, c }: { id: string; item: Item; c: ItemCtx }
   const age = fresh.age;
   return (
     <div className={`hb-card hb-live${item.by === "h" ? " dm" : ""}${fresh.stale ? " stale" : ""}${status ? ` st-${status}` : ""}`}
-      style={{ width: item.w ?? 360 }}>
+      style={{ width: item.w ?? 400 }}>
       {!header && <Header b={{ t: "header" }} data={data} status={status} stale={fresh.stale} t={t} fallbackTitle={item.title ?? ""} />}
       {body}
       <div className="lv-foot">

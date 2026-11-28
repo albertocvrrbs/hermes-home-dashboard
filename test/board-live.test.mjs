@@ -40,7 +40,7 @@ test("values format by kind, strings pass through untouched", () => {
 });
 
 test("deltas carry a sign and a direction", () => {
-  assert.deepEqual(fmtDelta(2.1, "pct"), { text: "+2.1", dir: "up" });
+  assert.deepEqual(fmtDelta(2.1, "pct"), { text: "+2.1 %", dir: "up" });
   assert.deepEqual(fmtDelta(-0.5, "usd"), { text: "−$0.50", dir: "down" });
   assert.deepEqual(fmtDelta("+3 st", undefined), { text: "+3 st", dir: "up" });
   assert.equal(fmtDelta(null, "pct"), null);

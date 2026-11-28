@@ -363,7 +363,8 @@
 .hb .vsep { width: 1px; height: 20px; background: var(--rule); flex: none; }
 .hb-presence { display: flex; align-items: center; gap: 8px; white-space: nowrap; font: 400 11px/1 var(--mono); color: var(--ink-3); min-width: 0; overflow: hidden; }
 .hb-presence b { font-weight: 400; color: var(--ink); overflow: hidden; text-overflow: ellipsis; }
-.hb .tagh svg { width: 8px; height: 10px; }
+.hb .tagh { display: inline-flex; flex: none; align-items: center; gap: 5px; height: 16px; padding: 0 6px; background: var(--accent); color: var(--on-accent); font: 700 9.5px/1 var(--mono); letter-spacing: .14em; white-space: nowrap; }
+.hb .tagh svg { width: 8px; height: 10px; flex: none; }
 .hb .spacer { flex: 1; min-width: 0; }
 .hb-state { display: flex; align-items: center; gap: 14px; font: 400 11px/1 var(--mono); color: var(--ink-3); white-space: nowrap; }
 .hb-state b { font-weight: 400; color: var(--ink-2); }
@@ -590,10 +591,11 @@
 .hb-live .lv-prog .cells { margin-top: 9px; gap: 2px; }
 .hb-live .lv-prog .cells i { height: 5px; }
 
-.hb-live .lv-metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(84px, 1fr)); }
+.hb-live .lv-metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(112px, 1fr)); }
 .hb-live .lv-metrics .m { display: flex; flex-direction: column; gap: 5px; padding: 10px 14px 11px; min-width: 0; box-shadow: inset -1px 0 0 var(--rule), inset 0 -1px 0 var(--rule); margin: 0 -1px -1px 0; }
-.hb-live .lv-metrics .k { font: 700 9px/1 var(--mono); letter-spacing: .15em; text-transform: uppercase; color: var(--ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.hb-live .lv-metrics .v { font: 600 18px/1.05 var(--mono); color: var(--ink); font-variant-numeric: tabular-nums; letter-spacing: -.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* line-height + block padding leave room for the accent of an uppercase É/Í/Ó; overflow:hidden clips at the line box */
+.hb-live .lv-metrics .k { font: 700 9px/1.5 var(--mono); padding-block: 3px 1px; margin-block: -3px -1px; letter-spacing: .15em; text-transform: uppercase; color: var(--ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hb-live .lv-metrics .v { font: 600 18px/1.15 var(--mono); color: var(--ink); font-variant-numeric: tabular-nums; letter-spacing: -.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .hb-live .lv-metrics .v em { font: 400 11px/1 var(--mono); font-style: normal; color: var(--ink-3); margin-left: 3px; }
 .hb-live .lv-metrics .d { font: 400 10.5px/1 var(--mono); color: var(--ink-3); font-variant-numeric: tabular-nums; }
 .hb-live .lv-metrics .d.good { color: var(--accent); }
@@ -601,7 +603,7 @@
 
 .hb-live .lv-spark { padding: 10px 14px 12px; }
 .hb-live .lv-spark .row { display: flex; align-items: baseline; gap: 10px; min-width: 0; }
-.hb-live .lv-spark .k { font: 700 9px/1 var(--mono); letter-spacing: .15em; text-transform: uppercase; color: var(--ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hb-live .lv-spark .k { font: 700 9px/1.5 var(--mono); padding-block: 3px 1px; margin-block: -3px -1px; letter-spacing: .15em; text-transform: uppercase; color: var(--ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .hb-live .lv-spark .sp { flex: 1; }
 .hb-live .lv-spark .rng { font: 400 10px/1 var(--mono); color: var(--ink-3); white-space: nowrap; font-variant-numeric: tabular-nums; }
 .hb-live .lv-spark b { font: 600 12px/1 var(--mono); color: var(--ink); font-variant-numeric: tabular-nums; }
@@ -616,7 +618,7 @@
 .hb-live .lv-media .cap { padding: 8px 14px 9px; font: 400 10.5px/1.35 var(--mono); color: var(--ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; border-top: 1px solid var(--rule); }
 
 .hb-live .lv-log { position: relative; padding: 9px 14px 10px; background: var(--well); }
-.hb-live .lv-log .k { display: block; margin-bottom: 6px; font: 700 9px/1 var(--mono); letter-spacing: .15em; text-transform: uppercase; color: var(--ink-3); }
+.hb-live .lv-log .k { display: block; margin-bottom: 6px; font: 700 9px/1.5 var(--mono); letter-spacing: .15em; text-transform: uppercase; color: var(--ink-3); }
 .hb-live .lv-log pre { margin: 0; font: 400 10.5px/1.6 var(--mono); color: var(--ink-3); white-space: pre-wrap; overflow-wrap: anywhere;
   -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 14px); mask-image: linear-gradient(to bottom, transparent 0, #000 14px); user-select: text; }
 .hb-live .lv-log pre .last { color: var(--ink-2); }
@@ -657,9 +659,24 @@
 .hb-live .lv-toast.err .ic { color: var(--danger); }
 @keyframes hb-toast-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
 
-/* sizes: narrow cards stack metrics in pairs, wide ones get room to breathe */
+/* sizes: narrow cards stack metrics in pairs, wide ones get room to breathe.
+   Columns follow the metric count (data-n) so four values share one row at the default width
+   instead of ellipsizing; below 380px they pair up, and 4+ values shrink to 16px under 480px. */
+.hb-live .lv-metrics[data-n="1"] { grid-template-columns: 1fr; }
+.hb-live .lv-metrics[data-n="2"] { grid-template-columns: 1fr 1fr; }
+.hb-live .lv-metrics[data-n="3"] { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.hb-live .lv-metrics[data-n="4"] { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.hb-live .lv-metrics[data-n="5"], .hb-live .lv-metrics[data-n="6"] { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.hb-live .lv-metrics[data-n="7"], .hb-live .lv-metrics[data-n="8"] { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+@container (max-width: 479px) {
+  .hb-live .lv-metrics[data-n="4"] .v, .hb-live .lv-metrics[data-n="7"] .v, .hb-live .lv-metrics[data-n="8"] .v { font-size: 16px; }
+}
+@container (max-width: 379px) {
+  .hb-live .lv-metrics[data-n="3"], .hb-live .lv-metrics[data-n="4"], .hb-live .lv-metrics[data-n="5"], .hb-live .lv-metrics[data-n="6"], .hb-live .lv-metrics[data-n="7"], .hb-live .lv-metrics[data-n="8"] { grid-template-columns: 1fr 1fr; }
+  .hb-live .lv-metrics .v { font-size: 18px !important; }
+}
 @container (max-width: 280px) {
-  .hb-live .lv-metrics { grid-template-columns: 1fr 1fr; }
+  .hb-live .lv-metrics[data-n] { grid-template-columns: 1fr 1fr; }
   .hb-live .lv-head { grid-template-columns: minmax(0, 1fr) auto; gap: 9px; padding: 11px 12px 10px; }
   .hb-live .lv-head .ico { display: none; }
   .hb-live .lv-spark .rng { display: none; }
