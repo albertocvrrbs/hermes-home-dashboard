@@ -9,6 +9,9 @@ import { BoardView } from "./BoardView";
 import { Icon } from "./icons";
 import { installTips } from "./tips";
 import { BoardPreview, loadBoardDoc } from "./items";
+import { installClockApi } from "./camera";
+import { prepareZoomIn } from "./handoff";
+import { MiniBoard } from "./miniboard";
 import type { BoardDoc } from "./model";
 import { HERMES_ACTIVE_S } from "./useBoard";
 
@@ -138,6 +141,7 @@ export function BoardWidget({ widgetProps, onWidgetPropsChange, editing }: {
   const seq = useRef(-1);
   const tipRoot = useRef<HTMLDivElement>(null);
   useEffect(() => (tipRoot.current ? installTips(tipRoot.current) : undefined), [rows === null || !rows.length]);
+  useEffect(() => installClockApi(), []);
   const pinned = typeof widgetProps.board === "string" ? widgetProps.board : null;
   const bid = pinned && rows?.some((r) => r.id === pinned) ? pinned : rows?.find((r) => !r.parent)?.id ?? null;
 
@@ -199,8 +203,15 @@ export function BoardWidget({ widgetProps, onWidgetPropsChange, editing }: {
   const count = doc ? Object.values(doc.items).filter((x) => x.k !== "line").length : 0;
   const list = (rows ?? []).filter((r) => !r.parent);
   return (
-    <div className="hb-widget" ref={tipRoot} onClick={(e) => { e.stopPropagation(); if (!editing && bid) goBoard(bid); }}>
-      <div className="pvw"><BoardPreview doc={doc} /></div>
+    <div className="hb-widget" ref={tipRoot} onClick={(e) => {
+      e.stopPropagation();
+      if (editing || !bid) return;
+      // the miniature opens up into the board: the Home is snapshotted and flown over the page
+      const here = e.currentTarget as HTMLElement;
+      prepareZoomIn(bid, here.closest(".home-root") as HTMLElement | null, here.querySelector(".hb-mini") as HTMLElement | null);
+      goBoard(bid);
+    }}>
+      <div className="pvw"><MiniBoard doc={doc} id={bid ?? undefined} /></div>
       <div className="foot">
         <b>{doc?.name ?? "…"}</b>
         {active

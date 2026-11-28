@@ -10,6 +10,8 @@ import { strokePath } from "./geometry";
 import { inkGeometry } from "./ink";
 import { Icon } from "./icons";
 import { drawPreview, accentOf } from "./preview";
+import { MiniBoard } from "./miniboard";
+import { thumbUrl } from "./thumbs";
 import { classifyUrl, hostOf, playerUrl } from "./urlKind";
 import { LiveView } from "./LiveCard";
 import { VideoStage } from "./video";
@@ -47,6 +49,24 @@ function useAsset(aid: string | undefined): string | null {
     return () => { live = false; };
   }, [aid]);
   return url;
+}
+
+/** A picture that also carries a small copy of itself: zoomed out, the board shows the copy
+ *  (CSS, by level of detail), so painting 150 items never means decoding full-size photos. */
+function Pic({ src, alt = "" }: { src: string; alt?: string }) {
+  const [lo, setLo] = useState<string | null>(null);
+  useEffect(() => {
+    let live = true;
+    setLo(null);
+    void thumbUrl(src).then((u) => { if (live) setLo(u); });
+    return () => { live = false; };
+  }, [src]);
+  return (
+    <>
+      <img className={lo ? "full" : undefined} src={src} alt={alt} draggable={false} />
+      {lo && <img className="lo" src={lo} alt="" draggable={false} />}
+    </>
+  );
 }
 
 /** Auto-growing textarea that commits on blur / Escape / ⌘Enter. */
@@ -229,7 +249,7 @@ export function VideoView({ id, item, c }: { id: string; item: Item; c: ItemCtx 
               allow="autoplay; fullscreen; picture-in-picture; encrypted-media"
               allowFullScreen referrerPolicy="strict-origin-when-cross-origin" />
           )}
-          {!playing && (poster ? <img src={poster} alt="" draggable={false} /> : <div className="poster-empty">{site}</div>)}
+          {!playing && (poster ? <Pic src={poster} /> : <div className="poster-empty">{site}</div>)}
           {!playing && <button className="play" data-nodrag="" onClick={() => c.setPlaying(id)}>{PLAY}{c.t("board.video.play")}</button>}
         </div>
       ) : (
@@ -254,7 +274,7 @@ export function LinkView({ id, item, c }: { id: string; item: Item; c: ItemCtx }
   const site = item.site || (item.url ? hostOf(item.url) : "");
   return (
     <div className={`hb-card hb-link${item.by === "h" ? " dm" : ""}`}>
-      {(thumb || waiting) && <div className={`thumb${waiting ? " skel-thumb" : ""}`}>{thumb && <img src={thumb} alt="" draggable={false} />}</div>}
+      {(thumb || waiting) && <div className={`thumb${waiting ? " skel-thumb" : ""}`}>{thumb && <Pic src={thumb} />}</div>}
       <div className="body">
         <div className="dom">{icon && <img src={icon} alt="" />}<span>{item.url ? hostOf(item.url) : site}</span></div>
         {waiting ? (
@@ -282,7 +302,7 @@ export function ImageView({ id, item, c }: { id: string; item: Item; c: ItemCtx 
   return (
     <div className={`hb-card hb-image${item.by === "h" ? " dm" : ""}`} style={{ width: item.w ?? 372 }}>
       <div className="art" style={!url ? { aspectRatio: `${1 / ratio}` } : undefined}>
-        {url && <img src={url} alt={item.cap ?? ""} draggable={false} />}
+        {url && <Pic src={url} alt={item.cap ?? ""} />}
       </div>
       <div className="cap">
         {c.editing === id
@@ -380,7 +400,7 @@ export function BoardRefView({ item, c }: { item: Item; c: ItemCtx }) {
   return (
     <div className={`hb-card hb-boardref${item.by === "h" ? " dm" : ""}`} style={{ width: item.w ?? 212 }}
       onDoubleClick={(e) => { e.stopPropagation(); if (item.ref) c.openBoard(item.ref); }}>
-      <div className="pv"><BoardPreview doc={child} /></div>
+      <div className="pv"><MiniBoard doc={child} id={item.ref} /></div>
       <div className="ttl">
         <b>{child?.name ?? item.title ?? c.t("board.ref.missing")}</b>
         <span><button data-nodrag="" data-tip={c.t("board.index.open")} aria-label={c.t("board.index.open")} onClick={() => item.ref && c.openBoard(item.ref)}><Icon name="openBoard" size={13} /></button></span>

@@ -19,11 +19,14 @@ import {
 } from "./ink";
 import { InkBar } from "./InkBar";
 import { HermesCursor, type CursorHandle, type CursorStep } from "./HermesCursor";
+import { Camera, cameraClockApi, installCameraApi, viewForRect, type BoardCameraApi, type CameraRequest } from "./camera";
+import { applyLod } from "./lod";
+import { arriveZoomIn, arriveZoomOut, prepareZoomIn, prepareZoomOut, takeHandoff, type Handoff } from "./handoff";
 import { Icon, type IconName } from "./icons";
 import { ItemBody, itemForUrl, type ItemCtx } from "./items";
 import { BoardMenu, type MenuEntry } from "./Menu";
 import { installTips } from "./tips";
-import { drawPreview } from "./preview";
+import { drawPreview, previewGeometry } from "./preview";
 import { approxRect, DEFAULT_SIZE, itemLabel, newRef, type BoardDoc, type Entry, type Item, type Op, type Point } from "./model";
 import { extractUrl } from "./urlKind";
 import { HERMES_ACTIVE_S, useBoard } from "./useBoard";
@@ -125,9 +128,23 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
   const lastPoint = useRef<{ x: number; y: number } | null>(null);
   const fitted = useRef(false);
   const accentRef = useRef("");
+  const cam = useRef<Camera | null>(null);
+  const mapViewRef = useRef<HTMLElement>(null);
+  const mapHermesRef = useRef<HTMLElement>(null);
+  const mapGeo = useRef<{ s: number; ox: number; oy: number; W: number; H: number } | null>(null);
+  const chromeRaf = useRef(0);
+  const gestureT = useRef(0);
+  const gridKey = useRef("");
+  const saveT = useRef(0);
+  const autoFit = useRef(false);
+  const autoFitUntil = useRef(0);
+  const handoffRef = useRef<Handoff | null>(null);
 
+  const [mapOff, setMapOff] = useState(() => readLocal("hb.map.off") === "1");
   const [tool, setTool] = useState<Tool>("select");
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const selectedRef = useRef(selected);
+  selectedRef.current = selected;
   const [editing, setEditing] = useState<string | null>(null);
   const [playing, setPlaying] = useState<string | null>(null);
   const [delta, setDelta] = useState<{ dx: number; dy: number } | null>(null);
@@ -265,6 +282,18 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
   const docRef = useRef(doc);
   docRef.current = doc;
 
+  // Entering a nested board opens its card up into the board (and back out again on the way
+  // up); with nothing to zoom from, or under reduced motion, it is a plain navigation.
+  const openChild = useCallback((child: string) => {
+    const card = vpRef.current?.querySelector(`[data-mini="${child}"]`) as HTMLElement | null;
+    prepareZoomIn(child, rootRef.current, card);
+    onOpenBoard(child);
+  }, [onOpenBoard]);
+  const closeToParent = useCallback((parent: string) => {
+    prepareZoomOut(parent, bid, rootRef.current, vpRef.current, view.current);
+    onOpenBoard(parent);
+  }, [bid, onOpenBoard]);
+
   // ── geometry ────────────────────────────────────────────────────────────
   const getRect = useCallback((id: string): Rect | null => {
     const el = els.current.get(id);
@@ -299,28 +328,34 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
     return { x: (cx - rect.left - v.x) / v.z, y: (cy - rect.top - v.y) / v.z };
   }, []);
 
+  // The minimap is a static layer (drawn when the document changes) plus a frame and a marker
+  // that only move: panning and zooming never repaint it.
   const drawMap = useCallback(() => {
-    const canvas = mapRef.current, d = docRef.current, vp = vpRef.current;
-    if (!canvas || !d || !vp) return;
+    const d = docRef.current, vp = vpRef.current, el = mapViewRef.current, canvas = mapRef.current;
+    if (!d || !vp || !el || !canvas) return;
+    const g = mapGeo.current;
+    if (!g || g.W !== canvas.clientWidth || g.H !== canvas.clientHeight) { drawMapLayerRef.current(); return; }
     const v = view.current;
-    const visible = { x: -v.x / v.z, y: -v.y / v.z, w: vp.clientWidth / v.z, h: vp.clientHeight / v.z };
-    if (!accentRef.current) accentRef.current = accentColor(rootRef.current);
-    drawPreview(canvas, d, { accent: accentRef.current, cell: 4, hermesAt: cursorRef.current?.position() ?? null });
-    // viewport frame
-    const ctx = canvas.getContext("2d");
-    const rects = Object.values(d.items).map(approxRect).filter(Boolean) as Rect[];
-    const b = boundsOf(rects) ?? visible;
-    const W = canvas.clientWidth, H = canvas.clientHeight, pad = 30;
-    const s = Math.min(W / (b.w + pad * 2), H / (b.h + pad * 2));
-    const ox = (W - b.w * s) / 2 - b.x * s, oy = (H - b.h * s) / 2 - b.y * s;
-    if (ctx) {
-      ctx.globalAlpha = 0.75;
-      ctx.strokeStyle = accentRef.current;
-      ctx.lineWidth = 1;
-      ctx.strokeRect(Math.round(ox + visible.x * s) + 0.5, Math.round(oy + visible.y * s) + 0.5, visible.w * s, visible.h * s);
-      ctx.globalAlpha = 1;
+    el.style.transform = `translate(${Math.round(g.ox + (-v.x / v.z) * g.s)}px, ${Math.round(g.oy + (-v.y / v.z) * g.s)}px)`;
+    el.style.width = `${Math.round((vp.clientWidth / v.z) * g.s)}px`;
+    el.style.height = `${Math.round((vp.clientHeight / v.z) * g.s)}px`;
+    const hm = mapHermesRef.current, pos = cursorRef.current?.position();
+    if (hm) {
+      if (pos) { hm.style.display = "block"; hm.style.transform = `translate(${g.ox + pos.x * g.s}px, ${g.oy + pos.y * g.s}px)`; }
+      else hm.style.display = "none";
     }
   }, []);
+  const drawMapLayer = useCallback(() => {
+    const canvas = mapRef.current, d = docRef.current;
+    if (!canvas || !d) return;
+    if (!accentRef.current) accentRef.current = accentColor(rootRef.current);
+    drawPreview(canvas, d, { accent: accentRef.current, cell: 4 });
+    const W = canvas.clientWidth, H = canvas.clientHeight;
+    mapGeo.current = { ...previewGeometry(d, W, H), W, H };
+    drawMap();
+  }, [drawMap]);
+  const drawMapLayerRef = useRef(drawMapLayer);
+  drawMapLayerRef.current = drawMapLayer;
 
   // The selection bar lives in screen space (fixed size at every zoom), above the selection,
   // flipped below it when the top is covered, and clamped to the viewport.
@@ -336,36 +371,87 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
     el.dataset.below = p.below ? "1" : "0";
   }, []);
 
-  const applyView = useCallback(() => {
-    const v = view.current, world = worldRef.current, grid = gridRef.current;
-    if (!world || !grid) return;
-    world.style.transform = `translate(${v.x}px, ${v.y}px) scale(${v.z})`;
-    world.style.setProperty("--iz", String(1 / v.z));
-    const g = 24 * v.z, G = g * 5, c = 4.5;
-    if (!accentRef.current) accentRef.current = accentColor(rootRef.current);
-    const cross = withAlpha(accentRef.current, 0.16);
-    const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='${G}' height='${G}'><path d='M${-c} 0H${c}M0 ${-c}V${c}M${G - c} 0H${G + c}M${G} ${-c}V${c}M${-c} ${G}H${c}M0 ${G - c}V${G + c}M${G - c} ${G}H${G + c}M${G} ${G - c}V${G + c}' stroke='${cross}' stroke-width='1'/></svg>`;
-    grid.style.backgroundImage = `url("data:image/svg+xml,${encodeURIComponent(svg)}"), radial-gradient(circle, color-mix(in srgb, var(--accent) 8%, transparent) .9px, transparent 1.2px)`;
-    grid.style.backgroundSize = `${G}px ${G}px, ${g}px ${g}px`;
-    grid.style.backgroundPosition = `${v.x}px ${v.y}px, ${v.x}px ${v.y}px`;
-    if (pctRef.current) pctRef.current.textContent = `${Math.round(v.z * 100)}%`;
+  // The world transform is written at once (everything that measures reads it); the rest of the
+  // chrome (grid, minimap frame, %, selection bar) is folded into one write per animation frame.
+  const applyChrome = useCallback(() => {
+    chromeRaf.current = 0;
+    const v = view.current, grid = gridRef.current;
+    if (!grid) return;
+    const g = 24 * v.z, G = g * 5;
+    const key = `${Math.round(v.z * 1000)}`;
+    if (gridKey.current !== key) {
+      gridKey.current = key;
+      // crosses at every fifth dot, as two gradient layers (an SVG image background repaints too
+      // slowly while panning); dots as a radial gradient
+      if (!accentRef.current) accentRef.current = accentColor(rootRef.current);
+      const cross = withAlpha(accentRef.current, 0.16), c = 4.5;
+      const arm = (dir: string) => `linear-gradient(${dir}, ${cross} 0 ${c}px, transparent ${c}px calc(100% - ${c}px), ${cross} calc(100% - ${c}px) 100%)`;
+      grid.style.backgroundImage = `${arm("90deg")}, ${arm("180deg")}, radial-gradient(circle, color-mix(in srgb, var(--accent) 8%, transparent) .9px, transparent 1.2px)`;
+      grid.style.backgroundSize = `${G}px 1px, 1px ${G}px, ${g}px ${g}px`;
+      grid.style.backgroundRepeat = "repeat-x, repeat-y, repeat";
+      grid.style.setProperty("--gp", `${G}px`);
+    }
+    // one tile of slack on each side: the pattern slides by the remainder
+    grid.style.transform = `translate(${((v.x % G) + G) % G}px, ${((v.y % G) + G) % G}px)`;
+    if (pctRef.current) { const txt = `${Math.round(v.z * 100)}%`; if (pctRef.current.textContent !== txt) pctRef.current.textContent = txt; }
     drawMap();
     placeCtx();
   }, [drawMap, placeCtx]);
 
-  const saveView = useCallback(() => {
+  const applyView = useCallback(() => {
+    const v = view.current, world = worldRef.current;
+    if (!world) return;
+    world.style.transform = `translate(${v.x}px, ${v.y}px) scale(${v.z})`;
+    applyLod(world, v.z);
+    // compositor hints only while moving
+    const vp = vpRef.current;
+    if (vp) {
+      vp.classList.add("gesturing");
+      window.clearTimeout(gestureT.current);
+      gestureT.current = window.setTimeout(() => vp.classList.remove("gesturing"), 180);
+    }
+    if (!chromeRaf.current) chromeRaf.current = requestAnimationFrame(applyChrome);
+  }, [applyChrome]);
+  useEffect(() => () => { cancelAnimationFrame(chromeRaf.current); window.clearTimeout(gestureT.current); }, []);
+
+  // remembered per board for the session, written once the view has been still for a moment
+  const saveNow = useCallback(() => {
+    window.clearTimeout(saveT.current);
     try { sessionStorage.setItem(`hb.view.${bid}`, JSON.stringify(view.current)); } catch { /* private mode */ }
   }, [bid]);
+  const saveView = useCallback(() => {
+    window.clearTimeout(saveT.current);
+    saveT.current = window.setTimeout(saveNow, 220);
+  }, [saveNow]);
+  useEffect(() => () => { if (view.current) saveNow(); }, [saveNow]);
+
+  // the camera: eased, interruptible moves (camera.ts); user input always wins
+  const applyViewRef = useRef(applyView);
+  applyViewRef.current = applyView;
+  const saveViewRef = useRef(saveView);
+  saveViewRef.current = saveView;
+  if (!cam.current) {
+    cam.current = new Camera({
+      get: () => view.current,
+      set: (v) => { view.current = v; applyViewRef.current(); },
+      size: () => ({ w: vpRef.current?.clientWidth ?? 1, h: vpRef.current?.clientHeight ?? 1 }),
+      reduced,
+      onMoving: (m) => { if (!m) saveViewRef.current(); },
+    });
+  }
+  const stopCamera = useCallback(() => { autoFit.current = false; cam.current?.cancel(); }, []);
 
   const zoomAt = useCallback((f: number, sx: number, sy: number) => {
+    stopCamera();
     view.current = zoomView(view.current, f, sx, sy);
     applyView();
     saveView();
-  }, [applyView, saveView]);
+  }, [applyView, saveView, stopCamera]);
 
   // Wheel zoom eases toward its target (~120 ms) around the pointer; notches accumulate.
   const zoomAnim = useRef<{ z: number; sx: number; sy: number; raf: number } | null>(null);
   const zoomSmooth = useCallback((f: number, sx: number, sy: number) => {
+    stopCamera();
     if (reduced()) { zoomAt(f, sx, sy); return; }
     const a = zoomAnim.current;
     const base = a ? a.z : view.current.z;
@@ -383,7 +469,7 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
       anim.raf = requestAnimationFrame(step);
     };
     anim.raf = requestAnimationFrame(step);
-  }, [applyView, saveView, zoomAt]);
+  }, [applyView, saveView, stopCamera, zoomAt]);
   useEffect(() => () => { if (zoomAnim.current) cancelAnimationFrame(zoomAnim.current.raf); }, []);
 
   const contentBounds = useCallback((): Rect | null => {
@@ -393,25 +479,68 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
     return boundsOf(rects);
   }, [getRect]);
 
-  const fit = useCallback(() => {
+  const fitTarget = useCallback((): View | null => {
     const vp = vpRef.current, b = contentBounds();
-    if (!vp) return;
-    view.current = b ? fitView(b, { w: vp.clientWidth, h: vp.clientHeight }, 60, 1.1) : { x: vp.clientWidth / 2 - 200, y: vp.clientHeight / 2 - 120, z: 0.9 };
+    if (!vp) return null;
+    return b ? fitView(b, { w: vp.clientWidth, h: vp.clientHeight }, 60, 1.1) : { x: vp.clientWidth / 2 - 200, y: vp.clientHeight / 2 - 120, z: 0.9 };
+  }, [contentBounds]);
+
+  /** Frames the whole board: an eased move, or a jump when `animate` is false. */
+  const fit = useCallback((animate = true, duration?: number) => {
+    const target = fitTarget();
+    if (!target) return;
+    if (animate) { autoFit.current = false; void cam.current!.flyTo(target, { duration, ease: "inOut" }); return; }
+    cam.current?.cancel();
+    view.current = target;
     applyView();
     saveView();
-  }, [applyView, contentBounds, saveView]);
+  }, [applyView, fitTarget, saveView]);
 
-  // initial view: saved, else fit
+  /** Frames the selection (the whole board when nothing is selected). */
+  const zoomToSelection = useCallback(() => {
+    const vp = vpRef.current;
+    const rects = [...selectedRef.current].map((id) => getRect(id)).filter(Boolean) as Rect[];
+    const b = boundsOf(rects);
+    if (!vp || !b) { fit(); return; }
+    autoFit.current = false;
+    void cam.current!.flyTo(viewForRect(b, { w: vp.clientWidth, h: vp.clientHeight }, { pad: 90, maxZ: 1.5 }), { ease: "inOut" });
+  }, [fit, getRect]);
+
+  // initial view: arriving from a zoom, saved, else fit
   useLayoutEffect(() => {
     if (!doc || fitted.current) return;
     fitted.current = true;
     let saved: View | null = null;
     try { saved = JSON.parse(sessionStorage.getItem(`hb.view.${bid}`) || "null"); } catch { saved = null; }
-    if (saved && Number.isFinite(saved.z)) { view.current = saved; applyView(); } else fit();
+    if (saved && Number.isFinite(saved.z)) { view.current = saved; applyView(); } else { fit(false); autoFit.current = true; autoFitUntil.current = performance.now() + 3500; }
+    const h = takeHandoff(bid);
+    const vp = vpRef.current, root = rootRef.current;
+    if (!h || !vp || !root) { if (h) h.overlay.remove(); return; }
+    handoffRef.current = h;
+    if (h.kind === "in") {
+      autoFit.current = false;
+      void arriveZoomIn(h, { cam: cam.current!, vp, root, target: view.current }, (start) => { view.current = start; applyView(); });
+    } else {
+      void arriveZoomOut(h, () => (h.child ? (vp.querySelector(`[data-mini="${h.child}"]`) as HTMLElement | null) : null), { w: window.innerWidth, h: window.innerHeight });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [doc, bid, applyView, fit]);
 
   useEffect(() => { fitted.current = false; setSelected(new Set()); setEditing(null); setPlaying(null); }, [bid]);
   useEffect(() => { applyView(); }, [applyView, doc, layoutV]);
+  // the minimap's static layer follows the document (not the camera)
+  useEffect(() => {
+    const h = window.setTimeout(() => drawMapLayerRef.current(), 90);
+    return () => window.clearTimeout(h);
+  }, [doc]);
+
+  // media, links and live cards size themselves after the first fit: settle on the real bounds
+  // once they stop changing, unless the view has been touched
+  useEffect(() => {
+    if (!autoFit.current || performance.now() > autoFitUntil.current) return;
+    const h = window.setTimeout(() => { if (autoFit.current && !cam.current?.moving) { fit(true, 280); autoFit.current = true; } }, 260);
+    return () => window.clearTimeout(h);
+  }, [layoutV, fit]);
 
   // re-measure connectors when items change size
   useEffect(() => {
@@ -741,6 +870,7 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
     if (!d || e.button === 2) return;
     const target = e.target as HTMLElement;
     if (target.closest("[data-nodrag], .hb-ctx, input, textarea, a, iframe, video")) return;
+    stopCamera();
     if (connectFrom) {
       const hit = target.closest("[data-kid], [data-iid]") as HTMLElement | null;
       const to = hit?.dataset.kid ?? hit?.dataset.iid;
@@ -1006,6 +1136,7 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
     // an active embed or a playing video owns the wheel (inactive ones sit behind a shield)
     if (target.tagName === "IFRAME" || target.tagName === "VIDEO") return;
     e.preventDefault();
+    stopCamera();
     const rect = vpRef.current!.getBoundingClientRect();
     const sx = e.clientX - rect.left, sy = e.clientY - rect.top;
     const now = performance.now();
@@ -1021,7 +1152,7 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
     view.current = { ...view.current, x: view.current.x - dx, y: view.current.y - dy };
     applyView();
     saveView();
-  }, [applyView, saveView, zoomAt, zoomSmooth]);
+  }, [applyView, saveView, stopCamera, zoomAt, zoomSmooth]);
 
   // The viewport only exists once the board has loaded: (re)attach then.
   const hasDoc = !!doc;
@@ -1031,6 +1162,49 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
     vp.addEventListener("wheel", onWheel, { passive: false });
     return () => vp.removeEventListener("wheel", onWheel);
   }, [onWheel, hasDoc]);
+
+  // The camera for the outside world: window.__hbCamera and `hb:camera` events (camera.ts), so a
+  // script (the video director, a test) can fly it frame by frame on a clock it controls.
+  useEffect(() => {
+    if (!hasDoc) return;
+    const size = () => ({ w: vpRef.current?.clientWidth ?? 1, h: vpRef.current?.clientHeight ?? 1 });
+    const rectFor = (ids: string[]) => boundsOf(ids.map((id) => getRect(id)).filter(Boolean) as Rect[]);
+    const api: BoardCameraApi = {
+      version: 1, board: bid,
+      flyTo: (req: CameraRequest) => {
+        autoFit.current = false;
+        let target: View | null = null;
+        if (req.view) target = req.view;
+        else if (req.fit) target = fitTarget();
+        else {
+          const b = req.rect ?? (req.item ? rectFor([req.item]) : req.items ? rectFor(req.items) : req.selection ? rectFor([...selectedRef.current]) : null);
+          if (b) target = viewForRect(b, size(), { pad: req.pad ?? 80, maxZ: req.maxZ ?? 1.5, minZ: req.minZ ?? 0.05 });
+        }
+        if (!target) return Promise.resolve(false);
+        return cam.current!.flyTo(target, { duration: req.duration, ease: req.ease });
+      },
+      fit: (o) => { const t = fitTarget(); return t ? cam.current!.flyTo(t, o) : Promise.resolve(false); },
+      getView: () => ({ ...view.current }),
+      setView: (v) => { stopCamera(); view.current = { ...v }; applyView(); saveView(); },
+      itemRect: (id) => getRect(id),
+      cancel: stopCamera,
+      moving: () => !!cam.current?.moving,
+      minimap: (on) => { writeLocal("hb.map.off", on ? "0" : "1"); setMapOff(!on); },
+      clock: cameraClockApi,
+    };
+    return installCameraApi(api);
+  }, [hasDoc, bid, applyView, fitTarget, getRect, saveView, stopCamera]);
+
+  /** Zoom by a step around the viewport centre, eased; presses add up. */
+  const zoomStep = useCallback((f: number) => {
+    const vp = vpRef.current;
+    if (!vp) return;
+    autoFit.current = false;
+    zoomAnim.current && cancelAnimationFrame(zoomAnim.current.raf);
+    zoomAnim.current = null;
+    void cam.current!.zoomBy(f, vp.clientWidth / 2, vp.clientHeight / 2);
+  }, []);
+  const toggleMap = useCallback(() => setMapOff((o) => { writeLocal("hb.map.off", o ? "0" : "1"); return !o; }), []);
 
   // ── keyboard, paste, drop ───────────────────────────────────────────────
   useEffect(() => {
@@ -1073,8 +1247,10 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
       }
       if (e.key === "/") { e.preventDefault(); openChat(true); return; }
       if (e.key === "f" || e.key === "F") { fit(); return; }
-      if (e.key === "+" || e.key === "=") { const vp = vpRef.current!; zoomAt(1.2, vp.clientWidth / 2, vp.clientHeight / 2); return; }
-      if (e.key === "-") { const vp = vpRef.current!; zoomAt(1 / 1.2, vp.clientWidth / 2, vp.clientHeight / 2); return; }
+      if (e.key === "z" || e.key === "Z") { zoomToSelection(); return; }
+      if (e.key === "m" || e.key === "M") { toggleMap(); return; }
+      if (e.key === "+" || e.key === "=") { zoomStep(1.2); return; }
+      if (e.key === "-") { zoomStep(1 / 1.2); return; }
       if (e.key.startsWith("Arrow") && selected.size) {
         e.preventDefault();
         const d = docRef.current!;
@@ -1103,7 +1279,7 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
     window.addEventListener("keydown", onKey);
     window.addEventListener("keyup", onKey);
     return () => { window.removeEventListener("keydown", onKey); window.removeEventListener("keyup", onKey); };
-  }, [ask, center, commit, confirmReq, connectFrom, continueInSession, deleteSelection, duplicate, fit, openChat, scheduleLive, selected, setInk, sync, tool, toggleGroup, zoomAt]);
+  }, [ask, center, commit, confirmReq, connectFrom, continueInSession, deleteSelection, duplicate, fit, openChat, scheduleLive, selected, setInk, sync, tool, toggleGroup, toggleMap, zoomStep, zoomToSelection]);
 
   useEffect(() => {
     const onPaste = (e: ClipboardEvent) => {
@@ -1150,7 +1326,7 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
 
   const ctx: ItemCtx | null = useMemo(() => (doc ? {
     doc, t, editing, setEditing, update, commit, playing, setPlaying, Frame, liveActions, liveActionsDown, runLiveAction, erasing,
-    openBoard: (id) => onOpenBoard(id),
+    openBoard: (id) => openChild(id),
     addToColumn: (col) => {
       const ref = newRef();
       commit([{ op: "add", ref, item: { k: "card", in: col } }]);
@@ -1212,7 +1388,7 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
   const mod = modKey();
   const runOpen = () => {
     if (!openTarget) return;
-    if ("board" in openTarget) onOpenBoard(openTarget.board);
+    if ("board" in openTarget) openChild(openTarget.board);
     else window.open(openTarget.url, "_blank", "noopener,noreferrer");
   };
   const startConnect = () => { if (selIds.length === 1) { setConnectFrom(selIds[0]); setTool("select"); } };
@@ -1256,6 +1432,7 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
       }
       if (canEdit) out.push({ id: "edit", label: t("board.ctx.edit"), icon: "edit", kbd: "↵", run: () => setEditing(selIds[0]) });
       if (openTarget) out.push({ id: "open", label: t("board.ctx.open"), icon: "board" in openTarget ? "openBoard" : "open", run: runOpen });
+      out.push({ id: "zoomto", label: t("board.ctx.zoomTo"), icon: "focus", kbd: "Z", run: zoomToSelection });
       if (canConnect) out.push({ id: "connect", label: t("board.ctx.connect"), icon: "connect", run: startConnect });
       if (canDuplicate) out.push({ id: "dup", label: t("board.ctx.duplicate"), icon: "duplicate", kbd: `${mod}D`, run: duplicate });
       if (canGroup) out.push({ id: "grp", label: t(isGrouped ? "board.ctx.ungroup" : "board.ctx.group"), icon: isGrouped ? "ungroup" : "group", kbd: `${mod}G`, run: toggleGroup });
@@ -1277,7 +1454,7 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
     for (const x of TOOLS[1]) out.push({ id: x.tool, label: t(x.label), icon: x.icon, kbd: x.key, run: place(x.tool) });
     out.push({ sep: true });
     out.push({ id: "all", label: t("board.menu.selectAll"), icon: "selectAll", kbd: `${mod}A`, run: () => setSelected(new Set(Object.keys(docRef.current?.items ?? {}).filter((k) => !docRef.current!.items[k].in))) });
-    out.push({ id: "fit", label: t("board.fit"), icon: "fit", kbd: "F", run: fit });
+    out.push({ id: "fit", label: t("board.fit"), icon: "fit", kbd: "F", run: () => fit() });
     out.push({ id: "chat", label: chatOpen ? t("board.chat.close") : t("board.chat.open"), icon: chatOpen ? "closePanel" : "chat", kbd: "/", run: () => (chatOpen ? closeChat() : openChat(true)) });
     return out;
   };
@@ -1306,7 +1483,7 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
   const savedTs = sync.savedAt ? sync.savedAt / 1000 : doc.updated;
   const vpCls = `hb-viewport${tool === "pan" ? " tool-pan" : ""}${tool === "draw" ? ` tool-draw ink-${ink.tool}` : ""}${tool === "arrow" || connectFrom ? " tool-arrow" : ""}${PLACE.includes(tool) ? " tool-place" : ""}`;
   const hint = connectFrom ? t("board.hint.connect") : tool === "draw" ? t(INK_HINT[ink.tool]) : TOOL_HINT[tool] ? t(TOOL_HINT[tool]!) : "";
-  const zoomBy = (f: number) => { const vp = vpRef.current!; zoomAt(f, vp.clientWidth / 2, vp.clientHeight / 2); };
+  const zoomBy = (f: number) => zoomStep(f);
 
   return (
     <div ref={rootRef} className={rootCls} style={{ ["--chat-w" as string]: `${chatWidth}px` }}>
@@ -1323,7 +1500,7 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
         }}
         onDragOver={(e) => e.preventDefault()} onDrop={onDrop}>
         <div className="hb-grid" ref={gridRef} />
-        <div className="hb-world" ref={worldRef}>
+        <div className={`hb-world${items.length > 60 ? " crowd" : ""}`} ref={worldRef}>
           <Wires doc={doc} getRect={getRect} version={layoutV + (delta ? 1 : 0)} hidden={hidden} fresh={fresh}
             selected={selected} draft={draft}
             onSelect={(id, additive) => setSelected((s) => { const n = additive ? new Set(s) : new Set<string>(); n.add(id); return n; })} />
@@ -1390,6 +1567,7 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
           <i className="sep" />
           {canEdit && <button className="ib" data-tip={t("board.ctx.edit")} data-kbd="↵" aria-label={t("board.ctx.edit")} onClick={() => setEditing(selIds[0])}><Icon name="edit" /></button>}
           {openTarget && <button className="ib" data-tip={t("board.ctx.open")} aria-label={t("board.ctx.open")} onClick={runOpen}><Icon name={"board" in openTarget ? "openBoard" : "open"} /></button>}
+          <button className="ib" data-tip={t("board.ctx.zoomTo")} data-kbd="Z" aria-label={t("board.ctx.zoomTo")} onClick={zoomToSelection}><Icon name="focus" /></button>
           {canConnect && <button className="ib" data-tip={t("board.ctx.connect")} aria-label={t("board.ctx.connect")} onClick={startConnect}><Icon name="connect" /></button>}
           {canDuplicate && <button className="ib" data-tip={t("board.ctx.duplicate")} data-kbd={`${mod}D`} aria-label={t("board.ctx.duplicate")} onClick={duplicate}><Icon name="duplicate" /></button>}
           {canGroup && <button className="ib" data-tip={t(isGrouped ? "board.ctx.ungroup" : "board.ctx.group")} data-kbd={`${mod}G`} aria-label={t(isGrouped ? "board.ctx.ungroup" : "board.ctx.group")} onClick={toggleGroup}><Icon name={isGrouped ? "ungroup" : "group"} /></button>}
@@ -1402,7 +1580,7 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
           <span className="mark"><Cad /></span>
           <button onClick={onHome}>{t("board.path.home")}</button><span className="sl">/</span>
           <button onClick={() => onOpenBoard(null)}>{t("board.path.boards")}</button><span className="sl">/</span>
-          {doc.parent && <><button onClick={() => onOpenBoard(doc.parent)}>{t("board.path.parent")}</button><span className="sl">/</span></>}
+          {doc.parent && <><button onClick={() => closeToParent(doc.parent!)}>{t("board.path.parent")}</button><span className="sl">/</span></>}
         </nav>
         <span className="hb-btitle" onDoubleClick={() => setRenaming(true)} data-tip={t("board.renameHint")}>
           {renaming
@@ -1460,24 +1638,24 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
           <button className="tool" aria-label={t("board.zoomOut")} data-tip={t("board.zoomOut")} data-kbd="−" onClick={() => zoomBy(1 / 1.2)}><Icon name="zoomOut" size={15} /></button>
           <span className="pct" ref={pctRef}>{Math.round(view.current.z * 100)}%</span>
           <button className="tool" aria-label={t("board.zoomIn")} data-tip={t("board.zoomIn")} data-kbd="+" onClick={() => zoomBy(1.2)}><Icon name="zoomIn" size={15} /></button>
-          <button className="tool" aria-label={t("board.fit")} data-tip={t("board.fit")} data-kbd="F" onClick={fit}><Icon name="fit" size={15} /></button>
+          <button className="tool" aria-label={t("board.fit")} data-tip={t("board.fit")} data-kbd="F" onClick={() => fit()}><Icon name="fit" size={15} /></button>
         </div>
       </footer>
 
-      <div className={`hb-map${items.length ? "" : " off"}`} data-tip={t("board.map")} onClick={(e) => {
-        const b = contentBounds();
-        const canvas = mapRef.current, vp = vpRef.current;
-        if (!b || !canvas || !vp) return;
+      <div className={`hb-map${items.length && !mapOff ? "" : " off"}`} data-tip={t("board.map")} onClick={(e) => {
+        const canvas = mapRef.current, vp = vpRef.current, g = mapGeo.current;
+        if (!canvas || !vp || !g) return;
         const r = canvas.getBoundingClientRect();
-        const pad = 30, s = Math.min(r.width / (b.w + pad * 2), r.height / (b.h + pad * 2));
-        const ox = (r.width - b.w * s) / 2 - b.x * s, oy = (r.height - b.h * s) / 2 - b.y * s;
-        const wx = (e.clientX - r.left - ox) / s, wy = (e.clientY - r.top - oy) / s;
+        const wx = (e.clientX - r.left - g.ox) / g.s, wy = (e.clientY - r.top - g.oy) / g.s;
         const v = view.current;
-        view.current = { ...v, x: vp.clientWidth / 2 - wx * v.z, y: vp.clientHeight / 2 - wy * v.z };
-        applyView();
-        saveView();
+        autoFit.current = false;
+        void cam.current!.flyTo({ ...v, x: vp.clientWidth / 2 - wx * v.z, y: vp.clientHeight / 2 - wy * v.z }, { duration: 340, ease: "out" });
       }}>
-        <canvas ref={mapRef} width={384} height={208} />
+        <div className="hb-map-wrap">
+          <canvas ref={mapRef} width={384} height={208} />
+          <i className="hb-map-view" ref={mapViewRef} />
+          <i className="hb-map-hermes" ref={mapHermesRef} />
+        </div>
       </div>
 
       <div className={`hb-log${logOn && log.length ? "" : " off"}`} role="log">

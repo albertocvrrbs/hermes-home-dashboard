@@ -248,6 +248,7 @@ const en = {
   "board.state.session": "session",
   "board.state.noSession": "no session yet",
   "board.continue": "Continue in session",
+  "board.ctx.zoomTo": "Zoom to selection",
   "board.fit": "Fit to content",
   "board.zoomIn": "Zoom in",
   "board.zoomOut": "Zoom out",
