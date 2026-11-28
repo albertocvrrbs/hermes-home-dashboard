@@ -1,6 +1,7 @@
 // Typed access to the Hermes dashboard plugin SDK (window.__HERMES_PLUGIN_SDK__).
 // The host exposes its React instance, an authenticated API client for core
 // endpoints, and fetchJSON. We only declare the slice we use.
+import { demoOn, demoSource } from "./demo";
 import type {
   StatusResponse, SystemStats, AnalyticsResponse, ModelsAnalyticsResponse,
   PaginatedSessions, LogsResponse, CronJob, ProjectsResponse, SpendResponse,
@@ -137,7 +138,7 @@ export const api: Required<HermesApi> = {
   },
   getCronJobs: (profile) => getHost().api.getCronJobs(profile),
   getSessions: (limit, offset) => getHost().api.getSessions(limit, offset),
-  getLogs: (params) => getHost().api.getLogs(params),
+  getLogs: (params) => getHost().api.getLogs(params).then((r) => (demoOn() ? (demoSource("logs", r, Date.now()) as typeof r) : r)),
 };
 
 export function fetchJSON<T = unknown>(url: string, init?: RequestInit): Promise<T> {

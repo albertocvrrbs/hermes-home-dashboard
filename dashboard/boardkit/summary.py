@@ -3,6 +3,8 @@ from __future__ import annotations
 
 from typing import Any, Dict, Iterable, List, Optional
 
+from . import tour as tour_mod
+
 _POS_KEYS = ("x", "y", "w", "h", "in", "kids")
 
 
@@ -43,6 +45,8 @@ def item_line(iid: str, it: Dict[str, Any], text_len: int = 80) -> str:
         parts.append(str(it["num"]))
     if it.get("title"):
         parts.append(f'"{_clip(it["title"], 60)}"')
+    if it.get("mark"):
+        parts.append(f"mark={it['mark']}")
     if k == "card" and it.get("text"):
         parts.append(_clip(it["text"], text_len))
     elif k == "text" and it.get("text"):
@@ -74,6 +78,15 @@ def item_line(iid: str, it: Dict[str, Any], text_len: int = 80) -> str:
         parts.append(f"board={it.get('ref')}")
     elif k == "live":
         parts.append(_live_bits(it))
+    elif k == "comp":
+        bits = [f"component:{it.get('comp')}{'@' + it['ver'] if it.get('ver') else ''}"]
+        if it.get("cdata"):
+            bits.append("data:" + ",".join(list(it["cdata"])[:6]))
+        if it.get("files"):
+            bits.append("files:" + ",".join(list(it["files"])[:6]))
+        if it.get("actions"):
+            bits.append("actions:" + ",".join(it["actions"][:4]))
+        parts.append(" ".join(bits))
     elif k == "frame" and it.get("note"):
         parts.append(_clip(it["note"], 60))
     elif k == "draw":
@@ -87,6 +100,8 @@ def item_line(iid: str, it: Dict[str, Any], text_len: int = 80) -> str:
         if it.get("g"):
             bits.append(f"group:{it['g']}")
         parts.append(" ".join(bits))
+    if it.get("sync"):
+        parts.append(f"sync:{it['sync']}")
     if it.get("tags"):
         parts.append(" ".join(f"#{t}" for t in it["tags"]))
     if it.get("due"):
@@ -128,7 +143,9 @@ def outline(doc: Dict[str, Any], only: Optional[Iterable[str]] = None, limit: in
     items = doc.get("items") or {}
     keys = list(only) if only is not None else sorted(items, key=lambda i: (len(i), i))
     lines = [header(doc)]
-    size = len(lines[0])
+    if only is None and tour_mod.outline_line(doc):
+        lines.append(tour_mod.outline_line(doc))
+    size = sum(len(x) + 1 for x in lines) - 1
     text_len = 80 if len(keys) < 150 else 40
     for n, iid in enumerate(keys):
         it = items.get(iid)

@@ -110,7 +110,7 @@ export type ToolKind =
 export interface ToolAct { kind: ToolKind; /** board edits: how many changes the call carried */ n?: number }
 
 const EXACT: Record<string, ToolKind> = {
-  board_read: "readBoard", board_apply: "editBoard", board_render: "viewBoard",
+  board_read: "readBoard", board_apply: "editBoard", board_render: "viewBoard", board_component: "editBoard",
   skill_view: "skill", skills_list: "skill", skill_manage: "skill",
   terminal: "command", process_manage: "command", execute_code: "command",
   read_file: "readFile", write_file: "editFile", patch: "editFile",

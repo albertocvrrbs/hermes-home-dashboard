@@ -20,8 +20,13 @@ MAX_CHUNK = 4 * 1024 * 1024
 MAX_RANGE = 4 * 1024 * 1024
 MIME = {"png": "image/png", "jpg": "image/jpeg", "gif": "image/gif", "webp": "image/webp",
         "ico": "image/x-icon", "html": "text/html",
-        "mp4": "video/mp4", "webm": "video/webm", "mov": "video/quicktime"}
+        "mp4": "video/mp4", "webm": "video/webm", "mov": "video/quicktime",
+        "pdf": "application/pdf", "stl": "model/stl", "obj": "model/obj",
+        "3mf": "application/vnd.ms-package.3dmanufacturing-3dmodel+xml"}
 VIDEO_EXT = ("mp4", "webm", "mov")
+# originals kept next to their thumbnail (imported from the user's project)
+DOC_EXT = ("pdf", "stl", "obj", "3mf")
+MAX_DOC = 64 * 1024 * 1024
 _UPLOAD = re.compile(r"[a-f0-9]{16}")
 
 
@@ -165,6 +170,40 @@ class AssetStore:
         except (binascii.Error, ValueError):
             raise AssetError("data is not valid base64") from None
         return self.put_bytes(data, max_bytes)
+
+    def put_file(self, path: Path, ext: str, max_bytes: int, head_check=None) -> str:
+        """Copy a local file into the store (streamed + hashed; never links to ``path``)."""
+        if ext not in VIDEO_EXT + DOC_EXT:
+            raise AssetError("unsupported file type")
+        h = hashlib.sha256()
+        self.root.mkdir(parents=True, exist_ok=True)
+        tmp = self.root / f".imp-{os.getpid()}-{id(h):x}.tmp"
+        size = 0
+        try:
+            with open(path, "rb") as src, open(tmp, "wb") as dst:
+                head = src.read(16)
+                if head_check is not None and not head_check(head):
+                    raise AssetError("file content does not match its extension")
+                src.seek(0)
+                for block in iter(lambda: src.read(1 << 20), b""):
+                    size += len(block)
+                    if size > max_bytes:
+                        raise AssetError(f"file is larger than {max_bytes // (1024 * 1024)} MB")
+                    h.update(block)
+                    dst.write(block)
+            if size == 0:
+                raise AssetError("file is empty")
+            aid = f"{h.hexdigest()[:16]}.{ext}"
+            dest = self._path(aid)
+            if dest.exists():
+                tmp.unlink(missing_ok=True)
+            else:
+                os.replace(tmp, dest)
+            return aid
+        except OSError as e:
+            raise AssetError(f"cannot read file: {e.strerror or e}") from None
+        finally:
+            tmp.unlink(missing_ok=True)
 
     def put_html(self, text: str) -> str:
         if not isinstance(text, str):

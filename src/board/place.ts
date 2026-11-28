@@ -20,7 +20,7 @@ export interface Size { w: number; h: number }
 export const SIZES: Record<string, [number, number]> = {
   card: [256, 120], todo: [304, 240], col: [276, 320], link: [276, 250], image: [372, 260],
   embed: [452, 320], video: [400, 260], board: [212, 170], frame: [480, 320], box: [196, 62],
-  text: [420, 40], draw: [120, 80], live: [400, 300], shape: [160, 56],
+  text: [420, 40], draw: [120, 80], live: [400, 300], shape: [160, 56], comp: [480, 320],
 };
 export const SHAPES: Record<string, [number, number]> = { rect: [160, 56], diamond: [150, 100], pill: [150, 48], circle: [72, 72] };
 

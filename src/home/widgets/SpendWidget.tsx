@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { demoOn } from "@/demo";
 import { getSpend, openSession } from "@/sdk";
 import type { SpendBucket, SpendResponse, SpendSession } from "@/api-types";
 import { useT, type MessageKey } from "../i18n";
@@ -33,7 +34,7 @@ interface Props {
  *  Hover controls: range (today / 7 days / this month), top-list ranking
  *  (all costs / real only) and the cap stepper; all persist in the widget's
  *  layout props. Data comes from this plugin's read-only `/spend` route. */
-export function SpendWidget({ widgetProps, onWidgetPropsChange, editing, gridSize }: Props) {
+function SpendWidgetLive({ widgetProps, onWidgetPropsChange, editing, gridSize }: Props) {
   const t = useT();
   const range = coerceSpendRange(widgetProps.range);
   const topMode = coerceTopMode(widgetProps.top);
@@ -222,4 +223,11 @@ function TopSessions({ sessions, editing, real }: { sessions: SpendSession[]; ed
       })}
     </div>
   );
+}
+
+/** Demo mode shows no money at all: the widget stands down instead of masking each figure. */
+export function SpendWidget(props: Props) {
+  const t = useT();
+  if (demoOn()) return <span className="dim">{t("demo.masked")}</span>;
+  return <SpendWidgetLive {...props} />;
 }

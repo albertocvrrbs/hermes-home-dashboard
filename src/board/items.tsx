@@ -1,9 +1,9 @@
 // Item renderers. Each renders the inside of one board item; positioning, selection and
 // dragging live in BoardView. Text is always React text, never HTML.
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import type { Translate } from "../home/i18n";
+import type { MessageKey, Translate } from "../home/i18n";
 import type { SandboxedFrameComponent } from "../sdk";
-import { assetHtml, assetUrl, boardsApi, type ActionResult } from "./api";
+import { assetHtml, assetUrl, boardsApi, openAsset, type ActionResult } from "./api";
 import type { LiveActionInfo, LiveActionRef } from "./live";
 import { Cad, RichText, Sig, ago, dueLabel } from "./bits";
 import { strokePath } from "./geometry";
@@ -13,6 +13,8 @@ import { drawPreview, accentOf } from "./preview";
 import { MiniBoard } from "./miniboard";
 import { classifyUrl, hostOf, playerUrl } from "./urlKind";
 import { LiveView } from "./LiveCard";
+import { CompView } from "./CompCard";
+import type { SyncHub } from "./syncClock";
 import { VideoStage } from "./video";
 import { aspectOf, stageAspect, thumbAspect } from "./place";
 import { embedDocument, type EmbedTheme } from "./embedBridge";
@@ -43,6 +45,11 @@ export interface ItemCtx {
   /** The action list could not be read (an older backend still serving this page). */
   liveActionsDown: boolean;
   runLiveAction: (iid: string, ref: LiveActionRef, index: number) => Promise<ActionResult | null>;
+  /** Custom components: this board's id, its sync hub (shared playheads) and the `hb.action` handler
+   *  (resolves null when the user cancels the confirm dialog). */
+  bid: string;
+  sync: SyncHub;
+  runCompAction: (iid: string, action: string, args: Record<string, unknown>) => Promise<ActionResult | null>;
   /** Draw strokes the eraser is over (hover preview) or has swept (while dragging). */
   erasing?: Set<string>;
 }
@@ -152,7 +159,7 @@ export function CardView({ id, item, c }: { id: string; item: Item; c: ItemCtx }
     );
   }
   return (
-    <div className={`hb-card hb-note${quote ? " quote" : ""}${item.by === "h" ? " dm" : ""}`}>
+    <div className={`hb-card hb-note${quote ? " quote" : ""}${item.h ? " capped" : ""}${item.by === "h" ? " dm" : ""}`}>
       {item.title && <h4 data-field="title">{item.title}</h4>}
       {text ? <div className="body" data-field="text"><RichText text={text} /></div>
         : !item.title && <div className="body" style={{ opacity: 0.5 }}>{c.t("board.card.empty")}</div>}
@@ -276,7 +283,7 @@ export function VideoView({ id, item, c }: { id: string; item: Item; c: ItemCtx 
           {!playing && <button className="play" data-nodrag="" onClick={() => c.setPlaying(id)}>{PLAY}{c.t("board.video.play")}</button>}
         </div>
       ) : (
-        <VideoStage playId={id} c={c} src={direct} asset={asset} posterAsset={item.img} dur={item.dur} title={title} style={stageStyle} />
+        <VideoStage playId={id} c={c} src={direct} asset={asset} posterAsset={item.img} dur={item.dur} title={title} syncGroup={item.sync} style={stageStyle} />
       )}
       <div className="hb-link"><div className="body">
         <div className="dom"><span>{site}</span></div>
@@ -325,21 +332,35 @@ export function LinkView({ id, item, c }: { id: string; item: Item; c: ItemCtx }
 
 // ── image ────────────────────────────────────────────────────────────────
 
+const FILE_LABEL: Record<string, string> = { pdf: "PDF", stl: "STL", obj: "OBJ", "3mf": "3MF" };
+
 export function ImageView({ id, item, c }: { id: string; item: Item; c: ItemCtx }) {
   const url = useAsset(item.asset);
   // The frame has the picture's own shape before the picture arrives, so the card never grows
   // (and never lands on its neighbours) when the bytes load.
   const ratio = aspectOf(item);
+  const fk = item.file ? item.fk ?? "pdf" : null;
+  const isPdf = fk === "pdf";
+  const [busy, setBusy] = useState(false);
+  const getFile = () => {
+    if (!item.file || busy) return;
+    setBusy(true);
+    openAsset(item.file, item.cap || "model").catch(() => undefined).finally(() => setBusy(false));
+  };
   return (
-    <div className={`hb-card hb-image${item.by === "h" ? " dm" : ""}`} style={{ width: item.w ?? 372 }}>
+    <div className={`hb-card hb-image${fk ? " has-file" : ""}${item.by === "h" ? " dm" : ""}`} style={{ width: item.w ?? 372 }}>
       <div className={`art${ratio ? " fit" : ""}`} style={ratio ? { aspectRatio: `${ratio}` } : !url ? { aspectRatio: "4 / 3" } : undefined}>
-        {url && <Pic src={url} alt={item.cap ?? ""} />}
+        {url ? <Pic src={url} alt={item.cap ?? ""} />
+          : fk && <span className="file-ph"><Icon name={isPdf ? "fileDoc" : "model3d"} size={34} /></span>}
+        {fk && <span className="fbadge">{FILE_LABEL[fk]}{isPdf && item.pg ? ` · ${c.t("board.file.pages", { n: item.pg })}` : ""}</span>}
       </div>
       <div className="cap">
         {c.editing === id
           ? <b style={{ flex: 1 }}><EditText single value={item.cap ?? ""} placeholder={c.t("board.image.capPh")} caret={fieldHint(c, id, "cap", true).caret}
               onDone={(v) => { c.setEditing(null); c.update(id, { cap: v.trim() || null }); }} /></b>
           : <b data-field="cap">{item.cap || (item.url ? hostOf(item.url) : "")}</b>}
+        {fk && <button className="kbtn" data-nodrag="" data-tip={c.t(isPdf ? "board.file.open" : "board.file.download")}
+          aria-label={c.t(isPdf ? "board.file.open" : "board.file.download")} disabled={busy} onClick={getFile}><Icon name={isPdf ? "fileOpen" : "fileGet"} size={13} /></button>}
         {item.by === "h" && <Sig />}
       </div>
     </div>
@@ -579,8 +600,23 @@ export function DrawView({ item, selected, erasing }: { item: Item; selected: bo
   );
 }
 
+const MARK_ICON = { ok: "markOk", fail: "markFail", wait: "markWait" } as const;
+
+/** Status stamp (ok / fail / wait) on the corner of any card-like item. */
+export function Mark({ mark, t }: { mark: NonNullable<Item["mark"]>; t: ItemCtx["t"] }) {
+  return <i className={`hb-mark ${mark}`} role="img" aria-label={t(`board.mark.${mark}` as MessageKey)} data-tip={t(`board.mark.${mark}` as MessageKey)}><Icon name={MARK_ICON[mark]} size={11} /></i>;
+}
+
 /** Picks the renderer for an item. */
-export function ItemBody({ id, item, c, dropIndex, selected }: {
+export function ItemBody(props: {
+  id: string; item: Item; c: ItemCtx; dropIndex: number | null; selected: boolean;
+}) {
+  const mark = props.item.mark;
+  if (!mark || props.item.k === "line" || props.item.k === "draw" || props.item.k === "frame") return <ItemKind {...props} />;
+  return <><ItemKind {...props} /><Mark mark={mark} t={props.c.t} /></>;
+}
+
+function ItemKind({ id, item, c, dropIndex, selected }: {
   id: string; item: Item; c: ItemCtx; dropIndex: number | null; selected: boolean;
 }) {
   switch (item.k) {
@@ -598,6 +634,7 @@ export function ItemBody({ id, item, c, dropIndex, selected }: {
     case "text": return <TextView id={id} item={item} c={c} />;
     case "draw": return <DrawView item={item} selected={selected} erasing={c.erasing?.has(id)} />;
     case "live": return <LiveView id={id} item={item} c={c} />;
+    case "comp": return <CompView id={id} item={item} c={c} />;
     default: return null;
   }
 }

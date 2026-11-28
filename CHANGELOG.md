@@ -20,6 +20,71 @@ clone, they never build).
 
 ---
 
+## 1.10.0 — video parity
+
+Everything the launch video shows now works for real, with real Hermes, from one chat
+instruction: your project files on the board, components Hermes writes for you on the spot,
+video and components on one clock, presentation tours with camera flights, and a demo mode
+for recording.
+
+**Gateway restart needed.** The Python board engine changes (new `import`, `set_where`,
+`zones`, `arrange`, `place`, `comp`, `sync`, `unsync`, `tour` ops; `mark`, `sync`, `file`
+fields; the new `board_component` tool). A running gateway keeps the old Python until it is
+restarted, and the Webapp is served by the gateway. Restart it after updating (and
+`hermes-dashboard` if you run it as a service).
+
+### Your project on the board
+
+- **Hermes imports project files** (`import` op): images, SVG (rasterised, scripts refused),
+  videos (poster + duration), PDFs (first-page thumbnail, click to open), STL/OBJ/3MF (shaded
+  3D thumbnail, click to download), text and code as cards with fenced code. Globs and folders
+  ("put my renders here"), copied into the board asset store (never hotlinked), placed on a
+  tidy grid. Only paths inside your home; hidden folders and secret-looking files are refused.
+- **Big orders in one instruction and one undo step**: `set_where` (set fields on every match,
+  e.g. mark 37 stations), `zones` (titled frames in order, items moved in by rule, gridded
+  inside), `arrange`, `place`. New `mark` stamp (ok / fail / wait) on cards, boxes and media.
+
+### Custom components (no fixed cards)
+
+- **Components platform.** The plugin does not ship a neural-network card or any other
+  one-off card: Hermes writes the component you need with the new `board_component` tool
+  (create, update with `edits` patches, versions `v1`, `v2`..., diff, rollback, delete). They
+  live in your component library and are reusable on any board.
+- A `comp` card runs one in a sandboxed iframe (opaque origin, CSP, no network) with a small,
+  stable `window.hb` v1 bridge: `data` / `onData`, `asset()` for big files (tens of MB),
+  `size` / `onResize`, `theme`, `clock`, `action()` (owner's allowlist only, destructive
+  actions confirm). Gallery with live thumbnails in the toolbar and right-click menu; card
+  menu with versions, update, reload, theme switch and source. See `docs/components.md`.
+
+### Media sync
+
+- `sync` group on video and component cards: one shared clock per group (a video is the
+  master, frame-accurate through `requestVideoFrameCallback`), shared transport and link
+  chips, `sync` / `unsync` ops for Hermes, a link-to-clock entry in the card menu, and `window.__hbSync`
+  for deterministic frame-by-frame capture.
+
+### Presentation mode
+
+- Tours: an ordered list of stops (frames, items, sub-boards, saved views) stored in the
+  board. Full-window playback with eased camera flights, dives into sub-boards and back,
+  optional dwell per stop and auto-play, a quiet HUD, keyboard control. Hermes builds one in
+  one call (`tour` op, e.g. "make a tour through the zones"); `window.__hbTour` for recorders.
+
+### Demo mode
+
+- `?demo[&now=ISO][&nomap]`: frozen clock for the whole plugin (clock widget, "saved",
+  "ago", live-card freshness), neutral host name and Cron / Logs / Sessions rows, no money in
+  Tokens and Spend, no session ids in the board chat, minimap toggle (`M`). Off by default,
+  never touches stored data.
+
+### Fixed
+
+- Image cards stacked the low-res thumbnail on top of the full picture.
+- A card with a fixed height (an imported file excerpt) now clips and fades instead of
+  growing to the full file length.
+
+---
+
 ## 1.9.3
 
 Direct editing, arrange and insert on connectors, a real camera, and HTML embeds

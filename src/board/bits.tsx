@@ -39,8 +39,17 @@ export function clock(ts: number): string {
   return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
 }
 
-/** Plain text with the `**bold**` subset, as React text (never HTML). */
+/** Plain text with the `**bold**` subset, as React text (never HTML). A ```fenced``` block (what
+ *  imported code files arrive as) is shown as a monospaced block. */
 export function RichText({ text }: { text: string }): ReactNode {
+  if (text.includes("```")) {
+    const chunks = text.split(/```[^\n]*\n([\s\S]*?)(?:\n```|$)/g);
+    return (
+      <>
+        {chunks.map((c, i) => (i % 2 === 1 ? <pre key={i} className="code">{c}</pre> : c ? <RichText key={i} text={c.replace(/^\n+|\n+$/g, "")} /> : null))}
+      </>
+    );
+  }
   const parts = text.split(/(\*\*[^*\n]+\*\*)/g);
   return (
     <>

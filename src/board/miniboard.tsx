@@ -7,6 +7,7 @@ import { fitView, RESIZE_H, type Rect, type View } from "./geometry";
 import { ItemBody, type ItemCtx } from "./items";
 import { approxRect, DEFAULT_SIZE, itemLabel, type BoardDoc, type Item } from "./model";
 import { Wires } from "./Wires";
+import { SyncHub } from "./syncClock";
 
 /** How a miniature laid its content out: the view (relative to the box's top-left) and the
  *  content bounds in board coordinates. Read by the page transitions. */
@@ -19,6 +20,7 @@ export const miniPad = (w: number, h: number): number => Math.max(6, Math.min(22
 
 const NONE = new Set<string>();
 const noop = () => undefined;
+const MINI_HUB = new SyncHub();
 const layer = (it: Item) => (it.k === "frame" ? 0 : it.k === "draw" && it.tl === "hl" ? 1 : 2);
 
 /** The items as the board page positions them. */
@@ -45,6 +47,7 @@ export function MiniBoard({ doc, id, className }: { doc: BoardDoc | null; id?: s
     const c: ItemCtx = {
       doc, t, editing: null, hint: null, keyOf: (k) => k, setEditing: noop, update: noop, commit: noop, playing: null, setPlaying: noop,
       openBoard: noop, addToColumn: noop, liveActions: null, liveActionsDown: false, runLiveAction: async () => null,
+      bid: "", sync: MINI_HUB, runCompAction: async () => null,
       renderKid: (kid) => {
         const it = doc.items[kid];
         return it ? <div key={kid} className="hb-kid"><MiniBody id={kid} item={it} c={c} /></div> : null;
@@ -139,6 +142,15 @@ function MiniBody({ id, item, c }: { id: string; item: Item; c: ItemCtx }): Reac
       </div>
     );
   }
+  if (item.k === "comp") {
+    return (
+      <div className={`hb-card hb-embed hb-comp${item.by === "h" ? " dm" : ""}`} style={{ width: item.w ?? 480 }}>
+        <div className="bar-e"><span className="file">{item.title || item.comp}</span></div>
+        <div className="frame" style={{ height: item.h ? Math.max(120, item.h - 80) : 240 }} />
+      </div>
+    );
+  }
+  if (item.k === "video" && item.sync) return <ItemBody id={id} item={{ ...item, sync: undefined }} c={c} dropIndex={null} selected={false} />;
   if (item.k === "board") {
     return (
       <div className={`hb-card hb-boardref${item.by === "h" ? " dm" : ""}`} style={{ width: item.w ?? 212 }}>

@@ -5,6 +5,7 @@
 // without CORS) the stage shows the video element paused at ~1 s.
 import { useEffect, useState, type CSSProperties } from "react";
 import { assetUrl, boardsApi, grabFrame, mediaUrl, rememberPoster, videoPoster, type VideoPoster } from "./api";
+import { Icon } from "./icons";
 import type { ItemCtx } from "./items";
 
 const PLAY = <svg viewBox="0 0 10 12" aria-hidden="true"><path d="M0 0 10 6 0 12z" /></svg>;
@@ -54,12 +55,17 @@ export function useVideoPoster(src?: string, asset?: string, posterAsset?: strin
   return { ...st, setDur: (d: number) => setSt((s) => (s.dur ? s : { ...s, dur: d })) };
 }
 
-export function VideoStage({ playId, c, src, asset, posterAsset, posterUrl, dur, title, vert, style }: {
+export function VideoStage({ playId, c, src, asset, posterAsset, posterUrl, dur, title, vert, syncGroup, style }: {
   playId: string; c: ItemCtx; src?: string; asset?: string; posterAsset?: string; posterUrl?: string;
-  dur?: number; title?: string; vert?: boolean; style?: CSSProperties;
+  dur?: number; title?: string; vert?: boolean; syncGroup?: string; style?: CSSProperties;
 }) {
   const poster = useVideoPoster(src, asset, posterAsset, posterUrl, dur);
-  const playing = c.playing === playId;
+  // a video in a sync group is mounted from the start: it is the playhead the other cards follow
+  const synced = !!syncGroup && !!(src || asset);
+  const playing = c.playing === playId || synced;
+  const [vel, setVel] = useState<HTMLVideoElement | null>(null);
+  const clock = syncGroup ? c.sync.clock(syncGroup) : null;
+  useEffect(() => (vel && clock ? clock.attachVideo(vel) : undefined), [vel, clock]);
   const [blob, setBlob] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   useEffect(() => {
@@ -74,7 +80,8 @@ export function VideoStage({ playId, c, src, asset, posterAsset, posterUrl, dur,
   const url = asset ? blob : src;
   return (
     <div className={`stage${vert ? " vert" : ""}`} style={style}>
-      {playing && url && <video src={url} controls autoPlay preload="metadata" data-nodrag="" title={title} />}
+      {playing && url && <video ref={setVel} src={url} controls autoPlay={!synced} preload="metadata" data-nodrag="" title={title} poster={synced ? poster.url ?? undefined : undefined} />}
+      {synced && <span className="sync-chip over" data-tip={c.t("board.comp.syncTip", { group: syncGroup! })}><Icon name="sync" size={12} />{syncGroup}</span>}
       {!(playing && url) && (poster.url
         ? <img src={poster.url} alt="" draggable={false} />
         : poster.live

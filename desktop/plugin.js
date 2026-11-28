@@ -2,6 +2,190 @@ import { jsx, jsxs, Fragment } from "react/jsx-runtime";
 import * as PluginSdk from "@hermes/plugin-sdk";
 import { host } from "@hermes/plugin-sdk";
 import { useState, useEffect, useRef, useMemo, useCallback, forwardRef, useImperativeHandle, useLayoutEffect, memo } from "react";
+const DEMO_KEY = "hb.demo";
+const OFF = { on: false, now: null, tick: false, nomap: false };
+const FLAG = (v) => v !== null && !/^(0|false|off|no)$/i.test(v);
+function parseMoment(v) {
+  if (!v) return null;
+  if (/^\d{10}$/.test(v)) return Number(v) * 1e3;
+  if (/^\d{12,14}$/.test(v)) return Number(v);
+  const t2 = new Date(v).getTime();
+  return Number.isFinite(t2) ? t2 : null;
+}
+function parseDemo(search, stored) {
+  const q = new URLSearchParams(search);
+  if (q.has("demo")) {
+    if (!FLAG(q.get("demo"))) return OFF;
+    return { on: true, now: parseMoment(q.get("now")), tick: FLAG(q.get("tick")), nomap: FLAG(q.get("nomap")) };
+  }
+  if (!stored) return OFF;
+  try {
+    const s = JSON.parse(stored);
+    if (s === true || s === 1) return { ...OFF, on: true };
+    if (!s || typeof s !== "object" || !s.on) return OFF;
+    return { on: true, now: typeof s.now === "number" ? s.now : null, tick: !!s.tick, nomap: !!s.nomap };
+  } catch {
+    return stored === "1" ? { ...OFF, on: true } : OFF;
+  }
+}
+function makeClock(start, tick, real) {
+  let base = start, since = real();
+  return {
+    now: () => tick ? base + (real() - since) : base,
+    set: (ms) => {
+      base = ms;
+      since = real();
+    },
+    advance: (ms) => {
+      base = tick ? base + (real() - since) + ms : base + ms;
+      since = real();
+    }
+  };
+}
+function makeDate(Real, clock2) {
+  const Demo = function(...args) {
+    if (!new.target) return new Real(clock2.now()).toString();
+    return args.length === 0 ? new Real(clock2.now()) : new Real(...args);
+  };
+  Object.setPrototypeOf(Demo, Real);
+  Demo.prototype = Real.prototype;
+  Demo.now = () => clock2.now();
+  return Demo;
+}
+let config = OFF;
+let realNowFn = () => Date.now();
+const realNow = () => realNowFn();
+let clock$2 = null;
+const demoOn = () => config.on;
+const demoNomap = () => config.on && config.nomap;
+function installDemo(win = window) {
+  let stored = null;
+  try {
+    stored = win.localStorage?.getItem(DEMO_KEY) ?? null;
+  } catch {
+    stored = null;
+  }
+  const next = parseDemo(win.location.search, stored);
+  try {
+    if (new URLSearchParams(win.location.search).has("demo")) {
+      if (next.on) win.localStorage?.setItem(DEMO_KEY, JSON.stringify(next));
+      else win.localStorage?.removeItem(DEMO_KEY);
+    }
+  } catch {
+  }
+  const first = !clock$2;
+  config = next;
+  if (next.on && first) {
+    const RealDate = win.Date;
+    const real = () => RealDate.now();
+    realNowFn = real;
+    clock$2 = makeClock(next.now ?? real(), next.tick, real);
+    win.Date = makeDate(RealDate, clock$2);
+  }
+  const api2 = {
+    get on() {
+      return config.on;
+    },
+    config: () => ({ ...config }),
+    enable: (o = {}) => {
+      const cfg = { on: true, now: typeof o.now === "string" ? parseMoment(o.now) : o.now ?? null, tick: !!o.tick, nomap: !!o.nomap };
+      try {
+        win.localStorage?.setItem(DEMO_KEY, JSON.stringify(cfg));
+      } catch {
+      }
+      win.location.reload();
+    },
+    disable: () => {
+      try {
+        win.localStorage?.removeItem(DEMO_KEY);
+      } catch {
+      }
+      win.location.reload();
+    },
+    setNow: (v) => {
+      const ms = typeof v === "number" ? v : parseMoment(v);
+      if (clock$2 && ms != null) clock$2.set(ms);
+    },
+    advance: (ms) => clock$2?.advance(ms),
+    now: () => clock$2 ? clock$2.now() : Date.now()
+  };
+  win.__hbDemo = api2;
+  return config;
+}
+const pad$1 = (n) => String(n).padStart(2, "0");
+const stamp = (ms) => {
+  const d = new Date(ms);
+  return `${d.getFullYear()}-${pad$1(d.getMonth() + 1)}-${pad$1(d.getDate())} ${pad$1(d.getHours())}:${pad$1(d.getMinutes())}:${pad$1(d.getSeconds())},120`;
+};
+function demoSource(key, value, now) {
+  const v = value;
+  if (!v) return value;
+  switch (key) {
+    case "status":
+      return { ...v, hermes_home: "~/.hermes", config_path: "~/.hermes/config.yaml", env_path: "~/.hermes/.env", gateway_health_url: null };
+    case "system":
+      return { ...v, hostname: "demo-host" };
+    case "analytics": {
+      const a = v;
+      const zero = (r) => ({ ...r, estimated_cost: 0, actual_cost: 0 });
+      return {
+        ...a,
+        daily: a.daily?.map(zero),
+        by_model: a.by_model?.map(zero),
+        totals: a.totals && { ...a.totals, total_estimated_cost: 0, total_actual_cost: 0 }
+      };
+    }
+    case "cron": {
+      const jobs = [
+        ["Morning briefing", "every day 08:00", 25 * 6e4],
+        ["Nightly backup check", "every day 23:30", 2.4 * 36e5],
+        ["Weekly digest", "mondays 09:00", 5.1 * 36e5],
+        ["Inbox triage", "every hour", 11 * 6e4],
+        ["Release notes draft", "fridays 17:00", 20 * 36e5]
+      ];
+      return jobs.map(([name, display, ahead], i) => ({
+        id: `demo-${i}`,
+        name,
+        enabled: true,
+        state: "scheduled",
+        schedule_display: display,
+        next_run_at: new Date(now + ahead).toISOString(),
+        last_run_at: new Date(now - 36e5 * (i + 1)).toISOString(),
+        last_error: null
+      }));
+    }
+    case "sessions": {
+      const titles = ["Plan the launch board", "Tidy the training notes", "Draft the release notes", "Review the spider sim", "Sketch the exam circuit", "Weekly summary"];
+      const s = titles.map((title, i) => ({
+        id: `demo-s${i}`,
+        source: "cli",
+        model: "demo-model",
+        title,
+        started_at: now / 1e3 - 3600 * (i + 1),
+        ended_at: i ? now / 1e3 - 3e3 * i : null,
+        last_active: now / 1e3 - 420 * (i + 1),
+        is_active: i === 0,
+        message_count: 14 + i * 5,
+        tool_call_count: 3 + i,
+        input_tokens: 42e3 + i * 31e3,
+        output_tokens: 9e3 + i * 6500,
+        preview: title
+      }));
+      return { sessions: s, total: s.length, limit: 20, offset: 0 };
+    }
+    case "logs":
+      return {
+        file: "errors",
+        lines: [
+          `${stamp(now - 14 * 6e4)} ERROR demo.worker: Upstream request timed out, retrying in 5s`,
+          `${stamp(now - 9 * 6e4)} WARNING demo.gateway: Connection reset by peer`,
+          `${stamp(now - 3 * 6e4)} ERROR demo.worker: Retry limit reached, giving up on job`
+        ]
+      };
+    default:
+      return value;
+  }
+}
 function getDashboardHost() {
   const sdk = window.__HERMES_PLUGIN_SDK__;
   if (!sdk) throw new Error("Hermes plugin SDK not available");
@@ -30,7 +214,7 @@ const api = {
   },
   getCronJobs: (profile) => getHost().api.getCronJobs(profile),
   getSessions: (limit, offset) => getHost().api.getSessions(limit, offset),
-  getLogs: (params) => getHost().api.getLogs(params)
+  getLogs: (params) => getHost().api.getLogs(params).then((r) => demoOn() ? demoSource("logs", r, Date.now()) : r)
 };
 function fetchJSON(url, init) {
   return getHost().fetchJSON(url, init);
@@ -408,6 +592,12 @@ const en = {
   "board.video.play": "Play",
   "board.video.untitled": "Video",
   "board.image.capPh": "Caption",
+  "board.file.open": "Open the PDF",
+  "board.file.download": "Download the model",
+  "board.file.pages": "{n} p.",
+  "board.mark.ok": "OK",
+  "board.mark.fail": "Failed",
+  "board.mark.wait": "Waiting",
   "board.embed.title": "embed.html",
   "board.embed.sandbox": "sandbox: scripts only, no network",
   "board.embed.reload": "Reload",
@@ -416,6 +606,34 @@ const en = {
   "board.embed.themeOff": "Original look",
   "board.embed.activate": "Click to interact",
   "board.embed.live": "live html",
+  "board.comp.gallery": "Components",
+  "board.comp.close": "Close",
+  "board.comp.emptyTitle": "No components yet",
+  "board.comp.emptyBody": "Ask Hermes for a view you need (a gauge, a network, a timeline). It writes the component, saves it here and reuses it on any board.",
+  "board.comp.downTitle": "Components unavailable",
+  "board.comp.downBody": "The backend serving this page does not have the component library yet. Restart the gateway after updating the plugin.",
+  "board.comp.latest": "latest",
+  "board.comp.update": "Update to {v}",
+  "board.comp.versions": "Versions",
+  "board.comp.followLatest": "Follow latest",
+  "board.comp.source": "Source",
+  "board.comp.missing": "Component {name} is not in the library",
+  "board.comp.missingHint": "It was deleted or never created. Ask Hermes to create it again.",
+  "board.comp.dataFiles": "{n} data files · {size}",
+  "board.comp.syncTip": "Linked to the shared clock {group}",
+  "board.comp.actionNotOnCard": "This card is not allowed to run {id}",
+  "board.comp.actionCancelled": "Cancelled",
+  "board.sync.link": "Link to one clock",
+  "board.sync.unlink": "Unlink clock",
+  "board.sync.group": "Shared clock {group}",
+  "board.sync.master": "Follows the video",
+  "board.sync.free": "Own clock (no video in the group)",
+  "board.sync.rewind": "Back to start",
+  "board.sync.play": "Play",
+  "board.sync.pause": "Pause",
+  "board.sync.seek": "Position",
+  "board.sync.rate": "Speed",
+  "board.sync.manual": "Manual clock: stepped by a script",
   "board.ref.open": "open",
   "board.ref.meta": "{n} cards · {when}",
   "board.ref.missing": "Board not found",
@@ -450,6 +668,24 @@ const en = {
   "board.undo": "Undo",
   "board.redo": "Redo",
   "board.map": "Overview: click to jump",
+  "board.present.label": "Presentation controls",
+  "board.present.start": "Present",
+  "board.present.prev": "Previous stop",
+  "board.present.next": "Next stop",
+  "board.present.finish": "Finish",
+  "board.present.auto": "Auto-play",
+  "board.present.exit": "Exit presentation",
+  "board.present.empty": "Nothing to present yet: add frames or tour stops",
+  "board.tour.fromFrames": "Build tour from frames",
+  "board.tour.addSel": "Add to tour",
+  "board.tour.addView": "Add this view to tour",
+  "board.tour.clear": "Clear tour",
+  "board.tour.built": "Tour: {n} stops",
+  "board.tour.added": "Added to the tour ({n} stops)",
+  "board.tour.cleared": "Tour cleared",
+  "board.tour.noFrames": "No frames to build a tour from",
+  "board.map.toggle": "Overview map",
+  "demo.masked": "hidden in demo mode",
   "board.hint.pan": "Drag to move around the board",
   "board.hint.place": "Click on the board to place it · Esc to cancel",
   "board.hint.arrow": "Drag from one card to another",
@@ -907,6 +1143,12 @@ const es = {
   "board.video.play": "Reproducir",
   "board.video.untitled": "Video",
   "board.image.capPh": "Pie de imagen",
+  "board.file.open": "Abrir el PDF",
+  "board.file.download": "Descargar el modelo",
+  "board.file.pages": "{n} pág.",
+  "board.mark.ok": "Bien",
+  "board.mark.fail": "Falló",
+  "board.mark.wait": "En espera",
   "board.embed.title": "embed.html",
   "board.embed.sandbox": "aislado: solo scripts, sin red",
   "board.embed.reload": "Recargar",
@@ -915,6 +1157,34 @@ const es = {
   "board.embed.themeOff": "Aspecto original",
   "board.embed.activate": "Clic para usar",
   "board.embed.live": "html en vivo",
+  "board.comp.gallery": "Componentes",
+  "board.comp.close": "Cerrar",
+  "board.comp.emptyTitle": "Aún no hay componentes",
+  "board.comp.emptyBody": "Pídele a Hermes la vista que necesites (un medidor, una red, una línea de tiempo). Escribe el componente, lo guarda aquí y lo reutiliza en cualquier tablero.",
+  "board.comp.downTitle": "Componentes no disponibles",
+  "board.comp.downBody": "El servidor de esta página aún no tiene la biblioteca de componentes. Reinicia el gateway después de actualizar el plugin.",
+  "board.comp.latest": "última",
+  "board.comp.update": "Actualizar a {v}",
+  "board.comp.versions": "Versiones",
+  "board.comp.followLatest": "Seguir la última",
+  "board.comp.source": "Código",
+  "board.comp.missing": "El componente {name} no está en la biblioteca",
+  "board.comp.missingHint": "Se borró o nunca se creó. Pídele a Hermes que lo cree otra vez.",
+  "board.comp.dataFiles": "{n} archivos de datos · {size}",
+  "board.comp.syncTip": "Enlazada al reloj compartido {group}",
+  "board.comp.actionNotOnCard": "Esta tarjeta no tiene permiso para ejecutar {id}",
+  "board.comp.actionCancelled": "Cancelado",
+  "board.sync.link": "Enlazar a un reloj",
+  "board.sync.unlink": "Desenlazar reloj",
+  "board.sync.group": "Reloj compartido {group}",
+  "board.sync.master": "Sigue al video",
+  "board.sync.free": "Reloj propio (sin video en el grupo)",
+  "board.sync.rewind": "Al inicio",
+  "board.sync.play": "Reproducir",
+  "board.sync.pause": "Pausar",
+  "board.sync.seek": "Posición",
+  "board.sync.rate": "Velocidad",
+  "board.sync.manual": "Reloj manual: lo avanza un script",
   "board.ref.open": "abrir",
   "board.ref.meta": "{n} tarjetas · {when}",
   "board.ref.missing": "Pizarrón no encontrado",
@@ -949,6 +1219,24 @@ const es = {
   "board.undo": "Deshacer",
   "board.redo": "Rehacer",
   "board.map": "Vista general: clic para ir",
+  "board.present.label": "Controles de la presentación",
+  "board.present.start": "Presentar",
+  "board.present.prev": "Parada anterior",
+  "board.present.next": "Siguiente parada",
+  "board.present.finish": "Terminar",
+  "board.present.auto": "Reproducción automática",
+  "board.present.exit": "Salir de la presentación",
+  "board.present.empty": "Aún no hay nada que presentar: agrega marcos o paradas",
+  "board.tour.fromFrames": "Armar recorrido con los marcos",
+  "board.tour.addSel": "Agregar al recorrido",
+  "board.tour.addView": "Agregar esta vista al recorrido",
+  "board.tour.clear": "Quitar recorrido",
+  "board.tour.built": "Recorrido: {n} paradas",
+  "board.tour.added": "Agregado al recorrido ({n} paradas)",
+  "board.tour.cleared": "Recorrido quitado",
+  "board.tour.noFrames": "No hay marcos para armar un recorrido",
+  "board.map.toggle": "Mapa de vista general",
+  "demo.masked": "oculto en modo demo",
   "board.hint.pan": "Arrastra para moverte por el pizarrón",
   "board.hint.place": "Haz clic en el pizarrón para colocarlo · Esc para cancelar",
   "board.hint.arrow": "Arrastra de una tarjeta a otra",
@@ -2359,7 +2647,7 @@ function hostOf$1(url) {
     return url;
   }
 }
-function Row$1({ label, val }) {
+function Row$2({ label, val }) {
   return /* @__PURE__ */ jsxs("div", { className: "row", children: [
     /* @__PURE__ */ jsx("span", { className: "dim", children: label }),
     /* @__PURE__ */ jsx("span", { children: val })
@@ -2386,11 +2674,11 @@ function GatewayWidget({ status }) {
       ] }, name))
     ] }),
     /* @__PURE__ */ jsx("div", { className: "hover-reveal", children: /* @__PURE__ */ jsxs("div", { className: "rows", children: [
-      status.gateway_pid != null && /* @__PURE__ */ jsx(Row$1, { label: t2("gateway.pid"), val: String(status.gateway_pid) }),
-      status.gateway_exit_reason && /* @__PURE__ */ jsx(Row$1, { label: t2("gateway.exit"), val: status.gateway_exit_reason.slice(0, 28) }),
-      status.gateway_health_url && /* @__PURE__ */ jsx(Row$1, { label: t2("gateway.health"), val: hostOf$1(status.gateway_health_url) }),
-      /* @__PURE__ */ jsx(Row$1, { label: t2("gateway.config"), val: configStr }),
-      /* @__PURE__ */ jsx(Row$1, { label: t2("gateway.version"), val: `v${status.version}` })
+      status.gateway_pid != null && /* @__PURE__ */ jsx(Row$2, { label: t2("gateway.pid"), val: String(status.gateway_pid) }),
+      status.gateway_exit_reason && /* @__PURE__ */ jsx(Row$2, { label: t2("gateway.exit"), val: status.gateway_exit_reason.slice(0, 28) }),
+      status.gateway_health_url && /* @__PURE__ */ jsx(Row$2, { label: t2("gateway.health"), val: hostOf$1(status.gateway_health_url) }),
+      /* @__PURE__ */ jsx(Row$2, { label: t2("gateway.config"), val: configStr }),
+      /* @__PURE__ */ jsx(Row$2, { label: t2("gateway.version"), val: `v${status.version}` })
     ] }) })
   ] });
 }
@@ -2753,8 +3041,7 @@ function TokensWidget({ analytics, widgetProps, onWidgetPropsChange, gridSize })
             /* @__PURE__ */ jsx("b", { children: tip.bar.label }),
             " · ",
             formatTokenCount(tip.bar.tokens),
-            " · $",
-            tip.bar.cost.toFixed(2)
+            demoOn() ? "" : ` · $${tip.bar.cost.toFixed(2)}`
           ]
         }
       ),
@@ -2815,7 +3102,7 @@ function TokensWidget({ analytics, widgetProps, onWidgetPropsChange, gridSize })
         " ",
         formatTokenCount(tot.total_output)
       ] }),
-      /* @__PURE__ */ jsxs("span", { children: [
+      !demoOn() && /* @__PURE__ */ jsxs("span", { children: [
         /* @__PURE__ */ jsx("span", { className: "dim", children: t2("tokens.cost") }),
         " ",
         /* @__PURE__ */ jsxs("span", { className: "ok", children: [
@@ -2850,7 +3137,7 @@ function TokenBreakdown({ groups, cap, note }) {
         {
           className: "row tok-group",
           style: { "--share": `${Math.max(1, Math.min(100, g.share))}%` },
-          title: t2("tokens.rowTitle", {
+          title: demoOn() ? void 0 : t2("tokens.rowTitle", {
             name,
             tokens: formatTokenCount(g.tokens),
             cost: g.cost.toFixed(2),
@@ -2939,7 +3226,7 @@ function Meter({ label, pct, val }) {
     /* @__PURE__ */ jsx("span", { className: "val", children: val })
   ] });
 }
-function Row({ label, val }) {
+function Row$1({ label, val }) {
   return /* @__PURE__ */ jsxs("div", { className: "row", children: [
     /* @__PURE__ */ jsx("span", { className: "dim", children: label }),
     /* @__PURE__ */ jsx("span", { children: val })
@@ -2995,7 +3282,7 @@ function HostWidget({ system, widgetProps, onWidgetPropsChange }) {
     const tick = () => {
       const s = latest.current;
       if (!s) return;
-      setBuf((prev) => pushSample(prev, toSample(s, Date.now()), BUFFER_CAP));
+      setBuf((prev) => pushSample(prev, toSample(s, realNow()), BUFFER_CAP));
     };
     tick();
     const id = setInterval(tick, SAMPLE_MS);
@@ -3020,12 +3307,12 @@ function HostWidget({ system, widgetProps, onWidgetPropsChange }) {
       ] })
     ] }),
     view === "detail" && /* @__PURE__ */ jsxs("div", { className: "rows", children: [
-      system.load_avg && system.load_avg.length >= 3 && /* @__PURE__ */ jsx(Row, { label: t2("host.load"), val: system.load_avg.slice(0, 3).map((n) => n.toFixed(2)).join(" ") }),
-      system.cpu_count !== null && /* @__PURE__ */ jsx(Row, { label: t2("host.cores"), val: String(system.cpu_count) }),
-      system.memory && /* @__PURE__ */ jsx(Row, { label: t2("host.ram"), val: `${(system.memory.used / GB).toFixed(1)} / ${(system.memory.total / GB).toFixed(1)}G` }),
-      system.disk && /* @__PURE__ */ jsx(Row, { label: t2("host.disk"), val: t2("host.diskFree", { n: (system.disk.free / GB).toFixed(0) }) }),
-      system.process && /* @__PURE__ */ jsx(Row, { label: t2("host.proc"), val: t2("host.procValue", { mb: (system.process.rss / MB).toFixed(0), threads: system.process.num_threads }) }),
-      /* @__PURE__ */ jsx(Row, { label: t2("host.os"), val: `${system.platform} ${system.arch}` })
+      system.load_avg && system.load_avg.length >= 3 && /* @__PURE__ */ jsx(Row$1, { label: t2("host.load"), val: system.load_avg.slice(0, 3).map((n) => n.toFixed(2)).join(" ") }),
+      system.cpu_count !== null && /* @__PURE__ */ jsx(Row$1, { label: t2("host.cores"), val: String(system.cpu_count) }),
+      system.memory && /* @__PURE__ */ jsx(Row$1, { label: t2("host.ram"), val: `${(system.memory.used / GB).toFixed(1)} / ${(system.memory.total / GB).toFixed(1)}G` }),
+      system.disk && /* @__PURE__ */ jsx(Row$1, { label: t2("host.disk"), val: t2("host.diskFree", { n: (system.disk.free / GB).toFixed(0) }) }),
+      system.process && /* @__PURE__ */ jsx(Row$1, { label: t2("host.proc"), val: t2("host.procValue", { mb: (system.process.rss / MB).toFixed(0), threads: system.process.num_threads }) }),
+      /* @__PURE__ */ jsx(Row$1, { label: t2("host.os"), val: `${system.platform} ${system.arch}` })
     ] }),
     view === "graphs" && /* @__PURE__ */ jsx("div", { className: "host-sparks", children: HOST_SIGNALS.map((sig) => {
       const values = seriesOf(buf, sig.key);
@@ -4047,7 +4334,7 @@ const RANGE_LABEL = {
   week: "spend.range.week",
   month: "spend.range.month"
 };
-function SpendWidget({ widgetProps, onWidgetPropsChange, editing, gridSize }) {
+function SpendWidgetLive({ widgetProps, onWidgetPropsChange, editing, gridSize }) {
   const t2 = useT();
   const range = coerceSpendRange(widgetProps.range);
   const topMode = coerceTopMode(widgetProps.top);
@@ -4249,6 +4536,11 @@ function TopSessions({ sessions, editing, real }) {
     })
   ] });
 }
+function SpendWidget(props) {
+  const t2 = useT();
+  if (demoOn()) return /* @__PURE__ */ jsx("span", { className: "dim", children: t2("demo.masked") });
+  return /* @__PURE__ */ jsx(SpendWidgetLive, { ...props });
+}
 const BASE = "/api/plugins/home-dashboard/boards";
 const json = (method, body) => ({
   method,
@@ -4271,6 +4563,10 @@ const boardsApi = {
   videoChunk: (upload, i, n, data) => fetchJSON(`${BASE}/assets/video`, json("POST", { upload, i, n, data })),
   media: (aid, off, n) => fetchJSON(`${BASE}/media/${aid}?off=${off}&n=${n}`),
   liveActions: () => fetchJSON(`${BASE}/live/actions`),
+  components: () => fetchJSON(`${BASE}/components`).then((r) => r.components),
+  component: (name, ver) => fetchJSON(`${BASE}/components/${encodeURIComponent(name)}${ver ? `?ver=${encodeURIComponent(ver)}` : ""}`),
+  compFile: (bid, iid, name, off, n) => fetchJSON(`${BASE}/${bid}/comp/${iid}/files/${encodeURIComponent(name)}?off=${off}&n=${n}`),
+  compAction: (bid, iid, action, args, confirm) => fetchJSON(`${BASE}/${bid}/comp/${iid}/action`, json("POST", { action, args, confirm })).then((r) => r.result),
   liveAction: (bid, iid, action, index, confirm) => fetchJSON(`${BASE}/${bid}/live/${iid}/action`, json("POST", { action, index, confirm })).then((r) => r.result)
 };
 const posterCache = /* @__PURE__ */ new Map();
@@ -4307,6 +4603,38 @@ function mediaUrl(aid) {
     })();
     p.catch(() => mediaCache.delete(aid));
     mediaCache.set(aid, p);
+  }
+  return p;
+}
+const compFileCache = /* @__PURE__ */ new Map();
+function loadCompFile(bid, iid, name, rev) {
+  const key = `${bid}/${iid}/${name}@${rev}`;
+  let p = compFileCache.get(key);
+  if (!p) {
+    p = (async () => {
+      const parts = [];
+      let off = 0, size = Infinity, total = 0;
+      while (off < size) {
+        const r = await boardsApi.compFile(bid, iid, name, off, RANGE);
+        size = r.size;
+        if (!r.data) break;
+        const bin = atob(r.data);
+        const bytes = new Uint8Array(bin.length);
+        for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+        parts.push(bytes);
+        off += bytes.length;
+        total += bytes.length;
+      }
+      const out = new Uint8Array(total);
+      let at = 0;
+      for (const part of parts) {
+        out.set(part, at);
+        at += part.length;
+      }
+      return out.buffer;
+    })();
+    p.catch(() => compFileCache.delete(key));
+    compFileCache.set(key, p);
   }
   return p;
 }
@@ -4391,6 +4719,20 @@ function assetUrl(aid) {
     imageCache.set(aid, p);
   }
   return p;
+}
+async function openAsset(aid, name) {
+  const r = await boardsApi.asset(aid);
+  if (!r.data) throw new Error("not a file");
+  const url = URL.createObjectURL(b64ToBlob(r.data, r.mime));
+  const a = document.createElement("a");
+  a.href = url;
+  a.rel = "noopener noreferrer";
+  if (r.mime === "application/pdf") a.target = "_blank";
+  else a.download = `${name.replace(/[\\/:*?"<>|]+/g, "_") || "model"}.${aid.split(".")[1] ?? "bin"}`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 12e4);
 }
 function assetHtml(aid) {
   let p = htmlCache.get(aid);
@@ -4488,6 +4830,10 @@ function clock$1(ts) {
   return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
 }
 function RichText({ text }) {
+  if (text.includes("```")) {
+    const chunks = text.split(/```[^\n]*\n([\s\S]*?)(?:\n```|$)/g);
+    return /* @__PURE__ */ jsx(Fragment, { children: chunks.map((c, i) => i % 2 === 1 ? /* @__PURE__ */ jsx("pre", { className: "code", children: c }, i) : c ? /* @__PURE__ */ jsx(RichText, { text: c.replace(/^\n+|\n+$/g, "") }, i) : null) });
+  }
   const parts = text.split(/(\*\*[^*\n]+\*\*)/g);
   return /* @__PURE__ */ jsx(Fragment, { children: parts.map((p, i) => p.startsWith("**") && p.endsWith("**") && p.length > 4 ? /* @__PURE__ */ jsx("b", { children: p.slice(2, -2) }, i) : /* @__PURE__ */ jsx("span", { children: p }, i)) });
 }
@@ -4567,6 +4913,7 @@ const EXACT = {
   board_read: "readBoard",
   board_apply: "editBoard",
   board_render: "viewBoard",
+  board_component: "editBoard",
   skill_view: "skill",
   skills_list: "skill",
   skill_manage: "skill",
@@ -4785,6 +5132,15 @@ const Bell = [
     }
   ]
 ];
+const Blocks = [
+  [
+    "path",
+    {
+      d: "M10 22V7a1 1 0 0 0-1-1H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-5a1 1 0 0 0-1-1H2"
+    }
+  ],
+  ["rect", { x: "14", y: "2", width: "8", height: "8", rx: "1" }]
+];
 const BookOpen = [
   ["path", { d: "M12 7v14" }],
   [
@@ -4801,6 +5157,16 @@ const Bot = [
   ["path", { d: "M20 14h2" }],
   ["path", { d: "M15 13v2" }],
   ["path", { d: "M9 13v2" }]
+];
+const Box = [
+  [
+    "path",
+    {
+      d: "M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"
+    }
+  ],
+  ["path", { d: "m3.3 7 8.7 5 8.7-5" }],
+  ["path", { d: "M12 22V12" }]
 ];
 const Brain = [
   ["path", { d: "M12 18V5" }],
@@ -4843,11 +5209,20 @@ const CircleAlert = [
   ["line", { x1: "12", x2: "12", y1: "8", y2: "12" }],
   ["line", { x1: "12", x2: "12.01", y1: "16", y2: "16" }]
 ];
+const CircleArrowUp = [
+  ["circle", { cx: "12", cy: "12", r: "10" }],
+  ["path", { d: "m16 12-4-4-4 4" }],
+  ["path", { d: "M12 16V8" }]
+];
 const CircleCheck = [
   ["circle", { cx: "12", cy: "12", r: "10" }],
   ["path", { d: "m9 12 2 2 4-4" }]
 ];
 const Circle = [["circle", { cx: "12", cy: "12", r: "10" }]];
+const Clock = [
+  ["circle", { cx: "12", cy: "12", r: "10" }],
+  ["path", { d: "M12 6v6l4 2" }]
+];
 const CodeXml = [
   ["path", { d: "m18 16 4-4-4-4" }],
   ["path", { d: "m6 8-4 4 4 4" }],
@@ -5011,6 +5386,11 @@ const Highlighter = [
   ["path", { d: "m9 11-6 6v3h9l3-3" }],
   ["path", { d: "m22 12-4.6 4.6a2 2 0 0 1-2.8 0l-5.2-5.2a2 2 0 0 1 0-2.8L14 4" }]
 ];
+const History = [
+  ["path", { d: "M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" }],
+  ["path", { d: "M3 3v5h5" }],
+  ["path", { d: "M12 7v5l4 2" }]
+];
 const Image = [
   ["rect", { width: "18", height: "18", x: "3", y: "3", rx: "2", ry: "2" }],
   ["circle", { cx: "9", cy: "9", r: "2" }],
@@ -5043,6 +5423,11 @@ const LayoutDashboard = [
   ["rect", { width: "7", height: "9", x: "14", y: "12", rx: "1" }],
   ["rect", { width: "7", height: "5", x: "3", y: "16", rx: "1" }]
 ];
+const Link2 = [
+  ["path", { d: "M9 17H7A5 5 0 0 1 7 7h2" }],
+  ["path", { d: "M15 7h2a5 5 0 1 1 0 10h-2" }],
+  ["line", { x1: "8", x2: "16", y1: "12", y2: "12" }]
+];
 const Link = [
   ["path", { d: "M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" }],
   ["path", { d: "M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" }]
@@ -5070,6 +5455,16 @@ const Magnet = [
     }
   ],
   ["path", { d: "m5 8 4 4" }]
+];
+const Map$1 = [
+  [
+    "path",
+    {
+      d: "M14.106 5.553a2 2 0 0 0 1.788 0l3.659-1.83A1 1 0 0 1 21 4.619v12.764a1 1 0 0 1-.553.894l-4.553 2.277a2 2 0 0 1-1.788 0l-4.212-2.106a2 2 0 0 0-1.788 0l-3.659 1.83A1 1 0 0 1 3 19.381V6.618a1 1 0 0 1 .553-.894l4.553-2.277a2 2 0 0 1 1.788 0z"
+    }
+  ],
+  ["path", { d: "M15 5.764v15" }],
+  ["path", { d: "M9 3.236v15" }]
 ];
 const Maximize2 = [
   ["path", { d: "M15 3h6v6" }],
@@ -5162,6 +5557,11 @@ const Power = [
   ["path", { d: "M12 2v10" }],
   ["path", { d: "M18.4 6.6a9 9 0 1 1-12.77.04" }]
 ];
+const Presentation = [
+  ["path", { d: "M2 3h20" }],
+  ["path", { d: "M21 3v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V3" }],
+  ["path", { d: "m7 21 5-5 5 5" }]
+];
 const RectangleHorizontal = [
   ["rect", { width: "20", height: "12", x: "2", y: "6", rx: "2" }]
 ];
@@ -5219,6 +5619,15 @@ const Server = [
   ["rect", { width: "20", height: "8", x: "2", y: "14", rx: "2", ry: "2" }],
   ["line", { x1: "6", x2: "6.01", y1: "6", y2: "6" }],
   ["line", { x1: "6", x2: "6.01", y1: "18", y2: "18" }]
+];
+const SkipBack = [
+  [
+    "path",
+    {
+      d: "M17.971 4.285A2 2 0 0 1 21 6v12a2 2 0 0 1-3.029 1.715l-9.997-5.998a2 2 0 0 1-.003-3.432z"
+    }
+  ],
+  ["path", { d: "M3 20V4" }]
 ];
 const Slash = [["path", { d: "M22 2 2 22" }]];
 const Spline = [
@@ -5421,8 +5830,20 @@ const ICONS = {
   selectAll: SquareDashedMousePointer,
   video: Video,
   ok: CircleCheck,
+  markOk: Check,
+  markFail: X,
+  markWait: Clock,
+  fileDoc: FileText,
+  model3d: Box,
+  fileOpen: SquareArrowOutUpRight,
+  fileGet: Download,
   alert: CircleAlert,
   check: Check,
+  // presentation
+  present: Presentation,
+  play: Play,
+  pause: Pause,
+  map: Map$1,
   // Draw tool
   pen: Pen,
   highlighter: Highlighter,
@@ -5443,7 +5864,15 @@ const ICONS = {
   shapeRect: RectangleHorizontal,
   shapeDiamond: Diamond,
   shapePill: PILL$1,
-  shapeCircle: Circle
+  shapeCircle: Circle,
+  // components + sync
+  components: Blocks,
+  sync: Link2,
+  upgrade: CircleArrowUp,
+  versions: History,
+  skipBack: SkipBack,
+  playIcon: Play,
+  pauseIcon: Pause
 };
 const LIVE_ICONS = {
   activity: Activity,
@@ -5834,12 +6263,13 @@ function SessionModelPill({ doc, t: t2, refreshKey }) {
 }
 const CHAT_MAX_W = 640;
 function ToolLine({ acts, names, t: t2 }) {
+  if (demoOn()) acts = acts.filter((a) => a.kind !== "skill" && a.kind !== "command" && a.kind !== "other");
   if (!acts.length) return null;
   const label = (a) => a.kind === "editBoard" && a.n ? t2("board.chat.tool.editBoardN", { n: a.n }) : t2(`board.chat.tool.${a.kind}`);
   const ordered = [...acts].sort((a, b) => Number(b.kind === "editBoard") - Number(a.kind === "editBoard"));
   const shown = ordered.slice(0, 2);
   const rest = ordered.length - shown.length;
-  return /* @__PURE__ */ jsxs("div", { className: "ch-tool", "data-tip": names.join(" · "), children: [
+  return /* @__PURE__ */ jsxs("div", { className: "ch-tool", "data-tip": demoOn() ? void 0 : names.join(" · "), children: [
     /* @__PURE__ */ jsx(Icon, { name: `tool${ordered[0].kind[0].toUpperCase()}${ordered[0].kind.slice(1)}`, size: 12 }),
     /* @__PURE__ */ jsxs("span", { className: "txt", children: [
       shown.map(label).join(" · "),
@@ -6022,7 +6452,7 @@ function ChatPanel({ doc, t: t2, width, selected, sentAt, onWidth, onClose, onCo
           }
         ),
         /* @__PURE__ */ jsxs("header", { className: "ch-top", children: [
-          /* @__PURE__ */ jsx("span", { className: "hd", "data-tip": sessionId ? t2("board.chat.sessionTip", { id: sessionId }) : void 0, children: /* @__PURE__ */ jsxs("span", { className: "who", children: [
+          /* @__PURE__ */ jsx("span", { className: "hd", "data-tip": sessionId && !demoOn() ? t2("board.chat.sessionTip", { id: sessionId }) : void 0, children: /* @__PURE__ */ jsxs("span", { className: "who", children: [
             /* @__PURE__ */ jsx(Cad, {}),
             "hermes"
           ] }) }),
@@ -6167,17 +6597,17 @@ function headPath(x, y, dir, L = 7, W = 4) {
 }
 function samplePolyline(pts, step) {
   const out = [];
-  let carry = step / 2;
+  let carry2 = step / 2;
   for (let i = 1; i < pts.length; i++) {
     const [ax, ay] = pts[i - 1], [bx, by] = pts[i];
     const len = Math.hypot(bx - ax, by - ay);
-    let s = carry;
+    let s = carry2;
     while (s <= len) {
       const t2 = s / len;
       out.push([Math.round((ax + (bx - ax) * t2) * 10) / 10, Math.round((ay + (by - ay) * t2) * 10) / 10]);
       s += step;
     }
-    carry = s - len;
+    carry2 = s - len;
   }
   return out;
 }
@@ -6209,7 +6639,7 @@ function fitView(b, vp, pad2 = 60, maxZ = 1.25) {
 function intersects(a, b) {
   return a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
 }
-const RESIZE_H = /* @__PURE__ */ new Set(["frame", "box", "embed", "text", "shape"]);
+const RESIZE_H = /* @__PURE__ */ new Set(["frame", "box", "embed", "comp", "text", "shape"]);
 function resizePatch(kind, w, h) {
   const p = { w: Math.round(Math.max(kind === "shape" ? 40 : 120, w)) };
   if (RESIZE_H.has(kind)) p.h = Math.round(Math.max(40, h));
@@ -7074,6 +7504,552 @@ function applyLod(el, z) {
   if (el.dataset.lod !== String(lod)) el.dataset.lod = String(lod);
   return lod;
 }
+const IDLE_MS = 2600;
+function PresenterHud({ p, t: t2, board }) {
+  const [idle, setIdle] = useState(false);
+  const timer = useRef(0);
+  useEffect(() => {
+    const wake = () => {
+      setIdle(false);
+      window.clearTimeout(timer.current);
+      timer.current = window.setTimeout(() => setIdle(true), IDLE_MS);
+    };
+    wake();
+    window.addEventListener("pointermove", wake);
+    window.addEventListener("keydown", wake);
+    return () => {
+      window.removeEventListener("pointermove", wake);
+      window.removeEventListener("keydown", wake);
+      window.clearTimeout(timer.current);
+    };
+  }, []);
+  if (!p.hud || !p.stops.length) return null;
+  const n = p.stops.length, i = Math.min(p.ps.i, n - 1);
+  const last = i >= n - 1;
+  return /* @__PURE__ */ jsxs("div", { className: `hb-present${idle ? " idle" : ""}`, role: "toolbar", "aria-label": t2("board.present.label"), onPointerDown: (e) => e.stopPropagation(), children: [
+    /* @__PURE__ */ jsx("button", { className: "ib", "aria-label": t2("board.present.prev"), "data-tip": t2("board.present.prev"), "data-kbd": "←", disabled: i === 0 && !p.tour?.loop, onClick: p.prev, children: /* @__PURE__ */ jsx(Icon, { name: "prev", size: 15 }) }),
+    /* @__PURE__ */ jsxs("div", { className: "who", "aria-live": "polite", children: [
+      /* @__PURE__ */ jsxs("span", { className: "k", children: [
+        p.depth > 0 ? `${board} · ` : "",
+        String(i + 1).padStart(2, "0"),
+        /* @__PURE__ */ jsx("i", { children: "/" }),
+        String(n).padStart(2, "0")
+      ] }),
+      /* @__PURE__ */ jsx("b", { children: p.title }),
+      p.note && /* @__PURE__ */ jsx("span", { className: "note", children: p.note })
+    ] }),
+    /* @__PURE__ */ jsx("div", { className: "cells", "aria-hidden": "true", children: p.stops.map((_, j) => /* @__PURE__ */ jsx("i", { className: j < i ? "past" : j === i ? "on" : "" }, j)) }),
+    /* @__PURE__ */ jsx(
+      "button",
+      {
+        className: "ib",
+        "aria-label": last && !p.tour?.loop ? t2("board.present.finish") : t2("board.present.next"),
+        "data-tip": last && !p.tour?.loop ? t2("board.present.finish") : t2("board.present.next"),
+        "data-kbd": "→",
+        onClick: p.next,
+        children: /* @__PURE__ */ jsx(Icon, { name: "next", size: 15 })
+      }
+    ),
+    /* @__PURE__ */ jsx("i", { className: "sep" }),
+    /* @__PURE__ */ jsx(
+      "button",
+      {
+        className: `ib${p.ps.auto ? " on" : ""}`,
+        "aria-pressed": p.ps.auto,
+        "aria-label": t2("board.present.auto"),
+        "data-tip": t2("board.present.auto"),
+        "data-kbd": "P",
+        onClick: p.toggleAuto,
+        children: /* @__PURE__ */ jsx(Icon, { name: p.ps.auto ? "pause" : "play", size: 15 })
+      }
+    ),
+    /* @__PURE__ */ jsx("button", { className: "ib", "aria-label": t2("board.present.exit"), "data-tip": t2("board.present.exit"), "data-kbd": "Esc", onClick: p.stop, children: /* @__PURE__ */ jsx(Icon, { name: "close", size: 15 }) })
+  ] });
+}
+const DEFAULT_DWELL_S = 4;
+function liveStops(doc) {
+  const tour = doc?.tour;
+  if (!tour) return [];
+  return tour.stops.filter((s) => s.id ? !!doc.items[s.id] && doc.items[s.id].k !== "line" : !!(s.r || s.v));
+}
+function itemTitle(it) {
+  return ((it?.title || it?.text || it?.cap || it?.label || it?.note || "").trim().split("\n")[0] ?? "").slice(0, 80);
+}
+function stopTitle(stop, doc, n) {
+  if (stop.t) return stop.t;
+  const it = stop.id ? doc?.items[stop.id] : void 0;
+  return itemTitle(it) || String(n);
+}
+function stopNote(stop, doc) {
+  const it = stop.id ? doc?.items[stop.id] : void 0;
+  return it?.k === "frame" ? (it.note ?? "").trim().split("\n")[0].slice(0, 120) : "";
+}
+const hasDwell = (tour) => !!tour && (!!tour.dw || tour.stops.some((s) => !!s.dw));
+const dwellOf = (stop, tour) => stop.dw ?? tour?.dw ?? DEFAULT_DWELL_S;
+function framesAsStops(doc, rectOf) {
+  const rows = [];
+  const all = Object.entries(doc.items).filter(([, it]) => it.k === "frame" && !it.in).map(([id]) => ({ id, r: rectOf(id) })).filter((f) => !!f.r).sort((a, b) => a.r.y - b.r.y || a.r.x - b.r.x);
+  for (const f of all) {
+    const row = rows.find((r) => Math.abs(f.r.y - r[0].r.y) <= Math.max(40, 0.5 * Math.min(f.r.h, r[0].r.h)));
+    if (row) row.push(f);
+    else rows.push([f]);
+  }
+  return rows.flatMap((row) => row.sort((a, b) => a.r.x - b.r.x)).map((f) => ({ k: "frame", id: f.id }));
+}
+function withStop(tour, stop) {
+  return { ...tour ?? { stops: [] }, stops: [...tour?.stops ?? [], stop] };
+}
+class TourPlayer {
+  io;
+  token = 0;
+  timer = null;
+  duration;
+  state = { on: false, i: 0, n: 0, auto: false, flying: false, done: false };
+  constructor(io) {
+    this.io = io;
+  }
+  set(p) {
+    this.state = { ...this.state, ...p };
+    this.io.onState?.(this.state);
+  }
+  clearTimer() {
+    if (this.timer) {
+      this.timer.clock.cancel(this.timer.id);
+      this.timer = null;
+    }
+  }
+  /** Begins at stop `index` (default 0). Resolves when the camera arrives. */
+  start(index = 0, o = {}) {
+    const stops = this.io.stops();
+    this.duration = o.duration;
+    this.set({ on: true, n: stops.length, auto: o.auto ?? hasDwell(this.io.tour()), done: false });
+    if (!stops.length) {
+      this.finish("end");
+      return Promise.resolve(false);
+    }
+    return this.goto(index);
+  }
+  /** Flies to stop `index`, skipping any that cannot be shown (`dir` says which way to look on). */
+  async goto(index, dir = 1) {
+    const stops = this.io.stops();
+    const n = stops.length;
+    this.clearTimer();
+    const tok = ++this.token;
+    let i = Math.max(0, Math.min(n - 1, index));
+    let view = n ? this.io.view(stops[i]) : null;
+    while (!view && i + dir >= 0 && i + dir < n) {
+      i += dir;
+      view = this.io.view(stops[i]);
+    }
+    if (!view) {
+      this.finish("end");
+      return false;
+    }
+    this.set({ i, n, flying: true, done: false });
+    const ok = await this.io.fly(view, { duration: this.duration });
+    if (tok !== this.token) return false;
+    this.set({ flying: false });
+    if (ok) this.arm(tok);
+    return ok;
+  }
+  /** Waits the stop's dwell on the camera clock (so a manual clock steps it), then moves on. */
+  arm(tok) {
+    if (!this.state.auto || !this.state.on) return;
+    const stop = this.io.stops()[this.state.i];
+    if (!stop) return;
+    const clock2 = this.io.clock();
+    const deadline = clock2.now() + dwellOf(stop, this.io.tour()) * 1e3;
+    const tick = (t2) => {
+      if (tok !== this.token || !this.state.auto) return;
+      if (t2 >= deadline) {
+        this.timer = null;
+        void this.next();
+        return;
+      }
+      this.timer = { id: clock2.request(tick), clock: clock2 };
+    };
+    this.timer = { id: clock2.request(tick), clock: clock2 };
+  }
+  next() {
+    if (!this.state.on) return Promise.resolve(false);
+    const stops = this.io.stops();
+    const cur = stops[this.state.i];
+    if (cur?.k === "board" && !this.state.flying && this.io.enter?.(cur, this.state.i, this.state.auto)) {
+      this.token++;
+      this.clearTimer();
+      this.set({ on: false });
+      return Promise.resolve(true);
+    }
+    if (this.state.i >= stops.length - 1) {
+      if (this.io.tour()?.loop && stops.length > 1) return this.goto(0);
+      this.finish("end");
+      return Promise.resolve(false);
+    }
+    return this.goto(this.state.i + 1, 1);
+  }
+  prev() {
+    if (!this.state.on) return Promise.resolve(false);
+    return this.state.i > 0 ? this.goto(this.state.i - 1, -1) : this.goto(0);
+  }
+  setAuto(on) {
+    this.set({ auto: on });
+    if (!on) this.clearTimer();
+    else if (this.state.on && !this.state.flying && !this.timer) this.arm(this.token);
+  }
+  toggleAuto() {
+    this.setAuto(!this.state.auto);
+  }
+  /** Silently drops timers and in-flight work (the board unmounted); no onEnd. */
+  dispose() {
+    this.token++;
+    this.clearTimer();
+  }
+  /** Stops at the current stop and hands control back. */
+  stop() {
+    this.finish("stop");
+  }
+  finish(why) {
+    this.token++;
+    this.clearTimer();
+    if (why === "stop") this.io.cancel();
+    this.set({ on: false, flying: false, done: why === "end" });
+    this.io.onEnd?.(why);
+  }
+}
+let carry = null;
+const peekCarry = () => carry;
+const clearCarry = () => {
+  carry = null;
+};
+function carryInto(from, index, child, auto, duration) {
+  carry = { stack: [...carry?.stack ?? [], { board: from, index, auto }], phase: "in", target: child, duration };
+}
+function carryOut() {
+  if (!carry || !carry.stack.length) {
+    carry = null;
+    return null;
+  }
+  carry = { ...carry, phase: "out", target: carry.stack[carry.stack.length - 1].board };
+  return carry.target;
+}
+function claimCarry(bid) {
+  const c = carry;
+  if (!c) return null;
+  if (c.target !== bid) {
+    carry = null;
+    return null;
+  }
+  if (c.phase === "in") return { role: "child", depth: c.stack.length, auto: c.stack[c.stack.length - 1]?.auto ?? false, duration: c.duration };
+  const top = c.stack[c.stack.length - 1];
+  const rest = c.stack.slice(0, -1);
+  carry = rest.length ? { ...c, stack: rest, phase: "in", target: bid } : null;
+  return { role: "resume", index: top.index + 1, auto: top.auto, depth: rest.length, duration: c.duration };
+}
+function installTourApi(api2, win = window) {
+  win.__hbTour = api2;
+  return () => {
+    if (win.__hbTour === api2) delete win.__hbTour;
+  };
+}
+const INITIAL = { on: false, i: 0, n: 0, auto: false, flying: false, done: false };
+const CINEMA = 1.9;
+function usePresentation(d) {
+  const [ps, setPs] = useState(INITIAL);
+  const [presenting, setPresenting] = useState(() => {
+    const c = peekCarry();
+    return !!c && c.target === d.bid;
+  });
+  const presentingRef = useRef(presenting);
+  presentingRef.current = presenting;
+  const [hud, setHud] = useState(true);
+  const [depth, setDepth] = useState(0);
+  const depthRef = useRef(0);
+  const dep = useRef(d);
+  dep.current = d;
+  const doc = d.doc;
+  const tour = doc?.tour;
+  const stored = !!tour?.stops.length;
+  const stopsNow = useCallback(() => {
+    const { docRef, getRect, contentBounds } = dep.current;
+    const cur2 = docRef.current;
+    if (!cur2) return [];
+    const own = liveStops(cur2);
+    if (own.length) return own;
+    if (!cur2.tour?.stops.length) {
+      const frames = framesAsStops(cur2, getRect);
+      if (frames.length) return frames;
+    }
+    if (depthRef.current > 0) {
+      const b = contentBounds();
+      if (b) return [{ k: "view", r: { x: b.x - 140, y: b.y - 120, w: b.w + 280, h: b.h + 240 } }];
+    }
+    return [];
+  }, []);
+  const viewOf = useCallback((stop2) => {
+    const { vpRef, getRect } = dep.current;
+    const vp = vpRef.current;
+    if (!vp) return null;
+    if (stop2.v) return { ...stop2.v };
+    const r = stop2.r ?? (stop2.id ? getRect(stop2.id) : null);
+    if (!r) return null;
+    const size = { w: vp.clientWidth, h: vp.clientHeight };
+    const frame = stop2.k === "frame" || stop2.k === "view";
+    return viewForRect(r, size, { pad: frame ? 64 : 120, maxZ: frame ? 2.2 : 1.4, minZ: 0.05 });
+  }, []);
+  const playerRef = useRef(null);
+  const hudRef = useRef(true);
+  const fsRef = useRef(false);
+  const arrived = useRef(null);
+  const exitFullscreen = useCallback(() => {
+    if (fsRef.current && document.fullscreenElement) void document.exitFullscreen?.().catch(() => {
+    });
+    fsRef.current = false;
+  }, []);
+  const player = useMemo(() => {
+    const p = new TourPlayer({
+      stops: () => stopsNow(),
+      tour: () => dep.current.docRef.current?.tour,
+      view: (s) => viewOf(s),
+      fly: (to, o) => {
+        const c = dep.current.cam.current;
+        const from = dep.current.view.current;
+        const vp = dep.current.vpRef.current;
+        const size = { w: vp?.clientWidth ?? 1, h: vp?.clientHeight ?? 1 };
+        const dur = o.duration ?? Math.round(Math.min(1700, Math.max(700, flightDuration(from, to, size) * CINEMA)));
+        return c.flyTo(to, { duration: dur, ease: "inOut" });
+      },
+      cancel: () => dep.current.cam.current?.cancel(),
+      clock: () => getCameraClock(),
+      enter: (stop2, index, auto) => {
+        const ref = dep.current.docRef.current?.items[stop2.id ?? ""]?.ref;
+        if (!ref) return false;
+        carryInto(dep.current.bid, index, ref, auto, void 0);
+        dep.current.openChild(ref);
+        return true;
+      },
+      onEnd: (why) => {
+        if (why === "end" && depthRef.current > 0) {
+          const parent = carryOut();
+          if (parent) {
+            dep.current.closeToParent(parent);
+            return;
+          }
+        }
+        clearCarry();
+        exitFullscreen();
+        depthRef.current = 0;
+        setDepth(0);
+        setPresenting(false);
+        arrived.current?.(false);
+      },
+      onState: (s) => setPs(s)
+    });
+    playerRef.current = p;
+    return p;
+  }, [exitFullscreen, stopsNow, viewOf]);
+  const rectBefore = useRef(null);
+  const markViewport = () => {
+    rectBefore.current = dep.current.vpRef.current?.getBoundingClientRect() ?? null;
+  };
+  const pending2 = useRef(null);
+  useLayoutEffect(() => {
+    const vp = dep.current.vpRef.current, before = rectBefore.current;
+    rectBefore.current = null;
+    if (vp && before) {
+      const after = vp.getBoundingClientRect();
+      const v = dep.current.view.current;
+      if (after.left !== before.left || after.top !== before.top) {
+        dep.current.view.current = { ...v, x: v.x + before.left - after.left, y: v.y + before.top - after.top };
+        dep.current.applyView();
+      }
+    }
+    const p = pending2.current;
+    if (presenting && p) {
+      pending2.current = null;
+      void player.start(p.from, { auto: p.o.auto, duration: p.o.duration }).then((ok) => arrived.current?.(ok));
+    }
+  }, [presenting, player]);
+  const begin = useCallback((from, o, sub = 0) => {
+    depthRef.current = sub;
+    setDepth(sub);
+    hudRef.current = o.hud !== false;
+    setHud(hudRef.current);
+    dep.current.stopCamera();
+    pending2.current = { from, o };
+    if (presentingRef.current) {
+      pending2.current = null;
+      return player.start(from, { auto: o.auto, duration: o.duration });
+    }
+    markViewport();
+    setPresenting(true);
+    return new Promise((res) => {
+      arrived.current = res;
+    });
+  }, [player]);
+  const start = useCallback((o = {}) => {
+    if (!stopsNow().length) return Promise.resolve(false);
+    clearCarry();
+    if (o.fullscreen) {
+      fsRef.current = true;
+      void document.documentElement.requestFullscreen?.().catch(() => {
+        fsRef.current = false;
+      });
+    }
+    return begin(o.from ?? 0, o, 0);
+  }, [begin, stopsNow]);
+  const stop = useCallback(() => player.stop(), [player]);
+  const next = useCallback(() => {
+    void player.next();
+  }, [player]);
+  const prev = useCallback(() => {
+    void player.prev();
+  }, [player]);
+  const toggleAuto = useCallback(() => player.toggleAuto(), [player]);
+  const claimed = useRef(null);
+  useEffect(() => {
+    if (!d.ready || claimed.current === d.bid) return;
+    claimed.current = d.bid;
+    const role = claimCarry(d.bid);
+    if (!role) return;
+    const go = () => {
+      if (role.role === "child") {
+        void begin(0, { auto: role.auto || void 0, duration: role.duration }, role.depth);
+        return;
+      }
+      const n = stopsNow().length;
+      depthRef.current = role.depth;
+      if (role.index >= n) {
+        if (role.depth > 0) {
+          const parent = carryOut();
+          if (parent) {
+            dep.current.closeToParent(parent);
+            return;
+          }
+        }
+        setPresenting(false);
+        return;
+      }
+      void begin(role.index, { auto: role.auto, duration: role.duration }, role.depth);
+    };
+    const wait2 = d.arrival.current;
+    if (wait2) void wait2.then(go, go);
+    else go();
+  }, [begin, d.arrival, d.bid, d.ready, stopsNow]);
+  useEffect(() => {
+    claimed.current = null;
+  }, [d.bid]);
+  useEffect(() => {
+    if (!presenting) return;
+    const onKey = (e) => {
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      const k = e.key;
+      const eat = () => {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+      };
+      if (e.type === "keyup") {
+        if (k === " ") eat();
+        return;
+      }
+      if (k === "ArrowRight" || k === "ArrowDown" || k === "PageDown" || k === "Enter") {
+        eat();
+        next();
+      } else if (k === " ") {
+        eat();
+        if (playerRef.current?.state.auto) toggleAuto();
+        else next();
+      } else if (k === "ArrowLeft" || k === "ArrowUp" || k === "PageUp" || k === "Backspace") {
+        eat();
+        prev();
+      } else if (k === "Home") {
+        eat();
+        void player.goto(0);
+      } else if (k === "End") {
+        eat();
+        void player.goto(Math.max(0, stopsNow().length - 1));
+      } else if (k === "Escape") {
+        eat();
+        stop();
+      } else if (k === "p" || k === "P") {
+        eat();
+        toggleAuto();
+      } else if (k === "h" || k === "H") {
+        eat();
+        hudRef.current = !hudRef.current;
+        setHud(hudRef.current);
+      } else if (k === "f" || k === "F") {
+        eat();
+        if (document.fullscreenElement) void document.exitFullscreen?.().catch(() => {
+        });
+        else {
+          fsRef.current = true;
+          void document.documentElement.requestFullscreen?.().catch(() => {
+            fsRef.current = false;
+          });
+        }
+      } else eat();
+    };
+    window.addEventListener("keydown", onKey, true);
+    window.addEventListener("keyup", onKey, true);
+    return () => {
+      window.removeEventListener("keydown", onKey, true);
+      window.removeEventListener("keyup", onKey, true);
+    };
+  }, [next, player, presenting, prev, stop, stopsNow, toggleAuto]);
+  useEffect(() => {
+    if (!presenting) return;
+    const onFs = () => {
+      if (fsRef.current && !document.fullscreenElement) {
+        fsRef.current = false;
+        stop();
+      }
+    };
+    document.addEventListener("fullscreenchange", onFs);
+    return () => document.removeEventListener("fullscreenchange", onFs);
+  }, [presenting, stop]);
+  useEffect(() => () => {
+    playerRef.current?.dispose();
+  }, []);
+  useEffect(() => {
+    if (!d.ready) return;
+    const api2 = {
+      version: 1,
+      board: d.bid,
+      stops: () => stopsNow().map((stop2, i) => ({ stop: stop2, title: stopTitle(stop2, dep.current.docRef.current, i + 1), view: viewOf(stop2) })),
+      state: () => playerRef.current?.state ?? INITIAL,
+      start: (o) => start(o),
+      next: () => player.next(),
+      prev: () => player.prev(),
+      goto: (i) => player.goto(i),
+      auto: (on) => player.setAuto(on),
+      stop: () => player.stop(),
+      hud: (on) => {
+        hudRef.current = on;
+        setHud(on);
+      }
+    };
+    return installTourApi(api2);
+  }, [d.bid, d.ready, player, start, stopsNow, viewOf]);
+  const stops = useMemo(() => stopsNow(), [stopsNow, doc, presenting, ps.n, ps.on]);
+  const cur = stops[ps.i];
+  return {
+    presenting,
+    ps,
+    hud,
+    stops,
+    tour,
+    stored,
+    depth,
+    title: cur ? stopTitle(cur, doc, ps.i + 1) : "",
+    note: cur ? stopNote(cur, doc) : "",
+    count: () => stopsNow().length,
+    start,
+    stop,
+    next,
+    prev,
+    toggleAuto
+  };
+}
 const clone = (v) => v === void 0 ? v : JSON.parse(JSON.stringify(v));
 function insertKid(items, col, id, at) {
   const c = items[col];
@@ -7150,6 +8126,10 @@ function applyOp(doc, op) {
       for (const k of doomed) delete items[k];
       return;
     }
+    case "tour":
+      if (op.tour && op.tour.stops) doc.tour = clone(op.tour);
+      else delete doc.tour;
+      return;
     case "board":
       if (typeof op.p.name === "string") doc.name = op.p.name;
       return;
@@ -7223,7 +8203,8 @@ const DEFAULT_SIZE = {
   text: [420, 40],
   draw: [120, 80],
   live: [400, 300],
-  shape: [160, 56]
+  shape: [160, 56],
+  comp: [480, 320]
 };
 function liveMetricRows(n, w) {
   if (n <= 0) return 1;
@@ -7246,6 +8227,7 @@ function approxRect(item) {
   if (item.k === "col") h = 60 + 96 * (item.kids?.length ?? 0);
   if (item.k === "todo") h = 110 + 26 * (item.items?.length ?? 0);
   if (item.k === "live") h = item.h ?? liveHeight(item);
+  if (item.k === "image" && item.h == null && item.iw && item.ih) h = Math.round(((item.w ?? dw) - 14) * item.ih / item.iw + 56);
   if (item.k === "draw" && item.d) {
     const pts = item.d.split(" ").map((p) => p.split(",").map(Number));
     const xs2 = pts.map((p) => p[0]), ys2 = pts.map((p) => p[1]);
@@ -7322,8 +8304,8 @@ function accentOf(el, fallback = "#ffe3c4") {
   return c;
 }
 const cache = /* @__PURE__ */ new Map();
-const THUMB_W = 240;
-function thumbUrl(src, width = THUMB_W) {
+const THUMB_W$1 = 240;
+function thumbUrl(src, width = THUMB_W$1) {
   let p = cache.get(src);
   if (!p) {
     p = (async () => {
@@ -7489,9 +8471,13 @@ function useVideoPoster(src, asset, posterAsset, posterUrl, knownDur) {
   }, [src, asset, posterAsset, posterUrl, knownDur]);
   return { ...st, setDur: (d) => setSt((s) => s.dur ? s : { ...s, dur: d }) };
 }
-function VideoStage({ playId, c, src, asset, posterAsset, posterUrl, dur, title, vert }) {
+function VideoStage({ playId, c, src, asset, posterAsset, posterUrl, dur, title, vert, syncGroup }) {
   const poster = useVideoPoster(src, asset, posterAsset, posterUrl, dur);
-  const playing = c.playing === playId;
+  const synced = !!syncGroup && !!(src || asset);
+  const playing = c.playing === playId || synced;
+  const [vel, setVel] = useState(null);
+  const clock2 = syncGroup ? c.sync.clock(syncGroup) : null;
+  useEffect(() => vel && clock2 ? clock2.attachVideo(vel) : void 0, [vel, clock2]);
   const [blob, setBlob] = useState(null);
   const [loading, setLoading] = useState(false);
   useEffect(() => {
@@ -7512,7 +8498,11 @@ function VideoStage({ playId, c, src, asset, posterAsset, posterUrl, dur, title,
   const length = clockDuration(poster.dur);
   const url = asset ? blob : src;
   return /* @__PURE__ */ jsxs("div", { className: `stage${vert ? " vert" : ""}`, children: [
-    playing && url && /* @__PURE__ */ jsx("video", { src: url, controls: true, autoPlay: true, preload: "metadata", "data-nodrag": "", title }),
+    playing && url && /* @__PURE__ */ jsx("video", { ref: setVel, src: url, controls: true, autoPlay: !synced, preload: "metadata", "data-nodrag": "", title, poster: synced ? poster.url ?? void 0 : void 0 }),
+    synced && /* @__PURE__ */ jsxs("span", { className: "sync-chip over", "data-tip": c.t("board.comp.syncTip", { group: syncGroup }), children: [
+      /* @__PURE__ */ jsx(Icon, { name: "sync", size: 12 }),
+      syncGroup
+    ] }),
     !(playing && url) && (poster.url ? /* @__PURE__ */ jsx("img", { src: poster.url, alt: "", draggable: false }) : poster.live ? /* @__PURE__ */ jsx(
       "video",
       {
@@ -8055,7 +9045,7 @@ try{W.dispatchEvent(new Event('hermes:theme'))}catch(x){}}
 else if(m.type==='${SIZE_MSG}'){H.size={w:m.w,h:m.h,dpr:m.dpr||1,zoom:m.zoom||1};if(!raf)raf=W.requestAnimationFrame(fire)}});
 try{P.postMessage({type:'${READY_MSG}'},'*')}catch(e){}
 })();`;
-function jsonForScript(v) {
+function jsonForScript$1(v) {
   return JSON.stringify(v).replace(/</g, "\\u003c").replace(/\u2028/g, "\\u2028").replace(/\u2029/g, "\\u2029");
 }
 function insertAtHead(html, block) {
@@ -8067,17 +9057,71 @@ function insertAtHead(html, block) {
   if (dt) return dt[0] + block + html.slice(dt[0].length);
   return block + html;
 }
-const SCRIPT_OPEN = String.fromCharCode(60) + "script";
-const SCRIPT_CLOSE = String.fromCharCode(60) + "/script>";
+const SCRIPT_OPEN$1 = String.fromCharCode(60) + "script";
+const SCRIPT_CLOSE$1 = String.fromCharCode(60) + "/script>";
 function embedDocument(html, themed, theme) {
   if (!themed || !theme) return html;
-  const block = `<style id="hermes-base">${baseCss(theme)}</style>${SCRIPT_OPEN} id="hermes-bridge">${BRIDGE_JS.replace("__HERMES_THEME__", () => jsonForScript(theme))}${SCRIPT_CLOSE}`;
+  const block = `<style id="hermes-base">${baseCss(theme)}</style>${SCRIPT_OPEN$1} id="hermes-bridge">${BRIDGE_JS.replace("__HERMES_THEME__", () => jsonForScript$1(theme))}${SCRIPT_CLOSE$1}`;
   return insertAtHead(html, block);
 }
 function sizeMessage(w, h, devicePixelRatio, zoom) {
   const z = Number.isFinite(zoom) && zoom > 0 ? zoom : 1;
   const dpr = Math.min(4, Math.round(Math.max(1, devicePixelRatio || 1) * Math.max(1, z) * 100) / 100);
   return { type: SIZE_MSG, w: Math.round(w), h: Math.round(h), dpr, zoom: Math.round(z * 100) / 100 };
+}
+const HB_VERSION = 1;
+const HB_ASSET_REQ = "hb:asset";
+const HB_ACTION_REQ = "hb:action";
+const HB_CLOCK_CMD = "hb:clock-cmd";
+const HB_DATA = "hb:data";
+const HB_CLOCK = "hb:clock";
+const HB_ASSETS = "hb:assets";
+const HB_ASSET_RES = "hb:asset-res";
+const HB_ACTION_RES = "hb:action-res";
+const COMPONENT_CSP = "default-src 'none'; script-src 'unsafe-inline' 'unsafe-eval'; style-src 'unsafe-inline'; img-src data: blob:; font-src data:; media-src data: blob:; connect-src 'none'; frame-src 'none'; form-action 'none'; base-uri 'none'";
+const HB_JS = `(function(){
+var W=window,P=W.parent,H=W.hermes,I=__HB_INIT__;
+function bag(){var l=[];return{add:function(f){if(typeof f==='function')l.push(f);return function(){var i=l.indexOf(f);if(i>=0)l.splice(i,1)}},
+fire:function(a,b){l.slice().forEach(function(f){try{f(a,b)}catch(e){try{console.error(e)}catch(x){}}})},n:function(){return l.length}}}
+var dataS=bag(),tickS=bag(),seekS=bag(),stateS=bag(),pend={},seq=0,cache={};
+function post(m){try{P.postMessage(m,'*')}catch(e){}}
+function cmd(c,v){post({type:'${HB_CLOCK_CMD}',cmd:c,v:v})}
+var C={t:0,playing:false,rate:1,duration:0,group:null,manual:false,master:false,
+onTick:function(f){return tickS.add(f)},onSeek:function(f){return seekS.add(f)},onState:function(f){return stateS.add(f)},
+play:function(){cmd('play')},pause:function(){cmd('pause')},toggle:function(){cmd('toggle')},
+seek:function(t){cmd('seek',+t||0)},setRate:function(r){cmd('rate',+r||1)},setDuration:function(d){cmd('duration',+d||0)}};
+function setClock(c){for(var k in c)if(k in C&&typeof C[k]!=='function')C[k]=c[k]}
+setClock(I.clock||{});
+var hb=W.hb={version:${HB_VERSION},component:I.component,data:I.data||{},assets:Object.keys(I.assets||{}),assetRev:I.assets||{},actions:I.actions||[],clock:C,
+onData:function(f){var off=dataS.add(f);if(Object.keys(hb.data).length)try{f(hb.data,Object.keys(hb.data))}catch(e){}return off},
+onResize:function(f){return H.onResize(f)},onTheme:function(f){return H.onTheme(f)},
+asset:function(name,o){if(I.preview)return Promise.reject(new Error('no data in the preview'));var as=(o&&o.as)||(/\\.json$/i.test(name)?'json':'arraybuffer'),key=name+'@'+(hb.assetRev[name]||0);
+var p=cache[key];if(!p){p=cache[key]=new Promise(function(res,rej){var id=++seq;pend[id]={res:res,rej:rej};post({type:'${HB_ASSET_REQ}',id:id,name:name})});p.catch(function(){delete cache[key]})}
+return p.then(function(buf){if(as==='arraybuffer')return buf.slice(0);if(as==='blob')return new Blob([buf]);var s=new TextDecoder().decode(buf);return as==='json'?JSON.parse(s):s})},
+action:function(name,args){if(I.preview)return Promise.reject(new Error('actions are off in the preview'));return new Promise(function(res,rej){var id=++seq;pend[id]={res:res,rej:rej};post({type:'${HB_ACTION_REQ}',id:id,name:String(name),args:args||{}})})}};
+Object.defineProperty(hb,'size',{enumerable:true,get:function(){return H.size}});
+Object.defineProperty(hb,'theme',{enumerable:true,get:function(){return H.theme}});
+hb.ready=new Promise(function(res){var off=H.onResize(function(){res();try{off&&off()}catch(e){}})});
+W.addEventListener('message',function(e){if(e.source!==P)return;var m=e.data;if(!m||typeof m!=='object')return;
+if(m.type==='${HB_DATA}'){hb.data=m.data||{};dataS.fire(hb.data,m.keys||Object.keys(hb.data))}
+else if(m.type==='${HB_ASSETS}'){hb.assetRev=m.assets||{};hb.assets=Object.keys(hb.assetRev)}
+else if(m.type==='${HB_CLOCK}'){var was=C.playing,wr=C.rate,wd=C.duration;setClock(m.clock||{});
+if(m.ev==='seek')seekS.fire(C.t,C);if(m.ev==='tick'||m.ev==='seek')tickS.fire(C.t,C);
+if(m.ev==='state'||was!==C.playing||wr!==C.rate||wd!==C.duration)stateS.fire(C,C)}
+else if(m.type==='${HB_ASSET_RES}'||m.type==='${HB_ACTION_RES}'){var q=pend[m.id];if(!q)return;delete pend[m.id];
+if(m.ok)q.res(m.type==='${HB_ASSET_RES}'?m.body:m.result);else q.rej(new Error(m.error||'failed'))}});
+})();`;
+function jsonForScript(v) {
+  return JSON.stringify(v).replace(/</g, "\\u003c").replace(/\u2028/g, "\\u2028").replace(/\u2029/g, "\\u2029");
+}
+const SCRIPT_OPEN = String.fromCharCode(60) + "script";
+const SCRIPT_CLOSE = String.fromCharCode(60) + "/script>";
+function componentDocument(html, themed, theme, init) {
+  const csp = `<meta http-equiv="Content-Security-Policy" content="${COMPONENT_CSP}">`;
+  const style = themed ? `<style id="hermes-base">${baseCss(theme)}</style>` : "";
+  const bridge = `${SCRIPT_OPEN} id="hermes-bridge">${BRIDGE_JS.replace("__HERMES_THEME__", () => jsonForScript(theme))}${SCRIPT_CLOSE}`;
+  const hb = `${SCRIPT_OPEN} id="hb-bridge">${HB_JS.replace("__HB_INIT__", () => jsonForScript(init))}${SCRIPT_CLOSE}`;
+  return insertAtHead(html, csp + style + bridge + hb);
 }
 function normalise(ctx, css, fallback) {
   if (!ctx) return css || fallback;
@@ -8199,6 +9243,297 @@ function useEmbedBridge(box2, active, themed, key, onTheme) {
       window.clearTimeout(first);
     };
   }, [box2, active, themed, key]);
+}
+function toDataUrl$1(html) {
+  const bytes = new TextEncoder().encode(html);
+  let bin = "";
+  for (let i = 0; i < bytes.length; i += 32768) bin += String.fromCharCode(...bytes.subarray(i, i + 32768));
+  return `data:text/html;charset=utf-8;base64,${btoa(bin)}`;
+}
+const libCache = /* @__PURE__ */ new Map();
+function loadComponent(name, ver, stamp2, fresh = false) {
+  const key = `${name}@${ver ?? "latest"}#${stamp2 ?? 0}`;
+  let p = fresh ? void 0 : libCache.get(key);
+  if (!p) {
+    p = boardsApi.component(name, ver);
+    p.catch(() => libCache.delete(key));
+    libCache.set(key, p);
+  }
+  return p;
+}
+function clockInit(s, group) {
+  return { t: s.t, playing: s.playing, rate: s.rate, duration: s.duration, group, manual: s.manual, master: s.master };
+}
+function useCompBridge(a) {
+  const { box: box2, active, nonce, bid, iid, clock: clock2, group } = a;
+  const latest = useRef(a);
+  latest.current = a;
+  const win = useCallback(() => box2.current?.querySelector("iframe")?.contentWindow ?? null, [box2]);
+  const post = useCallback((m, transfer) => {
+    try {
+      win()?.postMessage(m, "*", transfer);
+    } catch {
+    }
+  }, [win]);
+  useEffect(() => {
+    if (!active) return;
+    const reply = (type, id, ok, rest, transfer) => post({ type, id, ok, ...rest }, transfer);
+    const onMessage = (e) => {
+      const w = win();
+      if (!w || e.source !== w || !e.data || typeof e.data !== "object") return;
+      const m = e.data;
+      const cur = latest.current;
+      switch (m.type) {
+        case READY_MSG:
+          post({ type: HB_DATA, data: cur.data, keys: Object.keys(cur.data) });
+          post({ type: HB_ASSETS, assets: Object.fromEntries(Object.entries(cur.files).map(([k, v]) => [k, v.r])) });
+          post({ type: HB_CLOCK, ev: "state", clock: clockInit(clock2.state, group) });
+          return;
+        case HB_ASSET_REQ: {
+          const id = Number(m.id), name = String(m.name ?? "");
+          const rev = cur.files[name]?.r ?? 0;
+          loadCompFile(bid, iid, name, rev).then(
+            (buf) => {
+              const copy = buf.slice(0);
+              reply(HB_ASSET_RES, id, true, { body: copy }, [copy]);
+            },
+            (err) => reply(HB_ASSET_RES, id, false, { error: String(err?.message ?? err) })
+          );
+          return;
+        }
+        case HB_ACTION_REQ: {
+          const id = Number(m.id);
+          cur.runAction(String(m.name ?? ""), m.args && typeof m.args === "object" ? m.args : {}).then(
+            (result) => reply(HB_ACTION_RES, id, true, { result }),
+            (err) => reply(HB_ACTION_RES, id, false, { error: String(err?.message ?? err) })
+          );
+          return;
+        }
+        case HB_CLOCK_CMD:
+          switch (m.cmd) {
+            case "play":
+              clock2.play();
+              break;
+            case "pause":
+              clock2.pause();
+              break;
+            case "toggle":
+              clock2.toggle();
+              break;
+            case "seek":
+              void clock2.seek(Number(m.v));
+              break;
+            case "rate":
+              clock2.setRate(Number(m.v));
+              break;
+            case "duration":
+              clock2.setDuration(Number(m.v));
+              break;
+          }
+          return;
+      }
+    };
+    window.addEventListener("message", onMessage);
+    return () => window.removeEventListener("message", onMessage);
+  }, [active, bid, iid, clock2, group, nonce, post, win]);
+  const dataSig = useMemo(() => JSON.stringify(a.data), [a.data]);
+  const first = useRef(true);
+  useEffect(() => {
+    if (first.current) {
+      first.current = false;
+      return;
+    }
+    post({ type: HB_DATA, data: latest.current.data, keys: Object.keys(latest.current.data) });
+  }, [dataSig, post]);
+  const filesSig = useMemo(() => JSON.stringify(Object.entries(a.files).map(([k, v]) => [k, v.r])), [a.files]);
+  useEffect(() => {
+    post({ type: HB_ASSETS, assets: Object.fromEntries(Object.entries(latest.current.files).map(([k, v]) => [k, v.r])) });
+  }, [filesSig, post]);
+  useEffect(() => {
+    if (!active) return;
+    return clock2.subscribe((ev, s) => post({ type: HB_CLOCK, ev, clock: clockInit(s, group) }));
+  }, [active, clock2, group, nonce, post]);
+}
+const fmtBytes = (n) => n > 1048576 ? `${(n / 1048576).toFixed(1)} MB` : n > 1024 ? `${Math.round(n / 1024)} KB` : `${n} B`;
+function CompView({ id, item, c }) {
+  const name = item.comp ?? "";
+  const [lib, setLib] = useState(null);
+  const [nonce, setNonce] = useState(0);
+  const [base, setBase] = useState(null);
+  const [menu, setMenu] = useState(null);
+  const [src, setSrc] = useState(false);
+  const [scheme, setScheme] = useState(void 0);
+  const box2 = useRef(null);
+  const themed = item.nt !== true;
+  useEffect(() => {
+    let live = true;
+    if (!name) {
+      setLib("missing");
+      return;
+    }
+    loadComponent(name, item.ver, item.at).then((d) => live && setLib(d), () => live && setLib("missing"));
+    return () => {
+      live = false;
+    };
+  }, [name, item.ver, item.at]);
+  useLayoutEffect(() => {
+    if (!base && box2.current) setBase(readTheme(box2.current));
+  }, [base, lib]);
+  const group = item.sync ?? null;
+  const clock2 = c.sync.clock(group ?? `~${id}`);
+  const data = useMemo(() => item.cdata ?? (lib && lib !== "missing" && lib.sample && typeof lib.sample === "object" ? lib.sample : {}), [item.cdata, lib]);
+  const files = useMemo(() => item.files ?? {}, [item.files]);
+  const boot = useRef({ data, files, item, group, clock: clock2 });
+  boot.current = { data, files, item, group, clock: clock2 };
+  const html = lib && lib !== "missing" ? lib.html : null;
+  const version = lib && lib !== "missing" ? lib.version : "";
+  const doc = useMemo(() => {
+    if (html == null || !base) return null;
+    const b = boot.current;
+    const init = {
+      component: { name, version },
+      data: b.data,
+      assets: Object.fromEntries(Object.entries(b.files).map(([k, v]) => [k, v.r])),
+      actions: b.item.actions ?? [],
+      clock: clockInit(b.clock.state, b.group)
+    };
+    return componentDocument(html, themed, base, init);
+  }, [html, base, themed, nonce, name, version]);
+  const runAction = useCallback(async (action, args) => {
+    if (!(item.actions ?? []).includes(action)) throw new Error(c.t("board.comp.actionNotOnCard", { id: action }));
+    const r = await c.runCompAction(id, action, args);
+    if (!r) throw new Error(c.t("board.comp.actionCancelled"));
+    return r;
+  }, [c, id, item.actions]);
+  useEmbedBridge(box2, doc != null, themed, `${nonce}`, (t2) => setScheme(t2.scheme));
+  useCompBridge({ box: box2, active: doc != null, nonce: `${nonce}${themed}`, bid: c.bid, iid: id, data, files, clock: clock2, group, runAction });
+  const Frame = c.Frame;
+  const active = c.playing === id;
+  const height = item.h ? Math.max(120, item.h - 80) : 240;
+  const frameStyle = { height, ...themed ? { colorScheme: scheme ?? base?.scheme } : {} };
+  const missing = lib === "missing";
+  const current2 = lib && lib !== "missing" ? lib.current : "";
+  const behind = !!item.ver && !!current2 && item.ver !== current2;
+  const title = item.title || (lib && lib !== "missing" ? lib.title : "") || name;
+  const sync = group ? c.t("board.comp.syncTip", { group }) : "";
+  return /* @__PURE__ */ jsxs("div", { className: `hb-card hb-embed hb-comp${item.by === "h" ? " dm" : ""}${group ? " synced" : ""}`, style: { width: item.w ?? 480 }, children: [
+    /* @__PURE__ */ jsxs("div", { className: "bar-e", children: [
+      /* @__PURE__ */ jsx("span", { className: "file", children: title }),
+      version && /* @__PURE__ */ jsxs("span", { className: "sb", children: [
+        name,
+        " · ",
+        version,
+        item.ver ? "" : ` · ${c.t("board.comp.latest")}`
+      ] }),
+      /* @__PURE__ */ jsxs("span", { className: "tools", children: [
+        group && /* @__PURE__ */ jsxs("span", { className: "sync-chip", "data-tip": sync, "aria-label": sync, children: [
+          /* @__PURE__ */ jsx(Icon, { name: "sync", size: 12 }),
+          group
+        ] }),
+        behind && /* @__PURE__ */ jsx(
+          "button",
+          {
+            className: "kbtn on",
+            "data-nodrag": "",
+            "data-tip": c.t("board.comp.update", { v: current2 }),
+            "aria-label": c.t("board.comp.update", { v: current2 }),
+            onClick: () => c.update(id, { ver: null }),
+            children: /* @__PURE__ */ jsx(Icon, { name: "upgrade", size: 13 })
+          }
+        ),
+        /* @__PURE__ */ jsx(
+          "button",
+          {
+            className: `kbtn${themed ? " on" : ""}`,
+            "data-nodrag": "",
+            "data-tip": c.t(themed ? "board.embed.themeOff" : "board.embed.themeOn"),
+            "aria-pressed": themed,
+            "aria-label": c.t(themed ? "board.embed.themeOff" : "board.embed.themeOn"),
+            onClick: () => c.update(id, { nt: themed ? true : null }),
+            children: /* @__PURE__ */ jsx(Icon, { name: "theme", size: 13 })
+          }
+        ),
+        /* @__PURE__ */ jsx(
+          "button",
+          {
+            className: "kbtn",
+            "data-nodrag": "",
+            "data-tip": c.t("board.embed.reload"),
+            "aria-label": c.t("board.embed.reload"),
+            onClick: () => {
+              setNonce((n) => n + 1);
+              loadComponent(name, item.ver, item.at, true).then(setLib, () => void 0);
+            },
+            children: /* @__PURE__ */ jsx(Icon, { name: "reload", size: 13 })
+          }
+        ),
+        /* @__PURE__ */ jsx(
+          "button",
+          {
+            className: `kbtn${menu ? " on" : ""}`,
+            "data-nodrag": "",
+            "data-tip": c.t("board.comp.versions"),
+            "aria-label": c.t("board.comp.versions"),
+            "aria-expanded": !!menu,
+            onClick: () => setMenu((m) => m ? null : "ver"),
+            children: /* @__PURE__ */ jsx(Icon, { name: "versions", size: 13 })
+          }
+        ),
+        /* @__PURE__ */ jsx(
+          "button",
+          {
+            className: `kbtn${src ? " on" : ""}`,
+            "data-nodrag": "",
+            "data-tip": c.t("board.comp.source"),
+            "aria-label": c.t("board.comp.source"),
+            "aria-pressed": src,
+            onClick: () => setSrc((v) => !v),
+            children: /* @__PURE__ */ jsx(Icon, { name: "embed", size: 13 })
+          }
+        )
+      ] }),
+      menu && lib && lib !== "missing" && /* @__PURE__ */ jsxs("div", { className: "comp-menu", "data-nodrag": "", role: "menu", children: [
+        /* @__PURE__ */ jsxs("button", { role: "menuitem", className: !item.ver ? "on" : "", onClick: () => {
+          c.update(id, { ver: null });
+          setMenu(null);
+        }, children: [
+          /* @__PURE__ */ jsx("b", { children: c.t("board.comp.followLatest") }),
+          /* @__PURE__ */ jsx("small", { children: current2 })
+        ] }),
+        [...lib.versions].reverse().slice(0, 12).map((v) => /* @__PURE__ */ jsxs("button", { role: "menuitem", className: item.ver === v.v ? "on" : "", onClick: () => {
+          c.update(id, { ver: v.v });
+          setMenu(null);
+        }, children: [
+          /* @__PURE__ */ jsx("b", { children: v.v }),
+          /* @__PURE__ */ jsx("small", { children: v.note || new Date(v.at * 1e3).toLocaleDateString() })
+        ] }, v.v))
+      ] })
+    ] }),
+    /* @__PURE__ */ jsxs("div", { ref: box2, "data-nodrag": "", style: { height, position: "relative" }, children: [
+      !active && !missing && !src && /* @__PURE__ */ jsx("button", { className: "shield", "aria-label": c.t("board.embed.activate"), onClick: () => c.setPlaying(id), children: /* @__PURE__ */ jsx("span", { children: c.t("board.embed.activate") }) }),
+      missing ? /* @__PURE__ */ jsxs("div", { className: "comp-empty", style: { height }, children: [
+        /* @__PURE__ */ jsx(Icon, { name: "components", size: 20 }),
+        /* @__PURE__ */ jsx("b", { children: c.t("board.comp.missing", { name }) }),
+        /* @__PURE__ */ jsx("small", { children: c.t("board.comp.missingHint") })
+      ] }) : src ? /* @__PURE__ */ jsx("pre", { className: "comp-src", style: { height }, children: html ?? "" }) : doc == null ? /* @__PURE__ */ jsx("div", { className: "frame", style: { height } }) : Frame ? /* @__PURE__ */ jsx(Frame, { src: toDataUrl$1(doc), title, className: themed ? "frame themed" : "frame", style: frameStyle }, `${nonce}${themed}${version}`) : /* @__PURE__ */ jsx(
+        "iframe",
+        {
+          className: themed ? "frame themed" : "frame",
+          style: frameStyle,
+          sandbox: "allow-scripts",
+          srcDoc: doc,
+          title,
+          referrerPolicy: "no-referrer"
+        },
+        `${nonce}${themed}${version}`
+      )
+    ] }),
+    /* @__PURE__ */ jsxs("div", { className: "foot meta", children: [
+      /* @__PURE__ */ jsx("span", { children: Object.keys(files).length ? c.t("board.comp.dataFiles", { n: Object.keys(files).length, size: fmtBytes(Object.values(files).reduce((s, f) => s + f.n, 0)) }) : c.t("board.embed.live") }),
+      /* @__PURE__ */ jsx("span", { className: "sp" }),
+      item.by === "h" && /* @__PURE__ */ jsx(Sig, {})
+    ] })
+  ] });
 }
 function useAsset(aid) {
   const [url, setUrl] = useState(null);
@@ -8333,7 +9668,7 @@ function CardView({ id, item, c }) {
       ) })
     ] });
   }
-  return /* @__PURE__ */ jsxs("div", { className: `hb-card hb-note${quote ? " quote" : ""}${item.by === "h" ? " dm" : ""}`, children: [
+  return /* @__PURE__ */ jsxs("div", { className: `hb-card hb-note${quote ? " quote" : ""}${item.h ? " capped" : ""}${item.by === "h" ? " dm" : ""}`, children: [
     item.title && /* @__PURE__ */ jsx("h4", { "data-field": "title", children: item.title }),
     text ? /* @__PURE__ */ jsx("div", { className: "body", "data-field": "text", children: /* @__PURE__ */ jsx(RichText, { text }) }) : !item.title && /* @__PURE__ */ jsx("div", { className: "body", style: { opacity: 0.5 }, children: c.t("board.card.empty") }),
     /* @__PURE__ */ jsx(Meta, { item, t: c.t })
@@ -8492,7 +9827,7 @@ function VideoView({ id, item, c }) {
         PLAY,
         c.t("board.video.play")
       ] })
-    ] }) : /* @__PURE__ */ jsx(VideoStage, { playId: id, c, src: direct, asset, posterAsset: item.img, dur: item.dur, title }),
+    ] }) : /* @__PURE__ */ jsx(VideoStage, { playId: id, c, src: direct, asset, posterAsset: item.img, dur: item.dur, title, syncGroup: item.sync }),
     /* @__PURE__ */ jsx("div", { className: "hb-link", children: /* @__PURE__ */ jsxs("div", { className: "body", children: [
       /* @__PURE__ */ jsx("div", { className: "dom", children: /* @__PURE__ */ jsx("span", { children: site }) }),
       c.editing === id ? /* @__PURE__ */ jsx("h4", { children: /* @__PURE__ */ jsx(
@@ -8560,11 +9895,26 @@ function LinkView({ id, item, c }) {
     ] })
   ] });
 }
+const FILE_LABEL = { pdf: "PDF", stl: "STL", obj: "OBJ", "3mf": "3MF" };
 function ImageView({ id, item, c }) {
   const url = useAsset(item.asset);
   const ratio = item.iw && item.ih ? item.ih / item.iw : 0.6;
-  return /* @__PURE__ */ jsxs("div", { className: `hb-card hb-image${item.by === "h" ? " dm" : ""}`, style: { width: item.w ?? 372 }, children: [
-    /* @__PURE__ */ jsx("div", { className: "art", style: !url ? { aspectRatio: `${1 / ratio}` } : void 0, children: url && /* @__PURE__ */ jsx(Pic, { src: url, alt: item.cap ?? "" }) }),
+  const fk = item.file ? item.fk ?? "pdf" : null;
+  const isPdf = fk === "pdf";
+  const [busy, setBusy] = useState(false);
+  const getFile = () => {
+    if (!item.file || busy) return;
+    setBusy(true);
+    openAsset(item.file, item.cap || "model").catch(() => void 0).finally(() => setBusy(false));
+  };
+  return /* @__PURE__ */ jsxs("div", { className: `hb-card hb-image${fk ? " has-file" : ""}${item.by === "h" ? " dm" : ""}`, style: { width: item.w ?? 372 }, children: [
+    /* @__PURE__ */ jsxs("div", { className: "art", style: !url ? { aspectRatio: `${1 / ratio}` } : void 0, children: [
+      url ? /* @__PURE__ */ jsx(Pic, { src: url, alt: item.cap ?? "" }) : fk && /* @__PURE__ */ jsx("span", { className: "file-ph", children: /* @__PURE__ */ jsx(Icon, { name: isPdf ? "fileDoc" : "model3d", size: 34 }) }),
+      fk && /* @__PURE__ */ jsxs("span", { className: "fbadge", children: [
+        FILE_LABEL[fk],
+        isPdf && item.pg ? ` · ${c.t("board.file.pages", { n: item.pg })}` : ""
+      ] })
+    ] }),
     /* @__PURE__ */ jsxs("div", { className: "cap", children: [
       c.editing === id ? /* @__PURE__ */ jsx("b", { style: { flex: 1 }, children: /* @__PURE__ */ jsx(
         EditText,
@@ -8579,6 +9929,18 @@ function ImageView({ id, item, c }) {
           }
         }
       ) }) : /* @__PURE__ */ jsx("b", { "data-field": "cap", children: item.cap || (item.url ? hostOf(item.url) : "") }),
+      fk && /* @__PURE__ */ jsx(
+        "button",
+        {
+          className: "kbtn",
+          "data-nodrag": "",
+          "data-tip": c.t(isPdf ? "board.file.open" : "board.file.download"),
+          "aria-label": c.t(isPdf ? "board.file.open" : "board.file.download"),
+          disabled: busy,
+          onClick: getFile,
+          children: /* @__PURE__ */ jsx(Icon, { name: isPdf ? "fileOpen" : "fileGet", size: 13 })
+        }
+      ),
       item.by === "h" && /* @__PURE__ */ jsx(Sig, {})
     ] })
   ] });
@@ -8871,7 +10233,19 @@ function DrawView({ item, selected, erasing }) {
     }
   );
 }
-function ItemBody({ id, item, c, dropIndex, selected }) {
+const MARK_ICON = { ok: "markOk", fail: "markFail", wait: "markWait" };
+function Mark({ mark, t: t2 }) {
+  return /* @__PURE__ */ jsx("i", { className: `hb-mark ${mark}`, role: "img", "aria-label": t2(`board.mark.${mark}`), "data-tip": t2(`board.mark.${mark}`), children: /* @__PURE__ */ jsx(Icon, { name: MARK_ICON[mark], size: 11 }) });
+}
+function ItemBody(props) {
+  const mark = props.item.mark;
+  if (!mark || props.item.k === "line" || props.item.k === "draw" || props.item.k === "frame") return /* @__PURE__ */ jsx(ItemKind, { ...props });
+  return /* @__PURE__ */ jsxs(Fragment, { children: [
+    /* @__PURE__ */ jsx(ItemKind, { ...props }),
+    /* @__PURE__ */ jsx(Mark, { mark, t: props.c.t })
+  ] });
+}
+function ItemKind({ id, item, c, dropIndex, selected }) {
   switch (item.k) {
     case "card":
       return /* @__PURE__ */ jsx(CardView, { id, item, c });
@@ -8901,6 +10275,8 @@ function ItemBody({ id, item, c, dropIndex, selected }) {
       return /* @__PURE__ */ jsx(DrawView, { item, selected, erasing: c.erasing?.has(id) });
     case "live":
       return /* @__PURE__ */ jsx(LiveView, { id, item, c });
+    case "comp":
+      return /* @__PURE__ */ jsx(CompView, { id, item, c });
     default:
       return null;
   }
@@ -9201,11 +10577,439 @@ const Wires = forwardRef(function Wires2(props, ref) {
     /* @__PURE__ */ jsx("svg", { className: "hb-wires hb-wire-labels", width: "1", height: "1", "aria-hidden": "true", children: wires.filter((w) => w.label && editLabel !== w.id).map((w) => /* @__PURE__ */ jsx("text", { className: "lbl", x: w.mid[0], y: w.mid[1] + 3.5, textAnchor: "middle", children: w.label }, w.id)) })
   ] });
 });
+function browserTime() {
+  const g = globalThis;
+  return {
+    now: () => g.performance ? g.performance.now() : Date.now(),
+    raf: (fn2) => g.requestAnimationFrame ? g.requestAnimationFrame(fn2) : setTimeout(() => fn2(Date.now()), 16),
+    caf: (id) => g.cancelAnimationFrame ? g.cancelAnimationFrame(id) : clearTimeout(id)
+  };
+}
+const RATES = [0.25, 0.5, 1, 1.5, 2];
+const clampRate = (r) => Number.isFinite(r) ? Math.max(0.1, Math.min(8, r)) : 1;
+const finite = (n, d = 0) => Number.isFinite(n) ? n : d;
+class GroupClock {
+  name;
+  s;
+  subs = /* @__PURE__ */ new Set();
+  video = null;
+  offVideo = null;
+  loop = 0;
+  vloop = 0;
+  wall = 0;
+  // time source ms when the free-running clock last advanced
+  pendingSeek = [];
+  time;
+  hub;
+  constructor(name, time, hub) {
+    this.name = name;
+    this.time = time;
+    this.hub = hub;
+    this.s = { t: 0, playing: false, rate: 1, duration: 0, master: false, manual: false };
+  }
+  get state() {
+    return { ...this.s };
+  }
+  get hasVideo() {
+    return this.video !== null;
+  }
+  subscribe(fn2) {
+    this.subs.add(fn2);
+    return () => {
+      this.subs.delete(fn2);
+    };
+  }
+  emit(ev) {
+    const st = this.state;
+    for (const fn2 of [...this.subs]) {
+      try {
+        fn2(ev, st);
+      } catch {
+      }
+    }
+    this.hub?.changed(this.name);
+  }
+  // ── the video master ──────────────────────────────────────────────────
+  attachVideo(v) {
+    if (this.video === v) return () => this.detach(v);
+    this.detachCurrent();
+    this.video = v;
+    this.s.master = true;
+    const ev = (name, f) => {
+      v.addEventListener(name, f);
+      return () => v.removeEventListener(name, f);
+    };
+    const dur = () => {
+      const d = finite(v.duration);
+      if (d > 0 && d !== this.s.duration) {
+        this.s.duration = d;
+        this.emit("state");
+      }
+    };
+    const offs = [
+      ev("loadedmetadata", dur),
+      ev("durationchange", dur),
+      ev("play", () => {
+        if (this.s.manual) return;
+        this.freeze();
+        this.s.playing = true;
+        this.s.t = finite(v.currentTime);
+        this.startLoop();
+        this.emit("state");
+      }),
+      ev("pause", () => {
+        if (this.s.manual) return;
+        this.s.playing = false;
+        this.s.t = finite(v.currentTime);
+        this.stopLoop();
+        this.emit("state");
+      }),
+      ev("ended", () => {
+        this.s.playing = false;
+        this.s.t = finite(v.currentTime);
+        this.stopLoop();
+        this.emit("state");
+      }),
+      ev("ratechange", () => {
+        this.s.rate = clampRate(v.playbackRate);
+        this.emit("state");
+      }),
+      ev("seeked", () => {
+        this.s.t = finite(v.currentTime);
+        this.emit("tick");
+        const waiting = this.pendingSeek;
+        this.pendingSeek = [];
+        waiting.forEach((f) => f());
+      }),
+      ev("seeking", () => {
+        if (!this.s.manual) {
+          this.s.t = finite(v.currentTime);
+          this.emit("seek");
+        }
+      })
+    ];
+    this.offVideo = () => offs.forEach((o) => o());
+    const had = this.s;
+    dur();
+    if (had.t > 0 && Math.abs(v.currentTime - had.t) > 0.05) {
+      try {
+        v.currentTime = had.t;
+      } catch {
+      }
+    }
+    this.s.rate = clampRate(had.rate);
+    try {
+      v.playbackRate = this.s.rate;
+    } catch {
+    }
+    if (had.playing && !had.manual) {
+      this.stopLoop();
+      this.startVideo(v);
+    } else {
+      this.s.t = had.t;
+    }
+    this.emit("state");
+    return () => this.detach(v);
+  }
+  detach(v) {
+    if (this.video === v) {
+      this.detachCurrent();
+      this.emit("state");
+    }
+  }
+  detachCurrent() {
+    this.stopLoop();
+    this.offVideo?.();
+    this.offVideo = null;
+    this.video = null;
+    this.s.master = false;
+    const waiting = this.pendingSeek;
+    this.pendingSeek = [];
+    waiting.forEach((f) => f());
+  }
+  // ── the loop ──────────────────────────────────────────────────────────
+  freeze() {
+    this.wall = this.time.now();
+  }
+  startLoop() {
+    if (this.s.manual || this.loop || this.vloop) return;
+    const v = this.video;
+    if (v && v.requestVideoFrameCallback) {
+      const onFrame = (_n, meta) => {
+        this.vloop = 0;
+        if (!this.s.playing || !this.video) return;
+        this.s.t = finite(meta.mediaTime, this.video.currentTime);
+        this.emit("tick");
+        this.vloop = this.video.requestVideoFrameCallback(onFrame);
+      };
+      this.vloop = v.requestVideoFrameCallback(onFrame);
+      return;
+    }
+    const step = () => {
+      this.loop = 0;
+      if (!this.s.playing) return;
+      if (this.video) this.s.t = finite(this.video.currentTime);
+      else {
+        const now = this.time.now();
+        this.s.t += (now - this.wall) / 1e3 * this.s.rate;
+        this.wall = now;
+        if (this.s.duration > 0 && this.s.t >= this.s.duration) {
+          this.s.t = this.s.duration;
+          this.s.playing = false;
+          this.emit("state");
+          this.emit("tick");
+          return;
+        }
+      }
+      this.emit("tick");
+      this.loop = this.time.raf(step);
+    };
+    this.loop = this.time.raf(step);
+  }
+  stopLoop() {
+    if (this.loop) {
+      this.time.caf(this.loop);
+      this.loop = 0;
+    }
+    if (this.vloop) {
+      try {
+        this.video?.cancelVideoFrameCallback?.(this.vloop);
+      } catch {
+      }
+      this.vloop = 0;
+    }
+  }
+  // ── commands (from any linked card, the transport or a script) ────────
+  play() {
+    if (this.s.playing) return;
+    if (this.s.duration > 0 && this.s.t >= this.s.duration - 1e-3) this.s.t = 0;
+    this.s.playing = true;
+    if (this.video && !this.s.manual) {
+      try {
+        this.video.currentTime = this.s.t;
+      } catch {
+      }
+      this.startVideo(this.video);
+    } else {
+      this.freeze();
+      this.startLoop();
+    }
+    this.emit("state");
+  }
+  /** play() can be refused (autoplay policy, codec): the group must not claim to play then. */
+  startVideo(v) {
+    let res;
+    try {
+      res = v.play();
+    } catch {
+      res = Promise.reject(new Error("play failed"));
+    }
+    if (res && typeof res.catch === "function") {
+      res.catch(() => {
+        if (this.video !== v || !this.s.playing) return;
+        this.s.playing = false;
+        this.stopLoop();
+        this.emit("state");
+      });
+    }
+  }
+  pause() {
+    if (!this.s.playing) return;
+    this.s.playing = false;
+    this.stopLoop();
+    if (this.video && !this.s.manual) {
+      this.video.pause();
+      this.s.t = finite(this.video.currentTime, this.s.t);
+    }
+    this.emit("state");
+  }
+  toggle() {
+    if (this.s.playing) this.pause();
+    else this.play();
+  }
+  /** Moves the playhead. Resolves once the video (if any) shows that frame. */
+  seek(t2) {
+    let to = Math.max(0, finite(t2));
+    if (this.s.duration > 0) to = Math.min(to, this.s.duration);
+    this.s.t = to;
+    if (!this.s.playing) this.freeze();
+    this.emit("seek");
+    const v = this.video;
+    if (!v) {
+      this.emit("tick");
+      return Promise.resolve();
+    }
+    return new Promise((resolve2) => {
+      this.pendingSeek.push(resolve2);
+      try {
+        v.currentTime = to;
+      } catch {
+        this.pendingSeek = this.pendingSeek.filter((f) => f !== resolve2);
+        this.emit("tick");
+        resolve2();
+        return;
+      }
+      this.time.raf(() => {
+        if (Math.abs(finite(v.currentTime) - to) < 1e-6 && !v.seeking) {
+          const i = this.pendingSeek.indexOf(resolve2);
+          if (i >= 0) {
+            this.pendingSeek.splice(i, 1);
+            this.emit("tick");
+            resolve2();
+          }
+        }
+      });
+    });
+  }
+  setRate(r) {
+    this.s.rate = clampRate(r);
+    if (this.video) {
+      try {
+        this.video.playbackRate = this.s.rate;
+      } catch {
+      }
+    }
+    this.freeze();
+    this.emit("state");
+  }
+  /** Free-running groups only (a video knows its own length). */
+  setDuration(d) {
+    if (this.video) return;
+    this.s.duration = Math.max(0, finite(d));
+    this.emit("state");
+  }
+  setManual(on) {
+    if (this.s.manual === on) return;
+    this.s.manual = on;
+    if (on) {
+      this.stopLoop();
+      this.video?.pause();
+      if (this.video) this.s.t = finite(this.video.currentTime, this.s.t);
+    } else if (this.s.playing) {
+      if (this.video) this.startVideo(this.video);
+      else {
+        this.freeze();
+        this.startLoop();
+      }
+    }
+    this.emit("state");
+  }
+  /** Manual mode: move time by `ms` of real time at the current rate (only while "playing"). */
+  async advance(ms) {
+    if (!this.s.manual) return this.s.t;
+    if (this.s.playing) await this.seek(this.s.t + ms / 1e3 * this.s.rate);
+    return this.s.t;
+  }
+  destroy() {
+    this.stopLoop();
+    this.offVideo?.();
+    this.subs.clear();
+  }
+}
+class SyncHub {
+  clocks = /* @__PURE__ */ new Map();
+  watchers = /* @__PURE__ */ new Set();
+  manualOn = false;
+  time;
+  constructor(time = browserTime()) {
+    this.time = time;
+  }
+  clock(name) {
+    let c = this.clocks.get(name);
+    if (!c) {
+      c = new GroupClock(name, this.time, this);
+      if (this.manualOn) c.setManual(true);
+      this.clocks.set(name, c);
+    }
+    return c;
+  }
+  has(name) {
+    return this.clocks.has(name);
+  }
+  names() {
+    return [...this.clocks.keys()].filter((n) => !n.startsWith("~")).sort();
+  }
+  /** Anything about any clock changed (the transport re-renders from this). */
+  watch(fn2) {
+    this.watchers.add(fn2);
+    return () => {
+      this.watchers.delete(fn2);
+    };
+  }
+  changed(group) {
+    for (const w of [...this.watchers]) {
+      try {
+        w(group);
+      } catch {
+      }
+    }
+  }
+  get manual() {
+    return this.manualOn;
+  }
+  setManual(on) {
+    this.manualOn = on;
+    this.clocks.forEach((c) => c.setManual(on));
+  }
+  async advance(ms) {
+    await Promise.all([...this.clocks.values()].map((c) => c.advance(ms)));
+  }
+  destroy() {
+    this.clocks.forEach((c) => c.destroy());
+    this.clocks.clear();
+    this.watchers.clear();
+  }
+}
+function makeSyncApi(hub, board, defaultGroup) {
+  const pick = (g) => {
+    const n = g ?? defaultGroup() ?? hub.names()[0];
+    return n ? hub.clock(n) : null;
+  };
+  return {
+    version: 1,
+    board,
+    groups: () => hub.names(),
+    state: (g) => pick(g)?.state ?? null,
+    play: (g) => pick(g)?.play(),
+    pause: (g) => pick(g)?.pause(),
+    seek: (t2, g) => pick(g)?.seek(t2) ?? Promise.resolve(),
+    rate: (r, g) => pick(g)?.setRate(r),
+    manual: (on) => hub.setManual(on),
+    step: async (frames = 1, fps = 30, g) => {
+      const c = pick(g);
+      if (!c) return 0;
+      const rate = Math.max(1, fps);
+      await c.seek((Math.round(c.state.t * rate) + frames) / rate);
+      return c.state.t;
+    },
+    advance: (ms) => hub.advance(ms)
+  };
+}
+function installSyncApi(api2, win = window) {
+  win.__hbSync = api2;
+  return () => {
+    if (win.__hbSync === api2) delete win.__hbSync;
+  };
+}
+function formatClock(t2, fps = 0) {
+  const s = Math.max(0, finite(t2));
+  const m = Math.floor(s / 60);
+  const sec = s - m * 60;
+  const whole = Math.floor(sec);
+  const tail = fps > 0 ? `:${String(Math.floor((sec - whole) * fps)).padStart(2, "0")}` : `.${String(Math.floor((sec - whole) * 10))}`;
+  return `${m}:${String(whole).padStart(2, "0")}${tail}`;
+}
+function groupsOf(items) {
+  const out = [];
+  for (const it of Object.values(items)) if (it.sync && !out.includes(it.sync)) out.push(it.sync);
+  return out;
+}
 const fits = /* @__PURE__ */ new WeakMap();
 const miniFitOf = (el) => el ? fits.get(el) ?? null : null;
 const miniPad = (w, h) => Math.max(6, Math.min(22, Math.round(Math.min(w, h) * 0.09)));
 const NONE = /* @__PURE__ */ new Set();
 const noop = () => void 0;
+const MINI_HUB = new SyncHub();
 const layer = (it) => it.k === "frame" ? 0 : it.k === "draw" && it.tl === "hl" ? 1 : 2;
 function box(it) {
   const [dw] = DEFAULT_SIZE[it.k] ?? [200, 100];
@@ -9242,6 +11046,9 @@ function MiniBoard({ doc, id, className }) {
       liveActions: null,
       liveActionsDown: false,
       runLiveAction: async () => null,
+      bid: "",
+      sync: MINI_HUB,
+      runCompAction: async () => null,
       renderKid: (kid) => {
         const it = doc.items[kid];
         return it ? /* @__PURE__ */ jsx("div", { className: "hb-kid", children: /* @__PURE__ */ jsx(MiniBody, { id: kid, item: it, c }) }, kid) : null;
@@ -9349,6 +11156,13 @@ function MiniBody({ id, item, c }) {
       /* @__PURE__ */ jsx("div", { className: "frame", style: { height: item.h ? Math.max(120, item.h - 80) : 240 } })
     ] });
   }
+  if (item.k === "comp") {
+    return /* @__PURE__ */ jsxs("div", { className: `hb-card hb-embed hb-comp${item.by === "h" ? " dm" : ""}`, style: { width: item.w ?? 480 }, children: [
+      /* @__PURE__ */ jsx("div", { className: "bar-e", children: /* @__PURE__ */ jsx("span", { className: "file", children: item.title || item.comp }) }),
+      /* @__PURE__ */ jsx("div", { className: "frame", style: { height: item.h ? Math.max(120, item.h - 80) : 240 } })
+    ] });
+  }
+  if (item.k === "video" && item.sync) return /* @__PURE__ */ jsx(ItemBody, { id, item: { ...item, sync: void 0 }, c, dropIndex: null, selected: false });
   if (item.k === "board") {
     return /* @__PURE__ */ jsxs("div", { className: `hb-card hb-boardref${item.by === "h" ? " dm" : ""}`, style: { width: item.w ?? 212 }, children: [
       /* @__PURE__ */ jsx("div", { className: "pv" }),
@@ -10080,6 +11894,147 @@ function EdgePicker({ at, bounds, t: t2, onPick, onClose }) {
     }
   );
 }
+const THUMB_W = 480, THUMB_H = 320, SHOW_W = 196;
+function Thumb({ row, base }) {
+  const [doc, setDoc] = useState(null);
+  const box2 = useRef(null);
+  useEffect(() => {
+    let live = true;
+    boardsApi.component(row.name).then((d) => live && setDoc(d), () => live && setDoc("fail"));
+    return () => {
+      live = false;
+    };
+  }, [row.name, row.current]);
+  const html = useMemo(() => {
+    if (!doc || doc === "fail") return null;
+    const init = {
+      component: { name: row.name, version: doc.version },
+      assets: {},
+      actions: [],
+      data: doc.sample && typeof doc.sample === "object" ? doc.sample : {},
+      clock: { t: 0, playing: false, rate: 1, duration: 0, group: null, manual: false, master: false },
+      preview: true
+    };
+    return componentDocument(doc.html, true, base, init);
+  }, [doc, base, row.name]);
+  useEmbedBridge(box2, html != null, true, row.current);
+  return /* @__PURE__ */ jsxs("div", { className: "gal-thumb", "aria-hidden": "true", children: [
+    /* @__PURE__ */ jsx("div", { className: "gal-scale", ref: box2, style: { width: THUMB_W, height: THUMB_H, transform: `scale(${SHOW_W / THUMB_W})` }, children: html != null && /* @__PURE__ */ jsx("iframe", { className: "frame themed", sandbox: "allow-scripts", srcDoc: html, title: row.title, tabIndex: -1, referrerPolicy: "no-referrer" }) }),
+    doc === "fail" && /* @__PURE__ */ jsx("span", { className: "gal-nofile", children: /* @__PURE__ */ jsx(Icon, { name: "alert", size: 16 }) })
+  ] });
+}
+function CompGallery({ t: t2, onPick, onClose }) {
+  const [rows, setRows] = useState(null);
+  const [down, setDown] = useState(false);
+  const [base, setBase] = useState(null);
+  const root = useRef(null);
+  useEffect(() => {
+    let live = true;
+    boardsApi.components().then((r) => live && setRows(r), () => live && (setRows([]), setDown(true)));
+    return () => {
+      live = false;
+    };
+  }, []);
+  useLayoutEffect(() => {
+    if (!base && root.current) setBase(readTheme(root.current));
+  }, [base, rows]);
+  useEffect(() => {
+    const key = (e) => {
+      if (e.key === "Escape") {
+        e.stopPropagation();
+        onClose();
+      }
+    };
+    window.addEventListener("keydown", key, true);
+    return () => window.removeEventListener("keydown", key, true);
+  }, [onClose]);
+  return /* @__PURE__ */ jsxs("div", { className: "hb-gallery", ref: root, role: "dialog", "aria-label": t2("board.comp.gallery"), "data-nodrag": "", children: [
+    /* @__PURE__ */ jsxs("div", { className: "gal-hd", children: [
+      /* @__PURE__ */ jsx(Icon, { name: "components", size: 13 }),
+      /* @__PURE__ */ jsx("span", { children: t2("board.comp.gallery") }),
+      /* @__PURE__ */ jsx("button", { className: "kbtn", "aria-label": t2("board.comp.close"), onClick: onClose, children: /* @__PURE__ */ jsx(Icon, { name: "close", size: 13 }) })
+    ] }),
+    rows === null && /* @__PURE__ */ jsx("div", { className: "gal-empty", children: t2("common.loading") }),
+    rows && rows.length === 0 && /* @__PURE__ */ jsxs("div", { className: "gal-empty", children: [
+      /* @__PURE__ */ jsx("b", { children: down ? t2("board.comp.downTitle") : t2("board.comp.emptyTitle") }),
+      /* @__PURE__ */ jsx("span", { children: down ? t2("board.comp.downBody") : t2("board.comp.emptyBody") })
+    ] }),
+    rows && rows.length > 0 && /* @__PURE__ */ jsx("div", { className: "gal-grid", children: rows.slice(0, 24).map((r) => /* @__PURE__ */ jsxs("button", { className: "gal-tile", onClick: () => onPick(r.name, r.title === r.name ? "" : r.title), children: [
+      base ? /* @__PURE__ */ jsx(Thumb, { row: r, base }) : /* @__PURE__ */ jsx("div", { className: "gal-thumb" }),
+      /* @__PURE__ */ jsx("b", { children: r.title }),
+      /* @__PURE__ */ jsxs("small", { children: [
+        r.name,
+        " · ",
+        r.current,
+        r.desc ? ` · ${r.desc}` : ""
+      ] })
+    ] }, r.name)) })
+  ] });
+}
+function Row({ clock: clock2, t: t2 }) {
+  const [, setTick] = useState(0);
+  const bump = () => setTick((n) => n + 1);
+  useEffect(() => {
+    let raf = 0;
+    const off = clock2.subscribe(() => {
+      if (!raf) raf = requestAnimationFrame(() => {
+        raf = 0;
+        bump();
+      });
+    });
+    return () => {
+      off();
+      cancelAnimationFrame(raf);
+    };
+  }, [clock2]);
+  const s = clock2.state;
+  const next = RATES[(Math.max(0, RATES.findIndex((r) => r === s.rate)) + 1) % RATES.length];
+  return /* @__PURE__ */ jsxs("div", { className: "row", role: "group", "aria-label": t2("board.sync.group", { group: clock2.name }), children: [
+    /* @__PURE__ */ jsxs("span", { className: "grp", "data-tip": t2(s.master ? "board.sync.master" : "board.sync.free"), children: [
+      /* @__PURE__ */ jsx(Icon, { name: "sync", size: 12 }),
+      clock2.name
+    ] }),
+    /* @__PURE__ */ jsx("button", { className: "tool", "data-nodrag": "", "aria-label": t2("board.sync.rewind"), "data-tip": t2("board.sync.rewind"), onClick: () => void clock2.seek(0), children: /* @__PURE__ */ jsx(Icon, { name: "skipBack", size: 13 }) }),
+    /* @__PURE__ */ jsx(
+      "button",
+      {
+        className: "tool on",
+        "data-nodrag": "",
+        "aria-label": t2(s.playing ? "board.sync.pause" : "board.sync.play"),
+        "data-tip": t2(s.playing ? "board.sync.pause" : "board.sync.play"),
+        "aria-pressed": s.playing,
+        onClick: () => clock2.toggle(),
+        children: /* @__PURE__ */ jsx(Icon, { name: s.playing ? "pauseIcon" : "playIcon", size: 13 })
+      }
+    ),
+    /* @__PURE__ */ jsx(
+      "input",
+      {
+        className: "scrub",
+        "data-nodrag": "",
+        type: "range",
+        min: 0,
+        max: s.duration > 0 ? s.duration : Math.max(10, s.t * 1.25),
+        step: 0.01,
+        value: Math.min(s.t, s.duration > 0 ? s.duration : Infinity),
+        "aria-label": t2("board.sync.seek"),
+        onChange: (e) => void clock2.seek(Number(e.currentTarget.value))
+      }
+    ),
+    /* @__PURE__ */ jsxs("span", { className: "time", children: [
+      formatClock(s.t),
+      s.duration > 0 ? ` / ${formatClock(s.duration)}` : ""
+    ] }),
+    /* @__PURE__ */ jsxs("button", { className: "rate", "data-nodrag": "", "aria-label": t2("board.sync.rate"), "data-tip": t2("board.sync.rate"), onClick: () => clock2.setRate(next), children: [
+      s.rate,
+      "×"
+    ] }),
+    s.manual && /* @__PURE__ */ jsx("span", { className: "manual", "data-tip": t2("board.sync.manual"), children: "M" })
+  ] });
+}
+function SyncTransport({ hub, groups, t: t2 }) {
+  return /* @__PURE__ */ jsx("div", { className: "hb-sync", "data-nodrag": "", children: groups.map((g) => /* @__PURE__ */ jsx(Row, { clock: hub.clock(g), t: t2 }, g)) });
+}
 const TOOLS = [
   [{ tool: "select", key: "V", label: "board.tool.select", icon: "select" }, { tool: "pan", key: "H", label: "board.tool.pan", icon: "pan" }],
   [
@@ -10183,7 +12138,8 @@ function BoardView({ bid, onOpenBoard, onHome }) {
   const autoFit = useRef(false);
   const autoFitUntil = useRef(0);
   const handoffRef = useRef(null);
-  const [mapOff, setMapOff] = useState(() => readLocal("hb.map.off") === "1");
+  const arrival = useRef(null);
+  const [mapOff, setMapOff] = useState(() => readLocal("hb.map.off") === "1" || demoNomap());
   const [tool, setTool] = useState("select");
   const [selected, setSelected] = useState(/* @__PURE__ */ new Set());
   const [editing, setEditingRaw] = useState(null);
@@ -10298,13 +12254,27 @@ function BoardView({ bid, onOpenBoard, onHome }) {
   }, [bid, loadActions, t2]);
   const liveActionsRef = useRef(liveActions);
   liveActionsRef.current = liveActions;
+  const syncHub = useMemo(() => new SyncHub(), [bid]);
+  useEffect(() => () => syncHub.destroy(), [syncHub]);
+  const runCompAction = useCallback(async (iid, action, args) => {
+    const info = liveActionsRef.current?.[action];
+    if (!info || !info.enabled) throw new Error(t2("board.live.notRegistered", { id: action }));
+    let confirm = false;
+    if (info.destructive) {
+      confirm = await new Promise((resolve2) => setConfirmReq({ iid, ref: { action }, index: -1, info, resolve: resolve2 }));
+      setConfirmReq(null);
+      if (!confirm) return null;
+    }
+    return boardsApi.compAction(bid, iid, action, args, confirm);
+  }, [bid, t2]);
+  const [galleryOpen, setGalleryOpen] = useState(false);
   const onHermes = useCallback((entries, doc2) => {
     const steps = [];
     const hide2 = /* @__PURE__ */ new Set();
     let changes = 0;
     for (const e of entries) {
       for (const op of e.ops) {
-        if (op.op === "board") continue;
+        if (op.op === "board" || op.op === "tour") continue;
         changes++;
         const id = op.op === "put" || op.op === "set" || op.op === "del" ? op.id : null;
         if (!id) continue;
@@ -10638,12 +12608,12 @@ function BoardView({ bid, onOpenBoard, onHome }) {
     handoffRef.current = h;
     if (h.kind === "in") {
       autoFit.current = false;
-      void arriveZoomIn(h, { cam: cam.current, vp, root, target: view.current }, (start) => {
+      arrival.current = arriveZoomIn(h, { cam: cam.current, vp, root, target: view.current }, (start) => {
         view.current = start;
         applyView();
       });
     } else {
-      void arriveZoomOut(h, () => h.child ? vp.querySelector(`[data-mini="${h.child}"]`) : null, { w: window.innerWidth, h: window.innerHeight });
+      arrival.current = arriveZoomOut(h, () => h.child ? vp.querySelector(`[data-mini="${h.child}"]`) : null, { w: window.innerWidth, h: window.innerHeight });
     }
   }, [doc, bid, applyView, fit]);
   useEffect(() => {
@@ -11656,6 +13626,68 @@ function BoardView({ bid, onOpenBoard, onHome }) {
   }, [onWheel, hasDoc]);
   useEffect(() => {
     if (!hasDoc) return;
+    return installSyncApi(makeSyncApi(syncHub, bid, () => groupsOf(docRef.current?.items ?? {})[0]));
+  }, [bid, hasDoc, syncHub]);
+  const syncGroupsKey = doc ? groupsOf(doc.items).join(",") : "";
+  const syncGroups = useMemo(() => syncGroupsKey ? syncGroupsKey.split(",") : [], [syncGroupsKey]);
+  const show2 = usePresentation({
+    bid,
+    doc,
+    docRef,
+    cam,
+    vpRef,
+    view,
+    applyView,
+    getRect,
+    contentBounds,
+    openChild,
+    closeToParent,
+    arrival,
+    ready: !!doc,
+    stopCamera
+  });
+  const startPresenting = useCallback(() => {
+    if (!show2.count()) {
+      flash(t2("board.present.empty"));
+      return;
+    }
+    setSelected(/* @__PURE__ */ new Set());
+    setMenu(null);
+    void show2.start({ fullscreen: false });
+  }, [flash, show2, t2]);
+  const tourFromFrames = useCallback(() => {
+    const d = docRef.current;
+    const stops = d ? framesAsStops(d, getRect) : [];
+    if (!stops.length) {
+      flash(t2("board.tour.noFrames"));
+      return;
+    }
+    commit([{ op: "tour", tour: { ...d?.tour ?? {}, stops } }]);
+    flash(t2("board.tour.built", { n: stops.length }));
+  }, [commit, flash, getRect, t2]);
+  const tourAdd = useCallback((stop) => {
+    let tour = docRef.current?.tour;
+    for (const s of stop) tour = withStop(tour, s);
+    if (!tour) return;
+    commit([{ op: "tour", tour }]);
+    flash(t2("board.tour.added", { n: tour.stops.length }));
+  }, [commit, flash, t2]);
+  const tourAddSelection = useCallback(() => {
+    const d = docRef.current;
+    if (!d) return;
+    const ids = [...selectedRef.current].filter((id) => d.items[id] && d.items[id].k !== "line");
+    tourAdd(ids.map((id) => ({ k: d.items[id].k === "frame" ? "frame" : d.items[id].k === "board" ? "board" : "item", id })));
+  }, [tourAdd]);
+  const tourAddView = useCallback(() => {
+    const v = view.current;
+    tourAdd([{ k: "view", v: { x: Math.round(v.x), y: Math.round(v.y), z: Math.round(v.z * 1e3) / 1e3 } }]);
+  }, [tourAdd]);
+  const tourClear = useCallback(() => {
+    commit([{ op: "tour", tour: null }]);
+    flash(t2("board.tour.cleared"));
+  }, [commit, flash, t2]);
+  useEffect(() => {
+    if (!hasDoc) return;
     const size = () => ({ w: vpRef.current?.clientWidth ?? 1, h: vpRef.current?.clientHeight ?? 1 });
     const rectFor = (ids) => boundsOf(ids.map((id) => getRect(id)).filter(Boolean));
     const api2 = {
@@ -11821,6 +13853,11 @@ function BoardView({ bid, onOpenBoard, onHome }) {
         toggleMap();
         return;
       }
+      if (e.key === "p" || e.key === "P") {
+        e.preventDefault();
+        startPresenting();
+        return;
+      }
       if (e.key === "+" || e.key === "=") {
         zoomStep(1.2);
         return;
@@ -11881,7 +13918,7 @@ function BoardView({ bid, onOpenBoard, onHome }) {
       window.removeEventListener("keydown", onKey);
       window.removeEventListener("keyup", onKey);
     };
-  }, [ask, center, commit, confirmReq, connectFrom, continueInSession, deleteSelection, duplicate, fit, openChat, scheduleLive, selected, setInk, startEdit, sync, tidy, tool, toggleGroup, toggleMap, zoomStep, zoomToSelection]);
+  }, [ask, center, commit, confirmReq, connectFrom, continueInSession, deleteSelection, duplicate, fit, openChat, scheduleLive, selected, setInk, startEdit, startPresenting, sync, tidy, tool, toggleGroup, toggleMap, zoomStep, zoomToSelection]);
   useEffect(() => {
     const onPaste = (e) => {
       if (!rootRef.current?.isConnected || isTyping(e.target) || ask) return;
@@ -11957,6 +13994,9 @@ function BoardView({ bid, onOpenBoard, onHome }) {
     liveActionsDown,
     runLiveAction,
     erasing,
+    bid,
+    sync: syncHub,
+    runCompAction,
     keyOf,
     openBoard: (id) => openChild(id),
     addToColumn: (col) => {
@@ -11971,7 +14011,7 @@ function BoardView({ bid, onOpenBoard, onHome }) {
       const cls = `hb-kid${selected.has(id) ? " sel" : ""}${kidDrag?.id === id ? " ghost" : ""}${hidden.has(id) ? " reveal-wait" : ""}`;
       return /* @__PURE__ */ jsx("div", { className: cls, "data-kid": id, ref: regEl(id), children: /* @__PURE__ */ jsx(ItemBody, { id, item: it, c: ctxRef.current, dropIndex: null, selected: selected.has(id) }) }, keyOf(id));
     }
-  } : null, [Frame, commit, doc, editing, editHint, erasing, hidden, kidDrag, liveActions, liveActionsDown, keyOf, onOpenBoard, playing, regEl, runLiveAction, selected, setEditing, t2, update]);
+  } : null, [Frame, bid, commit, doc, editing, editHint, erasing, hidden, kidDrag, liveActions, liveActionsDown, keyOf, onOpenBoard, playing, regEl, runCompAction, runLiveAction, selected, setEditing, syncHub, t2, update]);
   const ctxRef = useRef(ctx);
   ctxRef.current = ctx;
   const selBounds = useMemo(() => {
@@ -12053,6 +14093,19 @@ function BoardView({ bid, onOpenBoard, onHome }) {
     setEditing(null);
     setMenu({ x: e.clientX - rr.left, y: e.clientY - rr.top, at, onItem: !!id || selected.size > 0 && !!target.closest(".hb-wires .hit") });
   };
+  const linkSelection = (unlink) => {
+    const d = docRef.current;
+    if (!d) return;
+    const members = selIds.filter((i) => d.items[i] && ["video", "comp"].includes(d.items[i].k));
+    if (unlink) {
+      commit(members.map((id) => ({ op: "set", id, p: { sync: null } })));
+      return;
+    }
+    const existing = members.map((i) => d.items[i].sync).find(Boolean);
+    let g = existing ?? "";
+    for (let n = 1; !g; n++) if (!Object.values(d.items).some((v) => v.sync === `s${n}`)) g = `s${n}`;
+    commit(members.map((id) => ({ op: "set", id, p: { sync: g } })));
+  };
   const menuEntries = () => {
     if (!menu) return [];
     if (menu.onItem && selIds.length) {
@@ -12065,7 +14118,13 @@ function BoardView({ bid, onOpenBoard, onHome }) {
       if (canEdit) out2.push({ id: "edit", label: t2("board.ctx.edit"), icon: "edit", kbd: "↵", run: () => setEditing(selIds[0]) });
       if (openTarget) out2.push({ id: "open", label: t2("board.ctx.open"), icon: "board" in openTarget ? "openBoard" : "open", run: runOpen });
       if (single?.k === "embed") out2.push({ id: "theme", label: t2(single.theme ? "board.embed.themeOff" : "board.embed.themeOn"), icon: "theme", run: () => update(selIds[0], { theme: single.theme ? null : true }) });
+      if (single?.k === "comp") out2.push({ id: "theme", label: t2(single.nt ? "board.embed.themeOn" : "board.embed.themeOff"), icon: "theme", run: () => update(selIds[0], { nt: single.nt ? null : true }) });
+      if (selIds.length > 1 && selIds.every((i) => doc?.items[i] && ["video", "comp"].includes(doc.items[i].k))) {
+        const linked = selIds.every((i) => doc.items[i].sync && doc.items[i].sync === doc.items[selIds[0]].sync);
+        out2.push({ id: "sync", label: t2(linked ? "board.sync.unlink" : "board.sync.link"), icon: "sync", run: () => linkSelection(linked) });
+      }
       out2.push({ id: "zoomto", label: t2("board.ctx.zoomTo"), icon: "focus", kbd: "Z", run: zoomToSelection });
+      out2.push({ id: "tour+", label: t2("board.tour.addSel"), icon: "present", run: tourAddSelection });
       if (canConnect) out2.push({ id: "connect", label: t2("board.ctx.connect"), icon: "connect", run: startConnect });
       if (canDuplicate) out2.push({ id: "dup", label: t2("board.ctx.duplicate"), icon: "duplicate", kbd: `${mod}D`, run: duplicate });
       if (selIds.length > 1) out2.push({ id: "tidy", label: t2("board.tidy.selection"), icon: "tidy", kbd: `${mod}⇧O`, run: tidy });
@@ -12089,15 +14148,22 @@ function BoardView({ bid, onOpenBoard, onHome }) {
     const out = [{ head: t2("board.menu.addHere") }];
     for (const x of TOOLS[1]) out.push({ id: x.tool, label: t2(x.label), icon: x.icon, kbd: x.key, run: place(x.tool) });
     out.push({ sep: true });
+    out.push({ id: "comps", label: t2("board.comp.gallery"), icon: "components", run: () => setGalleryOpen(true) });
     out.push({ id: "all", label: t2("board.menu.selectAll"), icon: "selectAll", kbd: `${mod}A`, run: () => setSelected(new Set(Object.keys(docRef.current?.items ?? {}).filter((k) => !docRef.current.items[k].in))) });
     out.push({ id: "tidy", label: t2("board.tidy.all"), icon: "tidy", kbd: `${mod}⇧O`, run: tidy });
     out.push({ id: "fit", label: t2("board.fit"), icon: "fit", kbd: "F", run: () => fit() });
+    out.push({ sep: true });
+    out.push({ id: "present", label: t2("board.present.start"), icon: "present", kbd: "P", run: startPresenting });
+    out.push({ id: "tourFrames", label: t2("board.tour.fromFrames"), icon: "flow", run: tourFromFrames });
+    out.push({ id: "tourView", label: t2("board.tour.addView"), icon: "plus", run: tourAddView });
+    if (docRef.current?.tour) out.push({ id: "tourClear", label: t2("board.tour.clear"), icon: "delete", danger: true, run: tourClear });
+    out.push({ sep: true });
     out.push({ id: "chat", label: chatOpen ? t2("board.chat.close") : t2("board.chat.open"), icon: chatOpen ? "closePanel" : "chat", kbd: "/", run: () => chatOpen ? closeChat() : openChat(true) });
     return out;
   };
   const chatFloat = rootW - CHAT_MIN_W < 620;
   const chatWidth = chatFloat ? Math.min(chatW, Math.max(260, rootW - 48)) : Math.min(chatW, rootW - 620);
-  const rootCls = `hb ${narrow}${chatOpen ? chatFloat ? " chat-float" : " chat-open" : ""}`.trim();
+  const rootCls = `hb ${narrow}${show2.presenting ? " presenting" : ""}${chatOpen ? chatFloat ? " chat-float" : " chat-open" : ""}`.trim();
   if (!doc || !ctx) {
     return /* @__PURE__ */ jsxs("div", { ref: rootRef, className: rootCls, children: [
       /* @__PURE__ */ jsx("header", { className: "hb-top", children: /* @__PURE__ */ jsxs("nav", { className: "hb-path", children: [
@@ -12117,7 +14183,7 @@ function BoardView({ bid, onOpenBoard, onHome }) {
   const layer2 = (it) => it.k === "frame" ? 0 : it.k === "draw" && it.tl === "hl" ? 1 : 2;
   items.sort(([, a], [, b]) => layer2(a) - layer2(b));
   const sessionShort = doc.session?.id ? doc.session.id.slice(-4) : null;
-  const savedTs = sync.savedAt ? sync.savedAt / 1e3 : doc.updated;
+  const savedTs = demoOn() ? Date.now() / 1e3 : sync.savedAt ? sync.savedAt / 1e3 : doc.updated;
   const vpCls = `hb-viewport${tool === "pan" ? " tool-pan" : ""}${tool === "draw" ? ` tool-draw ink-${ink2.tool}` : ""}${tool === "arrow" || connectFrom ? " tool-arrow" : ""}${PLACE.includes(tool) ? " tool-place" : ""}`;
   const hint = connectFrom ? t2("board.hint.connect") : tool === "draw" ? t2(INK_HINT[ink2.tool]) : TOOL_HINT[tool] ? t2(TOOL_HINT[tool]) : "";
   const zoomBy = (f) => zoomStep(f);
@@ -12193,7 +14259,7 @@ function BoardView({ bid, onOpenBoard, onHome }) {
               const rs = resize?.id === id ? resize : null;
               const [dw, dh] = (it.k === "shape" ? SHAPE_SIZE[it.sh ?? "rect"] : void 0) ?? DEFAULT_SIZE[it.k] ?? [200, 100];
               const width = it.k === "draw" ? void 0 : rs?.w ?? it.w ?? (it.k === "text" ? void 0 : dw);
-              const height = RESIZE_H.has(it.k) ? rs?.h ?? it.h ?? (it.k === "frame" ? 320 : it.k === "box" ? 62 : it.k === "shape" ? dh : void 0) : void 0;
+              const height = RESIZE_H.has(it.k) ? rs?.h ?? it.h ?? (it.k === "frame" ? 320 : it.k === "box" ? 62 : it.k === "shape" ? dh : void 0) : it.k === "card" && it.h ? it.h : void 0;
               const cls = `hb-item${sel ? " sel" : ""}${moving ? " dragging" : ""}${hidden.has(id) ? " reveal-wait" : ""}${fresh.has(id) && !reduced() ? " just-placed" : ""}${connectFrom === id ? " connect-from" : ""}`;
               const dropIndex = kidDrag?.col === id ? kidDrag.index : null;
               return /* @__PURE__ */ jsxs(
@@ -12308,8 +14374,19 @@ function BoardView({ bid, onOpenBoard, onHome }) {
       /* @__PURE__ */ jsx("span", { className: "spacer" }),
       /* @__PURE__ */ jsxs("span", { className: "hb-state", children: [
         /* @__PURE__ */ jsx("span", { children: t2("board.state.saved", { time: clock$1(savedTs) }) }),
-        /* @__PURE__ */ jsx("span", { className: "sess", "data-tip": doc.session?.id ? t2("board.chat.sessionTip", { id: doc.session.id }) : void 0, children: sessionShort ? t2("board.state.session") : t2("board.state.noSession") })
+        /* @__PURE__ */ jsx("span", { className: "sess", "data-tip": doc.session?.id && !demoOn() ? t2("board.chat.sessionTip", { id: doc.session.id }) : void 0, children: sessionShort ? t2("board.state.session") : t2("board.state.noSession") })
       ] }),
+      /* @__PURE__ */ jsx(
+        "button",
+        {
+          className: `ib lg${doc.tour?.stops.length ? " has-tour" : ""}`,
+          "aria-label": t2("board.present.start"),
+          "data-tip": t2("board.present.start"),
+          "data-kbd": "P",
+          onClick: startPresenting,
+          children: /* @__PURE__ */ jsx(Icon, { name: "present", size: 15 })
+        }
+      ),
       /* @__PURE__ */ jsx(
         "button",
         {
@@ -12328,6 +14405,12 @@ function BoardView({ bid, onOpenBoard, onHome }) {
       ] })
     ] }),
     tool === "draw" && /* @__PURE__ */ jsx(InkBar, { ink: ink2, onChange: setInk, t: t2 }),
+    galleryOpen && /* @__PURE__ */ jsx(CompGallery, { t: t2, onClose: () => setGalleryOpen(false), onPick: (name, title) => {
+      setGalleryOpen(false);
+      const id = add({ k: "comp", comp: name, w: 480, h: 320, title: title || void 0 }, center());
+      setSelected(/* @__PURE__ */ new Set([id]));
+    } }),
+    syncGroups.length > 0 && /* @__PURE__ */ jsx(SyncTransport, { hub: syncHub, groups: syncGroups, t: t2 }),
     /* @__PURE__ */ jsxs("footer", { className: "hb-status", children: [
       TOOLS.map((group, gi) => /* @__PURE__ */ jsx("div", { className: "seg", children: group.map((x) => /* @__PURE__ */ jsx(
         "button",
@@ -12355,6 +14438,17 @@ function BoardView({ bid, onOpenBoard, onHome }) {
         x.tool
       )) }, gi)),
       /* @__PURE__ */ jsx("span", { className: "hint", "aria-live": "polite", children: hint }),
+      /* @__PURE__ */ jsx("div", { className: "seg", children: /* @__PURE__ */ jsx(
+        "button",
+        {
+          className: `tool${galleryOpen ? " on" : ""}`,
+          "aria-pressed": galleryOpen,
+          "aria-label": t2("board.comp.gallery"),
+          "data-tip": t2("board.comp.gallery"),
+          onClick: () => setGalleryOpen((v) => !v),
+          children: /* @__PURE__ */ jsx(Icon, { name: "components", size: 15 })
+        }
+      ) }),
       /* @__PURE__ */ jsxs("div", { className: "seg", children: [
         /* @__PURE__ */ jsx(
           "button",
@@ -12393,6 +14487,7 @@ function BoardView({ bid, onOpenBoard, onHome }) {
           "%"
         ] }),
         /* @__PURE__ */ jsx("button", { className: "tool", "aria-label": t2("board.zoomIn"), "data-tip": t2("board.zoomIn"), "data-kbd": "+", onClick: () => zoomBy(1.2), children: /* @__PURE__ */ jsx(Icon, { name: "zoomIn", size: 15 }) }),
+        /* @__PURE__ */ jsx("button", { className: `tool${mapOff ? "" : " on"}`, "aria-pressed": !mapOff, "aria-label": t2("board.map.toggle"), "data-tip": t2("board.map.toggle"), "data-kbd": "M", onClick: toggleMap, children: /* @__PURE__ */ jsx(Icon, { name: "map", size: 15 }) }),
         /* @__PURE__ */ jsx("button", { className: "tool", "aria-label": t2("board.fit"), "data-tip": t2("board.fit"), "data-kbd": "F", onClick: () => fit(), children: /* @__PURE__ */ jsx(Icon, { name: "fit", size: 15 }) })
       ] })
     ] }),
@@ -12543,6 +14638,7 @@ function BoardView({ bid, onOpenBoard, onHome }) {
         ]
       }
     ) }),
+    show2.presenting && /* @__PURE__ */ jsx(PresenterHud, { p: show2, t: t2, board: doc.name }),
     (toast || sync.error) && /* @__PURE__ */ jsx("div", { className: "hb-toast", role: "status", children: toast || t2("board.toast.offline") }),
     /* @__PURE__ */ jsx(
       "input",
@@ -13459,10 +15555,11 @@ function useHomeData() {
         (value) => {
           inflight.delete(key);
           if (cancelled) return;
+          const shown = demoOn() ? demoSource(key, value, Date.now()) : value;
           setData((prev) => {
             const errors = new Set(prev.errors);
             errors.delete(key);
-            return { ...prev, [key]: value, errors };
+            return { ...prev, [key]: shown, errors };
           });
         },
         () => {
@@ -13819,7 +15916,8 @@ const boardCss = `/* Board — "Mesa de despacho" (hd-canvas-plan/mockup-v2). Ev
 .hb-world[data-lod] .hb-frame > i:nth-of-type(3) { border-width: 0 0 calc(1px * var(--ls-w, 1)) calc(1px * var(--ls-w, 1)); }
 .hb-world[data-lod] .hb-frame > i:nth-of-type(4) { border-width: 0 calc(1px * var(--ls-w, 1)) calc(1px * var(--ls-w, 1)) 0; }
 /* pictures: a thumbnail stands in below 50 % (decoding a full-size photo to paint 80 px is waste) */
-.hb img.lo { display: none; }
+.hb .hb-world img.lo { display: none; }
+/* specific enough to beat \`.hb-image .art img { display: block }\` */
 .hb-world[data-lod="1"] img.lo, .hb-world[data-lod="2"] img.lo { display: block; }
 .hb-world[data-lod="1"] img.full, .hb-world[data-lod="2"] img.full { display: none; }
 .hb-world[data-lod="1"] .hb-embed .frame, .hb-world[data-lod="2"] .hb-embed .frame { visibility: hidden; }
@@ -13847,6 +15945,90 @@ const boardCss = `/* Board — "Mesa de despacho" (hd-canvas-plan/mockup-v2). Ev
 @media (prefers-reduced-motion: reduce) {
   .hb-xfade { display: none; }
 }
+/* Custom components (kind comp), the component gallery and the shared sync transport.
+ * Kept apart from board.css (imported at its top); same variables, same material as the other
+ * cards: no colours of its own, Hermes is the dotted material (.dm), never a hue. */
+.hb-comp .comp-menu { position: absolute; z-index: 5; top: 34px; right: 6px; min-width: 168px; max-height: 260px; overflow: auto; padding: 4px;
+  border-radius: var(--r-float); background: var(--float-bg); border: 1px solid var(--float-line); box-shadow: var(--lift); font: 400 12px/1 var(--sans); }
+.hb-comp .comp-menu button { width: 100%; height: 30px; display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 0 8px;
+  border-radius: 4px; text-align: left; color: var(--ink-2); align-items: center; }
+.hb-comp .comp-menu button:hover { background: var(--hover); color: var(--ink); }
+.hb-comp .comp-menu button.on b { color: var(--accent); }
+.hb-comp .comp-menu b { font: 600 12px/1 var(--mono); color: var(--ink); }
+.hb-comp .comp-menu small { font: 400 10.5px/1 var(--mono); color: var(--ink-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 120px; }
+/* the versions menu hangs below the header, outside the card box */
+.hb .hb-embed.hb-comp { overflow: visible; }
+.hb .hb-comp .bar-e { position: relative; overflow: visible; border-radius: 3px 3px 0 0; }
+.hb-comp .foot { border-radius: 0 0 3px 3px; }
+.hb-item:has(.comp-menu) { z-index: 30 !important; }
+.hb-comp .comp-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 16px; text-align: center; color: var(--ink-3); }
+.hb-comp .comp-empty b { font: 600 12.5px/1.3 var(--sans); color: var(--ink-2); }
+.hb-comp .comp-empty small { font: 400 11px/1.4 var(--mono); }
+.hb-comp .comp-src { margin: 0; padding: 10px 12px; overflow: auto; font: 400 11px/1.5 var(--mono); color: var(--ink-2); white-space: pre; background: var(--well); user-select: text; }
+/* the link indicator on every synced card */
+.hb .sync-chip { display: inline-flex; align-items: center; gap: 4px; height: 20px; padding: 0 6px; border-radius: var(--r-ctl); font: 400 10.5px/1 var(--mono);
+  color: var(--accent); border: 1px solid color-mix(in srgb, var(--accent) 38%, transparent); white-space: nowrap; }
+.hb .sync-chip.over { position: absolute; z-index: 2; top: 8px; left: 8px; background: var(--float-bg); pointer-events: auto; }
+.hb-video .stage { position: relative; }
+/* gallery */
+.hb-gallery { position: absolute; z-index: 40; left: 0; right: 0; margin: 0 auto; bottom: 52px; width: min(720px, calc(100% - 32px)); max-height: min(520px, calc(100% - 120px));
+  display: flex; flex-direction: column; border-radius: var(--r-float); background: var(--float-bg); border: 1px solid var(--float-line); box-shadow: var(--lift);
+  animation: hb-pop .14s var(--out); }
+.hb-gallery .gal-hd { display: flex; align-items: center; gap: 8px; padding: 10px 10px 10px 14px; border-bottom: 1px solid var(--rule); font: 700 9.5px/1 var(--mono);
+  letter-spacing: .16em; text-transform: uppercase; color: var(--ink-3); }
+.hb-gallery .gal-hd svg { color: var(--accent); }
+.hb-gallery .gal-hd .kbtn { margin-left: auto; }
+.hb-gallery .gal-grid { overflow: auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; padding: 14px; }
+.hb-gallery .gal-tile { display: flex; flex-direction: column; gap: 4px; padding: 0 0 9px; text-align: left; border-radius: var(--r-ctl); border: 1px solid var(--rule); background: var(--sheet);
+  overflow: hidden; transition: border-color .14s var(--out); }
+.hb-gallery .gal-tile:hover, .hb-gallery .gal-tile:focus-visible { border-color: var(--accent); outline: none; }
+.hb-gallery .gal-tile b { padding: 4px 10px 0; font: 600 12.5px/1.2 var(--sans); color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hb-gallery .gal-tile small { padding: 0 10px; font: 400 10.5px/1.3 var(--mono); color: var(--ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hb-gallery .gal-thumb { position: relative; height: 131px; overflow: hidden; border-bottom: 1px solid var(--rule); background: var(--well); pointer-events: none; }
+.hb-gallery .gal-thumb .gal-scale { transform-origin: 0 0; position: absolute; left: 0; top: 0; }
+.hb-gallery .gal-thumb .frame { display: block; width: 100%; height: 100%; border: 0; background: transparent; }
+.hb-gallery .gal-thumb .gal-nofile { position: absolute; inset: 0; display: grid; place-items: center; color: var(--ink-3); }
+.hb-gallery .gal-empty { display: flex; flex-direction: column; gap: 6px; padding: 28px 22px; font: 400 12px/1.5 var(--sans); color: var(--ink-3); }
+.hb-gallery .gal-empty b { font: 600 13px/1.3 var(--sans); color: var(--ink-2); }
+/* shared transport */
+.hb-sync { position: absolute; z-index: 19; left: 50%; bottom: 52px; transform: translateX(-50%); display: flex; flex-direction: column; gap: 4px; padding: 4px;
+  border-radius: var(--r-panel); background: var(--chrome); border: 1px solid var(--rule); box-shadow: var(--lift); max-width: calc(100% - 24px); }
+.hb-gallery ~ .hb-sync { display: none; }
+.hb-sync .row { display: flex; align-items: center; gap: 4px; height: 30px; padding: 0 4px; color: var(--ink-2); }
+.hb-sync .grp { display: inline-flex; align-items: center; gap: 5px; min-width: 52px; padding: 0 6px 0 4px; font: 600 11px/1 var(--mono); color: var(--accent); }
+.hb-sync .scrub { width: clamp(120px, 24vw, 340px); height: 18px; margin: 0 6px; accent-color: var(--accent); background: transparent; cursor: pointer; }
+.hb-sync .time { min-width: 86px; text-align: right; font: 400 11px/1 var(--mono); color: var(--ink); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.hb-sync .rate { min-width: 38px; height: 22px; padding: 0 6px; margin-left: 4px; border-radius: var(--r-ctl); font: 400 11px/1 var(--mono); color: var(--ink-2); border: 1px solid var(--rule); }
+.hb-sync .rate:hover { color: var(--ink); background: var(--hover); }
+.hb-sync .manual { font: 700 9.5px/1 var(--mono); color: var(--on-accent); background: var(--accent); border-radius: 2px; padding: 3px 4px; }
+.hb.chat-open .hb-sync { left: calc((100% - var(--chat-w, 380px)) / 2); }
+.hb.chat-open .hb-gallery { right: var(--chat-w, 380px); }
+/* Presentation mode (tour.ts / usePresentation.ts). The board takes the whole window, its chrome
+ * steps aside, and a slim HUD sits at the bottom. Same material as the status bar and menus:
+ * var(--float-bg), the 1px float line, the board's own cells for progress. */
+.hb.presenting { position: fixed; inset: 0; height: auto; min-height: 0; z-index: 2147483000; }
+.hb.presenting > :not(.hb-viewport):not(.hb-present):not(.hb-toast) { display: none !important; }
+.hb.presenting .hb-viewport, .hb.presenting.chat-open .hb-viewport { inset: 0; right: 0; pointer-events: none; cursor: none; }
+.hb.presenting .hb-viewport * { pointer-events: none !important; }
+.hb.presenting .hb-sel, .hb.presenting .hb-marquee, .hb.presenting .hb-hermes-cursor { display: none !important; }
+.hb-present { position: absolute; left: 50%; bottom: 28px; transform: translateX(-50%); z-index: 30; display: flex; align-items: center; gap: 6px;
+  max-width: calc(100% - 40px); padding: 6px 8px; border-radius: var(--r-float); background: var(--float-bg); border: 1px solid var(--float-line);
+  box-shadow: var(--lift); color: var(--ink-2); animation: hb-pop .18s var(--out); transition: opacity .35s var(--out), transform .35s var(--out); }
+.hb-present.idle { opacity: 0; transform: translate(-50%, 8px); pointer-events: none; }
+.hb-present .ib:disabled { opacity: .35; pointer-events: none; }
+.hb-present .sep { width: 1px; height: 18px; background: var(--rule-2); margin: 0 2px; flex: none; }
+.hb-present .who { display: flex; flex-direction: column; justify-content: center; gap: 4px; min-width: 190px; max-width: 420px; padding: 0 10px; }
+.hb-present .who .k { font: 400 10.5px/1 var(--mono); letter-spacing: .1em; color: var(--ink-3); white-space: nowrap; }
+.hb-present .who .k i { font-style: normal; margin: 0 .25em; opacity: .55; }
+.hb-present .who b { font: 600 13px/1.2 var(--sans); color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hb-present .who .note { font: 400 11px/1.25 var(--sans); color: var(--ink-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hb-present .cells { display: flex; gap: 3px; width: clamp(40px, 12vw, 180px); padding: 0 6px; }
+.hb-present .cells i { flex: 1; height: 4px; min-width: 3px; background: color-mix(in srgb, var(--accent) 14%, transparent); transition: background-color .3s var(--out); }
+.hb-present .cells i.past { background: color-mix(in srgb, var(--accent) 48%, transparent); }
+.hb-present .cells i.on { background: var(--accent); }
+@media (prefers-reduced-motion: reduce) { .hb-present, .hb-present .cells i { transition: none; animation: none; } }
+/* the Present button's pulse while a tour is stored */
+.hb .ib.has-tour { color: var(--accent); }
 .hb {
   --accent: var(--color-primary, var(--ui-accent, #ffe3c4));
   --accent-soft: color-mix(in srgb, var(--accent) 82%, #9aa3b5);
@@ -13865,6 +16047,7 @@ const boardCss = `/* Board — "Mesa de despacho" (hd-canvas-plan/mockup-v2). Ev
   --rule-3: color-mix(in srgb, var(--accent) 42%, transparent);
   --tint: color-mix(in srgb, var(--accent) 6%, transparent);
   --warn: #f5b945;
+  --ok: var(--color-success, #3fb97f);
   --sans: var(--dt-font-sans, var(--theme-font-sans, system-ui, -apple-system, "Segoe UI", sans-serif));
   --mono: var(--theme-font-mono, ui-monospace, monospace);
   --r-panel: 4px; --r-card: 3px; --r-ctl: 3px; --r-float: 6px;
@@ -13952,6 +16135,8 @@ const boardCss = `/* Board — "Mesa de despacho" (hd-canvas-plan/mockup-v2). Ev
 .hb-note .body { margin: 4px 0 0; font: 400 12.5px/1.45 var(--sans); color: var(--ink-2); white-space: pre-wrap; overflow-wrap: anywhere; }
 .hb-note.quote .body { margin: 0; font: 500 16px/1.42 var(--sans); color: var(--ink); letter-spacing: -.003em; padding-right: 14px; }
 .hb-note .body b { color: var(--ink); font-weight: 650; }
+.hb-note .body pre.code { margin: 6px 0 0; padding: 8px 10px; border-radius: var(--r-ctl); background: var(--well); border: 1px solid var(--rule);
+  font: 400 11px/1.5 var(--mono); color: var(--ink-2); white-space: pre-wrap; overflow-wrap: anywhere; }
 .hb-note .meta { margin-top: 12px; }
 .hb-note .edit { display: block; width: 100%; min-height: 1.4em; overflow: hidden; }
 .hb-note h4 .edit { font: inherit; }
@@ -14031,6 +16216,22 @@ const boardCss = `/* Board — "Mesa de despacho" (hd-canvas-plan/mockup-v2). Ev
 .hb-image .art img { width: 100%; height: auto; display: block; }
 .hb-image .cap { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 6px 11px; min-height: 12px; }
 .hb-image .cap b { font: 600 13px/1.2 var(--sans); }
+/* imported file (pdf / 3D model): original kept beside its thumbnail */
+.hb-image .art { position: relative; }
+.hb-image .art .fbadge { position: absolute; left: 8px; top: 8px; padding: 2px 6px; border-radius: var(--r-ctl); font: 700 9.5px/1.3 var(--mono); letter-spacing: .08em;
+  color: var(--ink-2, var(--ink)); background: color-mix(in srgb, var(--bg) 78%, transparent); border: 1px solid var(--rule-2); backdrop-filter: blur(4px); }
+.hb-image .art .file-ph { display: grid; place-items: center; width: 100%; height: 100%; min-height: 120px; color: var(--ink-3); }
+.hb-image .cap .kbtn:disabled { opacity: .5; }
+.hb-image.has-file .art { background: var(--well); }
+/* status stamp */
+.hb-mark { position: absolute; right: -7px; top: -7px; width: 18px; height: 18px; border-radius: 50%; display: grid; place-items: center; pointer-events: none; z-index: 2;
+  color: var(--on-accent); border: 2px solid var(--bg); box-sizing: content-box; margin: -2px -2px 0 0; }
+.hb-mark.ok { background: var(--ok); }
+.hb-mark.fail { background: var(--danger); }
+.hb-mark.wait { background: var(--warn); }
+.hb-item:has(> .hb-mark.ok) > .hb-card, .hb-item:has(> .hb-mark.ok) > .hb-box { border-color: color-mix(in srgb, var(--ok) 55%, transparent); }
+.hb-item:has(> .hb-mark.fail) > .hb-card, .hb-item:has(> .hb-mark.fail) > .hb-box { border-color: color-mix(in srgb, var(--danger) 70%, transparent); }
+.hb-item:has(> .hb-mark.wait) > .hb-card, .hb-item:has(> .hb-mark.wait) > .hb-box { border-color: color-mix(in srgb, var(--warn) 60%, transparent); }
 /* embed: a window */
 .hb-embed { padding: 0; overflow: hidden; }
 .hb-embed .bar-e { height: 34px; display: flex; align-items: center; gap: 10px; padding: 0 6px 0 12px; border-bottom: 1px solid var(--rule); font: 400 11px/1 var(--mono); white-space: nowrap; overflow: hidden; }
@@ -14573,6 +16774,9 @@ const boardCss = `/* Board — "Mesa de despacho" (hd-canvas-plan/mockup-v2). Ev
 .hb-epick .kind { padding: 0 8px 0 6px; font: 400 10.5px/1 var(--mono); letter-spacing: .04em; color: var(--ink-3); text-transform: lowercase; }
 .hb-epick .sep { width: 1px; height: 18px; margin: 0 4px; background: var(--float-line); flex: none; }
 .hb-epick .row2 { flex-basis: 100%; display: flex; align-items: center; gap: 2px; padding-top: 3px; margin-top: 3px; border-top: 1px solid var(--float-line); }
+/* a card with a fixed height (an imported file excerpt) clips its body and fades out at the bottom */
+.hb-item > .hb-card.capped { height: 100%; overflow: hidden; display: flex; flex-direction: column; }
+.hb-card.capped > .body { flex: 1 1 auto; min-height: 0; overflow: hidden; -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 48px), transparent); mask-image: linear-gradient(to bottom, #000 calc(100% - 48px), transparent); }
 `;
 const HOME_DESKTOP_PATH = "/home";
 const BOARDS_DESKTOP_PATH = "/boards";
@@ -14812,6 +17016,7 @@ function createModelMenuHost(ns) {
   } : void 0;
   return { Picker, confirm, notifyError };
 }
+installDemo();
 function DesktopHomePage() {
   return /* @__PURE__ */ jsxs(Fragment, { children: [
     /* @__PURE__ */ jsx("style", { children: homeCss + boardCss }),

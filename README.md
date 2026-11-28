@@ -398,7 +398,7 @@ made; your work stays solid.
   Ctrl/⌘+wheel and a trackpad pinch. A two-finger trackpad scroll, Space+drag
   or a drag on the empty table pans; Shift+wheel pans sideways.
 - **Keys:** `V` select · `H` pan · `N` note · `T` to-do · `C` column · `L` link ·
-  `I` image · `B` board · `E` embed · `A` arrow · `D` draw · `/` chat · `F` fit ·
+  `I` image · `B` board · `E` embed · `A` arrow · `D` draw · `/` chat · `F` fit · `M` map · `P` present ·
   `⌘Z` / `⌘⇧Z` undo / redo (Ctrl on Windows and Linux). While drawing: `D` pen ·
   `⇧D` highlighter · `E` eraser · `[` `]` width · `1`–`6` colour · `⌘G` group.
 
@@ -408,6 +408,137 @@ made; your work stays solid.
   sidebar and the command palette.
 
 ![Board widget on the Home](assets/screenshot-board-widget.png)
+
+### Project files and big orders (one instruction, one undo)
+
+Ask Hermes "put my renders on the board" or "mark stations 1-30 ok, 31-37 waiting and group everything by
+stage". He does it in a **single `board_apply` call**, so it is one atomic commit and one undo step.
+
+- **`import`**: `{op:'import', paths:['~/projects/x/avances/*_hero*.png', '~/projects/x/parts/', ...], layout?:'grid'|'row'|'column', cols?, gap?, at?:{x,y}, into?:<frame or column id>, caption?:'name'|'none', limit?}`.
+  Paths can be files, globs or folders (40 files by default, 100 at most). Every file is **copied into the board's asset
+  store** (never linked, never served from its original path), placed on a tidy 24 px grid with no overlaps, and
+  reported back with its new id (`imported`) or the reason it was refused (`skipped`).
+  - images (png, jpg, webp, gif; bigger than 2560 px / 5 MB are downscaled) and svg (rasterised with ffmpeg; scripts and
+    external references refused) become image cards;
+  - mp4, webm and mov become video cards with a poster frame and the duration (ffmpeg), like uploads;
+  - **PDF** becomes a card with its first page as the thumbnail (`pdftoppm`, `pdftocairo`, `mutool`, Ghostscript,
+    `pypdfium2` or PyMuPDF, whichever is installed; without any of them a text preview of page one, or the biggest picture of
+    a scanned page, or an icon). The PDF is kept: the button on the card opens it;
+  - **STL, OBJ and 3MF** become a shaded isometric thumbnail on a transparent background (drawn by the plugin itself with
+    numpy and Pillow, no external tool). The model is kept: the button downloads it;
+  - markdown, text, code, json, csv, yaml... become text cards (code in a monospaced block, long files cut at 12 000
+    characters); `.html` becomes a sandboxed embed shown untouched (no theme).
+- **Safety.** The real path (symlinks resolved) must be inside your home folder, nothing below it may be hidden (`.ssh`,
+  `.env`, `.config`, `.hermes`...), names that look like secrets (`secrets.*`, `credentials.*`, `token.json`, `*.pem`,
+  `*.key`, `id_rsa`...) are refused, and only regular files of the types above are read. Only Hermes' tool can import;
+  the REST routes the browser uses cannot.
+- **`set_where`**: `{op:'set_where', where:{ids?, k?, tag?, text?, num?:'1-37', mark?, by?, frame?, in?}, p:{...}}`, or
+  `rules:[{where, p}, ...]` (later rules win), sets fields on every matching item. It fails if a filter matches nothing, so
+  Hermes learns when his filter is wrong. **`mark`** (`ok` / `fail` / `wait`, `null` clears) is a status stamp drawn on the
+  card, box, shape, image, video, link, embed, live card, column or sub-board, and shows in his board outline as `mark=ok`.
+- **`zones`**: `{op:'zones', zones:[{title, note?, where?|ids?, ref?, frame?, cols?, w?, h?}], layout?:'row'|'column'|'grid', gap?, spacing?, at?}`
+  creates titled frames in that order (Idea, Design, Brain, Training Room, Exam...), moves the items each rule matches into
+  them (the first zone to match wins; cards inside a column stay there unless asked for), lays them on the grid with uniform
+  spacing (numbered items go in number order), sizes the frames to fit, and keeps the group clear of everything else.
+  `frame:<id>` reuses an existing frame instead of creating one.
+- **`arrange`**: `{op:'arrange', frame?|ids?|where?, cols?, gap?}` grid-packs items (in a frame it also grows the frame).
+- **`place`**: `{op:'place', items:[{ref?, item:{k,...}, size?:[w,h]}], layout?, cols?, at?, into?, gap?}` adds many items on a grid
+  (what `import` produces).
+
+Hermes gets the short syntax in the tool description and the long one from `board_read {help:'bulk'}`.
+
+## Custom components and media sync
+
+The plugin ships no fixed "neural-network card". It ships a platform, so Hermes builds the
+component *you* need when you need it: ask for "a heatmap of my sensor readings" or "my training
+run animated next to the video" and Hermes writes it with the `board_component` tool (HTML/JS,
+versioned `v1`, `v2`, ...), saves it in your **component library** and puts it on the board. The
+library is shared by all boards; open it from the board toolbar (the blocks icon, or right-click >
+Components) to see live thumbnails and insert one.
+
+A component runs in a sandboxed iframe with no network and a small stable bridge, `window.hb`:
+`hb.data` / `hb.onData` (live data from Hermes or from a script), `hb.asset(name)` (big files, up
+to 48 MB, attached to the card), `hb.size` / `hb.onResize` (always responsive), `hb.theme` and the
+host's CSS variables and fonts, `hb.clock` (a shared playhead) and `hb.action(name, args)` (only
+actions you registered, destructive ones ask first). The card header has the version menu (pin /
+follow latest / update), reload, the theme switch and the source.
+
+```
+# Hermes pushes live data into a component card:        board_apply  [{"op":"comp","id":"4k","push":{"series":[61.2]}}]
+# or a script does:  curl -X POST .../boards/<board>/comp/<card>/data -d '{"push":{"series":[61.2]}}'
+# and attaches a big trace once:                         board_component attach id:"4k" name:"trace.json" path:"/tmp/trace.json"
+```
+
+**Media sync.** Give a video card and some components the same `sync` group (Hermes:
+`{"op":"sync","ids":[...]}`; you: select them, right-click > Link to one clock) and they share one
+playhead: a video drives it when there is one, play / pause / seek / speed work from any of them
+and from the transport at the bottom of the board, and components get `hb.clock` ticks at the
+video's frame rate. A recorder can step it frame by frame through `window.__hbSync`.
+
+Full contract, rules for Hermes, security model and a small sparkline example:
+[docs/components.md](docs/components.md). Components are stored in
+`<hermes-home>/plugin-data/home-dashboard/components/`; attached data files beside them. After
+updating the plugin, restart the gateway so the Python side (the library, the `comp` card and `sync`
+ops) is loaded.
+
+### Presentation mode: tours
+
+Frames work as slides. **Present** (the header button, the right-click menu, or `P`) plays the board
+full-window: the camera flies from stop to stop with the same eased motion as the rest of the board
+(slower and more deliberate), the chrome steps aside, and a slim HUD shows `stop n/N`, the stop's title
+(a frame's note under it), one cell per stop, previous / next, auto-play and exit.
+
+- **What a stop is:** a frame, any item, a *board* card (the tour dives into that sub-board with the usual
+  zoom, plays that board's own tour, or just frames it if it has none, then climbs back and carries on with
+  the next stop), a world rect, or a saved camera view. With no stored tour, `P` plays the frames in
+  reading order (rows top to bottom, left to right).
+- **Keys:** `→` `↓` `Space` `Enter` next · `←` `↑` previous · `Home` / `End` · `P` auto-play on/off ·
+  `H` hide the HUD · `F` real fullscreen · `Esc` exit. The HUD fades when the pointer rests.
+- **Auto-play and dwell:** each stop may carry `dw` seconds; so can the tour (default for every stop).
+  Setting any dwell turns auto-play on; the player then waits that long at each stop and moves on, and `P`
+  (or `Space` while it runs) pauses it. A tour can `loop`.
+- **Build it by hand:** right-click the table: *Build tour from frames*, *Add this view to tour*, *Clear
+  tour*; right-click a selection: *Add to tour*.
+- **Hermes builds it in one call.** The tour lives in the board document (`doc.tour`) and is one op of
+  `board_apply`, so "arma un recorrido por las zonas" is a single batch, undoable in one step:
+
+```json
+{"op": "tour", "from": "frames", "dw": 4, "loop": true}
+{"op": "tour", "t": "Launch", "stops": ["<frame id>", {"id": "<item id>", "t": "caption", "dw": 6},
+  {"rect": {"x": 0, "y": 0, "w": 2400, "h": 1200}}, {"view": {"x": -120, "y": 40, "z": 0.8}}, "<board card id>"]}
+{"op": "tour", "add": ["<id>"], "at": 0, "remove": ["<id>", 3]}   {"op": "tour", "clear": true}
+```
+
+  `board_read` lists the tour in the outline (`tour loop dwell=4s: 1:<id> "Idea" > 2:...`); a stop whose item
+  was deleted is skipped when playing (and marked `(missing)`).
+- **For a recorder (QA API).** `window.__hbTour` (next to `__hbCamera` and `__hbClock`) drives the tour on the
+  camera clock, so a manual clock makes it frame-by-frame deterministic, dwell included:
+
+```js
+__hbClock.manual(true);
+const p = __hbTour.start({ from: 0, auto: false, duration: 900, hud: false });   // duration: ms per flight
+__hbClock.advance(1000 / 60);          // call per frame; flights and dwell follow this clock
+await __hbTour.next();                 // resolves when the camera arrives
+__hbTour.stops();                      // [{ stop, title, view }] what the tour will show
+__hbTour.state();                      // { on, i, n, auto, flying, done }
+__hbTour.goto(3); __hbTour.prev(); __hbTour.auto(true); __hbTour.hud(false); __hbTour.stop();
+```
+
+### Demo mode (recording)
+
+A switch for screen recordings. **Off by default, and it never changes stored data**, only what the page shows.
+Turn it on with `?demo` in the URL (it is remembered in the browser until `?demo=0`), or from the console:
+`__hbDemo.enable({ now: "2026-11-27T10:30:00", nomap: true })` (reloads). Options: `now=<ISO | epoch>` freezes
+the clock, `tick` keeps it running from `now`, `nomap` hides the board's overview map.
+
+| What | In demo mode |
+| --- | --- |
+| Clock | `Date.now()` / `new Date()` frozen for the page: clock widget, "saved hh:mm", "3 min ago", live-card freshness and stale. `__hbDemo.setNow(iso)` / `.advance(ms)` move it. Server timestamps (a board's last edit) are still real, so pick `now` just after seeding. |
+| Host | neutral host name |
+| Cron, Logs, Sessions | neutral demo rows (no names, no raw log lines, no session titles) |
+| Tokens, Spend | no money (Spend stands down) |
+| Board chat | no session ids in tooltips, no skill / command rows |
+| Minimap | `nomap`; also a toggle (`M`, or the map button in the status bar) for any time |
 
 ## Live cards
 
@@ -478,10 +609,14 @@ disabled): [`examples/README.md`](examples/README.md).
   the video poster index. Deleted boards move to a trash folder there. Live
   card actions live in `../live-actions/*.json` (written by you, read by the
   plugin) and their log in `../live-actions.log.jsonl`.
+- **Files it can read (import).** The `import` op of `board_apply` reads files you point Hermes at, only inside your home
+  folder, never hidden files or folders, never names that look like secrets, and copies them into `assets/`. See
+  [Project files and big orders](#project-files-and-big-orders-one-instruction-one-undo).
 - **Commands it can run:** only the live card actions you register (see
   [Live card actions: security model](#live-card-actions-security-model)), and
   `ffmpeg`/`ffprobe` (if installed) to read a video's length and grab its
-  poster frame.
+  poster frame (and to rasterise an imported svg), plus `pdftoppm`/`pdftocairo`/`mutool`/`gs` (if installed) for the first page
+  of an imported PDF.
 - **Network:** link previews are fetched **server-side by the plugin
   backend** when you paste or add a link: the page HTML, its oEmbed JSON, its
   image and favicon. The fetch is SSRF-guarded: http(s) only, private,

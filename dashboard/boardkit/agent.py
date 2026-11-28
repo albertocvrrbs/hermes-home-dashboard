@@ -6,7 +6,7 @@ import json
 import re
 from typing import Any, Dict, Optional
 
-from . import embedlint, engine, summary
+from . import compguide, components as comp_mod, embedlint, engine, summary
 from .render import render_png
 from .service import BoardService
 from .store import NotFound
@@ -17,6 +17,9 @@ EMBED_HOOK = (
     "HTML embeds you write (charts, widgets): set theme:true and build fluid - use the injected vars "
     "(--foreground --muted-foreground --accent --border --card --chart-1..5, --font-sans/--font-mono), transparent "
     "background, %/flex/grid/viewBox instead of fixed px widths, redraw on window 'resize', no external fonts or libs.")
+
+BULK_HOOK = ("Big orders go in ONE board_apply: import project files (op:'import'), mark many items (op:'set_where', "
+             "mark ok/fail/wait), build zones and fill them (op:'zones'); board_read {help:'bulk'} has the syntax.")
 
 EMBED_RULES = (
     "Embed rules (HTML you write: charts, dashboards, widgets - set theme:true; leave theme off only to show the "
@@ -29,13 +32,50 @@ EMBED_RULES = (
     "'resize' (the card fires it with the real size). Warnings come back in the result; fix them."
 )
 
+BULK_RULES = (
+    'BIG ORDERS = ONE CALL (one board_apply = one undo step; never one call per item): '
+    "{op:'import', paths:['~/proj/renders/*_hero*.png', '~/proj/doc.pdf', '~/proj/parts/'] (files, globs or folders under the user's home; "
+    "max 40 files, raise limit up to 100), layout?:'grid'|'row'|'column', cols?, gap?, at?:{x,y}, into?:<frame or col id>, "
+    "caption?:'name'|'none'} COPIES the files into the board (never linked) and places them on a tidy grid: png/jpg/webp/gif/svg -> image cards, "
+    'mp4/webm/mov -> video cards (poster + duration), pdf -> card with the first page (click opens it), stl/obj/3mf -> shaded 3D thumbnail '
+    '(click downloads the model), md/txt/code/json/csv -> text cards, html -> untouched sandboxed embed. Hidden files (.env, .ssh ...), secrets '
+    "and anything outside the home folder are refused; the result lists the created 'imported' ids and what was 'skipped' and why. "
+    "{op:'set_where', where:{ids?, k?, tag?, text?, num?:'1-37', mark?, by?, frame?, in?}, p:{mark:'ok'|'fail'|'wait'|null, ...}} sets fields on EVERY match "
+    "(or rules:[{where,p},...], later rules win; it errors if a where matches nothing). 'mark' is a status stamp drawn on the item: use it for "
+    'ok/fail/wait states (37 stations in one op). '
+    "{op:'zones', zones:[{title, note?, where?:{...}|ids?:[...], ref?, frame?:<existing frame>, cols?, w?, h?}], layout?:'row'|'column'|'grid', gap?, "
+    'spacing?, cols?, at?} creates titled frames in that order (Idea -> Design -> ...), moves the matching items into each (first zone to match wins; '
+    'column kids only via where.in/ids), lays them on the 24px grid with uniform spacing, sizes the frames to fit and keeps the group clear of other '
+    "items. {op:'arrange', frame?:id | ids?:[...] | where?:{...}, cols?, gap?} grid-packs items (in a frame it also grows the frame). "
+    'A whole reorganisation is zones + set_where + arrange (+ connectors with $refs) in the same ops list. '
+)
+
+BULK_BRIEF = (
+    "BIG ORDERS = ONE CALL (one board_apply, one undo step; never one call per item): "
+    "{op:'import', paths:[files|globs|folders under the user's home], layout?:'grid'|'row'|'column', cols?, at?:{x,y}, into?:<frame|col id>, "
+    "caption?:'name'|'none'} copies project files in (png/jpg/webp/gif/svg, mp4/webm/mov, pdf, stl/obj/3mf with a 3D thumbnail, md/txt/code as "
+    "text cards; hidden and secret files refused); "
+    "{op:'set_where', where:{ids?,k?,tag?,text?,num?,mark?,frame?,in?}, p:{mark:'ok'|'fail'|'wait'|null, ...}} (or rules:[{where,p}]) edits every "
+    "match (mark = status stamp); {op:'zones', zones:[{title, where?|ids?, frame?, ref?}], layout?:'row'|'column'|'grid'} makes titled frames, moves "
+    "the matches in and grids them on 24px; {op:'arrange', frame?|ids?|where?, cols?} grid-packs. Full syntax: board_read {help:'bulk'}. "
+)
+
+TOUR_HOOK = (
+    "Tour: frames are the slides, then ONE {op:'tour', from:'frames'} (or stops:[id | {id,t?,dw?} | {rect} | {view}]; a board card "
+    "dives into the sub-board; add/remove/clear/loop/dw edit it).")
+
+COMP_HOOK = (
+    "Custom cards: board_component guide, then create and place a component (comp card); {op:'sync', ids:[video, comp...]} "
+    "links them to one playhead.")
+
 _OPS_HELP = (
-    "ops: [{op:'add', ref:'$a', item:{k, x, y, w?, h?, ...}}, {op:'set', id, p:{...}} (null removes a field), "
+    BULK_BRIEF + "ops: [{op:'add', ref:'$a', item:{k, x, y, w?, h?, ...}}, {op:'set', id, p:{...}} (null removes a field), "
     "{op:'del', id}, {op:'board', p:{name}}, {op:'tidy', ids?:[...], gap?:24} (lay items out in a clean grid in reading "
     "order, aligned to the 24px grid with uniform gaps; omit ids for the whole board, which leaves connected diagram "
     "nodes, framed items and loose strokes alone), {op:'insert_on_edge', edge:<line id>, ref?:'$x', item:{k,...}} (put an "
     "item in the middle of a connector: splits it into A->new->B, keeps the label on A->new, pushes B and what hangs off "
-    "it away if it is too tight; one undo step)]. Use '$refs' to point at items added in the same batch. "
+    "it away if it is too tight; one undo step), {op:'tour', stops:[...], add?:[...], at?, remove?:[...], from?:'frames'|'boards', "
+    "clear?:true, loop?, dw?, t?} (presentation tour: stops are ids, {rect}, {view}; from:'frames' = every frame in reading order)]. Use '$refs' to point at items added in the same batch. "
     "Kinds: card{title,text,tags,due} · todo{title,items:[{t,done}]} · col{title} (add cards with in:'<col>') · "
     "box{num,title,sub} (diagram node, ~196x62) · shape{sh:'rect'|'diamond'|'pill'|'circle',title} (flowchart symbol: process, "
     "decision, start/end, connector; ~160x56, diamond 150x100, pill 150x48, circle 72) · line{a,b,label} (connector; a/b = ids or [x,y]) · "
@@ -50,6 +90,9 @@ _OPS_HELP = (
     "usd|dur; status running|paused|done|error|idle). Update a live card later with {op:'live', id, data:{k:v} "
     "(null deletes), push:{series:[n]}, keep?} - cheap, no layout. Buttons can only name action ids the owner "
     "registered (board_read actions:true lists them); never put commands in a card. "
+    "comp{comp:'<library name>', title, w, h, cdata:{...}, ver?, actions:[ids]} (runs a component YOU wrote with the "
+    "board_component tool; update its data with {op:'comp', id, data:{k:v}|push:{k:n}}) · {op:'sync', ids:[video/comp "
+    "cards], group?} links cards to one shared playhead (video = master), {op:'unsync', ids?|group?}. "
     "Coordinates are world px; leave ~60px gaps; columns are 276 wide. " + EMBED_RULES
 )
 
@@ -67,7 +110,38 @@ SCHEMAS: Dict[str, Dict[str, Any]] = {
             "create": {"type": "boolean", "description": "Create the board if no board has this name."},
             "actions": {"type": "boolean", "description": "Also list the live-card actions the owner registered "
                         "(ids you may put on live card buttons)."},
+            "help": {"type": "string", "enum": ["bulk"], "description": "'bulk' returns the full syntax of import, set_where, "
+                     "zones, arrange and place (big orders in one board_apply)."},
         }},
+    },
+    "board_component": {
+        "name": "board_component",
+        "description": (
+            "Write, version and manage CUSTOM COMPONENTS: HTML/JS cards you create for what the user needs, saved in "
+            "their component library and reusable on any board. " + compguide.COMPONENT_RULES + " Actions: "
+            "list {} · guide {} (the full window.hb v1 contract; read it before your first component) · get {name, "
+            "version?} (source files) · create|update {name, html | files:{'index.html':...,'app.js':...}, edits?:[{file?, "
+            "find, replace}] (patch the current version), remove?:[files], replace?:true (start from empty), title?, "
+            "desc?, note?} (every save = new version v1,v2...; sample.json = preview data) · diff {name, from?, to?} · "
+            "rollback {name, to} (a new version copying the old one) · delete {name, confirm:true} · attach {board?, id, "
+            "name, path | json | text} (attach a data file to a comp card, up to 48 MB, read with hb.asset(name)) · "
+            "place {board?, name, x?, y?, w?, h?, cdata?} (shortcut for adding the card). Returns lint warnings; fix them."),
+        "parameters": {"type": "object", "properties": {
+            "action": {"type": "string", "enum": ["list", "guide", "get", "create", "update", "diff", "rollback",
+                                                  "delete", "attach", "place"]},
+            "name": {"type": "string", "description": "Component name (lowercase letters, digits, dashes) or, for "
+                     "attach, the data file name."},
+            "component": {"type": "string", "description": "attach/place: the library component name when `name` is the file."},
+            "html": {"type": "string"}, "files": {"type": "object"},
+            "edits": {"type": "array", "items": {"type": "object"}}, "remove": {"type": "array", "items": {"type": "string"}},
+            "replace": {"type": "boolean"}, "title": {"type": "string"}, "desc": {"type": "string"},
+            "note": {"type": "string"}, "version": {"type": "string"}, "from": {"type": "string"}, "to": {"type": "string"},
+            "confirm": {"type": "boolean"}, "board": {"type": "string"}, "id": {"type": "string", "description": "attach: the comp card id."},
+            "path": {"type": "string", "description": "attach: file on this machine to copy in."},
+            "json": {}, "text": {"type": "string"},
+            "x": {"type": "number"}, "y": {"type": "number"}, "w": {"type": "number"}, "h": {"type": "number"},
+            "cdata": {"type": "object"},
+        }, "required": ["action"]},
     },
     "board_apply": {
         "name": "board_apply",
@@ -171,10 +245,110 @@ class BoardAgent:
             out.extend(f"op {i}: {w}" for w in embedlint.lint_embed(body["html"]))
         return out[:12]
 
+    def _comp_warnings(self, doc: Dict[str, Any], ops: Any) -> list:
+        """A comp card that names a component the library does not have (or a sync that links nothing useful)."""
+        out: list = []
+        if not isinstance(ops, list):
+            return out
+        lib = self.svc.components
+        for i, op in enumerate(ops):
+            if not isinstance(op, dict):
+                continue
+            body = op.get("item") if op.get("op") == "add" else op.get("p") if op.get("op") == "set" else None
+            if isinstance(body, dict) and body.get("k", "comp" if op.get("op") == "set" else None) == "comp" \
+                    and isinstance(body.get("comp"), str) and not lib.exists(body["comp"]):
+                out.append(f"op {i}: component {body['comp']!r} is not in the library: create it first with "
+                           "board_component (action:'list' shows what exists)")
+        return out
+
     # ── tools ────────────────────────────────────────────────────────────
+    def board_component(self, args: Dict[str, Any], session_id: Optional[str] = None, **_: Any) -> str:
+        args = args or {}
+        act = args.get("action")
+        lib = self.svc.components
+        name = args.get("name")
+        try:
+            if act == "guide":
+                return _dump({"guide": compguide.GUIDE})
+            if act == "list":
+                return _dump({"components": lib.list(), "dir": str(lib.root),
+                              "hint": "none yet: create one with action:'create'" if not lib.list() else None})
+            if act in ("create", "update"):
+                keys = ("html", "files", "edits", "remove", "replace", "title", "desc", "note")
+                kw = {k: args[k] for k in keys if k in args}
+                if "replace" in kw:
+                    kw["replace"] = kw["replace"] is True
+                res = self.svc.comp_save(name, by="h", **kw)
+                self._presence(session_id, args, f"{'created' if res.get('created') else 'updated'} component {name}")
+                return _dump(res)
+            if act == "get":
+                ver, files = lib.files(name, args.get("version"))
+                meta = lib.meta(name)
+                return _dump({"name": name, "version": ver, "current": meta["current"], "title": meta.get("title"),
+                              "desc": meta.get("desc"), "versions": [v["v"] for v in meta["versions"]], "files": files})
+            if act == "diff":
+                return _dump(lib.diff(name, args.get("from"), args.get("to")))
+            if act == "rollback":
+                res = lib.rollback(name, args.get("to"), by="h")
+                if not res.get("noop"):
+                    self.svc.comp_touch(name)
+                return _dump(res)
+            if act == "delete":
+                if args.get("confirm") is not True:
+                    return _dump({"error": "delete removes the component and all its versions; ask the user, then "
+                                           "call again with confirm:true"})
+                gone = lib.delete(name)
+                if gone:
+                    self.svc.comp_touch(name)
+                return _dump({"deleted": gone})
+            if act == "attach":
+                doc, _, _ = self._resolve(args, session_id)
+                if doc is None:
+                    return self._missing(args)
+                if args.get("path"):
+                    from pathlib import Path
+                    p = Path(str(args["path"])).expanduser()
+                    if not p.is_file():
+                        return _dump({"error": f"no such file {str(p)[:120]}"})
+                    data = p.read_bytes()
+                elif "json" in args:
+                    data = json.dumps(args["json"], separators=(",", ":")).encode("utf-8")
+                elif isinstance(args.get("text"), str):
+                    data = args["text"].encode("utf-8")
+                else:
+                    return _dump({"error": "attach needs path, json or text"})
+                res = self.svc.comp_attach(doc["id"], str(args.get("id") or ""), str(args.get("name") or ""), data, by="h")
+                return _dump({"board": doc["id"], **res})
+            if act == "place":
+                doc, _, _ = self._resolve(args, session_id)
+                if doc is None:
+                    return self._missing(args)
+                comp = args.get("component") or name
+                item: Dict[str, Any] = {"k": "comp", "comp": comp}
+                for k in ("x", "y", "w", "h", "title", "cdata"):
+                    if k in args:
+                        item[k] = args[k]
+                new, entry = self.svc.commit(doc["id"], [{"op": "add", "item": item}], by="h", note=f"added {comp}")
+                return _dump({"board": doc["id"], "seq": new["seq"], "ids": entry.get("ids", {}),
+                              "id": next((o.get("id") for o in entry.get("ops", []) if o.get("id")), None),
+                              "warnings": self._comp_warnings(doc, [{"op": "add", "item": item}]) or None})
+            return _dump({"error": "action is one of list, guide, get, create, update, diff, rollback, delete, attach, place"})
+        except (comp_mod.CompError, comp_mod.CompNotFound, NotFound, engine.OpError) as e:
+            return _dump({"error": str(e).strip("'\"")})
+
+    def _presence(self, session_id: Optional[str], args: Dict[str, Any], act: str) -> None:
+        try:
+            doc, _, _ = self._resolve({"board": args.get("board")} if args.get("board") else {}, session_id)
+            if doc is not None:
+                self.svc.store.set_presence(doc["id"], act[:80])
+        except Exception:
+            pass
+
     def board_read(self, args: Dict[str, Any], session_id: Optional[str] = None, **_: Any) -> str:
         try:
             args = args or {}
+            if args.get("help") == "bulk":
+                return _dump({"help": BULK_RULES})
             if args.get("actions") and not args.get("board") and not session_id:
                 return _dump({"live_actions": self._actions()})
             doc, created, linked = self._resolve(args, session_id)
@@ -212,8 +386,9 @@ class BoardAgent:
             if doc is None:
                 return self._missing(args)
             note = args.get("note") if isinstance(args.get("note"), str) else None
-            embed_warnings = self._embed_warnings(doc, args.get("ops"))
-            new, entry = self.svc.commit(doc["id"], args.get("ops"), by="h", note=note, previews="wait")
+            embed_warnings = self._embed_warnings(doc, args.get("ops")) + self._comp_warnings(doc, args.get("ops"))
+            report: Dict[str, Any] = {}
+            new, entry = self.svc.commit(doc["id"], args.get("ops"), by="h", note=note, previews="wait", report=report)
             if entry.get("noop"):
                 return _dump({"board": doc["id"], "seq": new["seq"], "warning": "nothing changed"})
             last = next((op.get("id") for op in reversed(entry.get("ops") or []) if op.get("id")), None)
@@ -222,6 +397,12 @@ class BoardAgent:
             out: Dict[str, Any] = {"board": doc["id"], "seq": new["seq"], "ids": entry.get("ids", {})}
             if embed_warnings:
                 out["warnings"] = embed_warnings
+            if report.get("imported"):
+                ref_ids = out["ids"]
+                out["imported"] = [{**{k: v for k, v in row.items() if k != "ref"}, "id": ref_ids.get(row["ref"])}
+                                   for row in report["imported"]]
+            if report.get("skipped"):
+                out["skipped"] = report["skipped"][:30]
             waiting = [i for i, it in new["items"].items() if it.get("st") == "wait"]
             if waiting:
                 out["previews_pending"] = waiting
@@ -265,7 +446,7 @@ class BoardAgent:
             parts = []
             if linked_now or is_first_turn:
                 parts.append(f'This session is linked to the board "{doc["name"]}" ({bid}). Read it with board_read '
-                             "and write on it with board_apply (one batch per change set). " + EMBED_HOOK)
+                             "and write on it with board_apply (one batch per change set). " + BULK_HOOK + " " + COMP_HOOK + " " + TOUR_HOOK + " " + EMBED_HOOK)
             changes = summary.changes_since(doc, store.entries(bid), doc.get("seen", 0), limit=HOOK_LIMIT)
             if changes:
                 parts.append(f'[Board "{doc["name"]}" ({bid}): the user changed it since your last turn: {changes}. '

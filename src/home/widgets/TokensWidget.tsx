@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { demoOn } from "@/demo";
 import { api } from "@/sdk";
 import { Cancelled, fetchRetry } from "../fetchGuard";
 import type { AnalyticsResponse, ModelsAnalyticsEntry } from "@/api-types";
@@ -186,7 +187,7 @@ export function TokensWidget({ analytics, widgetProps, onWidgetPropsChange, grid
             className={`home-spark-tip${show ? " show" : ""}`}
             style={{ left: `${tip.frac * 100}%`, transform: `translateX(${-tip.frac * 100}%)` }}
           >
-            <b>{tip.bar.label}</b> · {formatTokenCount(tip.bar.tokens)} · ${tip.bar.cost.toFixed(2)}
+            <b>{tip.bar.label}</b> · {formatTokenCount(tip.bar.tokens)}{demoOn() ? "" : ` · $${tip.bar.cost.toFixed(2)}`}
           </div>
         )}
         {chart === "line" ? (
@@ -236,7 +237,7 @@ export function TokensWidget({ analytics, widgetProps, onWidgetPropsChange, grid
         <div className="tok-stats">
           <span><span className="dim">{t("tokens.in")}</span> {formatTokenCount(tot.total_input)}</span>
           <span><span className="dim">{t("tokens.out")}</span> {formatTokenCount(tot.total_output)}</span>
-          <span><span className="dim">{t("tokens.cost")}</span> <span className="ok">${tot.total_estimated_cost.toFixed(2)}</span></span>
+          {!demoOn() && <span><span className="dim">{t("tokens.cost")}</span> <span className="ok">${tot.total_estimated_cost.toFixed(2)}</span></span>}
         </div>
       )}
       {group !== "off" && (
@@ -274,7 +275,7 @@ function TokenBreakdown({ groups, cap, note }: {
               className="row tok-group"
               key={g.key || "\u0000"}
               style={{ "--share": `${Math.max(1, Math.min(100, g.share))}%` } as React.CSSProperties}
-              title={t("tokens.rowTitle", {
+              title={demoOn() ? undefined : t("tokens.rowTitle", {
                 name, tokens: formatTokenCount(g.tokens), cost: g.cost.toFixed(2), share,
               })}
             >

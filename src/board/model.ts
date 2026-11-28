@@ -6,7 +6,7 @@ import type { LiveBlock } from "./live";
 
 export type Kind =
   | "card" | "todo" | "col" | "link" | "image" | "embed" | "video" | "board"
-  | "frame" | "box" | "text" | "draw" | "line" | "live" | "shape";
+  | "frame" | "box" | "text" | "draw" | "line" | "live" | "shape" | "comp";
 
 export type Point = [number, number];
 export type End = string | Point;
@@ -22,6 +22,11 @@ export interface Item {
   items?: TodoItem[]; kids?: string[];
   url?: string; desc?: string; site?: string; icon?: string; img?: string;
   st?: "wait" | "ok" | "fail"; video?: VideoRef;
+  /** status stamp Hermes (or the user) puts on any card-like item */
+  mark?: "ok" | "fail" | "wait";
+  /** image card imported from a project file: the original (pdf / 3D model) beside its thumbnail,
+   *  its type and the pdf page count */
+  file?: string; fk?: "pdf" | "stl" | "obj" | "3mf"; pg?: number;
   /** embed: Hermes theme + responsive bridge (off = the page renders exactly as authored) */
   theme?: boolean;
   asset?: string; cap?: string; iw?: number; ih?: number; src?: string;
@@ -35,7 +40,22 @@ export interface Item {
   ds?: boolean; sm?: boolean; pr?: string; g?: string;
   /** video: duration (s); live: block spec, data bag, freshness TTL (s), last update (epoch s) */
   dur?: number; blocks?: LiveBlock[]; data?: Record<string, unknown>; ttl?: number; at?: number; tpl?: string;
+  /** comp: library component name, pinned version (absent = latest), data bag, attached data files
+   *  (name -> {n bytes, r revision}), allowed action ids, theme opt-out */
+  comp?: string; ver?: string; cdata?: Record<string, unknown>; files?: Record<string, { n: number; r: number }>;
+  actions?: string[]; nt?: boolean;
+  /** video / comp / embed: sync group (cards with the same group share one playhead) */
+  sync?: string;
 }
+
+/** One stop of the presentation: a frame, an item, a nested-board card, or a free view
+ *  (`r` = a world rect to frame, `v` = a saved camera view). `dw` = auto-play dwell (s). */
+export interface TourStop {
+  k: "frame" | "item" | "board" | "view";
+  id?: string; r?: { x: number; y: number; w: number; h: number }; v?: { x: number; y: number; z: number };
+  t?: string; dw?: number;
+}
+export interface Tour { stops: TourStop[]; loop?: boolean; dw?: number; t?: string }
 
 export interface Presence { at: number; act: string; on?: string }
 
@@ -44,6 +64,8 @@ export interface BoardDoc {
   session: { id: string; profile: string } | null; seen: number;
   created: number; updated: number; hermes?: Presence;
   items: Record<string, Item>;
+  /** presentation tour (tour.ts plays it) */
+  tour?: Tour;
 }
 
 export type Op =
@@ -51,6 +73,7 @@ export type Op =
   | { op: "set"; id: string; p: Partial<Record<keyof Item, unknown>>; at?: number }
   | { op: "del"; id: string }
   | { op: "board"; p: { name?: string } }
+  | { op: "tour"; tour: Tour | null }
   | { op: "add"; ref?: string; item: Item; at?: number };
 
 export interface Entry {
@@ -139,6 +162,10 @@ export function applyOp(doc: BoardDoc, op: Op): void {
       for (const k of doomed) delete items[k];
       return;
     }
+    case "tour":
+      if (op.tour && op.tour.stops) doc.tour = clone(op.tour);
+      else delete doc.tour;
+      return;
     case "board":
       if (typeof op.p.name === "string") doc.name = op.p.name;
       return;
@@ -236,7 +263,7 @@ export function itemLabel(item: Item): string {
 export const DEFAULT_SIZE: Record<string, [number, number]> = {
   card: [256, 120], todo: [304, 240], col: [276, 320], link: [276, 250], image: [372, 260],
   embed: [452, 320], video: [400, 260], board: [212, 170], frame: [480, 320], box: [196, 62],
-  text: [420, 40], draw: [120, 80], live: [400, 300], shape: [160, 56],
+  text: [420, 40], draw: [120, 80], live: [400, 300], shape: [160, 56], comp: [480, 320],
 };
 
 /** Rows the metrics grid wraps into (mirrors the CSS: columns follow the count, pairs below 380px). */
@@ -266,6 +293,8 @@ export function approxRect(item: Item): { x: number; y: number; w: number; h: nu
   if (item.k === "col") h = 60 + 96 * (item.kids?.length ?? 0);
   if (item.k === "todo") h = 110 + 26 * (item.items?.length ?? 0);
   if (item.k === "live") h = item.h ?? liveHeight(item);
+  // an imported picture / thumbnail is as tall as its aspect ratio says (+ padding and caption bar)
+  if (item.k === "image" && item.h == null && item.iw && item.ih) h = Math.round(((item.w ?? dw) - 14) * item.ih / item.iw + 56);
   if (item.k === "draw" && item.d) {
     const pts = item.d.split(" ").map((p) => p.split(",").map(Number));
     const xs = pts.map((p) => p[0]), ys = pts.map((p) => p[1]);

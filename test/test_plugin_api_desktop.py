@@ -281,7 +281,7 @@ class PackageRootTest(unittest.TestCase):
         ctx = Ctx()
         with tempfile.TemporaryDirectory() as tmp, patch.dict(os.environ, {"HERMES_HOME": tmp}):
             self.assertIsNone(module.register(ctx))
-        self.assertEqual(sorted(ctx.tools), ["board_apply", "board_read", "board_render"])
+        self.assertEqual(sorted(ctx.tools), ["board_apply", "board_component", "board_read", "board_render"])
         self.assertEqual({t[0] for t in ctx.tools.values()}, {"board"})
         self.assertIn("pre_llm_call", ctx.hooks)
 

@@ -6,7 +6,7 @@ import secrets
 from typing import Any
 
 _BID = re.compile(r"[a-z0-9]{8}")
-_AID = re.compile(r"[a-f0-9]{16}\.(png|jpg|gif|webp|ico|html|mp4|webm|mov)")
+_AID = re.compile(r"[a-f0-9]{16}\.(png|jpg|gif|webp|ico|html|mp4|webm|mov|pdf|stl|obj|3mf)")
 _ITEM = re.compile(r"[a-z0-9]{1,8}")
 _REF = re.compile(r"\$[A-Za-z0-9_]{1,16}")
 _DIGITS = "0123456789abcdefghijklmnopqrstuvwxyz"
