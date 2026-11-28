@@ -211,6 +211,55 @@ class ColumnsTest(unittest.TestCase):
         self.assertEqual(back["items"]["0"]["kids"], ["1", "2"])
 
 
+class BulkDeleteTest(unittest.TestCase):
+    """Delete-all lists every id; cascaded ids must be no-ops, and one undo restores everything."""
+
+    def doc(self):
+        doc, _, _ = engine.apply_batch(blank(), [
+            {"op": "add", "ref": "$c1", "item": {"k": "col", "x": 0, "y": 0, "title": "A"}},
+            {"op": "add", "ref": "$c2", "item": {"k": "col", "x": 400, "y": 0, "title": "B"}},
+            {"op": "add", "ref": "$k1", "item": {"k": "card", "text": "one", "in": "$c1"}},
+            {"op": "add", "ref": "$k2", "item": {"k": "card", "text": "two", "in": "$c1"}},
+            {"op": "add", "ref": "$k3", "item": {"k": "card", "text": "three", "in": "$c2"}},
+            {"op": "add", "ref": "$b", "item": {"k": "box", "x": 0, "y": 500, "title": "free"}},
+            {"op": "add", "ref": "$s1", "item": {"k": "draw", "x": 10, "y": 10, "w": 20, "h": 20, "d": "0,0 10,10", "g": "g1"}},
+            {"op": "add", "ref": "$s2", "item": {"k": "draw", "x": 50, "y": 10, "w": 20, "h": 20, "d": "0,0 10,10", "g": "g1"}},
+            {"op": "add", "item": {"k": "line", "a": "$c1", "b": "$b"}},
+            {"op": "add", "item": {"k": "line", "a": "$k3", "b": "$b"}},
+            {"op": "add", "item": {"k": "line", "a": "$k1", "b": "$k3"}},
+        ], by="u")
+        return doc
+
+    def test_delete_all_in_any_order_and_one_undo_restores(self):
+        import random
+        base = self.doc()
+        all_ids = list(base["items"])
+        orders = [all_ids, list(reversed(all_ids))]
+        rng = random.Random(7)
+        for _ in range(20):
+            o = all_ids[:]
+            rng.shuffle(o)
+            orders.append(o)
+        for order in orders:
+            doc, inv, _, fwd = engine.apply_batch_ex(copy.deepcopy(base), [{"op": "del", "id": i} for i in order])
+            self.assertEqual(doc["items"], {})
+            back, _, _ = engine.apply_batch(doc, inv)
+            self.assertEqual(back["items"], base["items"], order)
+            puts = [o["id"] for o in inv if o["op"] == "put"]
+            self.assertEqual(len(puts), len(set(puts)), "no duplicate puts")
+            replay, _, _ = engine.apply_batch(copy.deepcopy(base), fwd)
+            self.assertEqual(replay["items"], {})
+
+    def test_duplicate_and_cascaded_ids_are_noops_but_unknown_still_fails(self):
+        base = self.doc()
+        doc, _, _ = engine.apply_batch(copy.deepcopy(base), [
+            {"op": "del", "id": "0"}, {"op": "del", "id": "2"}, {"op": "del", "id": "0"}])
+        self.assertNotIn("0", doc["items"])
+        self.assertNotIn("2", doc["items"])
+        with self.assertRaises(engine.OpError):
+            engine.apply_batch(copy.deepcopy(base), [{"op": "del", "id": "0"}, {"op": "del", "id": "zz"}])
+
+
 class InverseRoundTripTest(unittest.TestCase):
     def test_every_batch_inverse_restores_items(self):
         doc, _, _ = engine.apply_batch(blank(), [

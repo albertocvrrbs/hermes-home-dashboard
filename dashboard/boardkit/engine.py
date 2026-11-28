@@ -259,6 +259,7 @@ class _Batch:
         self.now = int(now if now is not None else time.time())
         self.refs: Dict[str, str] = {}
         self._place: Optional[List[int]] = None
+        self.gone: set = set()  # ids deleted earlier in this batch (directly or by cascade)
 
     # ids
     def resolve(self, value: Any, *, must_exist: bool = True) -> str:
@@ -390,6 +391,7 @@ class _Batch:
             raise OpError("put needs id and item")
         if iid in self.items:
             raise OpError(f"item {iid} already exists")
+        self.gone.discard(iid)
         kind = raw["k"]
         item: Dict[str, Any] = {"k": kind, **self.clean_fields(kind, raw)}
         if raw.get("by") == "h":
@@ -478,7 +480,13 @@ class _Batch:
         return ([inv] if inv_p else []), (fwd if fwd_p else None)
 
     def delete(self, op: Dict[str, Any]) -> List[Dict[str, Any]]:
-        iid = self.resolve(op.get("id"))
+        # A bulk delete lists every selected id, but deleting a column or an item also removes
+        # its kids / attached connectors. Deleting an id already removed in this batch is a no-op
+        # (ids that never existed still fail). Nothing to undo, nothing to log.
+        raw_id = op.get("id")
+        if ids.valid_item_id(raw_id) and raw_id in self.gone and raw_id not in self.items:
+            return [], None
+        iid = self.resolve(raw_id)
         item = self.items[iid]
         doomed = [iid] + list(item.get("kids", []) if item["k"] == "col" else [])
         doomed_set = set(doomed)
@@ -501,6 +509,7 @@ class _Batch:
         self.remove_from_column(iid)
         for kid in doomed + lines:
             self.items.pop(kid, None)
+            self.gone.add(kid)
         return inv, {"op": "del", "id": iid}
 
     def live(self, op: Dict[str, Any]) -> List[Dict[str, Any]]:
