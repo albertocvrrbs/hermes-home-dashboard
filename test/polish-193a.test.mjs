@@ -69,3 +69,54 @@ test("the live card's default width is 400 everywhere", () => {
   assert.match(py, /"live": \(400, 300\)/);
   assert.match(ts, /live: \[400, 300\]/);
 });
+
+// ── chat: friendly tool labels ────────────────────────────────────────────
+import { opCount, toChatRows, toolKind } from "../src/board/chatRows.ts";
+
+test("tool names map to a kind of work; nothing raw reaches the reader", () => {
+  assert.equal(toolKind("board_read"), "readBoard");
+  assert.equal(toolKind("board_apply"), "editBoard");
+  assert.equal(toolKind("skill_view"), "skill");
+  assert.equal(toolKind("terminal"), "command");
+  assert.equal(toolKind("mcp__firecrawl__firecrawl_scrape"), "web");
+  assert.equal(toolKind("browser_click"), "web");
+  assert.equal(toolKind("mcp__rea__something_odd"), "other");
+  for (const kind of ["readBoard", "editBoard", "viewBoard", "skill", "command", "readFile", "editFile", "search", "web", "image", "plan", "memory", "delegate", "other"]) {
+    assert.ok(en[`board.chat.tool.${kind}`] && es[`board.chat.tool.${kind}`], kind);
+  }
+  assert.match(es["board.chat.tool.editBoardN"], /dibujando \{n\} cambios/);
+});
+
+test("board_apply carries its change count (ops array or JSON string)", () => {
+  assert.equal(opCount({ ops: [{}, {}, {}] }), 3);
+  assert.equal(opCount(JSON.stringify({ ops: JSON.stringify([{}, {}]) })), 2);
+  assert.equal(opCount({}), undefined);
+  assert.equal(opCount("not json"), undefined);
+});
+
+test("a run of tool steps folds into one row with merged acts", () => {
+  const rows = toChatRows([
+    { role: "assistant", text: "", tool_calls: [{ function: { name: "skill_view" } }, { function: { name: "board_read" } }], row_id: 1, timestamp: 1 },
+    { role: "tool", name: "tool_call", args: { calls: [{ name: "board_apply", arguments: { ops: [1, 2, 3, 4, 5, 6, 7] } }, { name: "terminal" }] }, row_id: 2 },
+    { role: "tool", name: "board_apply", row_id: 3 },
+  ]);
+  assert.equal(rows.length, 1);
+  assert.deepEqual(rows[0].acts, [
+    { kind: "skill" }, { kind: "readBoard" }, { kind: "editBoard", n: 7 }, { kind: "command" },
+  ]);
+  assert.deepEqual(rows[0].tools, ["skill_view", "board_read", "board_apply", "terminal"]);
+});
+
+// ── Home: rows stretch to fill a tall window ─────────────────────────────
+import { fitCellHeight } from "../src/home/grid-engine.ts";
+
+test("grid rows stretch to fill the window but never shrink or balloon", () => {
+  const o = { base: 44, gap: 10, pad: 12, maxStretch: 1.6 };
+  assert.equal(fitCellHeight(0, 16, o), 44); // unknown height: natural rows
+  assert.equal(fitCellHeight(300, 16, o), 44); // short window: never below the base
+  assert.equal(fitCellHeight(1000, 2, o), 70); // few rows: capped at 1.6x
+  const h = fitCellHeight(990, 16, o); // 1080 - bar
+  assert.ok(h > 44 && h <= 71);
+  const used = 12 * 2 + 16 * (h + 10) - 10;
+  assert.ok(Math.abs(used - 990) < 16 * 1, `fills the viewport (${used} vs 990)`);
+});

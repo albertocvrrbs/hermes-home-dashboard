@@ -79,3 +79,14 @@ export function clampPosition(
     gy: Math.max(0, Math.round(gy)),
   };
 }
+
+/** Row height that lets `rows` grid rows fill `fitHeight` px: never below `base`, never more than
+ *  `maxStretch` times it (a two-row grid must not turn into giant tiles). */
+export function fitCellHeight(
+  fitHeight: number, rows: number,
+  o: { base: number; gap: number; pad: number; maxStretch: number },
+): number {
+  if (!(fitHeight > 0) || rows <= 0) return o.base;
+  const fit = (fitHeight - o.pad * 2 + o.gap) / rows - o.gap;
+  return Math.round(Math.min(o.base * o.maxStretch, Math.max(o.base, fit)));
+}

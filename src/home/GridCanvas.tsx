@@ -7,13 +7,15 @@ import {
   type GridBox, type GridItem,
 } from "./grid-engine";
 import type { HomeLayout } from "./layout-schema";
+import { fitCellHeight } from "./grid-engine";
 import { WIDGET_REGISTRY } from "./widgets/registry";
 import { WidgetShell } from "./WidgetShell";
 import { useT } from "./i18n";
 import { widgetState } from "./widget-state";
 import type { HomeData } from "./useHomeData";
 
-const CELL_H = 44;
+const CELL_H = 44; // base row height; rows stretch (up to MAX_STRETCH) to fill a tall window
+const MAX_STRETCH = 1.6;
 const GAP = 10;
 const PAD = 12;
 
@@ -29,6 +31,8 @@ interface Props {
   onLayoutChange: (next: HomeLayout) => void;
   onRemove: (id: string) => void;
   onWidgetPropsChange: (id: string, props: Record<string, unknown>) => void;
+  /** Height the grid may fill (the page's viewport minus the edit bar); 0/undefined = natural rows. */
+  fitHeight?: number;
   /** Element acting as the trash / catalog drop zone (to delete by drag). */
   trashRef: React.RefObject<HTMLElement | null>;
   /** Notifies HomePage to highlight the trash zone during a drag over it. */
@@ -55,7 +59,7 @@ interface AddState {
 }
 
 export const GridCanvas = forwardRef<GridCanvasHandle, Props>(function GridCanvas(
-  { layout, editing, data, onLayoutChange, onRemove, onWidgetPropsChange, trashRef, onTrashActive },
+  { layout, editing, data, onLayoutChange, onRemove, onWidgetPropsChange, fitHeight, trashRef, onTrashActive },
   ref,
 ) {
   const stageRef = useRef<HTMLDivElement>(null);
@@ -75,13 +79,17 @@ export const GridCanvas = forwardRef<GridCanvasHandle, Props>(function GridCanva
     return () => ro.disconnect();
   }, []);
 
+  // A short grid on a tall window used to leave an empty band below it: stretch the rows to fill.
+  const layoutRows = layout.widgets.reduce((m, w) => Math.max(m, w.gy + w.gh), 0);
+  const cellH = fitCellHeight(fitHeight ?? 0, layoutRows, { base: CELL_H, gap: GAP, pad: PAD, maxStretch: MAX_STRETCH });
+
   const colW = stageW > 0 ? (stageW - PAD * 2 - GAP * (GRID_COLS - 1)) / GRID_COLS : 0;
 
   const toPx = (box: GridBox) => ({
     left: PAD + box.gx * (colW + GAP),
-    top: PAD + box.gy * (CELL_H + GAP),
+    top: PAD + box.gy * (cellH + GAP),
     width: box.gw * colW + (box.gw - 1) * GAP,
-    height: box.gh * CELL_H + (box.gh - 1) * GAP,
+    height: box.gh * cellH + (box.gh - 1) * GAP,
   });
 
   const pointerOverTrash = (x: number, y: number) => {
@@ -122,7 +130,7 @@ export const GridCanvas = forwardRef<GridCanvasHandle, Props>(function GridCanva
         const gw = Math.max(minW, Math.min(GRID_COLS - item.gx,
           Math.round((startPx.width + dx + GAP) / (colW + GAP))));
         const gh = Math.max(minH,
-          Math.round((startPx.height + dy + GAP) / (CELL_H + GAP)));
+          Math.round((startPx.height + dy + GAP) / (cellH + GAP)));
         const candidate = { gx: item.gx, gy: item.gy, gw, gh };
         next = {
           ...dragRef.current!,
@@ -130,7 +138,7 @@ export const GridCanvas = forwardRef<GridCanvasHandle, Props>(function GridCanva
           px: {
             ...startPx,
             width: Math.max(70, startPx.width + dx),
-            height: Math.max(CELL_H, startPx.height + dy),
+            height: Math.max(cellH, startPx.height + dy),
           },
           swapWith: null,
           moved: reflow({ ...candidate }, others),
@@ -139,12 +147,12 @@ export const GridCanvas = forwardRef<GridCanvasHandle, Props>(function GridCanva
       } else {
         const pos = clampPosition(
           item.gx + dx / (colW + GAP),
-          item.gy + dy / (CELL_H + GAP),
+          item.gy + dy / (cellH + GAP),
           item.gw, item.gh,
         );
         const candidate = { ...pos, gw: item.gw, gh: item.gh };
         const pgx = (ev.clientX - stageRect.left - PAD) / (colW + GAP);
-        const pgy = (ev.clientY - stageRect.top - PAD) / (CELL_H + GAP);
+        const pgy = (ev.clientY - stageRect.top - PAD) / (cellH + GAP);
         const twin = overTrash ? null : findSwapTarget(pgx, pgy, item, others);
         next = {
           ...dragRef.current!,
@@ -206,7 +214,7 @@ export const GridCanvas = forwardRef<GridCanvasHandle, Props>(function GridCanva
         }
         const pos = clampPosition(
           (x - stageRect.left - PAD) / (colW + GAP),
-          (y - stageRect.top - PAD) / (CELL_H + GAP),
+          (y - stageRect.top - PAD) / (cellH + GAP),
           gw, gh,
         );
         return { ...pos, gw, gh };
@@ -266,7 +274,8 @@ export const GridCanvas = forwardRef<GridCanvasHandle, Props>(function GridCanva
     (m, w) => Math.max(m, (previewMoved?.get(w.id) ?? w.gy) + w.gh), 0,
   );
   const addRow = adding?.candidate ? adding.candidate.gy + adding.candidate.gh : 0;
-  const stageH = PAD * 2 + Math.max(maxRow, addRow) * (CELL_H + GAP) - GAP;
+  const rows = Math.max(maxRow, addRow);
+  const stageH = PAD * 2 + rows * (cellH + GAP) - GAP;
 
   const ghostBox: GridBox | null = drag
     ? drag.overTrash

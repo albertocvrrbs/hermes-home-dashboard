@@ -3,6 +3,7 @@ import { fetchJSON, useDashboardLocale } from "../sdk";
 import { setHostLanguage, useT } from "./i18n";
 import { GridCanvas, type GridCanvasHandle } from "./GridCanvas";
 import { WidgetCatalog } from "./WidgetCatalog";
+import { Icon } from "../board/icons";
 import { useHomeData } from "./useHomeData";
 import { WIDGET_REGISTRY } from "./widgets/registry";
 import { BoardApp, notifyBoardRoute, useBoardRoute } from "../board/BoardApp";
@@ -11,6 +12,8 @@ import {
 } from "./layout-schema";
 
 const KNOWN_WIDGETS = new Set(Object.keys(WIDGET_REGISTRY));
+/** Padding + button of the edit bar below the grid (22 + 38 + 30, plus a margin so the page never scrolls). */
+const EDITBAR_RESERVE = 100;
 const LAYOUT_URL = "/api/plugins/home-dashboard/layout";
 
 function loadLayout(): Promise<HomeLayout> {
@@ -77,6 +80,19 @@ function HomeGrid() {
   // The edit affordance lives below the grid and reveals once the user
   // starts scrolling down — or right away when the grid is short enough
   // that there's nothing to scroll (otherwise it'd be unreachable).
+  // Height the grid may fill: the page's own viewport minus the edit bar under it.
+  const [viewH, setViewH] = useState(0);
+  useEffect(() => {
+    const el = rootRef.current;
+    if (!el) return;
+    const measure = () => setViewH(Math.max(0, el.clientHeight - EDITBAR_RESERVE));
+    measure();
+    const RO = (globalThis as { ResizeObserver?: typeof ResizeObserver }).ResizeObserver;
+    const ro = RO ? new RO(measure) : null;
+    ro?.observe(el);
+    return () => ro?.disconnect();
+  }, [layout !== null]);
+
   const recomputeShowEdit = useCallback(() => {
     const el = rootRef.current;
     if (!el) return;
@@ -175,6 +191,7 @@ function HomeGrid() {
           update({ ...layout, widgets: layout.widgets.filter((w) => w.id !== id) })
         }
         onWidgetPropsChange={updateWidgetProps}
+        fitHeight={viewH}
         trashRef={catalogRef}
         onTrashActive={setOverTrash}
       />
@@ -186,7 +203,7 @@ function HomeGrid() {
             title={t("home.restoreDefault")}
             aria-label={t("home.restoreDefault")}
           >
-            <span className="home-fab-spin">↺</span>
+            <span className="home-fab-spin"><Icon name="reset" size={16} /></span>
           </button>
         )}
         <button
@@ -195,8 +212,8 @@ function HomeGrid() {
           title={editing ? t("home.doneEditing") : t("home.editLayout")}
           aria-label={editing ? t("home.doneEditing") : t("home.editLayout")}
         >
-          <span className="home-fab-ico ico-edit" aria-hidden="true">✎</span>
-          <span className="home-fab-ico ico-done" aria-hidden="true">✓</span>
+          <span className="home-fab-ico ico-edit" aria-hidden="true"><Icon name="edit" size={16} /></span>
+          <span className="home-fab-ico ico-done" aria-hidden="true"><Icon name="check" size={16} /></span>
         </button>
       </div>
       {toast && <div className="home-toast" role="status">{toast}</div>}
