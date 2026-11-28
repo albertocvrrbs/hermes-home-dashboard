@@ -60,7 +60,7 @@ def est_size(batch: Any, iid: str) -> Tuple[int, int]:
     rect = batch.rect_of(iid)
     w = int(rect["w"]) if rect else DEFAULT_SIZE.get(it["k"], (200, 100))[0]
     h = int(rect["h"]) if rect else DEFAULT_SIZE.get(it["k"], (200, 100))[1]
-    if it.get("h") is None and it["k"] in ("image", "video") and it.get("iw") and it.get("ih"):
+    if it["k"] in ("image", "video") and it.get("iw") and it.get("ih"):  # h is ignored by the board
         h = _media_h(it["k"], it.get("w") or w, it["iw"], it["ih"])
     elif it.get("h") is None and it["k"] == "card":
         h = _card_h(it, w)
@@ -354,7 +354,7 @@ def expand_place(batch: Any, op: Dict[str, Any]) -> List[Dict[str, Any]]:
             if k == "shape":
                 dw, dh = SHAPE_SIZE.get(item.get("sh") if item.get("sh") in SHAPE_SIZE else "rect")
             w, h = int(item.get("w") or dw), int(item.get("h") or dh)
-            if not item.get("h") and k in ("image", "video") and item.get("iw") and item.get("ih"):
+            if k in ("image", "video") and item.get("iw") and item.get("ih"):
                 h = _media_h(k, w, item["iw"], item["ih"])
             elif not item.get("h") and k == "card":
                 h = _card_h(item, w)

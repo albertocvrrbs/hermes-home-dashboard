@@ -90,7 +90,7 @@ def _rect(it: Dict[str, Any], items: Dict[str, Dict[str, Any]]) -> Optional[Tupl
     if it["k"] == "col":
         dh = 60 + 90 * len(it.get("kids") or [])
     w = it.get("w") or dw
-    if it.get("h") is None and it["k"] in ("image", "video") and it.get("iw") and it.get("ih"):
+    if it["k"] in ("image", "video") and it.get("iw") and it.get("ih"):  # the board ignores h for pictures
         return it["x"], it["y"], w, bulk._media_h(it["k"], w, it["iw"], it["ih"])  # same height the board gives it
     if it.get("h") is None and it["k"] == "card":
         return it["x"], it["y"], w, bulk._card_h(it, w)

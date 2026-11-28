@@ -189,6 +189,21 @@ class ZonesTest(unittest.TestCase):
 
 
 class ArrangeAndPlaceTest(unittest.TestCase):
+    def test_picture_height_follows_aspect_even_with_h(self):
+        # the board ignores h on image/video cards; layout must too or text lands on the video
+        doc = engine.new_doc("abcd1234", "t", 0)
+        doc, _, _ = engine.apply_batch(doc, [
+            {"op": "add", "item": {"k": "video", "x": 0, "y": 0, "w": 680, "h": 383, "iw": 960, "ih": 540, "src": "https://ex.com/a.mp4"}},
+        ], "h")
+        from dashboard.boardkit import bulk
+        tall = bulk._media_h("video", 680, 960, 540)
+        self.assertGreater(tall, 383)
+        self.assertEqual(engine._Batch(doc, "h").rect_of("0")["h"], tall)
+        new, _, _ = engine.apply_batch(doc, [{"op": "add", "item": {"k": "card", "x": 0, "y": 400, "text": "below"}},
+                                             {"op": "tidy"}], "h")
+        v, c = new["items"]["0"], new["items"]["1"]
+        self.assertTrue(c["y"] >= v["y"] + tall or c["x"] >= v["x"] + 680 or c["x"] + 256 <= v["x"])
+
     def test_arrange_frame_is_a_uniform_grid(self):
         doc = stations_doc(12)
         doc, _, refs = engine.apply_batch(doc, [{"op": "add", "ref": "$f", "item": {"k": "frame", "title": "F", "x": -400, "y": -300, "w": 1300, "h": 1300}}], "h")

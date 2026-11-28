@@ -38,6 +38,11 @@ Found while building the launch board with real Hermes, by chat only.
 - **Live cards: `pct` is percent points** (77 shows 77 %), said in the tool description and the
   examples guide; Hermes sent 0.77 (like `progress`) and the card showed 0.8 %.
 
+- **Image and video cards: height follows the picture.** The board ignores `h` on them, but layout
+  (`tidy`, `zones`, `arrange`, `place`) and `board_render` used it, so a note Hermes placed under a
+  video he had given `h` landed on the video's footer. The server now sizes them from the aspect,
+  like the board, and the tool says to send `w` only.
+
 ## 1.10.0 — video parity
 
 Everything the launch video shows now works for real, with real Hermes, from one chat

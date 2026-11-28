@@ -80,7 +80,7 @@ _OPS_HELP = (
     "box{num,title,sub} (diagram node, ~196x62) · shape{sh:'rect'|'diamond'|'pill'|'circle',title} (flowchart symbol: process, "
     "decision, start/end, connector; ~160x56, diamond 150x100, pill 150x48, circle 72) · line{a,b,label} (connector; a/b = ids or [x,y]) · "
     "frame{title,note,w,h} (titled region) · text{text,size:'h'|'p'} · link{url} (preview fetched for you; video "
-    "and image URLs become players/images) · embed{title,html,theme} (sandboxed HTML, scripts only, no network; ALWAYS send theme:true on HTML you write, see 'Embed rules') · "
+    "and image URLs become players/images; image and video cards take w only, their height follows the picture) · embed{title,html,theme} (sandboxed HTML, scripts only, no network; ALWAYS send theme:true on HTML you write, see 'Embed rules') · "
     "draw{d:'x,y x,y …' ints relative to x,y, sw, tl?:'line'|'arrow'|'rect'|'ellipse'|'hl' (shapes: d = two points; "
     "hl = translucent highlighter), c?:'accent'|'sage'|'clay'|'slate'|'sand', ds?:true dashed, g?:group id} · "
     "board{ref} · live{title, tpl:'training'|'job'|'stat' or blocks:[...], data:{...}, ttl, actions:[{action, label?, "

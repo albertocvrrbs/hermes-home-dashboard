@@ -630,6 +630,9 @@ class _Batch:
         if k == "shape" and it.get("sh") in SHAPE_SIZE:
             dw, dh = SHAPE_SIZE[it["sh"]]
         w, h = it.get("w") or dw, it.get("h") or dh
+        if k in ("image", "video") and it.get("iw") and it.get("ih"):
+            from .bulk import _media_h  # the board sizes pictures from their aspect and ignores h
+            h = _media_h(k, w, it["iw"], it["ih"])
         if k == "col":
             h = 60 + 96 * len(it.get("kids") or [])
         elif k == "todo":
