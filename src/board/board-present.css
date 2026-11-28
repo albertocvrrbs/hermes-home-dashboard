@@ -1,0 +1,28 @@
+/* Presentation mode (tour.ts / usePresentation.ts). The board takes the whole window, its chrome
+ * steps aside, and a slim HUD sits at the bottom. Same material as the status bar and menus:
+ * var(--float-bg), the 1px float line, the board's own cells for progress. */
+.hb.presenting { position: fixed; inset: 0; height: auto; min-height: 0; z-index: 2147483000; }
+.hb.presenting > :not(.hb-viewport):not(.hb-present):not(.hb-toast) { display: none !important; }
+.hb.presenting .hb-viewport, .hb.presenting.chat-open .hb-viewport { inset: 0; right: 0; pointer-events: none; cursor: none; }
+.hb.presenting .hb-viewport * { pointer-events: none !important; }
+.hb.presenting .hb-sel, .hb.presenting .hb-marquee, .hb.presenting .hb-hermes-cursor { display: none !important; }
+
+.hb-present { position: absolute; left: 50%; bottom: 28px; transform: translateX(-50%); z-index: 30; display: flex; align-items: center; gap: 6px;
+  max-width: calc(100% - 40px); padding: 6px 8px; border-radius: var(--r-float); background: var(--float-bg); border: 1px solid var(--float-line);
+  box-shadow: var(--lift); color: var(--ink-2); animation: hb-pop .18s var(--out); transition: opacity .35s var(--out), transform .35s var(--out); }
+.hb-present.idle { opacity: 0; transform: translate(-50%, 8px); pointer-events: none; }
+.hb-present .ib:disabled { opacity: .35; pointer-events: none; }
+.hb-present .sep { width: 1px; height: 18px; background: var(--rule-2); margin: 0 2px; flex: none; }
+.hb-present .who { display: flex; flex-direction: column; justify-content: center; gap: 4px; min-width: 190px; max-width: 420px; padding: 0 10px; }
+.hb-present .who .k { font: 400 10.5px/1 var(--mono); letter-spacing: .1em; color: var(--ink-3); white-space: nowrap; }
+.hb-present .who .k i { font-style: normal; margin: 0 .25em; opacity: .55; }
+.hb-present .who b { font: 600 13px/1.2 var(--sans); color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hb-present .who .note { font: 400 11px/1.25 var(--sans); color: var(--ink-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hb-present .cells { display: flex; gap: 3px; width: clamp(40px, 12vw, 180px); padding: 0 6px; }
+.hb-present .cells i { flex: 1; height: 4px; min-width: 3px; background: color-mix(in srgb, var(--accent) 14%, transparent); transition: background-color .3s var(--out); }
+.hb-present .cells i.past { background: color-mix(in srgb, var(--accent) 48%, transparent); }
+.hb-present .cells i.on { background: var(--accent); }
+@media (prefers-reduced-motion: reduce) { .hb-present, .hb-present .cells i { transition: none; animation: none; } }
+
+/* the Present button's pulse while a tour is stored */
+.hb .ib.has-tour { color: var(--accent); }

@@ -55,3 +55,21 @@ is a jump and the zoom transitions are plain navigations.
 `window.__hbSync` steps the board's media (video cards and components in a `sync` group) the
 same way: `manual(true)`, `seek(t)`, `step(frames, fps)`, `advance(ms)`. See
 [components.md](components.md#frame-by-frame-capture-window__hbsync).
+
+## Tour API (`window.__hbTour`)
+
+Presentation mode (`src/board/tour.ts`, `usePresentation.ts`) publishes `window.__hbTour` once a board is open,
+next to `__hbCamera`. Its flights go through the same `Camera`, so the same manual clock (`__hbClock.manual(true)`,
+`__hbClock.advance(ms)`) makes a whole tour deterministic, auto-play dwell included (dwell waits on that clock too).
+
+| Call | Does |
+| --- | --- |
+| `start({from?, auto?, duration?, hud?, fullscreen?})` | Starts presenting at stop `from` (0). Resolves `true` when the camera arrives there. `duration` = ms per flight (default 700-1700 by distance). `auto` defaults to "some stop or the tour has a dwell". `hud:false` hides the controls. Plays the stored tour, else the frames in reading order. |
+| `next()` / `prev()` / `goto(i)` | Resolve when the flight lands. `next()` on a board stop dives into the sub-board (the tour continues there and returns). Past the last stop it ends (or wraps when the tour loops). |
+| `auto(on)` | Auto-play on/off. |
+| `stops()` | `[{stop, title, view}]`: what will play and the camera view each stop flies to. |
+| `state()` | `{on, i, n, auto, flying, done}` |
+| `hud(on)`, `stop()` | Show / hide the HUD; stop and hand control back. |
+
+The tour itself is document data (`doc.tour = {stops, loop?, dw?, t?}`, stop = `{k, id? | r? | v?, t?, dw?}`) written
+with the `tour` op of `board_apply` (see the README, "Presentation mode: tours").

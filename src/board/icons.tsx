@@ -12,6 +12,9 @@ import {
   type IconNode,
 } from "lucide";
 
+// presentation mode (tour.ts) and the minimap toggle
+import { Map as MapIcon, Presentation } from "lucide";
+
 // lucide has no plain stadium; this is its rectangle with full corner radius, same 24-unit grid
 const PILL: IconNode = [["rect", { x: 2, y: 7, width: 20, height: 10, rx: 5 }]];
 
@@ -68,6 +71,8 @@ export const ICONS = {
   markOk: Check, markFail: X, markWait: Clock, fileDoc: FileText, model3d: Box, fileOpen: SquareArrowOutUpRight, fileGet: Download,
   alert: CircleAlert,
   check: Check,
+  // presentation
+  present: Presentation, play: Play, pause: Pause, map: MapIcon,
   // Draw tool
   pen: Pen,
   highlighter: Highlighter,

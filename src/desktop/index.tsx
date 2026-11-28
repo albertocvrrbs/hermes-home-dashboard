@@ -5,6 +5,7 @@ import {
 } from "@hermes/plugin-sdk";
 import * as PluginSdk from "@hermes/plugin-sdk";
 
+import { installDemo } from "../demo";
 import HomePage from "../home/HomePage";
 import homeCss from "../home/home.css?inline";
 import boardCss from "../board/board.css?inline";
@@ -19,6 +20,9 @@ import {
 } from "./contract";
 import { createDesktopHomeHost } from "./host";
 import { createModelMenuHost } from "./modelPicker";
+
+// demo mode (?demo / localStorage): freezes the clock, masks names and money; off by default
+installDemo();
 
 function DesktopHomePage() {
   return (

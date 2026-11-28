@@ -48,6 +48,15 @@ export interface Item {
   sync?: string;
 }
 
+/** One stop of the presentation: a frame, an item, a nested-board card, or a free view
+ *  (`r` = a world rect to frame, `v` = a saved camera view). `dw` = auto-play dwell (s). */
+export interface TourStop {
+  k: "frame" | "item" | "board" | "view";
+  id?: string; r?: { x: number; y: number; w: number; h: number }; v?: { x: number; y: number; z: number };
+  t?: string; dw?: number;
+}
+export interface Tour { stops: TourStop[]; loop?: boolean; dw?: number; t?: string }
+
 export interface Presence { at: number; act: string; on?: string }
 
 export interface BoardDoc {
@@ -55,6 +64,8 @@ export interface BoardDoc {
   session: { id: string; profile: string } | null; seen: number;
   created: number; updated: number; hermes?: Presence;
   items: Record<string, Item>;
+  /** presentation tour (tour.ts plays it) */
+  tour?: Tour;
 }
 
 export type Op =
@@ -62,6 +73,7 @@ export type Op =
   | { op: "set"; id: string; p: Partial<Record<keyof Item, unknown>>; at?: number }
   | { op: "del"; id: string }
   | { op: "board"; p: { name?: string } }
+  | { op: "tour"; tour: Tour | null }
   | { op: "add"; ref?: string; item: Item; at?: number };
 
 export interface Entry {
@@ -150,6 +162,10 @@ export function applyOp(doc: BoardDoc, op: Op): void {
       for (const k of doomed) delete items[k];
       return;
     }
+    case "tour":
+      if (op.tour && op.tour.stops) doc.tour = clone(op.tour);
+      else delete doc.tour;
+      return;
     case "board":
       if (typeof op.p.name === "string") doc.name = op.p.name;
       return;

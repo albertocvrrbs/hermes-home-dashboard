@@ -3,6 +3,8 @@ from __future__ import annotations
 
 from typing import Any, Dict, Iterable, List, Optional
 
+from . import tour as tour_mod
+
 _POS_KEYS = ("x", "y", "w", "h", "in", "kids")
 
 
@@ -141,7 +143,9 @@ def outline(doc: Dict[str, Any], only: Optional[Iterable[str]] = None, limit: in
     items = doc.get("items") or {}
     keys = list(only) if only is not None else sorted(items, key=lambda i: (len(i), i))
     lines = [header(doc)]
-    size = len(lines[0])
+    if only is None and tour_mod.outline_line(doc):
+        lines.append(tour_mod.outline_line(doc))
+    size = sum(len(x) + 1 for x in lines) - 1
     text_len = 80 if len(keys) < 150 else 40
     for n, iid in enumerate(keys):
         it = items.get(iid)

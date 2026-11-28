@@ -17,6 +17,7 @@ from . import ids
 from . import layout
 from . import live as live_mod
 from . import components as comp_mod
+from . import tour as tour_mod
 
 MAX_OPS = 200
 MAX_ITEMS = 2000
@@ -594,6 +595,27 @@ class _Batch:
             return [], None
         return [{"op": "board", "p": inv_p}], {"op": "board", "p": {"name": self.doc["name"]}}
 
+    def tour(self, op: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """Set / edit the presentation tour (``doc["tour"]``). Normalised to the whole new tour."""
+        prev = copy.deepcopy(self.doc.get("tour"))
+        if "tour" in op:  # replay of a normalised entry / an undo: already clean
+            try:
+                new = tour_mod.coerce(self, op["tour"])
+            except tour_mod.TourError as e:
+                raise OpError(str(e)) from None
+        else:
+            try:
+                new = tour_mod.build(self, op, prev)
+            except tour_mod.TourError as e:
+                raise OpError(str(e)) from None
+        if new == prev:
+            return [], None
+        if new is None:
+            self.doc.pop("tour", None)
+        else:
+            self.doc["tour"] = new
+        return [{"op": "tour", "tour": prev}], {"op": "tour", "tour": copy.deepcopy(new)}
+
     # ── macro ops: expand to plain add/set ops, so undo and the log see ordinary batches ──
     def top_of(self, iid: str) -> str:
         """The item that is actually on the canvas: a column kid sits inside its column."""
@@ -772,7 +794,7 @@ class _Batch:
 
 
 _OPS = {"add": _Batch.add, "put": _Batch.put, "set": _Batch.set, "del": _Batch.delete, "board": _Batch.board,
-        "live": _Batch.live, "comp": _Batch.comp}
+        "live": _Batch.live, "comp": _Batch.comp, "tour": _Batch.tour}
 _MACROS = {"tidy": _Batch.expand_tidy, "insert_on_edge": _Batch.expand_insert,
            "sync": _Batch.expand_sync, "unsync": _Batch.expand_sync,
            "place": lambda b, op: bulk.expand_place(b, op), "set_where": lambda b, op: bulk.expand_set_where(b, op),
@@ -804,7 +826,7 @@ def apply_batch_ex(doc: Dict[str, Any], ops: Any, by: str = "u", now: Optional[f
     forward: List[Dict[str, Any]] = []
     for i, op in enumerate(ops):
         if not isinstance(op, dict) or op.get("op") not in _OPS and op.get("op") not in _MACROS:
-            raise OpError(f"op {i}: unknown op (use add, set, del, board, live, comp, tidy, insert_on_edge, place, set_where, zones, arrange, import, sync, unsync)")
+            raise OpError(f"op {i}: unknown op (use add, set, del, board, live, comp, tour, tidy, insert_on_edge, place, set_where, zones, arrange, import, sync, unsync)")
         try:
             prims = _MACROS[op["op"]](batch, op) if op["op"] in _MACROS else [op]
             for prim in prims:

@@ -7,6 +7,8 @@
 @import "./board-camera.css";
 @import "./board-comp.css";
 
+@import "./board-present.css";
+
 .hb {
   --accent: var(--color-primary, var(--ui-accent, #ffe3c4));
   --accent-soft: color-mix(in srgb, var(--accent) 82%, #9aa3b5);

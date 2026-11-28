@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { api } from "../sdk";
+import { demoOn, demoSource } from "../demo";
 import { withTimeout } from "./fetchGuard";
 import type {
   StatusResponse,
@@ -57,10 +58,11 @@ export function useHomeData(): HomeData {
         (value) => {
           inflight.delete(key);
           if (cancelled) return;
+          const shown = demoOn() ? demoSource(key, value, Date.now()) : value;
           setData((prev) => {
             const errors = new Set(prev.errors);
             errors.delete(key);
-            return { ...prev, [key]: value, errors };
+            return { ...prev, [key]: shown, errors };
           });
         },
         () => {
