@@ -63,6 +63,21 @@ FIELDS: Dict[str, Tuple[str, ...]] = {
     "comp": ("x", "y", "w", "h", "title", "comp", "ver", "cdata", "files", "actions", "nt", "sync", "at"),
 }
 KINDS = frozenset(FIELDS)
+# other kinds call their caption "title": an image's is ``cap``; accept the common names for it
+# (Hermes tried set {title} / {caption} on imported images and got "nothing changed")
+FIELD_ALIASES: Dict[str, Dict[str, str]] = {"image": {"title": "cap", "caption": "cap"}}
+
+
+def _alias(kind: str, raw: Dict[str, Any]) -> Dict[str, Any]:
+    names = FIELD_ALIASES.get(kind)
+    if not names or not any(k in raw for k in names):
+        return raw
+    out = dict(raw)
+    for alias, real in names.items():
+        if alias in out:
+            value = out.pop(alias)
+            out.setdefault(real, value)
+    return out
 
 _STROKE = re.compile(r"-?\d{1,7},-?\d{1,7}(?: -?\d{1,7},-?\d{1,7})*")
 _VIDEO_ID = re.compile(r"[A-Za-z0-9_-]{1,64}")
@@ -452,6 +467,7 @@ class _Batch:
     def clean_fields(self, kind: str, raw: Dict[str, Any]) -> Dict[str, Any]:
         out: Dict[str, Any] = {}
         allowed = FIELDS[kind]
+        raw = _alias(kind, raw)
         for key, value in raw.items():
             if key not in allowed or key in ("in", "kids") or value is None:
                 continue
@@ -574,6 +590,7 @@ class _Batch:
         item = self.items[iid]
         kind = item["k"]
         allowed = FIELDS[kind]
+        patch = _alias(kind, patch)
         inv_p: Dict[str, Any] = {}
         inv: Dict[str, Any] = {"op": "set", "id": iid, "p": inv_p}
         fwd_p: Dict[str, Any] = {}

@@ -36,7 +36,7 @@ BULK_RULES = (
     'BIG ORDERS = ONE CALL (one board_apply = one undo step; never one call per item): '
     "{op:'import', paths:['~/proj/renders/*_hero*.png', '~/proj/doc.pdf', '~/proj/parts/'] (files, globs or folders under the user's home; "
     "max 40 files, raise limit up to 100), layout?:'grid'|'row'|'column', cols?, gap?, at?:{x,y}, into?:<frame or col id>, "
-    "caption?:'name'|'none'} COPIES the files into the board (never linked) and places them on a tidy grid: png/jpg/webp/gif/svg -> image cards, "
+    "caption?:'name'|'none'} COPIES the files into the board (never linked) and places them on a tidy grid: png/jpg/webp/gif/svg -> image cards (caption = file name; rename with {op:'set', id, p:{cap:'...'}}), "
     'mp4/webm/mov -> video cards (poster + duration), pdf -> card with the first page (click opens it), stl/obj/3mf -> shaded 3D thumbnail '
     '(click downloads the model), md/txt/code/json/csv -> text cards, html -> untouched sandboxed embed. Hidden files (.env, .ssh ...), secrets '
     "and anything outside the home folder are refused; the result lists the created 'imported' ids and what was 'skipped' and why. "

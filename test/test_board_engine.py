@@ -45,6 +45,22 @@ class AddSetDelTest(unittest.TestCase):
             {"op": "add", "item": {"k": "card", "x": 10.6, "y": "7", "evil": "<script>", "text": "a"}}], by="u")
         self.assertEqual(doc["items"]["0"], {"k": "card", "x": 11, "y": 7, "text": "a"})
 
+    def test_image_caption_accepts_title_and_caption(self):
+        doc, _, _ = engine.apply_batch(blank(), [
+            {"op": "add", "item": {"k": "image", "x": 0, "y": 0, "asset": "0123456789abcdef.png", "title": "Hero render"}}], by="h")
+        self.assertEqual(doc["items"]["0"]["cap"], "Hero render")
+        self.assertNotIn("title", doc["items"]["0"])
+        doc, inv, _ = engine.apply_batch(doc, [{"op": "set", "id": "0", "p": {"caption": "Front render"}}], by="h")
+        self.assertEqual(doc["items"]["0"]["cap"], "Front render")
+        doc, _, _ = engine.apply_batch(doc, [{"op": "set", "id": "0", "p": {"title": "Pose", "cap": "Walking pose"}}], by="h")
+        self.assertEqual(doc["items"]["0"]["cap"], "Walking pose", "the real field wins over an alias")
+        doc, _, _ = engine.apply_batch(doc, inv, by="h")
+        self.assertEqual(doc["items"]["0"]["cap"], "Hero render", "undo restores the caption")
+        # other kinds keep their own title
+        doc, _, _ = engine.apply_batch(blank(), [{"op": "add", "item": {"k": "card", "x": 0, "y": 0, "title": "T", "caption": "x"}}], by="h")
+        self.assertEqual(doc["items"]["0"].get("title"), "T")
+        self.assertNotIn("cap", doc["items"]["0"])
+
     def test_bad_kind_rejects_whole_batch(self):
         base = blank()
         before = copy.deepcopy(base)

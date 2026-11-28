@@ -27,6 +27,10 @@ clone, they never build).
   Training Room of 37 stations). Press it again (or leave the board) to stop. A video you click keeps
   its controls and sound; videos in a sync group keep following their group's clock; YouTube/Vimeo
   players are left alone. (`src/board/playAll.ts`, `test/board-play-all.test.mjs`)
+- **Image captions answer to `title` and `caption`.** An imported image keeps its caption in `cap`;
+  `set {title}` / `set {caption}` on an image used to be dropped ("nothing changed"), so Hermes could
+  not put English captions on renders imported with Spanish file names. Both names now write `cap`,
+  and the import help says how to rename. (English rehearsal, turn 2)
 
 ## 1.10.2 — fixes from the acceptance rehearsal
 
