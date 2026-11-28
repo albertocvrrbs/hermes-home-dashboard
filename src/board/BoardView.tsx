@@ -34,6 +34,9 @@ import { Wires, type WiresHandle } from "./Wires";
 import { dblAction, EDITABLE, isTap, mapCaret, nextTap, pointerKind, typeToEditChar, type EditHint, type TapPoint } from "./gesture";
 import { downstream, insertPlan, snapMove, tidyPlan, type Block, type Guide } from "./layout";
 import { EdgePicker, type PickSpec } from "./EdgePicker";
+import { CompGallery } from "./CompGallery";
+import { SyncTransport } from "./SyncTransport";
+import { groupsOf, installSyncApi, makeSyncApi, SyncHub } from "./syncClock";
 
 type Tool = "select" | "pan" | "note" | "todo" | "link" | "image" | "col" | "board" | "embed" | "arrow" | "draw";
 
@@ -270,6 +273,22 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
   }, [bid, loadActions, t]);
   const liveActionsRef = useRef(liveActions);
   liveActionsRef.current = liveActions;
+
+  // ── custom components: shared playheads + hb.action ──────────────────────
+  const syncHub = useMemo(() => new SyncHub(), [bid]);
+  useEffect(() => () => syncHub.destroy(), [syncHub]);
+  const runCompAction = useCallback(async (iid: string, action: string, args: Record<string, unknown>): Promise<ActionResult | null> => {
+    const info = liveActionsRef.current?.[action];
+    if (!info || !info.enabled) throw new Error(t("board.live.notRegistered", { id: action }));
+    let confirm = false;
+    if (info.destructive) {
+      confirm = await new Promise<boolean>((resolve) => setConfirmReq({ iid, ref: { action }, index: -1, info, resolve }));
+      setConfirmReq(null);
+      if (!confirm) return null;
+    }
+    return boardsApi.compAction(bid, iid, action, args, confirm);
+  }, [bid, t]);
+  const [galleryOpen, setGalleryOpen] = useState(false);
 
   // ── Hermes' op stream drives his cursor ─────────────────────────────────
   const onHermes = useCallback((entries: Entry[], doc: BoardDoc) => {
@@ -1503,6 +1522,14 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
     return () => vp.removeEventListener("wheel", onWheel);
   }, [onWheel, hasDoc]);
 
+  // The shared clocks for the outside world: window.__hbSync (manual stepping for a recorder).
+  useEffect(() => {
+    if (!hasDoc) return;
+    return installSyncApi(makeSyncApi(syncHub, bid, () => groupsOf(docRef.current?.items ?? {})[0]));
+  }, [bid, hasDoc, syncHub]);
+  const syncGroupsKey = doc ? groupsOf(doc.items).join(",") : "";
+  const syncGroups = useMemo(() => (syncGroupsKey ? syncGroupsKey.split(",") : []), [syncGroupsKey]);
+
   // The camera for the outside world: window.__hbCamera and `hb:camera` events (camera.ts), so a
   // script (the video director, a test) can fly it frame by frame on a clock it controls.
   useEffect(() => {
@@ -1681,6 +1708,7 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
 
   const ctx: ItemCtx | null = useMemo(() => (doc ? {
     doc, t, editing, setEditing, hint: editHint, update, commit, playing, setPlaying, Frame, liveActions, liveActionsDown, runLiveAction, erasing,
+    bid, sync: syncHub, runCompAction,
     keyOf,
     openBoard: (id) => openChild(id),
     addToColumn: (col) => {
@@ -1699,7 +1727,7 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
         </div>
       );
     },
-  } : null), [Frame, commit, doc, editing, editHint, erasing, hidden, kidDrag, liveActions, liveActionsDown, keyOf, onOpenBoard, playing, regEl, runLiveAction, selected, setEditing, t, update]);
+  } : null), [Frame, bid, commit, doc, editing, editHint, erasing, hidden, kidDrag, liveActions, liveActionsDown, keyOf, onOpenBoard, playing, regEl, runCompAction, runLiveAction, selected, setEditing, syncHub, t, update]);
   const ctxRef = useRef(ctx);
   ctxRef.current = ctx;
 
@@ -1776,6 +1804,17 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
     setMenu({ x: e.clientX - rr.left, y: e.clientY - rr.top, at, onItem: !!id || selected.size > 0 && !!target.closest(".hb-wires .hit") });
   };
 
+  const linkSelection = (unlink: boolean) => {
+    const d = docRef.current;
+    if (!d) return;
+    const members = selIds.filter((i) => d.items[i] && ["video", "comp"].includes(d.items[i].k));
+    if (unlink) { commit(members.map((id) => ({ op: "set" as const, id, p: { sync: null } }))); return; }
+    const existing = members.map((i) => d.items[i].sync).find(Boolean);
+    let g = existing ?? "";
+    for (let n = 1; !g; n++) if (!Object.values(d.items).some((v) => v.sync === `s${n}`)) g = `s${n}`;
+    commit(members.map((id) => ({ op: "set" as const, id, p: { sync: g } })));
+  };
+
   const menuEntries = (): MenuEntry[] => {
     if (!menu) return [];
     if (menu.onItem && selIds.length) {
@@ -1788,6 +1827,11 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
       if (canEdit) out.push({ id: "edit", label: t("board.ctx.edit"), icon: "edit", kbd: "↵", run: () => setEditing(selIds[0]) });
       if (openTarget) out.push({ id: "open", label: t("board.ctx.open"), icon: "board" in openTarget ? "openBoard" : "open", run: runOpen });
       if (single?.k === "embed") out.push({ id: "theme", label: t(single.theme ? "board.embed.themeOff" : "board.embed.themeOn"), icon: "theme", run: () => update(selIds[0], { theme: single.theme ? null : true }) });
+      if (single?.k === "comp") out.push({ id: "theme", label: t(single.nt ? "board.embed.themeOn" : "board.embed.themeOff"), icon: "theme", run: () => update(selIds[0], { nt: single.nt ? null : true }) });
+      if (selIds.length > 1 && selIds.every((i) => doc?.items[i] && ["video", "comp"].includes(doc.items[i].k))) {
+        const linked = selIds.every((i) => doc!.items[i].sync && doc!.items[i].sync === doc!.items[selIds[0]].sync);
+        out.push({ id: "sync", label: t(linked ? "board.sync.unlink" : "board.sync.link"), icon: "sync", run: () => linkSelection(linked) });
+      }
       out.push({ id: "zoomto", label: t("board.ctx.zoomTo"), icon: "focus", kbd: "Z", run: zoomToSelection });
       if (canConnect) out.push({ id: "connect", label: t("board.ctx.connect"), icon: "connect", run: startConnect });
       if (canDuplicate) out.push({ id: "dup", label: t("board.ctx.duplicate"), icon: "duplicate", kbd: `${mod}D`, run: duplicate });
@@ -1810,6 +1854,7 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
     const out: MenuEntry[] = [{ head: t("board.menu.addHere") }];
     for (const x of TOOLS[1]) out.push({ id: x.tool, label: t(x.label), icon: x.icon, kbd: x.key, run: place(x.tool) });
     out.push({ sep: true });
+    out.push({ id: "comps", label: t("board.comp.gallery"), icon: "components", run: () => setGalleryOpen(true) });
     out.push({ id: "all", label: t("board.menu.selectAll"), icon: "selectAll", kbd: `${mod}A`, run: () => setSelected(new Set(Object.keys(docRef.current?.items ?? {}).filter((k) => !docRef.current!.items[k].in))) });
     out.push({ id: "tidy", label: t("board.tidy.all"), icon: "tidy", kbd: `${mod}⇧O`, run: tidy });
     out.push({ id: "fit", label: t("board.fit"), icon: "fit", kbd: "F", run: () => fit() });
@@ -1990,6 +2035,9 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
 
       {tool === "draw" && <InkBar ink={ink} onChange={setInk} t={t} />}
 
+      {galleryOpen && <CompGallery t={t} onClose={() => setGalleryOpen(false)} onPick={(name, title) => { setGalleryOpen(false); const id = add({ k: "comp", comp: name, w: 480, h: 320, title: title || undefined }, center()); setSelected(new Set([id])); }} />}
+      {syncGroups.length > 0 && <SyncTransport hub={syncHub} groups={syncGroups} t={t} />}
+
       <footer className="hb-status">
         {TOOLS.map((group, gi) => (
           <div className="seg" key={gi}>
@@ -2008,6 +2056,10 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
           </div>
         ))}
         <span className="hint" aria-live="polite">{hint}</span>
+        <div className="seg">
+          <button className={`tool${galleryOpen ? " on" : ""}`} aria-pressed={galleryOpen} aria-label={t("board.comp.gallery")} data-tip={t("board.comp.gallery")}
+            onClick={() => setGalleryOpen((v) => !v)}><Icon name="components" size={15} /></button>
+        </div>
         <div className="seg">
           <button className="tool" aria-label={selIds.length > 1 ? t("board.tidy.selection") : t("board.tidy.all")}
             data-tip={selIds.length > 1 ? t("board.tidy.selection") : t("board.tidy.all")} data-kbd={`${mod}⇧O`} onClick={tidy}><Icon name="tidy" size={15} /></button>

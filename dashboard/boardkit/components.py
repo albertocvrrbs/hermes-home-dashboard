@@ -165,7 +165,7 @@ def lint(files: Dict[str, str]) -> List[str]:
     if "hb." not in allsrc and "window.hb" not in allsrc:
         out.append("never touches the hb bridge: read data with hb.data / hb.onData(fn), size with hb.size / "
                    "hb.onResize(fn); see the component rules")
-    elif "hb.onData" not in allsrc and "hb.data" not in allsrc:
+    elif "hb.onData" not in allsrc and "hb.data" not in allsrc and "hb.asset" not in allsrc:
         out.append("does not read hb.data / hb.onData: the card cannot show what Hermes or a script sends it")
     if not re.search(r"hb\.onResize|addEventListener\(\s*['\"]resize|ResizeObserver|hermes\.onResize", allsrc):
         out.append("no resize handling: the card can be resized, so redraw from hb.onResize(fn) (or use fluid "

@@ -6,7 +6,7 @@ import type { LiveBlock } from "./live";
 
 export type Kind =
   | "card" | "todo" | "col" | "link" | "image" | "embed" | "video" | "board"
-  | "frame" | "box" | "text" | "draw" | "line" | "live" | "shape";
+  | "frame" | "box" | "text" | "draw" | "line" | "live" | "shape" | "comp";
 
 export type Point = [number, number];
 export type End = string | Point;
@@ -35,6 +35,12 @@ export interface Item {
   ds?: boolean; sm?: boolean; pr?: string; g?: string;
   /** video: duration (s); live: block spec, data bag, freshness TTL (s), last update (epoch s) */
   dur?: number; blocks?: LiveBlock[]; data?: Record<string, unknown>; ttl?: number; at?: number; tpl?: string;
+  /** comp: library component name, pinned version (absent = latest), data bag, attached data files
+   *  (name -> {n bytes, r revision}), allowed action ids, theme opt-out */
+  comp?: string; ver?: string; cdata?: Record<string, unknown>; files?: Record<string, { n: number; r: number }>;
+  actions?: string[]; nt?: boolean;
+  /** video / comp / embed: sync group (cards with the same group share one playhead) */
+  sync?: string;
 }
 
 export interface Presence { at: number; act: string; on?: string }
@@ -236,7 +242,7 @@ export function itemLabel(item: Item): string {
 export const DEFAULT_SIZE: Record<string, [number, number]> = {
   card: [256, 120], todo: [304, 240], col: [276, 320], link: [276, 250], image: [372, 260],
   embed: [452, 320], video: [400, 260], board: [212, 170], frame: [480, 320], box: [196, 62],
-  text: [420, 40], draw: [120, 80], live: [400, 300], shape: [160, 56],
+  text: [420, 40], draw: [120, 80], live: [400, 300], shape: [160, 56], comp: [480, 320],
 };
 
 /** Rows the metrics grid wraps into (mirrors the CSS: columns follow the count, pairs below 380px). */

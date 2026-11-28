@@ -13,6 +13,11 @@ export interface BoardRow {
 export interface SinceResult { seq: number; hermes?: Presence; entries?: Entry[]; doc?: BoardDoc }
 
 export interface VideoPoster { st: "ok" | "fail" | "none"; img?: string; dur?: number; iw?: number; ih?: number; by?: string; reason?: string }
+export interface CompRow { name: string; title: string; desc: string; current: string; versions: number; updated: number; by: string; size: number }
+export interface CompDoc {
+  name: string; version: string; current: string; title: string; desc: string; html: string; sample: unknown;
+  versions: { v: string; at: number; by: string; note?: string; size?: number }[]; files: string[];
+}
 export interface ActionResult { ok: boolean; code: number | string; out: string; ms: number; action: string }
 
 export interface LinkPreview {
@@ -51,6 +56,13 @@ export const boardsApi = {
   media: (aid: string, off: number, n: number) =>
     fetchJSON<{ mime: string; size: number; off: number; data: string }>(`${BASE}/media/${aid}?off=${off}&n=${n}`),
   liveActions: () => fetchJSON<{ actions: LiveActionInfo[]; problems: string[]; dir: string }>(`${BASE}/live/actions`),
+  components: () => fetchJSON<{ components: CompRow[] }>(`${BASE}/components`).then((r) => r.components),
+  component: (name: string, ver?: string) =>
+    fetchJSON<CompDoc>(`${BASE}/components/${encodeURIComponent(name)}${ver ? `?ver=${encodeURIComponent(ver)}` : ""}`),
+  compFile: (bid: string, iid: string, name: string, off: number, n: number) =>
+    fetchJSON<{ size: number; off: number; data: string }>(`${BASE}/${bid}/comp/${iid}/files/${encodeURIComponent(name)}?off=${off}&n=${n}`),
+  compAction: (bid: string, iid: string, action: string, args: Record<string, unknown>, confirm: boolean) =>
+    fetchJSON<{ result: ActionResult }>(`${BASE}/${bid}/comp/${iid}/action`, json("POST", { action, args, confirm })).then((r) => r.result),
   liveAction: (bid: string, iid: string, action: string, index: number, confirm: boolean) =>
     fetchJSON<{ result: ActionResult }>(`${BASE}/${bid}/live/${iid}/action`, json("POST", { action, index, confirm })).then((r) => r.result),
 };
@@ -96,6 +108,38 @@ export function mediaUrl(aid: string): Promise<string> {
     })();
     p.catch(() => mediaCache.delete(aid));
     mediaCache.set(aid, p);
+  }
+  return p;
+}
+
+const compFileCache = new Map<string, Promise<ArrayBuffer>>();
+
+/** A data file attached to a component card, whole, as bytes (read in ranges: the hosts' fetch speaks JSON). */
+export function loadCompFile(bid: string, iid: string, name: string, rev: number): Promise<ArrayBuffer> {
+  const key = `${bid}/${iid}/${name}@${rev}`;
+  let p = compFileCache.get(key);
+  if (!p) {
+    p = (async () => {
+      const parts: Uint8Array[] = [];
+      let off = 0, size = Infinity, total = 0;
+      while (off < size) {
+        const r = await boardsApi.compFile(bid, iid, name, off, RANGE);
+        size = r.size;
+        if (!r.data) break;
+        const bin = atob(r.data);
+        const bytes = new Uint8Array(bin.length);
+        for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+        parts.push(bytes);
+        off += bytes.length;
+        total += bytes.length;
+      }
+      const out = new Uint8Array(total);
+      let at = 0;
+      for (const part of parts) { out.set(part, at); at += part.length; }
+      return out.buffer as ArrayBuffer;
+    })();
+    p.catch(() => compFileCache.delete(key));
+    compFileCache.set(key, p);
   }
   return p;
 }

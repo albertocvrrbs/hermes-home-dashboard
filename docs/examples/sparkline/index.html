@@ -1,0 +1,55 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Sparkline</title>
+<style>
+  body { display: flex; flex-direction: column; gap: 8px; padding: 12px; }
+  header { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+  #label { color: var(--muted-foreground); }
+  #last { font: 600 22px/1 var(--font-mono); }
+  svg { flex: 1; width: 100%; min-height: 0; }
+  .area { fill: var(--chart-1); opacity: .14; }
+  .line { fill: none; stroke: var(--chart-1); stroke-width: 2; vector-effect: non-scaling-stroke; stroke-linejoin: round; }
+  .cursor { stroke: var(--accent); stroke-width: 1.5; vector-effect: non-scaling-stroke; }
+  .grid { stroke: var(--border); stroke-width: 1; vector-effect: non-scaling-stroke; }
+</style>
+</head>
+<body>
+<header><span id="label"></span><b id="last"></b></header>
+<svg id="s" viewBox="0 0 100 40" preserveAspectRatio="none">
+  <line class="grid" x1="0" y1="39.5" x2="100" y2="39.5"/>
+  <path class="area"/><path class="line"/><line class="cursor" y1="0" y2="40" visibility="hidden"/>
+</svg>
+<script>
+  var svg = document.getElementById("s");
+  var line = svg.querySelector(".line"), area = svg.querySelector(".area"), cursor = svg.querySelector(".cursor");
+  var series = [];
+
+  function draw() {
+    var n = series.length;
+    document.getElementById("label").textContent = hb.data.label || "";
+    document.getElementById("last").textContent = n ? String(series[n - 1]) : "";
+    if (n < 2) { line.setAttribute("d", ""); area.setAttribute("d", ""); return; }
+    var lo = Math.min.apply(null, series), hi = Math.max.apply(null, series), span = hi - lo || 1;
+    var pts = series.map(function (v, i) { return [i / (n - 1) * 100, 36 - (v - lo) / span * 32 + 2]; });
+    var d = "M" + pts.map(function (p) { return p[0].toFixed(2) + "," + p[1].toFixed(2); }).join("L");
+    line.setAttribute("d", d);
+    area.setAttribute("d", d + "L100,40L0,40Z");
+  }
+
+  function moveCursor() {
+    var c = hb.clock, n = series.length;
+    var span = c.duration > 0 ? c.duration : Math.max(1, n - 1);   // linked to a video, or one point per second
+    var x = Math.max(0, Math.min(100, c.t / span * 100));
+    cursor.setAttribute("x1", x); cursor.setAttribute("x2", x);
+    cursor.setAttribute("visibility", c.group ? "visible" : "hidden");   // only when linked to a clock
+  }
+
+  hb.onData(function (data) { series = data.series || []; draw(); moveCursor(); });
+  hb.onResize(draw);
+  hb.clock.onTick(moveCursor);
+  hb.clock.onSeek(moveCursor);
+</script>
+</body>
+</html>

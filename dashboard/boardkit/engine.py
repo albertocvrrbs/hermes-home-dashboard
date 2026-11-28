@@ -42,7 +42,7 @@ FIELDS: Dict[str, Tuple[str, ...]] = {
     "col": ("x", "y", "w", "h", "title", "kids"),
     "link": _COMMON + ("url", "title", "desc", "site", "icon", "img", "st", "video"),
     "image": _COMMON + ("asset", "cap", "iw", "ih", "url"),
-    "embed": _COMMON + ("asset", "title", "theme", "sync"),
+    "embed": _COMMON + ("asset", "title", "theme"),
     "video": _COMMON + ("src", "title", "asset", "img", "dur", "iw", "ih", "sync"),
     "board": _COMMON + ("ref", "title"),
     "frame": ("x", "y", "w", "h", "title", "note"),

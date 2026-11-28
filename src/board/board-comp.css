@@ -1,0 +1,62 @@
+/* Custom components (kind comp), the component gallery and the shared sync transport.
+ * Kept apart from board.css (imported at its top); same variables, same material as the other
+ * cards: no colours of its own, Hermes is the dotted material (.dm), never a hue. */
+
+.hb-comp .comp-menu { position: absolute; z-index: 5; top: 34px; right: 6px; min-width: 168px; max-height: 260px; overflow: auto; padding: 4px;
+  border-radius: var(--r-float); background: var(--float-bg); border: 1px solid var(--float-line); box-shadow: var(--lift); font: 400 12px/1 var(--sans); }
+.hb-comp .comp-menu button { width: 100%; height: 30px; display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 0 8px;
+  border-radius: 4px; text-align: left; color: var(--ink-2); align-items: center; }
+.hb-comp .comp-menu button:hover { background: var(--hover); color: var(--ink); }
+.hb-comp .comp-menu button.on b { color: var(--accent); }
+.hb-comp .comp-menu b { font: 600 12px/1 var(--mono); color: var(--ink); }
+.hb-comp .comp-menu small { font: 400 10.5px/1 var(--mono); color: var(--ink-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 120px; }
+/* the versions menu hangs below the header, outside the card box */
+.hb .hb-embed.hb-comp { overflow: visible; }
+.hb .hb-comp .bar-e { position: relative; overflow: visible; border-radius: 3px 3px 0 0; }
+.hb-comp .foot { border-radius: 0 0 3px 3px; }
+.hb-item:has(.comp-menu) { z-index: 30 !important; }
+.hb-comp .comp-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 16px; text-align: center; color: var(--ink-3); }
+.hb-comp .comp-empty b { font: 600 12.5px/1.3 var(--sans); color: var(--ink-2); }
+.hb-comp .comp-empty small { font: 400 11px/1.4 var(--mono); }
+.hb-comp .comp-src { margin: 0; padding: 10px 12px; overflow: auto; font: 400 11px/1.5 var(--mono); color: var(--ink-2); white-space: pre; background: var(--well); user-select: text; }
+
+/* the link indicator on every synced card */
+.hb .sync-chip { display: inline-flex; align-items: center; gap: 4px; height: 20px; padding: 0 6px; border-radius: var(--r-ctl); font: 400 10.5px/1 var(--mono);
+  color: var(--accent); border: 1px solid color-mix(in srgb, var(--accent) 38%, transparent); white-space: nowrap; }
+.hb .sync-chip.over { position: absolute; z-index: 2; top: 8px; left: 8px; background: var(--float-bg); pointer-events: auto; }
+.hb-video .stage { position: relative; }
+
+/* gallery */
+.hb-gallery { position: absolute; z-index: 40; left: 0; right: 0; margin: 0 auto; bottom: 52px; width: min(720px, calc(100% - 32px)); max-height: min(520px, calc(100% - 120px));
+  display: flex; flex-direction: column; border-radius: var(--r-float); background: var(--float-bg); border: 1px solid var(--float-line); box-shadow: var(--lift);
+  animation: hb-pop .14s var(--out); }
+.hb-gallery .gal-hd { display: flex; align-items: center; gap: 8px; padding: 10px 10px 10px 14px; border-bottom: 1px solid var(--rule); font: 700 9.5px/1 var(--mono);
+  letter-spacing: .16em; text-transform: uppercase; color: var(--ink-3); }
+.hb-gallery .gal-hd svg { color: var(--accent); }
+.hb-gallery .gal-hd .kbtn { margin-left: auto; }
+.hb-gallery .gal-grid { overflow: auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; padding: 14px; }
+.hb-gallery .gal-tile { display: flex; flex-direction: column; gap: 4px; padding: 0 0 9px; text-align: left; border-radius: var(--r-ctl); border: 1px solid var(--rule); background: var(--sheet);
+  overflow: hidden; transition: border-color .14s var(--out); }
+.hb-gallery .gal-tile:hover, .hb-gallery .gal-tile:focus-visible { border-color: var(--accent); outline: none; }
+.hb-gallery .gal-tile b { padding: 4px 10px 0; font: 600 12.5px/1.2 var(--sans); color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hb-gallery .gal-tile small { padding: 0 10px; font: 400 10.5px/1.3 var(--mono); color: var(--ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hb-gallery .gal-thumb { position: relative; height: 131px; overflow: hidden; border-bottom: 1px solid var(--rule); background: var(--well); pointer-events: none; }
+.hb-gallery .gal-thumb .gal-scale { transform-origin: 0 0; position: absolute; left: 0; top: 0; }
+.hb-gallery .gal-thumb .frame { display: block; width: 100%; height: 100%; border: 0; background: transparent; }
+.hb-gallery .gal-thumb .gal-nofile { position: absolute; inset: 0; display: grid; place-items: center; color: var(--ink-3); }
+.hb-gallery .gal-empty { display: flex; flex-direction: column; gap: 6px; padding: 28px 22px; font: 400 12px/1.5 var(--sans); color: var(--ink-3); }
+.hb-gallery .gal-empty b { font: 600 13px/1.3 var(--sans); color: var(--ink-2); }
+
+/* shared transport */
+.hb-sync { position: absolute; z-index: 19; left: 50%; bottom: 52px; transform: translateX(-50%); display: flex; flex-direction: column; gap: 4px; padding: 4px;
+  border-radius: var(--r-panel); background: var(--chrome); border: 1px solid var(--rule); box-shadow: var(--lift); max-width: calc(100% - 24px); }
+.hb-gallery ~ .hb-sync { display: none; }
+.hb-sync .row { display: flex; align-items: center; gap: 4px; height: 30px; padding: 0 4px; color: var(--ink-2); }
+.hb-sync .grp { display: inline-flex; align-items: center; gap: 5px; min-width: 52px; padding: 0 6px 0 4px; font: 600 11px/1 var(--mono); color: var(--accent); }
+.hb-sync .scrub { width: clamp(120px, 24vw, 340px); height: 18px; margin: 0 6px; accent-color: var(--accent); background: transparent; cursor: pointer; }
+.hb-sync .time { min-width: 86px; text-align: right; font: 400 11px/1 var(--mono); color: var(--ink); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.hb-sync .rate { min-width: 38px; height: 22px; padding: 0 6px; margin-left: 4px; border-radius: var(--r-ctl); font: 400 11px/1 var(--mono); color: var(--ink-2); border: 1px solid var(--rule); }
+.hb-sync .rate:hover { color: var(--ink); background: var(--hover); }
+.hb-sync .manual { font: 700 9.5px/1 var(--mono); color: var(--on-accent); background: var(--accent); border-radius: 2px; padding: 3px 4px; }
+.hb.chat-open .hb-sync { left: calc((100% - var(--chat-w, 380px)) / 2); }
+.hb.chat-open .hb-gallery { right: var(--chat-w, 380px); }

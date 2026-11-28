@@ -161,7 +161,7 @@ export function intersects(a: Rect, b: Rect): boolean {
 
 /** Kinds whose height is set by hand; everything else sizes its own height
  *  (video stages keep 16:9 or 9:16 via CSS aspect-ratio, images keep theirs). */
-export const RESIZE_H = new Set(["frame", "box", "embed", "text", "shape"]);
+export const RESIZE_H = new Set(["frame", "box", "embed", "comp", "text", "shape"]);
 
 /** The patch a resize-handle drag commits: width always, height only for free-height kinds. */
 export function resizePatch(kind: string, w: number, h: number): { w: number; h?: number } {
