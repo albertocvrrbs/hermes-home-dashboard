@@ -154,10 +154,19 @@ they never fight drag/resize.
 | **Notes** | quick to-dos · clear completed |
 | **Pomodoro** | step work / break lengths |
 | **Countdown** | alarm-style date+time picker (wheel, arrows, typing) |
-| **Ascii** | cycle emblems |
+| **Hermes** | cycle the emblem: the official banner caduceus, then kerykeion, talaria, petasos, lyre, tortoise, drachma and wing, dithered onto a square dot grid at the widget's size (see below) |
 | **Matrix** | tune rain speed |
 | **Heartbeat** | ECG trace · tune speed |
 | **Life** | Conway's Game of Life — draw live cells, pause / seed / clear |
+
+![The Hermes widget's eight emblems, as dots on a square grid](assets/screenshot-emblems.png)
+
+The **Hermes** widget paints real dots on a square grid instead of braille text
+(a monospace cell is not 1:2, so braille art came out stretched). Each emblem is
+drawn as vectors and Floyd–Steinberg dithered at the widget's resolution: grow
+the widget and you get more dots, not fatter ones, crisp on HiDPI. The dots
+resolve in when you switch designs and a faint glint passes now and then; both
+stop under *reduce motion*, and nothing runs while the widget is idle.
 
 State that should stick (ranges, formats, timer lengths, grouping, sort…) is
 saved to the layout; transient state (current page, browsed month) resets on
@@ -335,6 +344,22 @@ made; your work stays solid.
 
 ![The board chat's model picker: Desktop's own menu, scoped to the board's session](assets/screenshot-board-model-picker.png)
 
+- **Draw.** `D` opens a small toolbar above the status bar: pen, highlighter
+  (`⇧D`, translucent, always under the ink), eraser (`E` while drawing; strokes
+  under it fade before they go) and lasso (loop around strokes, then drag,
+  delete or group them with `⌘G`). Line, arrow, rectangle and ellipse take
+  Shift for 45° / squares / circles and Alt to draw from the centre. Three
+  widths (`[` `]`), six restrained colours (`1`–`6`: ink, accent, sage, clay,
+  slate, sand), dashed, and smoothing (off / on / strong). Mouse strokes go
+  through a speed-adaptive One Euro filter, so slow strokes lose their jitter
+  and fast ones don't lag, and the live ink always reaches the pointer; on
+  release the stroke is simplified and splined before it is saved. Pens keep
+  their pressure. Hermes reads all of it: shapes, colours and highlights show
+  up in his board outline and snapshots, so "Turn into a diagram" works on any
+  selection of strokes.
+
+![Draw: highlighter under the ink, shapes, an arrow, a dashed line, the ink toolbar](assets/screenshot-board-ink.png)
+
 - **Tools and menus.** Every tool, action and menu row carries its lucide
   icon; the name and shortcut show in a tooltip after a short hover. Right-
   click a card for its actions, or the table to add something right there.
@@ -344,7 +369,8 @@ made; your work stays solid.
   or a drag on the empty table pans; Shift+wheel pans sideways.
 - **Keys:** `V` select · `H` pan · `N` note · `T` to-do · `C` column · `L` link ·
   `I` image · `B` board · `E` embed · `A` arrow · `D` draw · `/` chat · `F` fit ·
-  `⌘Z` / `⌘⇧Z` undo / redo (Ctrl on Windows and Linux).
+  `⌘Z` / `⌘⇧Z` undo / redo (Ctrl on Windows and Linux). While drawing: `D` pen ·
+  `⇧D` highlighter · `E` eraser · `[` `]` width · `1`–`6` colour · `⌘G` group.
 
 ![Right-click menu: Hermes' verbs first, then edit, connect, duplicate and delete](assets/screenshot-board-menu.png)
 - **On the Home** the Board widget shows a live preview of a board; its hover

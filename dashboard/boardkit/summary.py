@@ -78,7 +78,15 @@ def item_line(iid: str, it: Dict[str, Any], text_len: int = 80) -> str:
         parts.append(_clip(it["note"], 60))
     elif k == "draw":
         pts = (it.get("d") or "").count(" ") + 1 if it.get("d") else 0
-        parts.append(f"sketch {pts}pts")
+        shape = {"hl": "highlight", "line": "line", "arrow": "arrow", "rect": "rectangle", "ellipse": "ellipse"}.get(it.get("tl"))
+        bits = [shape or "sketch"] if shape and shape != "highlight" else [f"{shape or 'sketch'} {pts}pts"]
+        if it.get("c"):
+            bits.append(it["c"])
+        if it.get("ds"):
+            bits.append("dashed")
+        if it.get("g"):
+            bits.append(f"group:{it['g']}")
+        parts.append(" ".join(bits))
     if it.get("tags"):
         parts.append(" ".join(f"#{t}" for t in it["tags"]))
     if it.get("due"):

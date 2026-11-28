@@ -3,11 +3,11 @@
 // Rendered like Desktop's sidebar: 24-unit viewBox, 2px round stroke, currentColor.
 import {
   Activity, ArrowUp, ArrowUpRight, Bell, Bot, Brain, BrushCleaning, CalendarArrowDown, ChartLine, Check,
-  ChevronLeft, ChevronRight, CircleAlert, CircleCheck, CodeXml, Columns3, Copy, Cpu, Database, Download,
-  FlaskConical, Gauge, GitBranch, Group, Hand, HardDrive, Image, LayoutDashboard, Link, ListPlus, ListTodo,
-  Maximize2, MessageSquareText, MousePointer2, MoveUpRight, PanelRightClose, Pause, Pencil, PencilLine, Play,
-  Plus, Power, Redo2, RefreshCw, Rocket, RotateCw, Route, Scan, Server, Split, Square, SquareArrowOutUpRight,
-  SquareDashedMousePointer, SquareTerminal, StickyNote, TextQuote, Timer, Trash2, Undo2, Upload, Video,
+  ChevronLeft, ChevronRight, Circle, CircleAlert, CircleCheck, CodeXml, Columns3, Copy, Cpu, Database, Download, Eraser,
+  FlaskConical, Gauge, GitBranch, Group, Hand, HardDrive, Highlighter, Image, LassoSelect, LayoutDashboard, Link, ListPlus, ListTodo,
+  Maximize2, MessageSquareText, MousePointer2, MoveUpRight, PanelRightClose, Pause, Pen, Pencil, PencilLine, Play,
+  Plus, Power, Redo2, RefreshCw, Rocket, RotateCw, Route, Scan, Server, Slash, Spline, Split, Square, SquareArrowOutUpRight, SquareDashed,
+  SquareDashedMousePointer, SquareTerminal, StickyNote, TextQuote, Timer, Trash2, Undo2, Ungroup, Upload, Video,
   Workflow, X, Zap, ZoomIn, ZoomOut,
   type IconNode,
 } from "lucide";
@@ -58,6 +58,18 @@ export const ICONS = {
   ok: CircleCheck,
   alert: CircleAlert,
   check: Check,
+  // Draw tool
+  pen: Pen,
+  highlighter: Highlighter,
+  eraser: Eraser,
+  lasso: LassoSelect,
+  line: Slash,
+  inkArrow: ArrowUpRight,
+  rect: Square,
+  ellipse: Circle,
+  dashed: SquareDashed,
+  smooth: Spline,
+  ungroup: Ungroup,
 } satisfies Record<string, IconNode>;
 
 /** Icons a live card may name (header `icon`, button `icon`). Unknown names fall back. */

@@ -6,7 +6,8 @@ import type { SandboxedFrameComponent } from "../sdk";
 import { assetHtml, assetUrl, boardsApi, type ActionResult } from "./api";
 import type { LiveActionInfo, LiveActionRef } from "./live";
 import { Cad, RichText, Sig, ago, dueLabel } from "./bits";
-import { fromStroke, strokePath } from "./geometry";
+import { strokePath } from "./geometry";
+import { inkGeometry } from "./ink";
 import { Icon } from "./icons";
 import { drawPreview, accentOf } from "./preview";
 import { classifyUrl, hostOf, playerUrl } from "./urlKind";
@@ -33,6 +34,8 @@ export interface ItemCtx {
   /** The action list could not be read (an older backend still serving this page). */
   liveActionsDown: boolean;
   runLiveAction: (iid: string, ref: LiveActionRef, index: number) => Promise<ActionResult | null>;
+  /** Draw strokes the eraser is over (hover preview) or has swept (while dragging). */
+  erasing?: Set<string>;
 }
 
 function useAsset(aid: string | undefined): string | null {
@@ -427,17 +430,19 @@ export function TextView({ id, item, c }: { id: string; item: Item; c: ItemCtx }
   return <div className={`hb-text ${size}`}>{item.text || c.t("board.text.empty")}</div>;
 }
 
-export function DrawView({ item, selected }: { item: Item; selected: boolean }) {
-  const pts = fromStroke(item.d);
-  if (!pts.length) return null;
-  const xs = pts.map((p) => p[0]), ys = pts.map((p) => p[1]);
-  const pad = 6;
-  const minX = Math.min(...xs) - pad, minY = Math.min(...ys) - pad;
-  const w = Math.max(...xs) - minX + pad, h = Math.max(...ys) - minY + pad;
+export function DrawView({ item, selected, erasing }: { item: Item; selected: boolean; erasing?: boolean }) {
+  const geo = inkGeometry(item, strokePath);
+  if (!geo) return null;
+  const { box } = geo;
+  const sw = item.sw ?? 1.9;
+  const cls = `hb-draw${selected ? " sel" : ""}${erasing ? " erasing" : ""}${item.tl === "hl" ? " hl" : ""}${item.c ? ` c-${item.c}` : ""}`;
   return (
-    <svg className={`hb-draw${selected ? " sel" : ""}`} width={w} height={h} viewBox={`${minX} ${minY} ${w} ${h}`}
-      style={{ position: "absolute", left: minX, top: minY }}>
-      <path d={strokePath(pts)} strokeWidth={item.sw ?? 1.9} />
+    <svg className={cls} width={box.w} height={box.h} viewBox={`${box.x} ${box.y} ${box.w} ${box.h}`}
+      style={{ position: "absolute", left: box.x, top: box.y }}>
+      {geo.paths.map((p, i) => (
+        <path key={i} d={p.d} className={p.fill ? "fill" : undefined} strokeWidth={p.fill ? undefined : sw}
+          strokeDasharray={p.dashed ? `${Math.max(4, sw * 3)} ${Math.max(4, sw * 2.4)}` : undefined} />
+      ))}
     </svg>
   );
 }
@@ -458,7 +463,7 @@ export function ItemBody({ id, item, c, dropIndex, selected }: {
     case "frame": return <FrameView id={id} item={item} c={c} />;
     case "box": return <BoxView id={id} item={item} c={c} />;
     case "text": return <TextView id={id} item={item} c={c} />;
-    case "draw": return <DrawView item={item} selected={selected} />;
+    case "draw": return <DrawView item={item} selected={selected} erasing={c.erasing?.has(id)} />;
     case "live": return <LiveView id={id} item={item} c={c} />;
     default: return null;
   }

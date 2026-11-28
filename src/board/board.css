@@ -253,10 +253,52 @@
 /* sketch labels: the UI sans in italic, Alberto's voice without a third family */
 .hb-text.s { font: italic 400 17px/1.25 var(--sans); color: var(--ink); opacity: .92; white-space: pre-wrap; }
 
-/* freehand */
-.hb-draw { overflow: visible; pointer-events: none; }
-.hb-draw path { fill: none; stroke: var(--ink); stroke-linecap: round; stroke-linejoin: round; opacity: .88; pointer-events: stroke; }
-.hb-draw.sel path { stroke: var(--accent); }
+/* freehand and shapes. A restrained palette: the theme's ink and accent plus four muted
+ * mid-tones that read on dark and light themes alike. */
+.hb {
+  --pen-sage: #7fa287; --pen-clay: #c47e62; --pen-slate: #7c93b4; --pen-sand: #bfa060;
+}
+.hb-draw { --pen: var(--ink); overflow: visible; pointer-events: none; }
+.hb-draw.c-accent { --pen: var(--accent); }
+.hb-draw.c-sage { --pen: var(--pen-sage); }
+.hb-draw.c-clay { --pen: var(--pen-clay); }
+.hb-draw.c-slate { --pen: var(--pen-slate); }
+.hb-draw.c-sand { --pen: var(--pen-sand); }
+.hb-draw path { fill: none; stroke: var(--pen); stroke-linecap: round; stroke-linejoin: round; opacity: .88; pointer-events: visibleStroke; }
+.hb-draw path.fill { fill: var(--pen); stroke: none; pointer-events: visibleFill; }
+/* highlighter: wide and translucent, layered under the ink (see BoardView's z-order) */
+.hb-draw.hl path { opacity: .3; stroke-linecap: round; }
+.hb-draw.sel:not(.c-accent, .c-sage, .c-clay, .c-slate, .c-sand) { --pen: var(--accent); }
+.hb-draw.sel { filter: drop-shadow(0 0 2.5px color-mix(in srgb, var(--accent) 65%, transparent)); }
+/* eraser hover preview / sweep: what goes, fades */
+.hb-draw.erasing path { opacity: .16; transition: opacity .1s var(--out); }
+.hb-live, .hb-live path { pointer-events: none !important; }
+.hb-live.lasso path { stroke: var(--accent); opacity: .9; fill: color-mix(in srgb, var(--accent) 6%, transparent); }
+.hb-viewport.ink-eraser { cursor: none; }
+.hb-eraser { position: absolute; left: 0; top: 0; margin: calc(var(--r, 9px) * -1) 0 0 calc(var(--r, 9px) * -1); border-radius: 50%;
+  border: 1.5px solid var(--ink-2); box-shadow: 0 0 0 1px color-mix(in srgb, var(--bg) 70%, transparent); pointer-events: none; z-index: 5; }
+
+/* the Draw tool's sub-toolbar: status-bar chrome, floating just above it */
+.hb-inkbar { position: absolute; left: 8px; bottom: 48px; z-index: 21; display: flex; flex-wrap: wrap; align-items: center;
+  max-width: calc(100% - 16px); padding: 0 2px; border-radius: var(--r-float); background: var(--float-bg);
+  border: 1px solid var(--float-line); box-shadow: var(--lift); color: var(--ink-2); animation: hb-pop .14s var(--out); }
+.hb.chat-open .hb-inkbar { max-width: calc(100% - var(--chat-w, 380px) - 16px); }
+.hb-inkbar .seg { display: flex; align-items: center; gap: 2px; height: 36px; padding: 0 4px; border-right: 1px solid var(--rule); flex: none; }
+.hb-inkbar .seg:last-child { border-right: 0; }
+.hb-inkbar .seg.off { opacity: .38; }
+.hb-inkbar .tool:disabled { cursor: default; background: none; }
+.hb-inkbar .tool.sw i { display: block; border-radius: 50%; background: currentColor; }
+.hb-inkbar .tool.sw-c { width: 26px; }
+.hb-inkbar .tool.sw-c i { --pen: var(--ink); width: 13px; height: 13px; border-radius: 50%; background: var(--pen);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--bg) 30%, transparent); }
+.hb-inkbar .tool.sw-c.c-accent i { --pen: var(--accent); }
+.hb-inkbar .tool.sw-c.c-sage i { --pen: var(--pen-sage); }
+.hb-inkbar .tool.sw-c.c-clay i { --pen: var(--pen-clay); }
+.hb-inkbar .tool.sw-c.c-slate i { --pen: var(--pen-slate); }
+.hb-inkbar .tool.sw-c.c-sand i { --pen: var(--pen-sand); }
+.hb-inkbar .tool.sw-c.on { background: var(--hover); box-shadow: inset 0 0 0 1px var(--rule-3); }
+.hb-inkbar .tool.smooth { position: relative; }
+.hb-inkbar .tool.smooth b { position: absolute; right: 3px; bottom: 2px; font: 700 8px/1 var(--mono); }
 
 /* selection: accent hairline + print crop marks (the resize handles) */
 .hb-item.sel > .hb-card, .hb-item.sel > .hb-box { border-color: var(--accent) !important; }

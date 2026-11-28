@@ -9,9 +9,15 @@ import { boardPrompt, sendToSession } from "./chat";
 import { CHAT_MAX_W, CHAT_MIN_W, ChatPanel } from "./ChatPanel";
 import { modKey, placeBar } from "./float";
 import {
-  boundsOf, fitView, intersects, RESIZE_H, resizePatch, simplify, strokePath, toStroke, wheelIntent, wheelZoomFactor,
+  boundsOf, fitView, intersects, RESIZE_H, resizePatch, strokePath, toStroke, wheelIntent, wheelZoomFactor,
   zoomView, ZOOM_MAX, ZOOM_MIN, type Rect, type View,
 } from "./geometry";
+import {
+  arrowHead, eraseHits, euroFor, expandGroups, finishStroke, freehandOutline, INK_COLORS, inkWidth, isShape, lassoHits,
+  newGroupId, OneEuro2D, outlinePath, parseInk, pressureDigits, shapePath, shapePoints, stepWidth,
+  type InkSettings, type InkTool,
+} from "./ink";
+import { InkBar } from "./InkBar";
 import { HermesCursor, type CursorHandle, type CursorStep } from "./HermesCursor";
 import { Icon, type IconName } from "./icons";
 import { ItemBody, itemForUrl, type ItemCtx } from "./items";
@@ -51,11 +57,38 @@ const EDITABLE = new Set(["card", "todo", "col", "frame", "box", "text", "image"
 const INTO_COLUMN = new Set(["card", "todo", "link", "image", "video", "board"]);
 
 interface Drag {
-  kind: "pan" | "move" | "resize" | "marquee" | "draw" | "arrow" | "kid";
+  kind: "pan" | "move" | "resize" | "marquee" | "ink" | "erase" | "lasso" | "arrow" | "kid";
   sx: number; sy: number; moved: boolean;
   view?: View; ids?: string[]; id?: string; w0?: number; h0?: number;
   pts?: Point[]; from?: string;
 }
+
+/** A stroke, shape or lasso in progress. Points are world coordinates; freehand points are
+ *  already stabilised (One Euro on screen px), `raw`/`pred` are the pointer itself so the live
+ *  ink always reaches it. */
+interface InkStroke {
+  tool: InkTool;
+  pointerType: string;
+  euro: OneEuro2D | null;
+  pts: Point[];
+  pr: number[];
+  raw: Point | null;
+  pred: Point | null;
+  a: Point;
+  b: Point;
+  shift: boolean;
+  alt: boolean;
+  loop: Point[];
+}
+
+const INK_KEY = "hb.ink";
+/** Eraser radius, screen px. */
+const ERASER_R = 9;
+const INK_HINT: Record<InkTool, MessageKey> = {
+  pen: "board.hint.ink.pen", hl: "board.hint.ink.pen", eraser: "board.hint.ink.eraser", lasso: "board.hint.ink.lasso",
+  line: "board.hint.ink.shape", arrow: "board.hint.ink.shape", rect: "board.hint.ink.shape", ellipse: "board.hint.ink.shape",
+};
+const sameSet = (a: Set<string>, b: string[]) => a.size === b.length && b.every((x) => a.has(x));
 
 interface LogLine { key: string; t: number; who: "hermes" | "you"; msg: string; detail?: string; s?: number }
 
@@ -100,7 +133,20 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
   const [delta, setDelta] = useState<{ dx: number; dy: number } | null>(null);
   const [resize, setResize] = useState<{ id: string; w: number; h: number } | null>(null);
   const [marquee, setMarquee] = useState<Rect | null>(null);
-  const [live, setLive] = useState<Point[] | null>(null);
+  const [ink, setInkState] = useState<InkSettings>(() => parseInk(readLocal(INK_KEY)));
+  const inkRef = useRef(ink);
+  inkRef.current = ink;
+  const setInk = useCallback((next: InkSettings) => { setInkState(next); writeLocal(INK_KEY, JSON.stringify(next)); }, []);
+  const [erasing, setErasing] = useState<Set<string>>(new Set());
+  const erasingRef = useRef(erasing);
+  erasingRef.current = erasing;
+  const stroke = useRef<InkStroke | null>(null);
+  const eraser = useRef<{ trail: Point[]; sweep: boolean } | null>(null);
+  const liveSvgRef = useRef<SVGSVGElement>(null);
+  const livePathRef = useRef<SVGPathElement>(null);
+  const liveHeadRef = useRef<SVGPathElement>(null);
+  const ringRef = useRef<HTMLDivElement>(null);
+  const liveRaf = useRef(0);
   const [draft, setDraft] = useState<{ from: Rect; to: Point } | null>(null);
   const [kidDrag, setKidDrag] = useState<{ id: string; x: number; y: number; col: string | null; index: number } | null>(null);
   const [hidden, setHidden] = useState<Set<string>>(new Set());
@@ -473,10 +519,15 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
     if (!d) return;
     const ops: Op[] = [];
     const next = new Set<string>();
+    const regroup = new Map<string, string>(); // copies of a group form a new group
     for (const id of selected) {
       const it = d.items[id];
       if (!it || it.k === "line" || it.k === "col") continue;
       const { by: _by, in: inCol, ...rest } = it;
+      if (rest.g) {
+        if (!regroup.has(rest.g)) regroup.set(rest.g, newGroupId());
+        rest.g = regroup.get(rest.g);
+      }
       const ref = newRef();
       next.add(ref);
       const r = getRect(id);
@@ -484,6 +535,17 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
     }
     if (ops.length) { commit(ops); setSelected(next); }
   }, [commit, getRect, selected]);
+
+  /** Groups the selected strokes (one shared `g`), or ungroups them when they already share one. */
+  const toggleGroup = useCallback(() => {
+    const d = docRef.current;
+    if (!d) return;
+    const ids = [...selected].filter((id) => d.items[id]?.k === "draw");
+    if (ids.length < 2 || ids.length !== selected.size) return;
+    const gs = new Set(ids.map((id) => d.items[id].g));
+    const g = gs.size === 1 && !gs.has(undefined) ? null : newGroupId();
+    commit(ids.map((id) => ({ op: "set", id, p: { g } }) as Op));
+  }, [commit, selected]);
 
   // ── Hermes prompt / session ─────────────────────────────────────────────
   const continueInSession = useCallback(async () => {
@@ -524,6 +586,155 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
     if (how === "handoff") flash(t("board.toast.promptCopied"));
   }, [flash, t]);
 
+  // ── ink: live stroke, eraser sweep (painted once per frame, never in pointermove) ──
+  const drawLive = useCallback(() => {
+    liveRaf.current = 0;
+    const er = eraser.current, d = docRef.current;
+    if (er && er.trail.length && d) {
+      const r = ERASER_R / view.current.z;
+      const hits = new Set(er.sweep ? erasingRef.current : []);
+      for (const p of er.trail) for (const id of eraseHits(d.items, p, r)) hits.add(id);
+      er.trail = er.trail.slice(-1);
+      const list = [...hits];
+      if (!sameSet(erasingRef.current, list)) { erasingRef.current = hits; setErasing(hits); }
+    }
+    const svg = liveSvgRef.current, path = livePathRef.current, head = liveHeadRef.current;
+    if (!svg || !path || !head) return;
+    const s = stroke.current;
+    if (!s) { path.setAttribute("d", ""); head.setAttribute("d", ""); return; }
+    const k = inkRef.current;
+    const sw = inkWidth(k, s.tool);
+    const r1 = (v: number) => Math.round(v * 10) / 10;
+    const fill = s.tool === "pen" && k.sm > 0 && !k.ds;
+    svg.setAttribute("class", `hb-draw hb-live${s.tool === "lasso" ? " lasso" : ""}${s.tool === "hl" ? " hl" : ""}${k.c !== "ink" && s.tool !== "lasso" ? ` c-${k.c}` : ""}`);
+    path.setAttribute("class", fill ? "fill" : "");
+    path.setAttribute("stroke-width", String(s.tool === "lasso" ? 1.2 / view.current.z : sw));
+    const dash = s.tool === "lasso" ? `${4 / view.current.z} ${3 / view.current.z}` : k.ds && !fill ? `${Math.max(4, sw * 3)} ${Math.max(4, sw * 2.4)}` : "";
+    if (dash) path.setAttribute("stroke-dasharray", dash); else path.removeAttribute("stroke-dasharray");
+    head.setAttribute("stroke-width", String(sw));
+    if (s.tool === "lasso") {
+      path.setAttribute("d", s.loop.length > 1 ? `M${s.loop.map(([x, y]) => `${r1(x)} ${r1(y)}`).join(" L")} Z` : "");
+      head.setAttribute("d", "");
+      return;
+    }
+    if (isShape(s.tool)) {
+      const [p0, p1] = shapePoints(s.tool, s.a, s.b, { shift: s.shift, alt: s.alt });
+      path.setAttribute("d", shapePath(s.tool, p0, p1));
+      head.setAttribute("d", s.tool === "arrow" ? arrowHead(p0, p1, sw) : "");
+      return;
+    }
+    // stabilised points, then the raw pointer (and its prediction) so the ink never trails it
+    const pts = s.pts.slice();
+    const prs = s.pr.slice();
+    for (const q of [s.raw, s.pred]) if (q) { pts.push(q); prs.push(prs[prs.length - 1] ?? 0.5); }
+    head.setAttribute("d", "");
+    if (fill) {
+      const pen = s.pointerType === "pen" && Math.max(...prs) - Math.min(...prs) > 0.05;
+      path.setAttribute("d", outlinePath(freehandOutline(pts, sw * 1.35, pen ? prs : undefined)));
+    } else {
+      path.setAttribute("d", strokePath(pts.map(([x, y]) => [r1(x), r1(y)] as Point)));
+    }
+  }, []);
+  const scheduleLive = useCallback(() => {
+    if (!liveRaf.current) liveRaf.current = requestAnimationFrame(drawLive);
+  }, [drawLive]);
+  useEffect(() => () => cancelAnimationFrame(liveRaf.current), []);
+  useEffect(() => {
+    if (tool !== "draw") { stroke.current = null; eraser.current = null; setErasing((cur) => (cur.size ? new Set() : cur)); }
+    else if (ink.tool !== "eraser") { eraser.current = null; setErasing((cur) => (cur.size ? new Set() : cur)); }
+  }, [tool, ink.tool]);
+
+  /** Viewport-relative world mapper, measured once per event batch. */
+  const worldMapper = () => {
+    const rect = vpRef.current!.getBoundingClientRect();
+    const v = view.current;
+    return (cx: number, cy: number): Point => [(cx - rect.left - v.x) / v.z, (cy - rect.top - v.y) / v.z];
+  };
+
+  const onInkMove = (e: React.PointerEvent) => {
+    const vp = vpRef.current;
+    if (!vp) return;
+    const W = worldMapper();
+    const k = inkRef.current;
+    const ring = ringRef.current;
+    if (ring) {
+      const rect = vp.getBoundingClientRect();
+      ring.style.transform = `translate(${e.clientX - rect.left}px, ${e.clientY - rect.top}px)`;
+    }
+    const native = e.nativeEvent as PointerEvent;
+    const batch = native.getCoalescedEvents?.() ?? [];
+    const events = batch.length ? batch : [native];
+    if (k.tool === "eraser") {
+      const er = eraser.current ?? (eraser.current = { trail: [], sweep: false });
+      er.sweep = drag.current?.kind === "erase";
+      if (!er.sweep) er.trail = [];
+      for (const ev of events) er.trail.push(W(ev.clientX, ev.clientY));
+      scheduleLive();
+      return;
+    }
+    const s = stroke.current;
+    if (!s || !drag.current) return;
+    if (s.tool === "lasso") {
+      for (const ev of events) s.loop.push(W(ev.clientX, ev.clientY));
+    } else if (isShape(s.tool)) {
+      s.b = W(e.clientX, e.clientY);
+      s.shift = e.shiftKey;
+      s.alt = e.altKey;
+    } else {
+      for (const ev of events) {
+        const [fx, fy] = s.euro ? s.euro.filter(ev.clientX, ev.clientY, ev.timeStamp) : [ev.clientX, ev.clientY];
+        s.pts.push(W(fx, fy));
+        s.pr.push(ev.pressure || 0.5);
+      }
+      s.raw = W(e.clientX, e.clientY);
+      const pred = native.getPredictedEvents?.() ?? [];
+      s.pred = pred.length ? W(pred[pred.length - 1].clientX, pred[pred.length - 1].clientY) : null;
+    }
+    scheduleLive();
+  };
+
+  /** Ends the stroke in progress: shapes and freehand become one draw item each. */
+  const finishInk = (d: BoardDoc) => {
+    const s = stroke.current;
+    stroke.current = null;
+    scheduleLive();
+    if (!s) return;
+    const k = inkRef.current;
+    const z = view.current.z;
+    if (s.tool === "lasso") {
+      setSelected(expandGroups(d.items, lassoHits(d.items, s.loop)));
+      return;
+    }
+    const sw = inkWidth(k, s.tool);
+    const style: Partial<Item> = {};
+    if (k.c !== "ink") style.c = k.c;
+    if (k.ds) style.ds = true;
+    if (isShape(s.tool)) {
+      const [p0, p1] = shapePoints(s.tool, s.a, s.b, { shift: s.shift, alt: s.alt });
+      if (Math.hypot(p1[0] - p0[0], p1[1] - p0[1]) < 3 / z) return;
+      const st = toStroke([p0, p1]);
+      commit([{ op: "add", ref: newRef(), item: { k: "draw", x: st.x, y: st.y, d: st.d, sw, tl: s.tool, ...style } }]);
+      return;
+    }
+    // end exactly where the pointer was released, not where the filter had got to
+    const raw = s.raw ? [...s.pts, s.raw] : s.pts;
+    const prs = s.raw ? [...s.pr, s.pr[s.pr.length - 1] ?? 0.5] : s.pr;
+    let pts = finishStroke(raw, z, s.pointerType, k.sm);
+    if (!pts.length) return;
+    if (pts.length === 1) pts = [pts[0], pts[0]];
+    const st = toStroke(pts);
+    const item: Item = { k: "draw", x: st.x, y: st.y, d: st.d, sw, ...style };
+    if (s.tool === "hl") item.tl = "hl";
+    else if (k.sm > 0 && !k.ds) {
+      item.sm = true;
+      if (s.pointerType === "pen") {
+        const pr = pressureDigits(raw, prs, pts);
+        if (pr) item.pr = pr;
+      }
+    }
+    commit([{ op: "add", ref: newRef(), item }]);
+  };
+
   // ── pointer interaction ─────────────────────────────────────────────────
   const onPointerDown = (e: React.PointerEvent) => {
     const d = docRef.current;
@@ -553,8 +764,29 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
       return;
     }
     if (tool === "draw") {
-      drag.current = { ...base, kind: "draw", pts: [[w.x, w.y]] };
-      setLive([[w.x, w.y]]);
+      const k = inkRef.current;
+      const p: Point = [w.x, w.y];
+      if (k.tool === "eraser") {
+        drag.current = { ...base, kind: "erase" };
+        eraser.current = { trail: [p], sweep: true };
+        erasingRef.current = new Set();
+        scheduleLive();
+        return;
+      }
+      if (k.tool === "lasso" && selBounds && selected.size && intersects(selBounds, { x: w.x, y: w.y, w: 0.01, h: 0.01 })) {
+        drag.current = { ...base, kind: "move", ids: [...selected].filter((x) => d.items[x] && !d.items[x].in && d.items[x].k !== "line") };
+        return;
+      }
+      const prm = k.tool === "pen" || k.tool === "hl" ? euroFor(e.pointerType || "mouse", k.sm) : null;
+      const euro = prm ? new OneEuro2D(prm) : null;
+      if (euro) euro.filter(e.clientX, e.clientY, e.timeStamp);
+      stroke.current = {
+        tool: k.tool, pointerType: e.pointerType || "mouse", euro, pts: [p], pr: [e.pressure || 0.5], raw: null, pred: null,
+        a: p, b: p, shift: e.shiftKey, alt: e.altKey, loop: [p],
+      };
+      if (k.tool === "lasso") setSelected(new Set());
+      drag.current = { ...base, kind: k.tool === "lasso" ? "lasso" : "ink" };
+      scheduleLive();
       return;
     }
     if (tool === "arrow") {
@@ -581,8 +813,9 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
     if (itemEl && tool === "select") {
       const id = itemEl.dataset.iid!;
       let sel = selected;
-      if (e.shiftKey) { sel = new Set(selected); if (sel.has(id)) sel.delete(id); else sel.add(id); }
-      else if (!selected.has(id)) sel = new Set([id]);
+      const group = expandGroups(d.items, [id]);
+      if (e.shiftKey) { sel = new Set(selected); if (sel.has(id)) group.forEach((x) => sel.delete(x)); else group.forEach((x) => sel.add(x)); }
+      else if (!selected.has(id)) sel = group;
       setSelected(sel);
       drag.current = { ...base, kind: "move", ids: [...sel].filter((x) => d.items[x] && !d.items[x].in && d.items[x].k !== "line") };
       return;
@@ -622,8 +855,9 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
   };
 
   const onPointerMove = (e: React.PointerEvent) => {
+    if (tool === "draw") onInkMove(e);
     const g = drag.current;
-    if (!g) return;
+    if (!g || g.kind === "ink" || g.kind === "erase" || g.kind === "lasso") return;
     const dx = e.clientX - g.sx, dy = e.clientY - g.sy;
     if (!g.moved && Math.hypot(dx, dy) > 3) g.moved = true;
     if (!g.moved) return;
@@ -645,10 +879,6 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
         setMarquee({ x: Math.min(s.x, w.x), y: Math.min(s.y, w.y), w: Math.abs(w.x - s.x), h: Math.abs(w.y - s.y) });
         break;
       }
-      case "draw":
-        g.pts!.push([w.x, w.y]);
-        setLive(g.pts!.slice());
-        break;
       case "arrow": {
         const r = getRect(g.from!);
         if (r) setDraft({ from: r, to: [w.x, w.y] });
@@ -706,15 +936,17 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
         const r = getRect(id);
         if (r && intersects(r, m)) sel.add(id);
       }
-      setSelected(sel);
+      setSelected(expandGroups(d.items, sel));
       return;
     }
-    if (g.kind === "draw") {
-      setLive(null);
-      const pts = simplify(g.pts ?? [], 1.5);
-      if (pts.length < 2) return;
-      const s = toStroke(pts);
-      commit([{ op: "add", ref: newRef(), item: { k: "draw", x: s.x, y: s.y, d: s.d, sw: 1.9 } }]);
+    if (g.kind === "ink" || g.kind === "lasso") { finishInk(d); return; }
+    if (g.kind === "erase") {
+      drawLive(); // fold in the last stretch of the sweep before reading it
+      if (eraser.current) { eraser.current.sweep = false; eraser.current.trail = []; }
+      const ids = [...erasingRef.current].filter((id) => d.items[id]);
+      erasingRef.current = new Set();
+      setErasing(new Set());
+      if (ids.length) commit(ids.map((id) => ({ op: "del", id }) as Op));
       return;
     }
     if (g.kind === "arrow") {
@@ -804,12 +1036,21 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (!rootRef.current?.isConnected || ask || confirmReq) return;
+      const live = stroke.current;
+      if (live && isShape(live.tool) && (e.key === "Shift" || e.key === "Alt")) {
+        live.shift = e.shiftKey;
+        live.alt = e.altKey;
+        if (e.key === "Alt") e.preventDefault();
+        scheduleLive();
+        return;
+      }
       if (e.key === " " && !isTyping(e.target)) { space.current = e.type === "keydown"; if (e.type === "keydown") e.preventDefault(); return; }
       if (e.type !== "keydown" || isTyping(e.target)) return;
       const mod = e.metaKey || e.ctrlKey;
       if (mod && e.key.toLowerCase() === "z") { e.preventDefault(); if (e.shiftKey) sync.redo(); else sync.undo(); return; }
       if (mod && e.key.toLowerCase() === "y") { e.preventDefault(); sync.redo(); return; }
       if (mod && e.key.toLowerCase() === "d") { e.preventDefault(); duplicate(); return; }
+      if (mod && e.key.toLowerCase() === "g") { e.preventDefault(); toggleGroup(); return; }
       if (mod && e.key.toLowerCase() === "a") {
         e.preventDefault();
         const d = docRef.current;
@@ -821,6 +1062,7 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
       if (e.key === "Delete" || e.key === "Backspace") { e.preventDefault(); deleteSelection(); return; }
       if (e.key === "Escape") {
         if (connectFrom) { setConnectFrom(null); return; }
+        if (stroke.current) { stroke.current = null; drag.current = null; scheduleLive(); return; }
         setSelected(new Set()); setTool("select"); setEditing(null); return;
       }
       if (e.key === "Enter" && selected.size === 1) {
@@ -842,6 +1084,15 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
           .map((id) => ({ op: "set", id, p: { x: (d.items[id].x ?? 0) + dx, y: (d.items[id].y ?? 0) + dy } }) as Op));
         return;
       }
+      // Draw tool keys. E is the eraser while drawing (the HTML-embed shortcut otherwise).
+      if (e.key.toLowerCase() === "d" && e.shiftKey) { setTool("draw"); setInk({ ...inkRef.current, tool: "hl" }); return; }
+      if (tool === "draw") {
+        const k = inkRef.current;
+        if (e.key === "[" || e.key === "]") { setInk(stepWidth(k, e.key === "]" ? 1 : -1)); return; }
+        if (/^[1-6]$/.test(e.key)) { setInk({ ...k, c: INK_COLORS[Number(e.key) - 1] }); return; }
+        if (e.key.toLowerCase() === "e") { setInk({ ...k, tool: "eraser" }); return; }
+        if (e.key.toLowerCase() === "d") { setInk({ ...k, tool: "pen" }); return; }
+      }
       const tl = KEY_TOOL[e.key.toLowerCase()];
       if (tl) {
         if (tl === "image") { fileRef.current?.click(); return; }
@@ -852,7 +1103,7 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
     window.addEventListener("keydown", onKey);
     window.addEventListener("keyup", onKey);
     return () => { window.removeEventListener("keydown", onKey); window.removeEventListener("keyup", onKey); };
-  }, [ask, center, commit, confirmReq, connectFrom, continueInSession, deleteSelection, duplicate, fit, openChat, selected, sync, zoomAt]);
+  }, [ask, center, commit, confirmReq, connectFrom, continueInSession, deleteSelection, duplicate, fit, openChat, scheduleLive, selected, setInk, sync, tool, toggleGroup, zoomAt]);
 
   useEffect(() => {
     const onPaste = (e: ClipboardEvent) => {
@@ -898,7 +1149,7 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
   }, []);
 
   const ctx: ItemCtx | null = useMemo(() => (doc ? {
-    doc, t, editing, setEditing, update, commit, playing, setPlaying, Frame, liveActions, liveActionsDown, runLiveAction,
+    doc, t, editing, setEditing, update, commit, playing, setPlaying, Frame, liveActions, liveActionsDown, runLiveAction, erasing,
     openBoard: (id) => onOpenBoard(id),
     addToColumn: (col) => {
       const ref = newRef();
@@ -917,7 +1168,7 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
         </div>
       );
     },
-  } : null), [Frame, commit, doc, editing, hidden, kidDrag, liveActions, liveActionsDown, onOpenBoard, playing, regEl, runLiveAction, selected, t, update]);
+  } : null), [Frame, commit, doc, editing, erasing, hidden, kidDrag, liveActions, liveActionsDown, onOpenBoard, playing, regEl, runLiveAction, selected, t, update]);
   const ctxRef = useRef(ctx);
   ctxRef.current = ctx;
 
@@ -939,6 +1190,7 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
   })();
   const hermesVerbs = (() => {
     if (!selKinds.length) return [] as MessageKey[];
+    if (selKinds.length > 1 && selKinds.every((k) => k === "draw")) return ["board.verb.diagram"] as MessageKey[];
     if (selKinds.length > 1) return ["board.verb.group", "board.verb.summarize"] as MessageKey[];
     switch (selKinds[0]) {
       case "draw": return ["board.verb.diagram"] as MessageKey[];
@@ -964,9 +1216,13 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
     else window.open(openTarget.url, "_blank", "noopener,noreferrer");
   };
   const startConnect = () => { if (selIds.length === 1) { setConnectFrom(selIds[0]); setTool("select"); } };
+  const canGroup = !!doc && selIds.length > 1 && selIds.every((id) => doc.items[id].k === "draw");
+  const groupOf = new Set(selIds.map((id) => doc?.items[id]?.g));
+  const isGrouped = canGroup && groupOf.size === 1 && !groupOf.has(undefined);
 
   useLayoutEffect(() => {
-    selRef.current = selBounds && selKinds.length && tool === "select" && !connectFrom && !menu ? selBounds : null;
+    const selecting = tool === "select" || (tool === "draw" && ink.tool === "lasso");
+    selRef.current = selBounds && selKinds.length && selecting && !connectFrom && !menu ? selBounds : null;
     placeCtx();
   });
   useEffect(() => (rootRef.current ? installTips(rootRef.current) : undefined), [!!doc]);
@@ -1002,6 +1258,7 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
       if (openTarget) out.push({ id: "open", label: t("board.ctx.open"), icon: "board" in openTarget ? "openBoard" : "open", run: runOpen });
       if (canConnect) out.push({ id: "connect", label: t("board.ctx.connect"), icon: "connect", run: startConnect });
       if (canDuplicate) out.push({ id: "dup", label: t("board.ctx.duplicate"), icon: "duplicate", kbd: `${mod}D`, run: duplicate });
+      if (canGroup) out.push({ id: "grp", label: t(isGrouped ? "board.ctx.ungroup" : "board.ctx.group"), icon: isGrouped ? "ungroup" : "group", kbd: `${mod}G`, run: toggleGroup });
       out.push({ sep: true });
       out.push({ id: "del", label: t("board.ctx.delete"), icon: "delete", kbd: "Del", danger: true, run: deleteSelection });
       return out;
@@ -1042,11 +1299,13 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
   }
 
   const items = Object.entries(doc.items).filter(([, it]) => !it.in && it.k !== "line");
-  items.sort(([, a], [, b]) => (a.k === "frame" ? -1 : 0) - (b.k === "frame" ? -1 : 0));
+  // frames at the back, highlighter strokes above them but under the ink, then everything else
+  const layer = (it: Item) => (it.k === "frame" ? 0 : it.k === "draw" && it.tl === "hl" ? 1 : 2);
+  items.sort(([, a], [, b]) => layer(a) - layer(b));
   const sessionShort = doc.session?.id ? doc.session.id.slice(-4) : null;
   const savedTs = sync.savedAt ? sync.savedAt / 1000 : doc.updated;
-  const vpCls = `hb-viewport${tool === "pan" ? " tool-pan" : ""}${tool === "draw" ? " tool-draw" : ""}${tool === "arrow" || connectFrom ? " tool-arrow" : ""}${PLACE.includes(tool) ? " tool-place" : ""}`;
-  const hint = connectFrom ? t("board.hint.connect") : TOOL_HINT[tool] ? t(TOOL_HINT[tool]!) : "";
+  const vpCls = `hb-viewport${tool === "pan" ? " tool-pan" : ""}${tool === "draw" ? ` tool-draw ink-${ink.tool}` : ""}${tool === "arrow" || connectFrom ? " tool-arrow" : ""}${PLACE.includes(tool) ? " tool-place" : ""}`;
+  const hint = connectFrom ? t("board.hint.connect") : tool === "draw" ? t(INK_HINT[ink.tool]) : TOOL_HINT[tool] ? t(TOOL_HINT[tool]!) : "";
   const zoomBy = (f: number) => { const vp = vpRef.current!; zoomAt(f, vp.clientWidth / 2, vp.clientHeight / 2); };
 
   return (
@@ -1055,6 +1314,7 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
         onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerCancel={onPointerUp}
         onContextMenu={onContextMenu}
         onDoubleClick={(e) => {
+          if (tool === "draw") return;
           const target = e.target as HTMLElement;
           const iid = (target.closest("[data-iid]") as HTMLElement | null)?.dataset.iid;
           if (iid) { const it = doc.items[iid]; if (it && EDITABLE.has(it.k)) setEditing(iid); return; }
@@ -1080,7 +1340,7 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
             const dropIndex = kidDrag?.col === id ? kidDrag.index : null;
             return (
               <div key={id} className={cls} data-iid={id} ref={regEl(id)}
-                style={{ left: x, top: y, width, height, zIndex: it.k === "frame" ? 0 : sel ? 3 : 1 }}>
+                style={{ left: x, top: y, width, height, zIndex: layer(it) < 2 ? 0 : sel ? 3 : 1 }}>
                 <ItemBody id={id} item={it} c={ctx} dropIndex={dropIndex} selected={sel} />
                 {sel && it.k !== "draw" && selected.size === 1 && (
                   <><i className="hb-crop tl" /><i className="hb-crop tr" /><i className="hb-crop bl" /><i className="hb-crop br" /></>
@@ -1093,14 +1353,16 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
               <ItemBody id={kidDrag.id} item={doc.items[kidDrag.id]} c={ctx} dropIndex={null} selected />
             </div>
           )}
-          {live && live.length > 1 && (
-            <svg className="hb-draw" style={{ position: "absolute", left: 0, top: 0, overflow: "visible" }} width="1" height="1">
-              <path d={strokePath(live.map(([x, y]) => [Math.round(x), Math.round(y)] as Point))} strokeWidth={1.9} />
+          {tool === "draw" && (
+            <svg ref={liveSvgRef} className="hb-draw hb-live" style={{ position: "absolute", left: 0, top: 0, overflow: "visible" }} width="1" height="1">
+              <path ref={livePathRef} d="" />
+              <path ref={liveHeadRef} d="" />
             </svg>
           )}
           {marquee && <div className="hb-marquee" style={{ left: marquee.x, top: marquee.y, width: marquee.w, height: marquee.h }} />}
           <HermesCursor ref={cursorRef} reducedMotion={reduced()} onActive={(on, act) => setCursorAct(on ? act : null)} />
         </div>
+        {tool === "draw" && ink.tool === "eraser" && <div className="hb-eraser" ref={ringRef} style={{ width: ERASER_R * 2, height: ERASER_R * 2 }} />}
         {items.length === 0 && (
           <div className="hb-empty">
             <span className="ico"><Icon name="note" size={18} /></span>
@@ -1130,6 +1392,7 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
           {openTarget && <button className="ib" data-tip={t("board.ctx.open")} aria-label={t("board.ctx.open")} onClick={runOpen}><Icon name={"board" in openTarget ? "openBoard" : "open"} /></button>}
           {canConnect && <button className="ib" data-tip={t("board.ctx.connect")} aria-label={t("board.ctx.connect")} onClick={startConnect}><Icon name="connect" /></button>}
           {canDuplicate && <button className="ib" data-tip={t("board.ctx.duplicate")} data-kbd={`${mod}D`} aria-label={t("board.ctx.duplicate")} onClick={duplicate}><Icon name="duplicate" /></button>}
+          {canGroup && <button className="ib" data-tip={t(isGrouped ? "board.ctx.ungroup" : "board.ctx.group")} data-kbd={`${mod}G`} aria-label={t(isGrouped ? "board.ctx.ungroup" : "board.ctx.group")} onClick={toggleGroup}><Icon name={isGrouped ? "ungroup" : "group"} /></button>}
           <button className="ib danger" data-tip={t("board.ctx.delete")} data-kbd="Del" aria-label={t("board.ctx.delete")} onClick={deleteSelection}><Icon name="delete" /></button>
         </div>
       )}
@@ -1168,6 +1431,8 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
           <Icon name="open" />{t("board.continue")}
         </button>
       </header>
+
+      {tool === "draw" && <InkBar ink={ink} onChange={setInk} t={t} />}
 
       <footer className="hb-status">
         {TOOLS.map((group, gi) => (

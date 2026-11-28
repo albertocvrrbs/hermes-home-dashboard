@@ -20,6 +20,68 @@ clone, they never build).
 
 ---
 
+## 1.9.2
+
+A real dot-matrix Hermes emblem, and a Draw tool with proper ink.
+
+- **Hermes widget: true proportions.** The emblem used to be braille text, and
+  a monospace cell is not 1:2, so the caduceus came out stretched. It is now
+  painted on a canvas as real dots on a square grid: the pitch is a whole
+  number of device pixels (crisp on HiDPI, no beating), the grid is re-laid on
+  every resize (ResizeObserver, coalesced to one frame) and the canvas sits
+  over its slot, so nothing shifts. Same look as before: the theme accent, the
+  dim-bright-dim vertical gradient and the soft glow. If a browser can't give a
+  2D canvas, the braille caduceus comes back as text.
+- **Hermes widget: a mythology set.** The official banner caduceus (decoded dot
+  for dot from `hermes_cli/banner.py`) stays first and the default. After it:
+  kerykeion (a drawn caduceus with a true double helix: the snakes pass over
+  and under each other and the staff), talaria (winged sandal), petasos
+  (winged hat), lyre (the tortoise-shell chelys), tortoise, drachma (Hermes in
+  profile wearing the petasos, beaded rim) and a wing. Each is drawn as clean
+  vectors and Floyd–Steinberg dithered at the widget's own resolution, so a
+  bigger widget gets more dots, not fatter ones. Pyramid and diamond are gone;
+  layouts that pointed at them open on the petasos and the drachma. The choice
+  is now stored by name (`art`), and the old `artIndex` is still read.
+- **Hermes widget: quiet motion.** Dots resolve in when the design changes, and
+  every 15 s a faint glint crosses the dots. Animation frames only run during
+  those moments, only while the widget is visible, and never under
+  `prefers-reduced-motion`; idle, nothing ticks.
+- **Draw tool options.** With Draw (`D`) active, a sub-toolbar in the status
+  bar's style (lucide icons, name + shortcut tips, separators, wraps instead of
+  overflowing) offers:
+  - **Pen**, **highlighter** (`⇧D`: wide, translucent, layered under the ink),
+    **eraser** (`E` while drawing: whole strokes, and the strokes under it fade
+    on hover before you erase) and **lasso** (loop around strokes, then drag
+    the selection, delete it, or group it).
+  - **Line, arrow, rectangle, ellipse.** Shift snaps lines to 45° and makes
+    squares and circles; Alt draws from the centre.
+  - **Three widths** (`[` `]`), a **restrained palette** (`1`–`6`: the theme's
+    ink and accent plus sage, clay, slate and sand, mid-tones that read on dark
+    and light themes), **dashed**, and **smoothing** (off / on / strong).
+  - Settings are remembered between visits.
+- **Smooth mouse ink without lag.** Strokes read every coalesced pointer event
+  and run through a One Euro filter: strong smoothing when the hand is slow
+  (jitter goes), almost none when it is fast (no drag). The live stroke is the
+  filtered path plus a tail to the real pointer (and the browser's predicted
+  point), painted once per frame, so the ink stays under the cursor. On
+  release the stroke is cleaned with a zoom-aware Ramer–Douglas–Peucker pass
+  and a centripetal Catmull–Rom spline, and stored compact (integers, at most
+  400 points). Mice get the strongest smoothing, touch less, pens almost none;
+  pen pressure is kept and drives the tapered outline.
+- **Groups.** `⌘G` / `Ctrl+G` (or the selection bar) groups selected strokes;
+  clicking one picks the whole group, duplicating a group makes a new one.
+  Selections made only of strokes offer "Turn into a diagram" to Hermes.
+- **Data model.** Draw items gain optional fields only: `tl` (`hl`, `line`,
+  `arrow`, `rect`, `ellipse`), `c` (palette name), `ds` (dashed), `sm`
+  (tapered), `pr` (pressure digits) and `g` (group). boardkit validates every
+  one, old strokes are untouched, and Hermes reads them in the board outline,
+  in `board_render` snapshots (shapes, colours and highlights drawn properly)
+  and in the `board_apply` help, so he can draw shapes too. Every action is a
+  single undoable batch.
+- **Upgrade note.** The new fields need the updated `boardkit` running in the
+  server that serves the board: until the gateway (Webapp/Desktop) or the
+  dashboard restarts, a shape is saved as a plain stroke.
+
 ## 1.9.1
 
 A model picker in the board's chat.

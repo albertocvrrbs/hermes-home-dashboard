@@ -43,7 +43,7 @@ FIELDS: Dict[str, Tuple[str, ...]] = {
     "frame": ("x", "y", "w", "h", "title", "note"),
     "box": ("x", "y", "w", "h", "title", "sub", "num"),
     "text": ("x", "y", "w", "h", "text", "size"),
-    "draw": ("x", "y", "w", "h", "d", "sw"),
+    "draw": ("x", "y", "w", "h", "d", "sw", "tl", "c", "ds", "sm", "pr", "g"),
     "line": ("a", "b", "label"),
     "live": ("x", "y", "w", "h", "title", "blocks", "data", "ttl", "at", "tpl"),
 }
@@ -51,6 +51,12 @@ KINDS = frozenset(FIELDS)
 
 _STROKE = re.compile(r"-?\d{1,7},-?\d{1,7}(?: -?\d{1,7},-?\d{1,7})*")
 _VIDEO_ID = re.compile(r"[A-Za-z0-9_-]{1,64}")
+_PRESSURE = re.compile(r"[0-9]{1,%d}" % MAX_POINTS)
+_GROUP = re.compile(r"[a-z0-9]{1,12}")
+
+# Draw items: tool (absent = pen), palette colour by name (absent = the theme's ink).
+INK_TOOLS = ("hl", "line", "arrow", "rect", "ellipse")
+INK_COLORS = ("accent", "sage", "clay", "slate", "sand")
 
 
 class OpError(ValueError):
@@ -183,6 +189,27 @@ def _video(value: Any) -> Dict[str, Any]:
     return out
 
 
+def _flag(value: Any) -> bool:
+    """Boolean style flags are stored only when on; send null to clear one."""
+    if value is not True:
+        raise OpError("expected true (use null to clear)")
+    return True
+
+
+def _pressure(value: Any) -> str:
+    s = _str(value, MAX_POINTS + 1)
+    if not _PRESSURE.fullmatch(s):
+        raise OpError("pressure must be one digit 0-9 per point")
+    return s
+
+
+def _group(value: Any) -> str:
+    s = _str(value, 13)
+    if not _GROUP.fullmatch(s):
+        raise OpError("group id must be 1-12 lowercase letters or digits")
+    return s
+
+
 def _sw(value: Any) -> float:
     return round(max(0.5, min(24.0, _num(value))), 1)
 
@@ -211,6 +238,7 @@ SANITIZE: Dict[str, Callable[[Any], Any]] = {
     "st": _enum("wait", "ok", "fail"), "size": _enum("h", "p", "s"),
     "asset": _asset, "icon": _asset, "img": _asset, "ref": _bid,
     "tags": _tags, "items": _todo_items, "d": _stroke, "video": _video, "sw": _sw,
+    "tl": _enum(*INK_TOOLS), "c": _enum(*INK_COLORS), "ds": _flag, "sm": _flag, "pr": _pressure, "g": _group,
     "dur": _dur, "blocks": _live(live_mod.clean_blocks), "data": _live(live_mod.clean_data),
     "ttl": _int(5, 7 * 86400), "at": _int(0, 2**42), "tpl": _enum(*live_mod.TEMPLATES),
 }

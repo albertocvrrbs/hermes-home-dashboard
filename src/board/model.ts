@@ -25,6 +25,10 @@ export interface Item {
   asset?: string; cap?: string; iw?: number; ih?: number; src?: string;
   ref?: string; note?: string; sub?: string; num?: string; size?: "h" | "p" | "s";
   d?: string; sw?: number; a?: End; b?: End; label?: string;
+  /** draw: tool (absent = pen), palette colour (absent = ink), dashed, smooth (tapered outline),
+   *  per-point pressure digits 0-9, group id */
+  tl?: "hl" | "line" | "arrow" | "rect" | "ellipse"; c?: "accent" | "sage" | "clay" | "slate" | "sand";
+  ds?: boolean; sm?: boolean; pr?: string; g?: string;
   /** video: duration (s); live: block spec, data bag, freshness TTL (s), last update (epoch s) */
   dur?: number; blocks?: LiveBlock[]; data?: Record<string, unknown>; ttl?: number; at?: number; tpl?: string;
 }

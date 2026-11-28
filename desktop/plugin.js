@@ -149,8 +149,13 @@ const en = {
   "widget.spend": "spend",
   // ── ascii ──
   "ascii.art.caduceus": "caduceus",
-  "ascii.art.pyramid": "pyramid",
-  "ascii.art.diamond": "diamond",
+  "ascii.art.winged-caduceus": "kerykeion",
+  "ascii.art.talaria": "talaria",
+  "ascii.art.petasos": "petasos",
+  "ascii.art.lyre": "lyre",
+  "ascii.art.tortoise": "tortoise",
+  "ascii.art.drachma": "drachma",
+  "ascii.art.wing": "wing",
   // ── clock ──
   "clock.seconds": "s",
   "clock.secondsTitle": "show / hide seconds",
@@ -433,6 +438,34 @@ const en = {
   "board.hint.arrow": "Drag from one card to another",
   "board.hint.draw": "Draw freely · Esc to stop",
   "board.hint.connect": "Click the card to connect to · Esc to cancel",
+  "board.ink.bar": "Draw options",
+  "board.ink.pen": "Pen",
+  "board.ink.hl": "Highlighter",
+  "board.ink.eraser": "Eraser",
+  "board.ink.lasso": "Lasso select",
+  "board.ink.line": "Line",
+  "board.ink.arrow": "Arrow",
+  "board.ink.rect": "Rectangle",
+  "board.ink.ellipse": "Ellipse",
+  "board.ink.thin": "Thin",
+  "board.ink.medium": "Medium",
+  "board.ink.thick": "Thick",
+  "board.ink.color.ink": "Ink",
+  "board.ink.color.accent": "Accent",
+  "board.ink.color.sage": "Sage",
+  "board.ink.color.clay": "Clay",
+  "board.ink.color.slate": "Slate",
+  "board.ink.color.sand": "Sand",
+  "board.ink.dashed": "Dashed",
+  "board.ink.smoothOff": "Smoothing off",
+  "board.ink.smoothOn": "Smoothing on",
+  "board.ink.smoothStrong": "Smoothing strong",
+  "board.hint.ink.pen": "Draw · [ ] width · 1-6 colour · Esc to stop",
+  "board.hint.ink.shape": "Drag · Shift straight or even · Alt from the centre",
+  "board.hint.ink.eraser": "Drag over strokes to erase them",
+  "board.hint.ink.lasso": "Loop around strokes · drag the selection to move it",
+  "board.ctx.group": "Group",
+  "board.ctx.ungroup": "Ungroup",
   "board.ctx.edit": "Edit",
   "board.ctx.open": "Open",
   "board.ctx.connect": "Connect to…",
@@ -562,8 +595,13 @@ const es = {
   "widget.spend": "gasto",
   // ── ascii ──
   "ascii.art.caduceus": "caduceo",
-  "ascii.art.pyramid": "pirámide",
-  "ascii.art.diamond": "diamante",
+  "ascii.art.winged-caduceus": "kerykeion",
+  "ascii.art.talaria": "talarias",
+  "ascii.art.petasos": "pétaso",
+  "ascii.art.lyre": "lira",
+  "ascii.art.tortoise": "tortuga",
+  "ascii.art.drachma": "dracma",
+  "ascii.art.wing": "ala",
   // ── clock ──
   "clock.seconds": "s",
   "clock.secondsTitle": "mostrar / ocultar segundos",
@@ -846,6 +884,34 @@ const es = {
   "board.hint.arrow": "Arrastra de una tarjeta a otra",
   "board.hint.draw": "Dibuja libre · Esc para terminar",
   "board.hint.connect": "Haz clic en la tarjeta a conectar · Esc para cancelar",
+  "board.ink.bar": "Opciones de dibujo",
+  "board.ink.pen": "Pluma",
+  "board.ink.hl": "Resaltador",
+  "board.ink.eraser": "Borrador",
+  "board.ink.lasso": "Selección con lazo",
+  "board.ink.line": "Línea",
+  "board.ink.arrow": "Flecha",
+  "board.ink.rect": "Rectángulo",
+  "board.ink.ellipse": "Elipse",
+  "board.ink.thin": "Delgado",
+  "board.ink.medium": "Medio",
+  "board.ink.thick": "Grueso",
+  "board.ink.color.ink": "Tinta",
+  "board.ink.color.accent": "Acento",
+  "board.ink.color.sage": "Salvia",
+  "board.ink.color.clay": "Barro",
+  "board.ink.color.slate": "Pizarra",
+  "board.ink.color.sand": "Arena",
+  "board.ink.dashed": "Punteado",
+  "board.ink.smoothOff": "Suavizado apagado",
+  "board.ink.smoothOn": "Suavizado activo",
+  "board.ink.smoothStrong": "Suavizado fuerte",
+  "board.hint.ink.pen": "Dibuja · [ ] grosor · 1-6 color · Esc para terminar",
+  "board.hint.ink.shape": "Arrastra · Shift recto o parejo · Alt desde el centro",
+  "board.hint.ink.eraser": "Pasa sobre los trazos para borrarlos",
+  "board.hint.ink.lasso": "Rodea los trazos · arrastra la selección para moverla",
+  "board.ctx.group": "Agrupar",
+  "board.ctx.ungroup": "Desagrupar",
   "board.ctx.edit": "Editar",
   "board.ctx.open": "Abrir",
   "board.ctx.connect": "Conectar con…",
@@ -1200,10 +1266,171 @@ function NotesWidget({ widgetProps, onWidgetPropsChange }) {
     /* @__PURE__ */ jsx("button", { className: "note-add", onClick: add, "aria-label": t2("notes.add"), children: "+" })
   ] });
 }
-function asciiArtClass(name) {
-  return name === "caduceus" ? "home-ascii home-ascii-caduceus" : "home-ascii";
+const EMBLEM_IDS = [
+  "caduceus",
+  "winged-caduceus",
+  "talaria",
+  "petasos",
+  "lyre",
+  "tortoise",
+  "drachma",
+  "wing"
+];
+const LEGACY_INDEX = ["caduceus", "petasos", "drachma"];
+function emblemFromProps(props) {
+  const art = props.art;
+  if (typeof art === "string" && EMBLEM_IDS.includes(art)) return art;
+  const idx2 = props.artIndex;
+  if (typeof idx2 === "number" && Number.isFinite(idx2)) {
+    const n = LEGACY_INDEX.length;
+    return LEGACY_INDEX[(Math.trunc(idx2) % n + n) % n];
+  }
+  return "caduceus";
 }
-const CADUCEUS = `⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣀⡀⠀⣀⣀⠀⢀⣀⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+function stepEmblem(props, dir) {
+  const n = EMBLEM_IDS.length;
+  const i = EMBLEM_IDS.indexOf(emblemFromProps(props));
+  const next = { ...props, art: EMBLEM_IDS[(i + dir + n) % n] };
+  delete next.artIndex;
+  return next;
+}
+function fitGrid(w, h, dpr, o = {}) {
+  const W = Math.max(0, Math.floor(w * dpr)), H = Math.max(0, Math.floor(h * dpr));
+  const fixed = !!(o.cols && o.rows);
+  let pitch;
+  if (fixed) {
+    pitch = Math.floor(Math.min(W / o.cols, H / o.rows));
+  } else {
+    const target = o.target ?? 72;
+    const lo = Math.max(2, Math.round((o.minCss ?? 2.8) * dpr));
+    const hi = Math.max(lo, Math.round((o.maxCss ?? 4.2) * dpr));
+    pitch = Math.min(hi, Math.max(lo, Math.round(Math.min(W, H) / target)));
+  }
+  pitch = Math.max(2, pitch);
+  const cols = fixed ? o.cols : Math.floor(W / pitch);
+  const rows = fixed ? o.rows : Math.floor(H / pitch);
+  return { pitch, cols, rows, ox: Math.floor((W - cols * pitch) / 2), oy: Math.floor((H - rows * pitch) / 2) };
+}
+function fitBox(bw, bh, cols, rows, margin = 1) {
+  const aw = Math.max(1, cols - 2 * margin), ah = Math.max(1, rows - 2 * margin);
+  const s = Math.min(aw / bw, ah / bh);
+  return { s, x: (cols - bw * s) / 2, y: (rows - bh * s) / 2 };
+}
+function floydSteinberg(lum, cols, rows, threshold = 0.5) {
+  const buf = Float32Array.from(lum);
+  const out = new Uint8Array(cols * rows);
+  for (let y = 0; y < rows; y++) {
+    const ltr = y % 2 === 0;
+    const dx = ltr ? 1 : -1;
+    for (let k = 0; k < cols; k++) {
+      const x = ltr ? k : cols - 1 - k;
+      const i = y * cols + x;
+      const v = buf[i];
+      const on = v >= threshold ? 1 : 0;
+      out[i] = on;
+      const err = v - on;
+      const fwd = x + dx >= 0 && x + dx < cols;
+      const back = x - dx >= 0 && x - dx < cols;
+      if (fwd) buf[i + dx] += err * 7 / 16;
+      if (y + 1 < rows) {
+        if (back) buf[i + cols - dx] += err * 3 / 16;
+        buf[i + cols] += err * 5 / 16;
+        if (fwd) buf[i + cols + dx] += err / 16;
+      }
+    }
+  }
+  return out;
+}
+function bayerMatrix(n = 2) {
+  let m = [[0]];
+  for (let k = 0; k < n; k++) {
+    const s = m.length;
+    const next = Array.from({ length: s * 2 }, () => new Array(s * 2).fill(0));
+    for (let y = 0; y < s; y++) {
+      for (let x = 0; x < s; x++) {
+        const v = 4 * m[y][x];
+        next[y][x] = v;
+        next[y][x + s] = v + 2;
+        next[y + s][x] = v + 3;
+        next[y + s][x + s] = v + 1;
+      }
+    }
+    m = next;
+  }
+  return m;
+}
+const BAYER4 = bayerMatrix(2);
+function bayerDither(lum, cols, rows) {
+  const out = new Uint8Array(cols * rows);
+  for (let y = 0; y < rows; y++) {
+    for (let x = 0; x < cols; x++) {
+      const t2 = (BAYER4[y & 3][x & 3] + 0.5) / 16;
+      out[y * cols + x] = lum[y * cols + x] > t2 ? 1 : 0;
+    }
+  }
+  return out;
+}
+const BRAILLE_DOTS = [[0, 0], [0, 1], [0, 2], [1, 0], [1, 1], [1, 2], [0, 3], [1, 3]];
+function brailleToBits(art) {
+  const lines = art.split("\n");
+  const width = Math.max(0, ...lines.map((l) => [...l].length));
+  const cols = width * 2, rows = lines.length * 4;
+  const bits = new Uint8Array(cols * rows);
+  lines.forEach((line2, ly) => {
+    [...line2].forEach((ch, lx) => {
+      const code = ch.codePointAt(0) - 10240;
+      if (code <= 0 || code > 255) return;
+      BRAILLE_DOTS.forEach(([dx, dy], k) => {
+        if (code & 1 << k) bits[(ly * 4 + dy) * cols + lx * 2 + dx] = 1;
+      });
+    });
+  });
+  return { cols, rows, bits };
+}
+function trimBits(b) {
+  let x0 = b.cols, y0 = b.rows, x1 = -1, y1 = -1;
+  for (let y = 0; y < b.rows; y++) {
+    for (let x = 0; x < b.cols; x++) {
+      if (!b.bits[y * b.cols + x]) continue;
+      if (x < x0) x0 = x;
+      if (x > x1) x1 = x;
+      if (y < y0) y0 = y;
+      if (y > y1) y1 = y;
+    }
+  }
+  if (x1 < 0) return { cols: 0, rows: 0, bits: new Uint8Array(0) };
+  const cols = x1 - x0 + 1, rows = y1 - y0 + 1;
+  const bits = new Uint8Array(cols * rows);
+  for (let y = 0; y < rows; y++) bits.set(b.bits.subarray((y + y0) * b.cols + x0, (y + y0) * b.cols + x0 + cols), y * cols);
+  return { cols, rows, bits };
+}
+function coverage(rgba, cols, rows, s) {
+  const out = new Float32Array(cols * rows);
+  const W = cols * s;
+  const n = s * s * 255 * 255;
+  for (let y = 0; y < rows; y++) {
+    for (let x = 0; x < cols; x++) {
+      let acc = 0;
+      for (let yy = 0; yy < s; yy++) {
+        let p = ((y * s + yy) * W + x * s) * 4;
+        for (let xx = 0; xx < s; xx++, p += 4) {
+          const luma = 0.2126 * rgba[p] + 0.7152 * rgba[p + 1] + 0.0722 * rgba[p + 2];
+          acc += luma * rgba[p + 3];
+        }
+      }
+      out[y * cols + x] = acc / n;
+    }
+  }
+  return out;
+}
+function dotRank(i) {
+  let h = i + 2654435769 | 0;
+  h = Math.imul(h ^ h >>> 16, 2246822507);
+  h = Math.imul(h ^ h >>> 13, 3266489909);
+  h ^= h >>> 16;
+  return (h >>> 0) / 4294967296;
+}
+const OFFICIAL_CADUCEUS = `⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣀⡀⠀⣀⣀⠀⢀⣀⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
 ⠀⠀⠀⠀⠀⠀⢀⣠⣴⣾⣿⣿⣇⠸⣿⣿⠇⣸⣿⣿⣷⣦⣄⡀⠀⠀⠀⠀⠀⠀
 ⠀⢀⣠⣴⣶⠿⠋⣩⡿⣿⡿⠻⣿⡇⢠⡄⢸⣿⠟⢿⣿⢿⣍⠙⠿⣶⣦⣄⡀⠀
 ⠀⠀⠉⠉⠁⠶⠟⠋⠀⠉⠀⢀⣈⣁⡈⢁⣈⣁⡀⠀⠉⠀⠙⠻⠶⠈⠉⠉⠀⠀
@@ -1218,36 +1445,639 @@ const CADUCEUS = `⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣀⡀⠀⣀⣀⠀⢀⣀⡀�
 ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣿⠁⢰⡆⠈⡿⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
 ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠳⠈⣡⠞⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
 ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀`;
-const PAD$1 = "⠀";
-const INK = "⣿";
-const W = 29;
-function row(lead, fill) {
-  return PAD$1.repeat(lead) + INK.repeat(fill) + PAD$1.repeat(Math.max(0, W - lead - fill));
+const ink = (v) => `rgb(${Math.round(v * 255)},${Math.round(v * 255)},${Math.round(v * 255)})`;
+const BLACK = "#000";
+const rad = (deg) => deg * Math.PI / 180;
+function feather(g, x, y, deg, len, wid, shade, gap = 2.2, curl = 0) {
+  const a = rad(deg), c = Math.cos(a), s = Math.sin(a);
+  const P = (u, v) => [x + c * u - s * v, y + s * u + c * v];
+  g.beginPath();
+  g.moveTo(...P(0, -wid * 0.42));
+  g.bezierCurveTo(...P(len * 0.3, -wid * 0.62), ...P(len * 0.75, -wid * 0.4 + curl), ...P(len, curl));
+  g.bezierCurveTo(...P(len * 0.78, wid * 0.42 + curl), ...P(len * 0.3, wid * 0.6), ...P(0, wid * 0.42));
+  g.arc(x, y, wid * 0.42, a + Math.PI / 2, a + Math.PI * 1.5);
+  g.closePath();
+  g.lineJoin = "round";
+  g.lineWidth = gap;
+  g.strokeStyle = BLACK;
+  g.stroke();
+  const grad = g.createLinearGradient(...P(0, 0), ...P(len, 0));
+  grad.addColorStop(0, ink(shade));
+  grad.addColorStop(1, ink(shade * 0.9));
+  g.fillStyle = grad;
+  g.fill();
 }
-const pyramid = Array.from({ length: 15 }, (_, r) => row(14 - r, 2 * r + 1)).join("\n");
-const diamond = Array.from({ length: 15 }, (_, r) => {
-  const k = Math.min(r, 14 - r);
-  return row(14 - k, 2 * k + 1);
-}).join("\n");
-const ARTS = [
-  { name: "caduceus", label: "ascii.art.caduceus", art: CADUCEUS },
-  { name: "pyramid", label: "ascii.art.pyramid", art: pyramid },
-  { name: "diamond", label: "ascii.art.diamond", art: diamond }
-];
+function ellipse(g, x, y, rx, ry, fill, rot = 0) {
+  g.beginPath();
+  g.ellipse(x, y, rx, ry, rot, 0, Math.PI * 2);
+  g.fillStyle = fill;
+  g.fill();
+}
+function radial(g, x, y, r, inner, outer) {
+  const grad = g.createRadialGradient(x, y, 0, x, y, r);
+  grad.addColorStop(0, ink(inner));
+  grad.addColorStop(1, ink(outer));
+  return grad;
+}
+function line(g, pts, w, color) {
+  g.beginPath();
+  g.moveTo(...pts[0]);
+  for (const p of pts.slice(1)) g.lineTo(...p);
+  g.lineWidth = w;
+  g.lineCap = "round";
+  g.lineJoin = "round";
+  g.strokeStyle = color;
+  g.stroke();
+}
+function drawCaduceus(g) {
+  const cx2 = 60;
+  placeWing(g, cx2 - 4, 34, 0.44, -1, -4);
+  placeWing(g, cx2 + 4, 34, 0.44, 1, -4);
+  const y0 = 44, y1 = 124, turns = 2;
+  const runs = [];
+  const N = 160;
+  for (const phase of [0, Math.PI]) {
+    let run = null;
+    for (let i = 0; i <= N; i++) {
+      const t2 = i / N;
+      const th = phase + Math.PI / 2 + t2 * turns * Math.PI * 2;
+      const A = 18 - 9 * t2;
+      const pt = { p: [cx2 + A * Math.sin(th), y0 + (y1 - y0) * t2], z: Math.cos(th), w: 8 - 4.4 * t2 };
+      const front = pt.z >= 0;
+      if (!run || run.front !== front) {
+        const prev = run ? run.pts[run.pts.length - 1] : void 0;
+        run = { front, pts: prev ? [prev] : [] };
+        runs.push(run);
+      }
+      run.pts.push(pt);
+    }
+  }
+  const paintRun = (pts, front) => {
+    for (let i = 1; i < pts.length; i++) line(g, [pts[i - 1].p, pts[i].p], pts[i].w + 3.2, BLACK);
+    for (let i = 1; i < pts.length; i++) {
+      const z = pts[i].z;
+      line(g, [pts[i - 1].p, pts[i].p], pts[i].w, ink(front ? 1 : 0.5 + 0.15 * (1 + z)));
+    }
+  };
+  for (const r of runs) if (!r.front) paintRun(r.pts, false);
+  g.fillStyle = BLACK;
+  g.fillRect(cx2 - 4, 20, 8, 112);
+  const staff = g.createLinearGradient(cx2 - 3, 0, cx2 + 3, 0);
+  staff.addColorStop(0, ink(0.7));
+  staff.addColorStop(0.45, ink(1));
+  staff.addColorStop(1, ink(0.75));
+  g.fillStyle = staff;
+  g.beginPath();
+  g.moveTo(cx2 - 2.6, 20);
+  g.lineTo(cx2 + 2.6, 20);
+  g.lineTo(cx2 + 1.8, 128);
+  g.lineTo(cx2, 132);
+  g.lineTo(cx2 - 1.8, 128);
+  g.closePath();
+  g.fill();
+  for (const r of runs) if (r.front) paintRun(r.pts, true);
+  for (const side of [-1, 1]) {
+    const hx = cx2 + side * 18, hy = y0 - 1;
+    g.save();
+    g.translate(hx, hy);
+    g.scale(-side, 1);
+    g.beginPath();
+    g.moveTo(-2, -4.6);
+    g.bezierCurveTo(4, -6.2, 9, -3.4, 10.5, -0.6);
+    g.bezierCurveTo(9.5, 2.2, 4, 3.8, -2, 4.2);
+    g.closePath();
+    g.lineWidth = 2.6;
+    g.strokeStyle = BLACK;
+    g.stroke();
+    g.fillStyle = ink(1);
+    g.fill();
+    ellipse(g, 4.2, -1.4, 1.3, 1.1, BLACK);
+    g.restore();
+  }
+  ellipse(g, cx2, 16, 7.6, 7.6, BLACK);
+  ellipse(g, cx2, 16, 6, 6, radial(g, cx2 - 2, 14, 8, 1, 0.6));
+  ellipse(g, cx2, 7.4, 3.2, 3, ink(0.9));
+}
+function drawTalaria(g) {
+  g.translate(12, -6);
+  g.beginPath();
+  g.moveTo(31, 30);
+  g.bezierCurveTo(31, 25, 52, 25, 52, 30);
+  g.bezierCurveTo(52, 40, 55, 46, 66, 52);
+  g.bezierCurveTo(80, 60, 100, 62, 113, 66);
+  g.bezierCurveTo(119, 68, 119, 76, 112, 77);
+  g.lineTo(28, 77);
+  g.bezierCurveTo(22, 77, 22, 68, 26, 60);
+  g.bezierCurveTo(29, 50, 31, 40, 31, 30);
+  g.closePath();
+  const foot = g.createLinearGradient(30, 26, 100, 76);
+  foot.addColorStop(0, ink(1));
+  foot.addColorStop(1, ink(0.97));
+  g.fillStyle = foot;
+  g.fill();
+  g.save();
+  g.clip();
+  for (const [a, b] of [
+    [[24, 38], [58, 36]],
+    [[26, 58], [68, 66]],
+    [[26, 70], [64, 54]],
+    [[66, 54], [82, 78]],
+    [[86, 59], [98, 78]]
+  ]) {
+    line(g, [a, b], 3, BLACK);
+  }
+  g.restore();
+  g.beginPath();
+  g.moveTo(22, 76);
+  g.lineTo(112, 76);
+  g.bezierCurveTo(121, 76, 123, 82, 116, 85);
+  g.lineTo(26, 86);
+  g.bezierCurveTo(18, 86, 17, 76, 22, 76);
+  g.closePath();
+  g.fillStyle = ink(1);
+  g.fill();
+  line(g, [[22, 76], [114, 76]], 2.6, BLACK);
+  line(g, [[26, 81], [114, 81]], 1.6, BLACK);
+  for (let i = 4; i >= 0; i--) {
+    feather(g, 31, 58 - i * 5, 180 + i * 7.5, 30 + i * 7, 9.4, 0.96, 2.6, -2.6);
+  }
+  for (let i = 0; i < 3; i++) feather(g, 33, 55 - i * 5.5, 184 + i * 9, 14, 10, 1, 2.4, -1);
+  ellipse(g, 32, 51, 5, 8, ink(1));
+}
+function drawPetasos(g) {
+  const cx2 = 60;
+  placeWing(g, cx2 - 20, 52, 0.4, -1, -14);
+  placeWing(g, cx2 + 20, 52, 0.4, 1, -14);
+  g.beginPath();
+  g.ellipse(cx2, 66, 28, 36, 0, Math.PI, 0);
+  g.closePath();
+  g.lineWidth = 3;
+  g.strokeStyle = BLACK;
+  g.stroke();
+  const dome = g.createRadialGradient(cx2 - 10, 40, 2, cx2, 56, 40);
+  dome.addColorStop(0, ink(1));
+  dome.addColorStop(0.55, ink(0.9));
+  dome.addColorStop(1, ink(0.66));
+  g.fillStyle = dome;
+  g.fill();
+  g.fillStyle = BLACK;
+  g.fillRect(cx2 - 30, 58, 60, 8.5);
+  g.fillStyle = ink(0.95);
+  g.fillRect(cx2 - 28, 60.4, 56, 3.8);
+  ellipse(g, cx2, 72, 58, 13, BLACK);
+  const brim = g.createLinearGradient(0, 60, 0, 84);
+  brim.addColorStop(0, ink(1));
+  brim.addColorStop(1, ink(0.82));
+  ellipse(g, cx2, 72, 56, 11.2, brim);
+  g.beginPath();
+  g.ellipse(cx2, 67.5, 29, 4.6, 0, 0, Math.PI);
+  g.lineWidth = 2.4;
+  g.strokeStyle = BLACK;
+  g.stroke();
+}
+function drawLyre(g) {
+  const cx2 = 50;
+  for (const side of [-1, 1]) {
+    const pts = [];
+    for (let i = 0; i <= 40; i++) {
+      const t2 = i / 40;
+      const u = 1 - t2;
+      const p0 = [cx2 + side * 14, 92], p1 = [cx2 + side * 40, 76], p2 = [cx2 + side * 38, 30], p3 = [cx2 + side * 24, 14];
+      pts.push([
+        u * u * u * p0[0] + 3 * u * u * t2 * p1[0] + 3 * u * t2 * t2 * p2[0] + t2 * t2 * t2 * p3[0],
+        u * u * u * p0[1] + 3 * u * u * t2 * p1[1] + 3 * u * t2 * t2 * p2[1] + t2 * t2 * t2 * p3[1]
+      ]);
+    }
+    line(g, pts, 10, BLACK);
+    for (let i = 1; i < pts.length; i++) {
+      const t2 = i / pts.length;
+      line(g, [pts[i - 1], pts[i]], 7.2 - 3 * t2, ink(0.95 - 0.1 * t2));
+    }
+    line(g, [[cx2 + side * 24, 14], [cx2 + side * 29, 9], [cx2 + side * 33, 10]], 4, ink(1));
+  }
+  line(g, [[cx2 - 30, 24], [cx2 + 30, 24]], 8.4, BLACK);
+  line(g, [[cx2 - 29, 24], [cx2 + 29, 24]], 5.2, ink(1));
+  ellipse(g, cx2, 100, 28, 20, BLACK);
+  ellipse(g, cx2, 100, 26, 18, radial(g, cx2 - 6, 94, 30, 1, 0.78));
+  g.lineWidth = 2.4;
+  g.strokeStyle = BLACK;
+  for (const [x, y] of [[cx2, 94], [cx2 - 13, 103], [cx2 + 13, 103], [cx2, 108]]) {
+    g.beginPath();
+    for (let k = 0; k < 6; k++) {
+      const a = rad(30 + k * 60);
+      const px = x + Math.cos(a) * 7.2, py = y + Math.sin(a) * 6.2;
+      if (k) g.lineTo(px, py);
+      else g.moveTo(px, py);
+    }
+    g.closePath();
+    g.stroke();
+  }
+  for (let i = 0; i < 7; i++) {
+    const x = cx2 - 12 + i * 4;
+    line(g, [[x, 26], [x + (x - cx2) * 0.15, 96]], 1.9, ink(1));
+  }
+  line(g, [[cx2 - 15, 96.5], [cx2 + 15, 96.5]], 4, BLACK);
+  line(g, [[cx2 - 14, 96.5], [cx2 + 14, 96.5]], 2.4, ink(1));
+}
+function drawTortoise(g) {
+  const cx2 = 55, cy2 = 54;
+  ellipse(g, cx2, 12, 8.5, 10.5, radial(g, cx2 - 2, 9, 12, 1, 0.7));
+  ellipse(g, cx2 - 3.4, 9, 1.4, 1.6, BLACK);
+  ellipse(g, cx2 + 3.4, 9, 1.4, 1.6, BLACK);
+  for (const [sx, sy, rot] of [[-1, -1, -0.6], [1, -1, 0.6], [-1, 1, 0.7], [1, 1, -0.7]]) {
+    ellipse(g, cx2 + sx * 31, cy2 + sy * 24, 9.5, 13, ink(0.85), rot);
+    for (let k = -1; k <= 1; k++) {
+      const a = Math.atan2(sy, sx) + k * 0.36;
+      ellipse(g, cx2 + sx * 31 + Math.cos(a) * 11, cy2 + sy * 24 + Math.sin(a) * 12, 1.8, 1.8, BLACK);
+    }
+  }
+  g.beginPath();
+  g.moveTo(cx2 - 4, cy2 + 34);
+  g.lineTo(cx2, cy2 + 46);
+  g.lineTo(cx2 + 4, cy2 + 34);
+  g.fillStyle = ink(0.85);
+  g.fill();
+  ellipse(g, cx2, cy2, 33, 38, BLACK);
+  ellipse(g, cx2, cy2, 31, 36, radial(g, cx2 - 8, cy2 - 10, 44, 0.95, 0.55));
+  g.beginPath();
+  g.ellipse(cx2, cy2, 25.5, 30.5, 0, 0, Math.PI * 2);
+  g.lineWidth = 2.2;
+  g.strokeStyle = BLACK;
+  g.stroke();
+  for (let k = 0; k < 22; k++) {
+    const a = k / 22 * Math.PI * 2;
+    line(g, [[cx2 + Math.cos(a) * 25.5, cy2 + Math.sin(a) * 30.5], [cx2 + Math.cos(a) * 31.5, cy2 + Math.sin(a) * 36.5]], 1.6, BLACK);
+  }
+  const hex = (x, y, rx, ry) => {
+    g.beginPath();
+    for (let k = 0; k < 6; k++) {
+      const a = rad(k * 60);
+      const px = x + Math.cos(a) * rx, py = y + Math.sin(a) * ry;
+      if (k) g.lineTo(px, py);
+      else g.moveTo(px, py);
+    }
+    g.closePath();
+    g.lineWidth = 2.4;
+    g.strokeStyle = BLACK;
+    g.fillStyle = radial(g, x - rx * 0.3, y - ry * 0.35, Math.max(rx, ry) * 1.3, 1, 0.62);
+    g.fill();
+    g.stroke();
+  };
+  for (const y of [cy2 - 18, cy2, cy2 + 18]) hex(cx2, y, 10.2, 9.4);
+  for (const side of [-1, 1]) {
+    hex(cx2 + side * 18.5, cy2 - 9, 8.6, 8.8);
+    hex(cx2 + side * 18.5, cy2 + 9.5, 8.6, 8.8);
+  }
+}
+function drawDrachma(g) {
+  const cx2 = 50, cy2 = 50;
+  g.beginPath();
+  for (let k = 0; k <= 60; k++) {
+    const a = k / 60 * Math.PI * 2;
+    const r = 46.5 + 1.1 * Math.sin(a * 3 + 0.6) + 0.7 * Math.sin(a * 5);
+    const px = cx2 + Math.cos(a) * r, py = cy2 + Math.sin(a) * r;
+    if (k) g.lineTo(px, py);
+    else g.moveTo(px, py);
+  }
+  g.closePath();
+  g.lineWidth = 2.6;
+  g.strokeStyle = ink(0.9);
+  g.stroke();
+  for (let k = 0; k < 26; k++) {
+    const a = k / 26 * Math.PI * 2;
+    ellipse(g, cx2 + Math.cos(a) * 41, cy2 + Math.sin(a) * 41, 2.7, 2.7, ink(1));
+  }
+  g.save();
+  g.beginPath();
+  g.arc(cx2, cy2, 37, 0, Math.PI * 2);
+  g.clip();
+  g.translate(cx2 + 1, cy2 + 3);
+  g.scale(1.12, 1.12);
+  g.translate(-55, -58);
+  const head = new Path2D(
+    "M36 88 C38 80 38 73 35 67 C31 61 30 51 34 44 L68 43 L70 47 L77.5 59 L72.6 60.6 L73.8 63 L71 64.3 L72.8 66.5 L70 68.5 C72.2 71 71.6 74.4 68 75.6 C64.5 76.6 62 76.2 60.4 77.4 L61 88 Z"
+  );
+  g.lineJoin = "round";
+  g.fillStyle = ink(1);
+  g.fill(head);
+  g.fillStyle = BLACK;
+  g.beginPath();
+  g.moveTo(62.6, 52.6);
+  g.quadraticCurveTo(65.4, 50.4, 68, 52.4);
+  g.quadraticCurveTo(65.2, 54, 62.6, 52.6);
+  g.fill();
+  line(g, [[61.6, 49.4], [68.4, 48.6]], 1.5, BLACK);
+  g.beginPath();
+  g.arc(47.5, 58, 3.6, rad(-60), rad(130));
+  g.lineWidth = 1.8;
+  g.strokeStyle = BLACK;
+  g.stroke();
+  line(g, [[36, 88], [61, 88]], 2, BLACK);
+  placeWing(g, 44, 34, 0.3, -1, -30);
+  g.beginPath();
+  g.ellipse(53, 42, 17, 15, 0, Math.PI, 0);
+  g.closePath();
+  g.lineWidth = 2.4;
+  g.strokeStyle = BLACK;
+  g.stroke();
+  g.fillStyle = ink(1);
+  g.fill();
+  ellipse(g, 53, 43.4, 26.5, 5.2, BLACK);
+  ellipse(g, 53, 43, 25, 3.6, ink(1));
+  g.restore();
+}
+function wingShape(g, k = 1) {
+  const edge = (t2) => {
+    const u = 1 - t2;
+    const p0 = [8, 82], p1 = [20, 12], p2 = [70, 2], p3 = [100, 24];
+    return [
+      u * u * u * p0[0] + 3 * u * u * t2 * p1[0] + 3 * u * t2 * t2 * p2[0] + t2 * t2 * t2 * p3[0],
+      u * u * u * p0[1] + 3 * u * u * t2 * p1[1] + 3 * u * t2 * t2 * p2[1] + t2 * t2 * t2 * p3[1]
+    ];
+  };
+  const n = 11;
+  for (let i = n - 1; i >= 0; i--) {
+    const t2 = 0.12 + i / (n - 1) * 0.86;
+    const [x, y] = edge(t2);
+    feather(g, x, y + 6, 100 - t2 * 74, 24 + 22 * Math.sin(t2 * Math.PI * 0.62), 13, 0.9 - 0.12 * (1 - t2), 2 * k, 2);
+  }
+  for (let i = 9; i >= 0; i--) {
+    const t2 = 0.08 + i / 9 * 0.8;
+    const [x, y] = edge(t2);
+    feather(g, x, y + 2, 96 - t2 * 80, 22 - 6 * t2, 9.5, 0.96, 2.2 * k, 1);
+  }
+  for (let i = 14; i >= 0; i--) {
+    const t2 = 0.04 + i / 14 * 0.78;
+    const [x, y] = edge(t2);
+    feather(g, x, y, 92 - t2 * 76, 10.5, 7.4, 1, 1.9 * k, 0);
+  }
+  const pts = [];
+  for (let i = 0; i <= 30; i++) pts.push(edge(i / 30 * 0.86));
+  line(g, pts, 4.2 * Math.min(k, 1.6), ink(1));
+}
+function placeWing(g, x, y, s, side, deg) {
+  g.save();
+  g.translate(x, y);
+  g.scale(side, 1);
+  g.rotate(rad(deg));
+  g.scale(s, s);
+  g.translate(-8, -82);
+  wingShape(g, Math.min(2.2, 0.7 / s));
+  g.restore();
+}
+function drawWing(g) {
+  wingShape(g);
+}
+const EMBLEMS = {
+  "caduceus": { kind: "braille", art: OFFICIAL_CADUCEUS },
+  "winged-caduceus": { kind: "vector", w: 120, h: 134, dither: "fs", draw: drawCaduceus },
+  "talaria": { kind: "vector", w: 136, h: 84, dither: "fs", draw: drawTalaria },
+  "petasos": { kind: "vector", w: 120, h: 88, dither: "fs", draw: drawPetasos },
+  "lyre": { kind: "vector", w: 100, h: 124, dither: "fs", draw: drawLyre },
+  "tortoise": { kind: "vector", w: 110, h: 104, dither: "fs", draw: drawTortoise },
+  "drachma": { kind: "vector", w: 100, h: 100, dither: "fs", draw: drawDrachma },
+  "wing": { kind: "vector", w: 146, h: 112, dither: "fs", draw: drawWing }
+};
+const SUPER = 4;
+const bitmapCache = /* @__PURE__ */ new Map();
+function inkRows(bits, cols, rows) {
+  let top = rows, bottom = -1;
+  for (let y = 0; y < rows; y++) {
+    for (let x = 0; x < cols; x++) {
+      if (bits[y * cols + x]) {
+        if (y < top) top = y;
+        bottom = y;
+        break;
+      }
+    }
+  }
+  return bottom < 0 ? [0, rows - 1] : [top, bottom];
+}
+function rasterize(e, w, h, dpr) {
+  if (w < 8 || h < 8) return null;
+  if (e.kind === "braille") {
+    let bm = bitmapCache.get(e.art);
+    if (!bm) {
+      bm = trimBits(brailleToBits(e.art));
+      bitmapCache.set(e.art, bm);
+    }
+    const cols2 = bm.cols + 2, rows2 = bm.rows + 2;
+    const grid2 = fitGrid(w, h, dpr, { cols: cols2, rows: rows2 });
+    const bits2 = new Uint8Array(cols2 * rows2);
+    for (let y = 0; y < bm.rows; y++) bits2.set(bm.bits.subarray(y * bm.cols, (y + 1) * bm.cols), (y + 1) * cols2 + 1);
+    const [top2, bottom2] = inkRows(bits2, cols2, rows2);
+    return { ...grid2, bits: bits2, top: top2, bottom: bottom2 };
+  }
+  const grid = fitGrid(w, h, dpr, { target: 72, minCss: 2.8, maxCss: 4.2 });
+  const { cols, rows } = grid;
+  if (cols < 4 || rows < 4) return null;
+  const off = document.createElement("canvas");
+  off.width = cols * SUPER;
+  off.height = rows * SUPER;
+  const g = off.getContext("2d", { willReadFrequently: true });
+  if (!g) return null;
+  g.fillStyle = "#000";
+  g.fillRect(0, 0, off.width, off.height);
+  const box = fitBox(e.w, e.h, cols, rows, 1);
+  g.setTransform(box.s * SUPER, 0, 0, box.s * SUPER, box.x * SUPER, box.y * SUPER);
+  e.draw(g);
+  const lum = coverage(g.getImageData(0, 0, off.width, off.height).data, cols, rows, SUPER);
+  const bits = e.dither === "bayer" ? bayerDither(lum, cols, rows) : floydSteinberg(lum, cols, rows);
+  const [top, bottom] = inkRows(bits, cols, rows);
+  return { ...grid, bits, top, bottom };
+}
+function paint(canvas, r, c, s) {
+  const g = canvas.getContext("2d");
+  if (!g) return;
+  g.setTransform(1, 0, 0, 1, 0, 0);
+  g.clearRect(0, 0, canvas.width, canvas.height);
+  const { pitch, cols, rows, ox, oy, bits } = r;
+  const y0 = oy + r.top * pitch, y1 = oy + (r.bottom + 1) * pitch;
+  const grad = g.createLinearGradient(0, y0, 0, Math.max(y0 + 1, y1));
+  grad.addColorStop(0, c.dim);
+  grad.addColorStop(0.4, c.accent);
+  grad.addColorStop(0.6, c.accent);
+  grad.addColorStop(1, c.dim);
+  const round = pitch >= 5;
+  const size = round ? pitch * 0.34 : Math.max(1, Math.round(pitch * 0.67));
+  const inset = Math.floor((pitch - size) / 2);
+  const band = 0.09;
+  const span = cols + rows * 0.7;
+  const base = new Path2D(), hot = new Path2D();
+  for (let y = 0; y < rows; y++) {
+    for (let x = 0; x < cols; x++) {
+      const i = y * cols + x;
+      if (!bits[i]) continue;
+      if (s.reveal < 1 && dotRank(i) >= s.reveal) continue;
+      const lit = s.glint !== null && Math.abs((x + y * 0.7) / span - s.glint) < band;
+      const p = lit ? hot : base;
+      if (round) {
+        const cx2 = ox + (x + 0.5) * pitch, cy2 = oy + (y + 0.5) * pitch;
+        p.moveTo(cx2 + size, cy2);
+        p.arc(cx2, cy2, size, 0, Math.PI * 2);
+      } else {
+        p.rect(ox + x * pitch + inset, oy + y * pitch + inset, size, size);
+      }
+    }
+  }
+  g.fillStyle = grad;
+  g.fill(base);
+  if (s.glint !== null) {
+    g.fillStyle = c.glint;
+    g.fill(hot);
+  }
+}
+function parseRgb(color) {
+  const m = /rgba?\(\s*([\d.]+)[,\s]+([\d.]+)[,\s]+([\d.]+)/.exec(color);
+  return m ? [Number(m[1]), Number(m[2]), Number(m[3])] : null;
+}
+function readColors(el) {
+  const accent = getComputedStyle(el).color || "rgb(255, 215, 0)";
+  const rgb = parseRgb(accent) ?? [255, 215, 0];
+  const mix = (k, to) => rgb.map((v) => Math.round(v * k + to * (1 - k))).join(",");
+  return { accent, dim: `rgb(${mix(0.55, 0)})`, glint: `rgb(${mix(0.45, 255)})` };
+}
+const REVEAL_MS = 520;
+const GLINT_MS = 1700;
+const GLINT_EVERY_MS = 15e3;
 function AsciiWidget({ status, widgetProps, onWidgetPropsChange }) {
   const t2 = useT();
   const version = status?.version;
-  const raw = typeof widgetProps.artIndex === "number" ? widgetProps.artIndex : 0;
-  const idx = (raw % ARTS.length + ARTS.length) % ARTS.length;
-  const cycle = (dir) => onWidgetPropsChange({ ...widgetProps, artIndex: (idx + dir + ARTS.length) % ARTS.length });
+  const id = emblemFromProps(widgetProps);
+  const slotRef = useRef(null);
+  const canvasRef = useRef(null);
+  const [noCanvas, setNoCanvas] = useState(false);
+  const label = t2(`ascii.art.${id}`);
+  useEffect(() => {
+    const slot = slotRef.current, canvas = canvasRef.current;
+    if (!slot || !canvas) return;
+    if (!canvas.getContext("2d")) {
+      setNoCanvas(true);
+      return;
+    }
+    return mountEmblem(slot, canvas, id);
+  }, [id]);
   return /* @__PURE__ */ jsxs("div", { className: "home-ascii-wrap", children: [
-    /* @__PURE__ */ jsx(HoverArrows, { onPrev: () => cycle(-1), onNext: () => cycle(1), label: t2(ARTS[idx].label) }),
-    /* @__PURE__ */ jsx("div", { className: asciiArtClass(ARTS[idx].name), children: ARTS[idx].art }),
+    /* @__PURE__ */ jsx(
+      HoverArrows,
+      {
+        onPrev: () => onWidgetPropsChange(stepEmblem(widgetProps, -1)),
+        onNext: () => onWidgetPropsChange(stepEmblem(widgetProps, 1)),
+        label
+      }
+    ),
+    /* @__PURE__ */ jsx("div", { className: "home-emblem", ref: slotRef, children: noCanvas ? /* @__PURE__ */ jsx("div", { className: "home-ascii", children: OFFICIAL_CADUCEUS }) : /* @__PURE__ */ jsx("canvas", { ref: canvasRef, role: "img", "aria-label": label }) }),
     /* @__PURE__ */ jsxs("div", { className: "home-ascii-ver", children: [
       "HERMES-AGENT",
       version ? ` · v${version}` : ""
     ] })
   ] });
+}
+function mountEmblem(slot, canvas, id) {
+  const emblem = EMBLEMS[id];
+  const motionQuery = window.matchMedia?.("(prefers-reduced-motion: reduce)");
+  const motion = () => !motionQuery?.matches;
+  let raster = null;
+  let colors = readColors(canvas);
+  let reveal = motion() ? 0 : 1;
+  let glint = null;
+  let visible = true;
+  let raf = 0, layoutRaf = 0, timer = 0;
+  let sized = "";
+  const draw = () => {
+    if (raster) paint(canvas, raster, colors, { reveal, glint });
+  };
+  const layout = () => {
+    layoutRaf = 0;
+    const r = slot.getBoundingClientRect();
+    const dpr = window.devicePixelRatio || 1;
+    const key = `${Math.round(r.width)}x${Math.round(r.height)}@${dpr}`;
+    if (key === sized) return;
+    sized = key;
+    canvas.width = Math.max(1, Math.floor(r.width * dpr));
+    canvas.height = Math.max(1, Math.floor(r.height * dpr));
+    raster = rasterize(emblem, r.width, r.height, dpr);
+    draw();
+  };
+  const animate = (ms, step, done) => {
+    cancelAnimationFrame(raf);
+    const t0 = performance.now();
+    const tick = (now) => {
+      const p = Math.min(1, (now - t0) / ms);
+      step(p);
+      draw();
+      if (p < 1) raf = requestAnimationFrame(tick);
+      else {
+        raf = 0;
+        done();
+      }
+    };
+    raf = requestAnimationFrame(tick);
+  };
+  const scheduleGlint = () => {
+    clearTimeout(timer);
+    timer = window.setTimeout(() => {
+      if (!motion() || !visible || document.hidden || !raster) {
+        scheduleGlint();
+        return;
+      }
+      animate(GLINT_MS, (p) => {
+        glint = -0.15 + 1.3 * p;
+      }, () => {
+        glint = null;
+        draw();
+        scheduleGlint();
+      });
+    }, GLINT_EVERY_MS);
+  };
+  layout();
+  if (reveal < 1) {
+    animate(REVEAL_MS, (p) => {
+      reveal = 1 - (1 - p) ** 3;
+    }, () => {
+      reveal = 1;
+      scheduleGlint();
+    });
+  } else {
+    scheduleGlint();
+  }
+  const ro = new ResizeObserver(() => {
+    if (!layoutRaf) layoutRaf = requestAnimationFrame(layout);
+  });
+  ro.observe(slot);
+  const io = new IntersectionObserver((entries) => {
+    visible = entries.some((e) => e.isIntersecting);
+  });
+  io.observe(slot);
+  const mo = new MutationObserver(() => {
+    const next = readColors(canvas);
+    if (next.accent !== colors.accent) {
+      colors = next;
+      draw();
+    }
+  });
+  for (const el of [document.documentElement, document.body]) {
+    mo.observe(el, { attributes: true, attributeFilter: ["class", "style", "data-theme"] });
+  }
+  const onMotion = () => {
+    if (!motion()) {
+      cancelAnimationFrame(raf);
+      raf = 0;
+      reveal = 1;
+      glint = null;
+      draw();
+    }
+  };
+  motionQuery?.addEventListener?.("change", onMotion);
+  return () => {
+    cancelAnimationFrame(raf);
+    cancelAnimationFrame(layoutRaf);
+    clearTimeout(timer);
+    ro.disconnect();
+    io.disconnect();
+    mo.disconnect();
+    motionQuery?.removeEventListener?.("change", onMotion);
+  };
 }
 function ClockWidget({ widgetProps, onWidgetPropsChange }) {
   const t2 = useT();
@@ -1593,7 +2423,7 @@ function TokensWidget({ analytics, widgetProps, onWidgetPropsChange, gridSize })
   const t2 = useT();
   const rangeKey = RANGES.find((r) => r.key === widgetProps.range)?.key ?? "week";
   const range = RANGES.find((r) => r.key === rangeKey);
-  const idx = RANGES.findIndex((r) => r.key === rangeKey);
+  const idx2 = RANGES.findIndex((r) => r.key === rangeKey);
   const chart = widgetProps.chart === "bars" ? "bars" : "line";
   const statsOn = widgetProps.stats !== false;
   const group = coerceGroupBy(widgetProps.group);
@@ -1632,7 +2462,7 @@ function TokensWidget({ analytics, widgetProps, onWidgetPropsChange, gridSize })
     };
   }, [range.days]);
   const setProp = (patch) => onWidgetPropsChange({ ...widgetProps, ...patch });
-  const cycle = (dir) => setProp({ range: RANGES[(idx + dir + RANGES.length) % RANGES.length].key });
+  const cycle = (dir) => setProp({ range: RANGES[(idx2 + dir + RANGES.length) % RANGES.length].key });
   const cycleGroup = () => setProp({ group: GROUP_MODES[(GROUP_MODES.indexOf(group) + 1) % GROUP_MODES.length] });
   const controls = /* @__PURE__ */ jsxs(HoverCtl, { className: "tok-ctl", children: [
     /* @__PURE__ */ jsx("button", { className: "hv-arrow", "aria-label": t2("common.previous"), onClick: () => cycle(-1), children: "‹" }),
@@ -1691,9 +2521,9 @@ function TokensWidget({ analytics, widgetProps, onWidgetPropsChange, gridSize })
   const total = tot.total_input + tot.total_output;
   const n = bars.length;
   const max = Math.max(1, ...bars.map((b) => b.tokens));
-  const H = 100, W2 = 100, PAD2 = 3;
+  const H = 100, W = 100, PAD2 = 3;
   const coords = bars.map((b, i) => [
-    n <= 1 ? W2 / 2 : i / (n - 1) * W2,
+    n <= 1 ? W / 2 : i / (n - 1) * W,
     H - PAD2 - b.tokens / max * (H - PAD2 * 2)
   ]);
   const linePath = coords.map(([x, y], i) => `${i ? "L" : "M"}${x.toFixed(2)},${y.toFixed(2)}`).join(" ");
@@ -1743,9 +2573,9 @@ function TokensWidget({ analytics, widgetProps, onWidgetPropsChange, gridSize })
         bars.map((b, i) => /* @__PURE__ */ jsx(
           "rect",
           {
-            x: i * W2 / n,
+            x: i * W / n,
             y: 0,
-            width: W2 / n,
+            width: W / n,
             height: H,
             fill: "transparent",
             onMouseEnter: () => {
@@ -1869,13 +2699,13 @@ function signalMax(values, fixedMax) {
   for (const v of values) if (v !== null && v > peak) peak = v;
   return peak > 0 ? peak : 1;
 }
-function areaPath(line, H) {
-  if (!line || !line.includes("L") || line.indexOf("M", 1) !== -1) return "";
-  const firstX = line.slice(1, line.indexOf(","));
-  const lastX = line.slice(line.lastIndexOf("L") + 1, line.lastIndexOf(","));
-  return `${line} L${lastX},${H} L${firstX},${H} Z`;
+function areaPath(line2, H) {
+  if (!line2 || !line2.includes("L") || line2.indexOf("M", 1) !== -1) return "";
+  const firstX = line2.slice(1, line2.indexOf(","));
+  const lastX = line2.slice(line2.lastIndexOf("L") + 1, line2.lastIndexOf(","));
+  return `${line2} L${lastX},${H} L${firstX},${H} Z`;
 }
-function seriesPath(values, max, W2, H, pad2) {
+function seriesPath(values, max, W, H, pad2) {
   const n = values.length;
   if (n === 0) return "";
   const parts = [];
@@ -1886,7 +2716,7 @@ function seriesPath(values, max, W2, H, pad2) {
       penDown = false;
       continue;
     }
-    const x = n <= 1 ? W2 / 2 : i / (n - 1) * W2;
+    const x = n <= 1 ? W / 2 : i / (n - 1) * W;
     const y = H - pad2 - Math.min(v, max) / max * (H - pad2 * 2);
     parts.push(`${penDown ? "L" : "M"}${x.toFixed(2)},${y.toFixed(2)}`);
     penDown = true;
@@ -1916,9 +2746,9 @@ function formatUptime(seconds) {
 let gradSeq = 0;
 function Spark$1({ values, fixedMax, label, readout, gid }) {
   const max = signalMax(values, fixedMax);
-  const H = 100, W2 = 100, PAD2 = 6;
-  const line = seriesPath(values, max, W2, H, PAD2);
-  const area = areaPath(line, H);
+  const H = 100, W = 100, PAD2 = 6;
+  const line2 = seriesPath(values, max, W, H, PAD2);
+  const area = areaPath(line2, H);
   return /* @__PURE__ */ jsxs("div", { className: "host-spark", children: [
     /* @__PURE__ */ jsxs("div", { className: "host-spark-head", children: [
       /* @__PURE__ */ jsx("span", { className: "dim", children: label }),
@@ -1930,10 +2760,10 @@ function Spark$1({ values, fixedMax, label, readout, gid }) {
         /* @__PURE__ */ jsx("stop", { offset: "100%", style: { stopColor: "var(--home-accent)", stopOpacity: 0 } })
       ] }) }),
       area && /* @__PURE__ */ jsx("path", { d: area, fill: `url(#${gid})` }),
-      line && /* @__PURE__ */ jsx(
+      line2 && /* @__PURE__ */ jsx(
         "path",
         {
-          d: line,
+          d: line2,
           fill: "none",
           stroke: "var(--home-accent)",
           strokeWidth: 1.5,
@@ -2059,8 +2889,8 @@ function levelClass(level) {
 }
 function parseRecords(lines) {
   const out = [];
-  for (const line of lines) {
-    const raw = line.replace(/[\r\n]+$/, "");
+  for (const line2 of lines) {
+    const raw = line2.replace(/[\r\n]+$/, "");
     const m = HEAD_RE.exec(raw);
     if (m) {
       const rest = m[4];
@@ -2084,7 +2914,7 @@ function parseRecords(lines) {
 function ErrorsWidget({ logs, widgetProps, onWidgetPropsChange }) {
   const t2 = useT();
   const fileKey = FILES.find((f) => f === widgetProps.file) ?? "agent";
-  const idx = FILES.indexOf(fileKey);
+  const idx2 = FILES.indexOf(fileKey);
   const [recs, setRecs] = useState(null);
   const [failed, setFailed] = useState(false);
   useEffect(() => {
@@ -2110,7 +2940,7 @@ function ErrorsWidget({ logs, widgetProps, onWidgetPropsChange }) {
       clearInterval(id);
     };
   }, [fileKey]);
-  const cycle = (dir) => onWidgetPropsChange({ ...widgetProps, file: FILES[(idx + dir + FILES.length) % FILES.length] });
+  const cycle = (dir) => onWidgetPropsChange({ ...widgetProps, file: FILES[(idx2 + dir + FILES.length) % FILES.length] });
   const arrows = /* @__PURE__ */ jsx(HoverArrows, { onPrev: () => cycle(-1), onNext: () => cycle(1), label: fileKey.toUpperCase() });
   const all = recs ?? (fileKey === "agent" && logs ? parseRecords(logs.lines ?? []) : null);
   if (!all) {
@@ -2390,7 +3220,7 @@ function LifeWidget({ editing }) {
       render();
     }, STEP_MS);
     let drawing = false;
-    const paint = (e) => {
+    const paint2 = (e) => {
       const { cols, rows } = dimsRef.current;
       const rect = cv.getBoundingClientRect();
       const x = Math.floor((e.clientX - rect.left) / CELL);
@@ -2407,10 +3237,10 @@ function LifeWidget({ editing }) {
         cv.setPointerCapture(e.pointerId);
       } catch {
       }
-      paint(e);
+      paint2(e);
     };
     const onMove = (e) => {
-      if (drawing) paint(e);
+      if (drawing) paint2(e);
     };
     const onUp = (e) => {
       drawing = false;
@@ -3040,8 +3870,8 @@ function SpendWidget({ widgetProps, onWidgetPropsChange, editing, gridSize }) {
     };
   }, [range]);
   const setProp = (patch) => onWidgetPropsChange({ ...widgetProps, ...patch });
-  const idx = SPEND_RANGES.indexOf(range);
-  const cycle = (dir) => setProp({ range: SPEND_RANGES[(idx + dir + SPEND_RANGES.length) % SPEND_RANGES.length] });
+  const idx2 = SPEND_RANGES.indexOf(range);
+  const cycle = (dir) => setProp({ range: SPEND_RANGES[(idx2 + dir + SPEND_RANGES.length) % SPEND_RANGES.length] });
   const controls = /* @__PURE__ */ jsxs(HoverCtl, { className: "tok-ctl", children: [
     /* @__PURE__ */ jsx("button", { className: "hv-arrow", "aria-label": t2("common.previous"), onClick: () => cycle(-1), children: "‹" }),
     /* @__PURE__ */ jsx("span", { className: "hv-label", children: t2(RANGE_LABEL[range]) }),
@@ -3735,6 +4565,7 @@ const CircleCheck = [
   ["circle", { cx: "12", cy: "12", r: "10" }],
   ["path", { d: "m9 12 2 2 4-4" }]
 ];
+const Circle = [["circle", { cx: "12", cy: "12", r: "10" }]];
 const CodeXml = [
   ["path", { d: "m18 16 4-4-4-4" }],
   ["path", { d: "m6 8-4 4 4 4" }],
@@ -3774,6 +4605,15 @@ const Download = [
   ["path", { d: "M12 15V3" }],
   ["path", { d: "M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" }],
   ["path", { d: "m7 10 5 5 5-5" }]
+];
+const Eraser = [
+  [
+    "path",
+    {
+      d: "M21 21H8a2 2 0 0 1-1.42-.587l-3.994-3.999a2 2 0 0 1 0-2.828l10-10a2 2 0 0 1 2.829 0l5.999 6a2 2 0 0 1 0 2.828L12.834 21"
+    }
+  ],
+  ["path", { d: "m5.082 11.09 8.828 8.828" }]
 ];
 const FlaskConical = [
   [
@@ -3824,10 +4664,29 @@ const HardDrive = [
   ["path", { d: "M21.946 12.013H2.054" }],
   ["path", { d: "M6 16h.01" }]
 ];
+const Highlighter = [
+  ["path", { d: "m9 11-6 6v3h9l3-3" }],
+  ["path", { d: "m22 12-4.6 4.6a2 2 0 0 1-2.8 0l-5.2-5.2a2 2 0 0 1 0-2.8L14 4" }]
+];
 const Image = [
   ["rect", { width: "18", height: "18", x: "3", y: "3", rx: "2", ry: "2" }],
   ["circle", { cx: "9", cy: "9", r: "2" }],
   ["path", { d: "m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" }]
+];
+const LassoSelect = [
+  ["path", { d: "M7 22a5 5 0 0 1-2-4" }],
+  ["path", { d: "M7 16.93c.96.43 1.96.74 2.99.91" }],
+  [
+    "path",
+    { d: "M3.34 14A6.8 6.8 0 0 1 2 10c0-4.42 4.48-8 10-8s10 3.58 10 8a7.19 7.19 0 0 1-.33 2" }
+  ],
+  ["path", { d: "M5 18a2 2 0 1 0 0-4 2 2 0 0 0 0 4z" }],
+  [
+    "path",
+    {
+      d: "M14.33 22h-.09a.35.35 0 0 1-.24-.32v-10a.34.34 0 0 1 .33-.34c.08 0 .15.03.21.08l7.34 6a.33.33 0 0 1-.21.59h-4.49l-2.57 3.85a.35.35 0 0 1-.28.14z"
+    }
+  ]
 ];
 const LayoutDashboard = [
   ["rect", { width: "7", height: "9", x: "3", y: "3", rx: "1" }],
@@ -3890,6 +4749,14 @@ const PanelRightClose = [
 const Pause = [
   ["rect", { x: "14", y: "3", width: "5", height: "18", rx: "1" }],
   ["rect", { x: "5", y: "3", width: "5", height: "18", rx: "1" }]
+];
+const Pen = [
+  [
+    "path",
+    {
+      d: "M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"
+    }
+  ]
 ];
 const PencilLine = [
   ["path", { d: "M13 21h8" }],
@@ -3971,6 +4838,12 @@ const Server = [
   ["line", { x1: "6", x2: "6.01", y1: "6", y2: "6" }],
   ["line", { x1: "6", x2: "6.01", y1: "18", y2: "18" }]
 ];
+const Slash = [["path", { d: "M22 2 2 22" }]];
+const Spline = [
+  ["circle", { cx: "19", cy: "5", r: "2" }],
+  ["circle", { cx: "5", cy: "19", r: "2" }],
+  ["path", { d: "M5 17A12 12 0 0 1 17 5" }]
+];
 const Split = [
   ["path", { d: "M16 3h5v5" }],
   ["path", { d: "M8 3H3v5" }],
@@ -3998,6 +4871,20 @@ const SquareDashedMousePointer = [
   ["path", { d: "M3 9v1" }],
   ["path", { d: "M21 9v2" }],
   ["path", { d: "M3 14v1" }]
+];
+const SquareDashed = [
+  ["path", { d: "M5 3a2 2 0 0 0-2 2" }],
+  ["path", { d: "M19 3a2 2 0 0 1 2 2" }],
+  ["path", { d: "M21 19a2 2 0 0 1-2 2" }],
+  ["path", { d: "M5 21a2 2 0 0 1-2-2" }],
+  ["path", { d: "M9 3h1" }],
+  ["path", { d: "M9 21h1" }],
+  ["path", { d: "M14 3h1" }],
+  ["path", { d: "M14 21h1" }],
+  ["path", { d: "M3 9v1" }],
+  ["path", { d: "M21 9v1" }],
+  ["path", { d: "M3 14v1" }],
+  ["path", { d: "M21 14v1" }]
 ];
 const SquareTerminal = [
   ["path", { d: "m7 11 2-2-2-2" }],
@@ -4035,6 +4922,10 @@ const Trash2 = [
 const Undo2 = [
   ["path", { d: "M9 14 4 9l5-5" }],
   ["path", { d: "M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5a5.5 5.5 0 0 1-5.5 5.5H11" }]
+];
+const Ungroup = [
+  ["rect", { width: "8", height: "6", x: "5", y: "4", rx: "1" }],
+  ["rect", { width: "8", height: "6", x: "11", y: "14", rx: "1" }]
 ];
 const Upload = [
   ["path", { d: "M12 3v12" }],
@@ -4118,7 +5009,19 @@ const ICONS = {
   video: Video,
   ok: CircleCheck,
   alert: CircleAlert,
-  check: Check
+  check: Check,
+  // Draw tool
+  pen: Pen,
+  highlighter: Highlighter,
+  eraser: Eraser,
+  lasso: LassoSelect,
+  line: Slash,
+  inkArrow: ArrowUpRight,
+  rect: Square,
+  ellipse: Circle,
+  dashed: SquareDashed,
+  smooth: Spline,
+  ungroup: Ungroup
 };
 const LIVE_ICONS = {
   activity: Activity,
@@ -4199,9 +5102,9 @@ function mergeSessionInfo(prev, info) {
   if (typeof r.service_tier === "string") next.serviceTier = r.service_tier.trim();
   return next;
 }
-function modelFromSessionRow(row2) {
-  if (!row2 || typeof row2 !== "object") return NO_MODEL;
-  const r = row2;
+function modelFromSessionRow(row) {
+  if (!row || typeof row !== "object") return NO_MODEL;
+  const r = row;
   let effort = "";
   let pending = true;
   try {
@@ -4363,8 +5266,8 @@ function useSessionModel(doc, opts) {
         window.clearTimeout(timer);
       };
     } else {
-      fetchJSON(`/api/sessions/${encodeURIComponent(storedId)}`).then((row2) => {
-        if (on) setModel(modelFromSessionRow(row2));
+      fetchJSON(`/api/sessions/${encodeURIComponent(storedId)}`).then((row) => {
+        if (on) setModel(modelFromSessionRow(row));
       }).catch(() => {
       });
     }
@@ -4423,14 +5326,14 @@ function useSessionModel(doc, opts) {
   }, [request, opts.failureMessage]);
   const select = useCallback(async (next, provider) => {
     const before = modelRef.current;
-    const paint = () => setModel((m) => ({ ...m, model: next, provider, effortWire: "" }));
+    const paint2 = () => setModel((m) => ({ ...m, model: next, provider, effortWire: "" }));
     const rollback = () => setModel(before);
     const send = (confirm = false) => request("config.set", {
       key: "model",
       value: modelSwitchValue(next, provider),
       ...confirm ? { confirm_expensive_model: true } : {}
     });
-    paint();
+    paint2();
     setBusy(true);
     try {
       const r = await send();
@@ -4443,7 +5346,7 @@ function useSessionModel(doc, opts) {
           message: r.confirm_message,
           failureMessage: opts.failureMessage,
           requestConfirmed: async () => {
-            paint();
+            paint2();
             return send(true);
           }
         });
@@ -4473,22 +5376,22 @@ function useSessionModel(doc, opts) {
     },
     // Selecting a row restores what this board last used for that model (the menu passes the
     // preset it read from presetFor, or the defaults). Only what differs is written.
-    applyPreset: (preset, row2) => {
+    applyPreset: (preset, row) => {
       const m = modelRef.current;
       const patch = {};
       if (preset.effort !== void 0 && preset.effort !== m.effort) patch.effort = preset.effort;
       const tier = preset.serviceTier ?? (preset.fast === void 0 ? void 0 : preset.fast ? "priority" : "normal");
       if (tier !== void 0 && tier !== (m.serviceTier || "normal")) patch.serviceTier = tier;
-      writePreset(store(), row2.provider, row2.model, preset);
+      writePreset(store(), row.provider, row.model, preset);
       if (Object.keys(patch).length) void writeOption(patch);
     },
     presetFor: (provider, m) => readPresets(store())[presetKey(provider, m)] ?? {},
     select,
     // Like the composer: an edit on the active row goes to the session; on another row it is
     // only remembered for when that model is picked.
-    setOptions: (patch, row2) => {
-      writePreset(store(), row2.provider, row2.model, patch);
-      if (row2.isActive) void writeOption(patch);
+    setOptions: (patch, row) => {
+      writePreset(store(), row.provider, row.model, patch);
+      if (row.isActive) void writeOption(patch);
     }
   } : null;
   return { model, sid, controller, busy };
@@ -4520,8 +5423,8 @@ function Md({ text }) {
   const lines = text.replace(/\r/g, "").split("\n");
   let i = 0;
   while (i < lines.length) {
-    const line = lines[i];
-    if (line.startsWith("```")) {
+    const line2 = lines[i];
+    if (line2.startsWith("```")) {
       const code = [];
       i++;
       while (i < lines.length && !lines[i].startsWith("```")) code.push(lines[i++]);
@@ -4529,15 +5432,15 @@ function Md({ text }) {
       blocks.push(/* @__PURE__ */ jsx("pre", { children: code.join("\n") }, blocks.length));
       continue;
     }
-    if (/^\s*([-*•]|\d+[.)])\s+/.test(line)) {
+    if (/^\s*([-*•]|\d+[.)])\s+/.test(line2)) {
       const items = [];
-      const ordered = /^\s*\d/.test(line);
+      const ordered = /^\s*\d/.test(line2);
       while (i < lines.length && /^\s*([-*•]|\d+[.)])\s+/.test(lines[i])) items.push(lines[i++].replace(/^\s*([-*•]|\d+[.)])\s+/, ""));
       const L = ordered ? "ol" : "ul";
       blocks.push(/* @__PURE__ */ jsx(L, { children: items.map((x, j) => /* @__PURE__ */ jsx("li", { children: inline(x) }, j)) }, blocks.length));
       continue;
     }
-    if (!line.trim()) {
+    if (!line2.trim()) {
       i++;
       continue;
     }
@@ -4762,41 +5665,11 @@ function ChatPanel({ doc, t: t2, width, selected, sentAt, onWidth, onClose, onCo
     }
   );
 }
-function simplify(pts, eps) {
-  if (pts.length < 3) return pts.slice();
-  const keep = new Uint8Array(pts.length);
-  keep[0] = keep[pts.length - 1] = 1;
-  const stack = [[0, pts.length - 1]];
-  while (stack.length) {
-    const [a, b] = stack.pop();
-    const [ax, ay] = pts[a];
-    const [bx, by] = pts[b];
-    const dx = bx - ax, dy = by - ay;
-    const len = Math.hypot(dx, dy) || 1;
-    let best = -1, far = 0;
-    for (let i = a + 1; i < b; i++) {
-      const d = Math.abs(dy * pts[i][0] - dx * pts[i][1] + bx * ay - by * ax) / len;
-      if (d > far) {
-        far = d;
-        best = i;
-      }
-    }
-    if (best > 0 && far > eps) {
-      keep[best] = 1;
-      stack.push([a, best], [best, b]);
-    }
-  }
-  return pts.filter((_, i) => keep[i]);
-}
 function toStroke(pts) {
   const r = pts.map(([x2, y2]) => [Math.round(x2), Math.round(y2)]);
   const x = Math.min(...r.map((p) => p[0]));
   const y = Math.min(...r.map((p) => p[1]));
   return { x, y, d: r.map(([px, py]) => `${px - x},${py - y}`).join(" ") };
-}
-function fromStroke(d) {
-  if (!d) return [];
-  return d.split(" ").map((pair) => pair.split(",").map(Number)).filter((p) => p.length === 2 && p.every(Number.isFinite));
 }
 function strokePath(pts) {
   if (!pts.length) return "";
@@ -4862,9 +5735,9 @@ function elbowPath(pts, r = 7) {
   const z = pts[pts.length - 1];
   return `${d} L${z[0]} ${z[1]}`;
 }
-function headPath(x, y, dir, L = 7, W2 = 4) {
+function headPath(x, y, dir, L = 7, W = 4) {
   const [dx, dy] = { r: [1, 0], l: [-1, 0], d: [0, 1], u: [0, -1] }[dir];
-  return `M${x} ${y} L${x - dx * L - dy * W2} ${y - dy * L + dx * W2} L${x - dx * L + dy * W2} ${y - dy * L - dx * W2}Z`;
+  return `M${x} ${y} L${x - dx * L - dy * W} ${y - dy * L + dx * W} L${x - dx * L + dy * W} ${y - dy * L - dx * W}Z`;
 }
 function samplePolyline(pts, step) {
   const out = [];
@@ -4921,6 +5794,445 @@ function zoomView(v, f, sx, sy, min = ZOOM_MIN, max = ZOOM_MAX) {
   const wx = (sx - v.x) / v.z, wy = (sy - v.y) / v.z;
   return { z, x: sx - wx * z, y: sy - wy * z };
 }
+function simplify(pts, eps) {
+  if (pts.length < 3) return pts.slice();
+  const keep = new Uint8Array(pts.length);
+  keep[0] = keep[pts.length - 1] = 1;
+  const stack = [[0, pts.length - 1]];
+  while (stack.length) {
+    const [a, b] = stack.pop();
+    const [ax, ay] = pts[a], [bx, by] = pts[b];
+    const dx = bx - ax, dy = by - ay;
+    const len = Math.hypot(dx, dy);
+    let best = -1, far = 0;
+    for (let i = a + 1; i < b; i++) {
+      const d = len ? Math.abs(dy * pts[i][0] - dx * pts[i][1] + bx * ay - by * ax) / len : Math.hypot(pts[i][0] - ax, pts[i][1] - ay);
+      if (d > far) {
+        far = d;
+        best = i;
+      }
+    }
+    if (best > 0 && far > eps) {
+      keep[best] = 1;
+      stack.push([a, best], [best, b]);
+    }
+  }
+  return pts.filter((_, i) => keep[i]);
+}
+const SHAPES = ["line", "arrow", "rect", "ellipse"];
+const isShape = (t2) => !!t2 && SHAPES.includes(t2);
+const INK_COLORS = ["ink", "accent", "sage", "clay", "slate", "sand"];
+const PEN_WIDTHS = [1.9, 3.5, 6];
+const HL_WIDTHS = [10, 16, 24];
+const DEFAULT_INK = { tool: "pen", w: { pen: 0, hl: 1 }, c: "ink" };
+const TOOLS$2 = ["pen", "hl", "eraser", "lasso", ...SHAPES];
+const idx = (v, d) => typeof v === "number" && Number.isInteger(v) && v >= 0 && v <= 2 ? v : d;
+function parseInk(raw) {
+  let o = {};
+  try {
+    o = raw ? JSON.parse(raw) : {};
+  } catch {
+    o = {};
+  }
+  if (!o || typeof o !== "object") o = {};
+  const w = o.w ?? {};
+  return {
+    tool: TOOLS$2.includes(o.tool) ? o.tool : DEFAULT_INK.tool,
+    w: { pen: idx(w.pen, DEFAULT_INK.w.pen), hl: idx(w.hl, DEFAULT_INK.w.hl) },
+    c: INK_COLORS.includes(o.c) ? o.c : DEFAULT_INK.c,
+    ds: o.ds === true,
+    sm: o.sm === 0 || o.sm === 2 ? o.sm : 1
+  };
+}
+function inkWidth(s, tool = s.tool) {
+  return tool === "hl" ? HL_WIDTHS[s.w.hl] : PEN_WIDTHS[s.w.pen];
+}
+function stepWidth(s, dir) {
+  const key = s.tool === "hl" ? "hl" : "pen";
+  return { ...s, w: { ...s.w, [key]: Math.max(0, Math.min(2, s.w[key] + dir)) } };
+}
+const alpha = (cutoff, dt) => 1 / (1 + 1 / (2 * Math.PI * cutoff * dt));
+class OneEuro2D {
+  x = 0;
+  y = 0;
+  dx = 0;
+  dy = 0;
+  rx = 0;
+  ry = 0;
+  t = -1;
+  p;
+  constructor(p) {
+    this.p = p;
+  }
+  filter(x, y, tMs) {
+    if (this.t < 0) {
+      this.t = tMs;
+      this.x = this.rx = x;
+      this.y = this.ry = y;
+      return [x, y];
+    }
+    const dt = Math.max(1 / 1e3, (tMs - this.t) / 1e3 || 1 / 240);
+    this.t = tMs;
+    const ad = alpha(this.p.dCutoff, dt);
+    this.dx += ad * ((x - this.rx) / dt - this.dx);
+    this.dy += ad * ((y - this.ry) / dt - this.dy);
+    this.rx = x;
+    this.ry = y;
+    const a = alpha(this.p.minCutoff + this.p.beta * Math.hypot(this.dx, this.dy), dt);
+    this.x += a * (x - this.x);
+    this.y += a * (y - this.y);
+    return [this.x, this.y];
+  }
+}
+function euroFor(pointerType, sm) {
+  if (sm === 0) return null;
+  const strong = sm === 2;
+  if (pointerType === "pen") return strong ? { minCutoff: 3, beta: 0.03, dCutoff: 1 } : { minCutoff: 6, beta: 0.05, dCutoff: 1 };
+  if (pointerType === "touch") return strong ? { minCutoff: 1.4, beta: 0.015, dCutoff: 1 } : { minCutoff: 2.8, beta: 0.025, dCutoff: 1 };
+  return strong ? { minCutoff: 0.8, beta: 0.01, dCutoff: 1 } : { minCutoff: 1.6, beta: 0.018, dCutoff: 1 };
+}
+function catmullRom(pts, step) {
+  if (pts.length < 3) return pts.slice();
+  const out = [pts[0]];
+  const P = (i) => pts[Math.max(0, Math.min(pts.length - 1, i))];
+  for (let i = 0; i < pts.length - 1; i++) {
+    const p0 = P(i - 1), p1 = P(i), p2 = P(i + 1), p3 = P(i + 2);
+    const knot = (a, b) => Math.max(1e-4, Math.sqrt(Math.hypot(b[0] - a[0], b[1] - a[1])));
+    const t0 = 0, t1 = t0 + knot(p0, p1), t2 = t1 + knot(p1, p2), t3 = t2 + knot(p2, p3);
+    const n = Math.max(1, Math.ceil(Math.hypot(p2[0] - p1[0], p2[1] - p1[1]) / step));
+    for (let k = 1; k <= n; k++) {
+      const t4 = t1 + (t2 - t1) * k / n;
+      const lerp = (a, b, ta, tb) => {
+        const u = tb - ta < 1e-9 ? 0 : (t4 - ta) / (tb - ta);
+        return [a[0] + (b[0] - a[0]) * u, a[1] + (b[1] - a[1]) * u];
+      };
+      const A1 = lerp(p0, p1, t0, t1), A2 = lerp(p1, p2, t1, t2), A3 = lerp(p2, p3, t2, t3);
+      const B1 = lerp(A1, A2, t0, t2), B2 = lerp(A2, A3, t1, t3);
+      out.push(lerp(B1, B2, t1, t2));
+    }
+  }
+  return out;
+}
+const MAX_POINTS = 400;
+function finishStroke(pts, zoom, pointerType = "mouse", smooth = 1) {
+  if (pts.length < 2) return pts.map(([x, y]) => [Math.round(x), Math.round(y)]);
+  const z = Math.max(0.05, zoom);
+  const screenEps = smooth === 0 ? 0.6 : pointerType === "pen" ? 0.6 : pointerType === "touch" ? 1 : smooth === 2 ? 1.8 : 1.2;
+  let pts1 = simplify(pts, screenEps / z);
+  if (smooth > 0 && pts1.length >= 3) pts1 = catmullRom(pts1, 5 / z);
+  const ints = [];
+  for (const [x, y] of pts1) {
+    const p = [Math.round(x), Math.round(y)];
+    const last = ints[ints.length - 1];
+    if (!last || last[0] !== p[0] || last[1] !== p[1]) ints.push(p);
+  }
+  let eps = 0.45;
+  let out = simplify(ints, eps);
+  while (out.length > MAX_POINTS) {
+    eps *= 1.6;
+    out = simplify(ints, eps);
+  }
+  return out;
+}
+function pressureDigits(raw, pressures, done) {
+  if (raw.length < 2 || pressures.length !== raw.length || done.length < 2) return void 0;
+  const lo = Math.min(...pressures), hi = Math.max(...pressures);
+  if (hi - lo < 0.05) return void 0;
+  const cum = (pts) => {
+    const c = [0];
+    for (let i = 1; i < pts.length; i++) c.push(c[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]));
+    const total = c[c.length - 1] || 1;
+    return c.map((v) => v / total);
+  };
+  const cr = cum(raw), cd = cum(done);
+  let j = 0;
+  return cd.map((u) => {
+    while (j < cr.length - 2 && cr[j + 1] < u) j++;
+    const span = cr[j + 1] - cr[j] || 1;
+    const k = Math.max(0, Math.min(1, (u - cr[j]) / span));
+    const p = pressures[j] + (pressures[j + 1] - pressures[j]) * k;
+    return String(Math.max(0, Math.min(9, Math.round(p * 9))));
+  }).join("");
+}
+function shapePoints(tool, a, b, mods = {}) {
+  let dx = b[0] - a[0], dy = b[1] - a[1];
+  if (mods.shift) {
+    if (tool === "line" || tool === "arrow") {
+      const len = Math.hypot(dx, dy);
+      const ang = Math.round(Math.atan2(dy, dx) / (Math.PI / 4)) * (Math.PI / 4);
+      dx = Math.round(Math.cos(ang) * len * 1e3) / 1e3;
+      dy = Math.round(Math.sin(ang) * len * 1e3) / 1e3;
+    } else {
+      const side = Math.max(Math.abs(dx), Math.abs(dy));
+      dx = (dx < 0 ? -1 : 1) * side;
+      dy = (dy < 0 ? -1 : 1) * side;
+    }
+  }
+  if (mods.alt) return [[a[0] - dx, a[1] - dy], [a[0] + dx, a[1] + dy]];
+  return [a, [a[0] + dx, a[1] + dy]];
+}
+function arrowHead(from, tip, sw) {
+  const L = Math.max(9, sw * 4.2), W = L * 0.55;
+  const dx = tip[0] - from[0], dy = tip[1] - from[1];
+  const len = Math.hypot(dx, dy) || 1;
+  const ux = dx / len, uy = dy / len;
+  const bx = tip[0] - ux * L, by = tip[1] - uy * L;
+  const r = (v) => Math.round(v * 10) / 10;
+  return `M${r(bx - uy * W)} ${r(by + ux * W)} L${tip[0]} ${tip[1]} L${r(bx + uy * W)} ${r(by - ux * W)}`;
+}
+function shapePath(tool, p0, p1) {
+  const [x0, y0] = p0, [x1, y1] = p1;
+  if (tool === "line" || tool === "arrow") return `M${x0} ${y0} L${x1} ${y1}`;
+  const l = Math.min(x0, x1), t2 = Math.min(y0, y1), r = Math.max(x0, x1), b = Math.max(y0, y1);
+  if (tool === "rect") return `M${l} ${t2} H${r} V${b} H${l} Z`;
+  const rx = (r - l) / 2, ry = (b - t2) / 2, cx2 = l + rx, cy2 = t2 + ry;
+  return `M${cx2 - rx} ${cy2} A${rx} ${ry} 0 1 0 ${cx2 + rx} ${cy2} A${rx} ${ry} 0 1 0 ${cx2 - rx} ${cy2} Z`;
+}
+function freehandOutline(pts, size, pressures) {
+  const n = pts.length;
+  if (n === 0) return [];
+  const cum = [0];
+  for (let i = 1; i < n; i++) cum.push(cum[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]));
+  const total = cum[n - 1];
+  const taper = Math.min(total * 0.3, size * 7);
+  const radius = (i) => {
+    const p = pressures?.[i];
+    const w = p === void 0 ? size : size * (0.3 + 0.95 * p);
+    const ease2 = (v) => 1 - (1 - Math.min(1, v)) ** 2;
+    const f = taper > 0 ? Math.min(ease2(cum[i] / taper), ease2((total - cum[i]) / taper)) : 1;
+    return Math.max(0.35, w / 2 * (0.22 + 0.78 * f));
+  };
+  if (n === 1 || total < 0.5) {
+    const r = Math.max(0.5, size / 2);
+    return Array.from({ length: 12 }, (_, k) => [pts[0][0] + Math.cos(k / 12 * Math.PI * 2) * r, pts[0][1] + Math.sin(k / 12 * Math.PI * 2) * r]);
+  }
+  const left = [], right = [];
+  for (let i = 0; i < n; i++) {
+    const a = pts[Math.max(0, i - 1)], b = pts[Math.min(n - 1, i + 1)];
+    let tx = b[0] - a[0], ty = b[1] - a[1];
+    const tl = Math.hypot(tx, ty) || 1;
+    tx /= tl;
+    ty /= tl;
+    const r = radius(i);
+    left.push([pts[i][0] - ty * r, pts[i][1] + tx * r]);
+    right.push([pts[i][0] + ty * r, pts[i][1] - tx * r]);
+  }
+  const cap = (c, from, r, steps = 5) => {
+    const a0 = Math.atan2(from[1] - c[1], from[0] - c[0]);
+    return Array.from({ length: steps - 1 }, (_, k) => {
+      const a = a0 - Math.PI * (k + 1) / steps;
+      return [c[0] + Math.cos(a) * r, c[1] + Math.sin(a) * r];
+    });
+  };
+  const end = cap(pts[n - 1], left[n - 1], radius(n - 1));
+  const start = cap(pts[0], right[0], radius(0));
+  return [...left, ...end, ...right.reverse(), ...start];
+}
+function outlinePath(poly) {
+  if (poly.length < 3) return "";
+  const r = (v) => Math.round(v * 100) / 100;
+  const mid = (a, b) => `${r((a[0] + b[0]) / 2)} ${r((a[1] + b[1]) / 2)}`;
+  let d = `M${mid(poly[0], poly[1])}`;
+  for (let i = 1; i <= poly.length; i++) {
+    const p = poly[i % poly.length], q = poly[(i + 1) % poly.length];
+    d += ` Q${r(p[0])} ${r(p[1])} ${mid(p, q)}`;
+  }
+  return `${d}Z`;
+}
+function parsePressure(pr, n) {
+  if (!pr || !/^[0-9]+$/.test(pr)) return void 0;
+  if (pr.length === n) return [...pr].map((c) => Number(c) / 9);
+  return Array.from({ length: n }, (_, i) => Number(pr[Math.round(i / Math.max(1, n - 1) * (pr.length - 1))]) / 9);
+}
+function distToSegment(p, a, b) {
+  const dx = b[0] - a[0], dy = b[1] - a[1];
+  const l2 = dx * dx + dy * dy;
+  const t2 = l2 ? Math.max(0, Math.min(1, ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / l2)) : 0;
+  return Math.hypot(p[0] - (a[0] + t2 * dx), p[1] - (a[1] + t2 * dy));
+}
+function itemPolyline(item) {
+  const ox = item.x ?? 0, oy = item.y ?? 0;
+  const pts = (item.d ?? "").split(" ").map((p) => p.split(",").map(Number)).filter((p) => p.length === 2 && p.every(Number.isFinite)).map(([x, y]) => [x + ox, y + oy]);
+  if (pts.length < 2 || !isShape(item.tl)) return pts;
+  const [a, b] = [pts[0], pts[pts.length - 1]];
+  if (item.tl === "line" || item.tl === "arrow") return [a, b];
+  const l = Math.min(a[0], b[0]), t2 = Math.min(a[1], b[1]), r = Math.max(a[0], b[0]), bt = Math.max(a[1], b[1]);
+  if (item.tl === "rect") return [[l, t2], [r, t2], [r, bt], [l, bt], [l, t2]];
+  const cx2 = (l + r) / 2, cy2 = (t2 + bt) / 2, rx = (r - l) / 2, ry = (bt - t2) / 2;
+  return Array.from({ length: 49 }, (_, k) => [cx2 + Math.cos(k / 48 * Math.PI * 2) * rx, cy2 + Math.sin(k / 48 * Math.PI * 2) * ry]);
+}
+function strokeHit(item, p, r) {
+  const pts = itemPolyline(item);
+  const reach = r + Math.max(1, (item.sw ?? 1.9) / 2);
+  if (pts.length === 1) return Math.hypot(p[0] - pts[0][0], p[1] - pts[0][1]) <= reach;
+  for (let i = 1; i < pts.length; i++) if (distToSegment(p, pts[i - 1], pts[i]) <= reach) return true;
+  return false;
+}
+function eraseHits(items, p, r) {
+  const out = [];
+  for (const [id, it] of Object.entries(items)) if (it.k === "draw" && !it.in && strokeHit(it, p, r)) out.push(id);
+  return out;
+}
+function pointInPolygon(p, poly) {
+  let inside = false;
+  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+    const [xi, yi] = poly[i], [xj, yj] = poly[j];
+    if (yi > p[1] !== yj > p[1] && p[0] < (xj - xi) * (p[1] - yi) / (yj - yi || 1e-9) + xi) inside = !inside;
+  }
+  return inside;
+}
+function lassoHits(items, loop) {
+  if (loop.length < 3) return [];
+  const out = [];
+  for (const [id, it] of Object.entries(items)) {
+    if (it.k !== "draw" || it.in) continue;
+    const pts = itemPolyline(it);
+    if (!pts.length) continue;
+    const inside = pts.filter((q) => pointInPolygon(q, loop)).length;
+    if (inside / pts.length >= 0.6) out.push(id);
+  }
+  return out;
+}
+function expandGroups(items, ids) {
+  const sel = new Set(ids);
+  const groups = new Set([...sel].map((id) => items[id]?.g).filter(Boolean));
+  if (groups.size) {
+    for (const [id, it] of Object.entries(items)) if (it.g && groups.has(it.g)) sel.add(id);
+  }
+  return sel;
+}
+function newGroupId() {
+  return Math.random().toString(36).slice(2, 10).padEnd(4, "0");
+}
+function inkGeometry(item, strokePath2) {
+  const pts = (item.d ?? "").split(" ").map((p) => p.split(",").map(Number)).filter((p) => p.length === 2 && p.every(Number.isFinite));
+  if (!pts.length) return null;
+  const sw = item.sw ?? 1.9;
+  const dashed = !!item.ds;
+  const paths = [];
+  let pad2 = Math.max(6, sw);
+  if (isShape(item.tl) && pts.length >= 2) {
+    const a = pts[0], b = pts[pts.length - 1];
+    paths.push({ d: shapePath(item.tl, a, b), fill: false, dashed });
+    if (item.tl === "arrow") {
+      paths.push({ d: arrowHead(a, b, sw), fill: false, dashed: false });
+      pad2 += Math.max(9, sw * 4.2);
+    }
+  } else if (item.sm && item.tl !== "hl" && !dashed) {
+    paths.push({ d: outlinePath(freehandOutline(pts, sw * 1.35, parsePressure(item.pr, pts.length))), fill: true, dashed: false });
+  } else {
+    paths.push({ d: strokePath2(pts), fill: false, dashed });
+  }
+  const xs = pts.map((p) => p[0]), ys = pts.map((p) => p[1]);
+  const x = Math.min(...xs) - pad2, y = Math.min(...ys) - pad2;
+  return { paths, box: { x, y, w: Math.max(...xs) - x + pad2, h: Math.max(...ys) - y + pad2 } };
+}
+const TOOLS$1 = [
+  { tool: "pen", icon: "pen", label: "board.ink.pen", kbd: "D" },
+  { tool: "hl", icon: "highlighter", label: "board.ink.hl", kbd: "⇧D" },
+  { tool: "eraser", icon: "eraser", label: "board.ink.eraser", kbd: "E" },
+  { tool: "lasso", icon: "lasso", label: "board.ink.lasso" }
+];
+const SHAPE_TOOLS = [
+  { tool: "line", icon: "line", label: "board.ink.line" },
+  { tool: "arrow", icon: "inkArrow", label: "board.ink.arrow" },
+  { tool: "rect", icon: "rect", label: "board.ink.rect" },
+  { tool: "ellipse", icon: "ellipse", label: "board.ink.ellipse" }
+];
+const WIDTH_LABEL = ["board.ink.thin", "board.ink.medium", "board.ink.thick"];
+const SMOOTH_LABEL = ["board.ink.smoothOff", "board.ink.smoothOn", "board.ink.smoothStrong"];
+function InkBar({ ink: ink2, onChange, t: t2 }) {
+  const hl = ink2.tool === "hl";
+  const widths = hl ? HL_WIDTHS : PEN_WIDTHS;
+  const wIdx = hl ? ink2.w.hl : ink2.w.pen;
+  const inkless = ink2.tool === "eraser" || ink2.tool === "lasso";
+  const set = (p) => onChange({ ...ink2, ...p });
+  const toolBtn = (x) => /* @__PURE__ */ jsx(
+    "button",
+    {
+      className: `tool${ink2.tool === x.tool ? " on" : ""}`,
+      "aria-pressed": ink2.tool === x.tool,
+      "aria-label": t2(x.label),
+      "data-tip": t2(x.label),
+      "data-kbd": x.kbd,
+      onClick: () => set({ tool: x.tool }),
+      children: /* @__PURE__ */ jsx(Icon, { name: x.icon, size: 15 })
+    },
+    x.tool
+  );
+  return /* @__PURE__ */ jsxs(
+    "div",
+    {
+      className: "hb-inkbar",
+      role: "toolbar",
+      "aria-label": t2("board.ink.bar"),
+      "data-nodrag": true,
+      onPointerDown: (e) => e.stopPropagation(),
+      onContextMenu: (e) => e.preventDefault(),
+      children: [
+        /* @__PURE__ */ jsx("div", { className: "seg", children: TOOLS$1.map(toolBtn) }),
+        /* @__PURE__ */ jsx("div", { className: "seg", children: SHAPE_TOOLS.map(toolBtn) }),
+        /* @__PURE__ */ jsx("div", { className: `seg${inkless ? " off" : ""}`, children: widths.map((_, i) => /* @__PURE__ */ jsx(
+          "button",
+          {
+            className: `tool sw${wIdx === i ? " on" : ""}`,
+            "aria-pressed": wIdx === i,
+            disabled: inkless,
+            "aria-label": t2(WIDTH_LABEL[i]),
+            "data-tip": t2(WIDTH_LABEL[i]),
+            "data-kbd": "[ ]",
+            onClick: () => set({ w: { ...ink2.w, [hl ? "hl" : "pen"]: i } }),
+            children: /* @__PURE__ */ jsx("i", { style: { width: 4 + i * 4, height: 4 + i * 4 } })
+          },
+          i
+        )) }),
+        /* @__PURE__ */ jsx("div", { className: `seg${inkless ? " off" : ""}`, children: INK_COLORS.map((c, i) => /* @__PURE__ */ jsx(
+          "button",
+          {
+            className: `tool sw-c c-${c}${ink2.c === c ? " on" : ""}`,
+            "aria-pressed": ink2.c === c,
+            disabled: inkless,
+            "aria-label": t2(`board.ink.color.${c}`),
+            "data-tip": t2(`board.ink.color.${c}`),
+            "data-kbd": String(i + 1),
+            onClick: () => set({ c }),
+            children: /* @__PURE__ */ jsx("i", {})
+          },
+          c
+        )) }),
+        /* @__PURE__ */ jsxs("div", { className: `seg${inkless ? " off" : ""}`, children: [
+          /* @__PURE__ */ jsx(
+            "button",
+            {
+              className: `tool${ink2.ds ? " on" : ""}`,
+              "aria-pressed": ink2.ds,
+              disabled: inkless,
+              "aria-label": t2("board.ink.dashed"),
+              "data-tip": t2("board.ink.dashed"),
+              onClick: () => set({ ds: !ink2.ds }),
+              children: /* @__PURE__ */ jsx(Icon, { name: "dashed", size: 15 })
+            }
+          ),
+          /* @__PURE__ */ jsxs(
+            "button",
+            {
+              className: `tool smooth${ink2.sm ? " on" : ""} lv${ink2.sm}`,
+              "aria-pressed": ink2.sm > 0,
+              disabled: inkless,
+              "aria-label": t2(SMOOTH_LABEL[ink2.sm]),
+              "data-tip": t2(SMOOTH_LABEL[ink2.sm]),
+              onClick: () => set({ sm: (ink2.sm + 1) % 3 }),
+              children: [
+                /* @__PURE__ */ jsx(Icon, { name: "smooth", size: 15 }),
+                /* @__PURE__ */ jsx("b", { "aria-hidden": "true", children: ink2.sm === 2 ? "2" : "" })
+              ]
+            }
+          )
+        ] })
+      ]
+    }
+  );
+}
 const MOVE_MS = 300;
 const DWELL_MS = 110;
 const TRAIL = 16;
@@ -4941,7 +6253,7 @@ const HermesCursor = forwardRef(
     });
     const activeCb = useRef(onActive);
     activeCb.current = onActive;
-    const paint = (x, y, act) => {
+    const paint2 = (x, y, act) => {
       const s = state.current;
       s.pos = { x, y };
       if (el.current) el.current.style.transform = `translate(${x}px, ${y}px) scale(var(--iz, 1))`;
@@ -4968,7 +6280,7 @@ const HermesCursor = forwardRef(
       const s = state.current;
       const step = () => {
         if (!s.pos) return;
-        paint(s.pos.x, s.pos.y);
+        paint2(s.pos.x, s.pos.y);
         if (s.trail.length > 1 && !s.running) s.raf = requestAnimationFrame(step);
       };
       s.raf = requestAnimationFrame(step);
@@ -5000,7 +6312,7 @@ const HermesCursor = forwardRef(
       activeCb.current?.(true, next.act);
       const from = s.pos ?? { x: target.x + 180, y: target.y - 90 };
       if (reducedMotion) {
-        paint(target.x, target.y, next.act);
+        paint2(target.x, target.y, next.act);
         next.onArrive?.();
         s.running = false;
         setTimeout(run, 60);
@@ -5010,7 +6322,7 @@ const HermesCursor = forwardRef(
       const frame = (now) => {
         const k = Math.min(1, (now - t0) / MOVE_MS);
         const e = ease(k);
-        paint(from.x + (target.x - from.x) * e, from.y + (target.y - from.y) * e, next.act);
+        paint2(from.x + (target.x - from.x) * e, from.y + (target.y - from.y) * e, next.act);
         if (k < 1) {
           s.raf = requestAnimationFrame(frame);
           return;
@@ -5060,8 +6372,8 @@ function insertKid(items, col, id, at) {
   if (!c || c.k !== "col") return;
   const kids = c.kids ?? (c.kids = []);
   if (kids.includes(id)) return;
-  const idx = at == null ? kids.length : Math.max(0, Math.min(kids.length, Math.round(at)));
-  kids.splice(idx, 0, id);
+  const idx2 = at == null ? kids.length : Math.max(0, Math.min(kids.length, Math.round(at)));
+  kids.splice(idx2, 0, id);
 }
 function removeKid(items, id) {
   const col = items[id]?.in;
@@ -5218,25 +6530,25 @@ function previewRects(doc) {
 }
 function drawPreview(canvas, doc, opts) {
   const dpr = Math.min(2, window.devicePixelRatio || 1);
-  const W2 = canvas.clientWidth, H = canvas.clientHeight;
-  if (!W2 || !H) return;
-  if (canvas.width !== Math.round(W2 * dpr) || canvas.height !== Math.round(H * dpr)) {
-    canvas.width = Math.round(W2 * dpr);
+  const W = canvas.clientWidth, H = canvas.clientHeight;
+  if (!W || !H) return;
+  if (canvas.width !== Math.round(W * dpr) || canvas.height !== Math.round(H * dpr)) {
+    canvas.width = Math.round(W * dpr);
     canvas.height = Math.round(H * dpr);
   }
   const ctx = canvas.getContext("2d");
   if (!ctx) return;
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  ctx.clearRect(0, 0, W2, H);
+  ctx.clearRect(0, 0, W, H);
   const cell = opts.cell ?? 6;
   const rects = doc ? previewRects(doc) : [];
   const b = boundsOf(rects.map((x) => x.r)) ?? { x: 0, y: 0, w: 1, h: 1 };
   const pad2 = 30;
-  const s = Math.min(W2 / (b.w + pad2 * 2), H / (b.h + pad2 * 2));
-  const ox = (W2 - b.w * s) / 2 - b.x * s, oy = (H - b.h * s) / 2 - b.y * s;
+  const s = Math.min(W / (b.w + pad2 * 2), H / (b.h + pad2 * 2));
+  const ox = (W - b.w * s) / 2 - b.x * s, oy = (H - b.h * s) / 2 - b.y * s;
   ctx.fillStyle = opts.accent;
   for (let y = cell / 2; y < H; y += cell) {
-    for (let x = cell / 2; x < W2; x += cell) {
+    for (let x = cell / 2; x < W; x += cell) {
       const wx = (x - ox) / s, wy = (y - oy) / s;
       let hit = null;
       for (const it of rects) {
@@ -5557,9 +6869,9 @@ function sparkPaths(series, w, h, lo, hi, pad2 = 3) {
     const y = pad2 + (1 - (Math.max(min, Math.min(max, v)) - min) / (max - min)) * (h - pad2 * 2);
     return [Math.round(x * 10) / 10, Math.round(y * 10) / 10];
   });
-  const line = xy.map(([x, y], i) => `${i ? "L" : "M"}${x} ${y}`).join(" ");
-  const area = n > 1 ? `${line} L${xy[n - 1][0]} ${h} L${xy[0][0]} ${h} Z` : "";
-  return { line, area, last: xy[n - 1], min: lo ?? Math.min(...pts), max: hi ?? Math.max(...pts) };
+  const line2 = xy.map(([x, y], i) => `${i ? "L" : "M"}${x} ${y}`).join(" ");
+  const area = n > 1 ? `${line2} L${xy[n - 1][0]} ${h} L${xy[0][0]} ${h} Z` : "";
+  return { line: line2, area, last: xy[n - 1], min: lo ?? Math.min(...pts), max: hi ?? Math.max(...pts) };
 }
 function tailLines(v, n) {
   const lines = Array.isArray(v) ? v.map(String) : typeof v === "string" ? v.replace(/\s+$/, "").split("\n") : [];
@@ -5657,8 +6969,8 @@ function Spark({ b, data, t: t2 }) {
   const series = numbers(resolve(b.series, data));
   if (series.length < 2) return null;
   const lo = resolve(b.min, data), hi = resolve(b.max, data);
-  const W2 = 300, H = 44;
-  const s = sparkPaths(series, W2, H, typeof lo === "number" ? lo : void 0, typeof hi === "number" ? hi : void 0);
+  const W = 300, H = 44;
+  const s = sparkPaths(series, W, H, typeof lo === "number" ? lo : void 0, typeof hi === "number" ? hi : void 0);
   const last = series[series.length - 1];
   return /* @__PURE__ */ jsxs("div", { className: "lv-spark", children: [
     /* @__PURE__ */ jsxs("div", { className: "row", children: [
@@ -5672,7 +6984,7 @@ function Spark({ b, data, t: t2 }) {
       /* @__PURE__ */ jsx("b", { children: fmtValue(last, b.fmt) })
     ] }),
     /* @__PURE__ */ jsxs("div", { className: "plot", children: [
-      /* @__PURE__ */ jsxs("svg", { viewBox: `0 0 ${W2} ${H}`, preserveAspectRatio: "none", "aria-hidden": "true", children: [
+      /* @__PURE__ */ jsxs("svg", { viewBox: `0 0 ${W} ${H}`, preserveAspectRatio: "none", "aria-hidden": "true", children: [
         /* @__PURE__ */ jsx("defs", { children: /* @__PURE__ */ jsxs("linearGradient", { id: gid, x1: "0", y1: "0", x2: "0", y2: "1", children: [
           /* @__PURE__ */ jsx("stop", { offset: "0", stopColor: "currentColor", stopOpacity: ".22" }),
           /* @__PURE__ */ jsx("stop", { offset: "1", stopColor: "currentColor", stopOpacity: "0" })
@@ -5680,7 +6992,7 @@ function Spark({ b, data, t: t2 }) {
         /* @__PURE__ */ jsx("path", { className: "area", d: s.area, fill: `url(#${gid})` }),
         /* @__PURE__ */ jsx("path", { className: "line", d: s.line, vectorEffect: "non-scaling-stroke" })
       ] }),
-      s.last && /* @__PURE__ */ jsx("i", { className: "dot", style: { left: `${s.last[0] / W2 * 100}%`, top: `${s.last[1] / H * 100}%` } })
+      s.last && /* @__PURE__ */ jsx("i", { className: "dot", style: { left: `${s.last[0] / W * 100}%`, top: `${s.last[1] / H * 100}%` } })
     ] })
   ] });
 }
@@ -6298,22 +7610,30 @@ function TextView({ id, item, c }) {
   }
   return /* @__PURE__ */ jsx("div", { className: `hb-text ${size}`, children: item.text || c.t("board.text.empty") });
 }
-function DrawView({ item, selected }) {
-  const pts = fromStroke(item.d);
-  if (!pts.length) return null;
-  const xs = pts.map((p) => p[0]), ys = pts.map((p) => p[1]);
-  const pad2 = 6;
-  const minX = Math.min(...xs) - pad2, minY = Math.min(...ys) - pad2;
-  const w = Math.max(...xs) - minX + pad2, h = Math.max(...ys) - minY + pad2;
+function DrawView({ item, selected, erasing }) {
+  const geo = inkGeometry(item, strokePath);
+  if (!geo) return null;
+  const { box } = geo;
+  const sw = item.sw ?? 1.9;
+  const cls = `hb-draw${selected ? " sel" : ""}${erasing ? " erasing" : ""}${item.tl === "hl" ? " hl" : ""}${item.c ? ` c-${item.c}` : ""}`;
   return /* @__PURE__ */ jsx(
     "svg",
     {
-      className: `hb-draw${selected ? " sel" : ""}`,
-      width: w,
-      height: h,
-      viewBox: `${minX} ${minY} ${w} ${h}`,
-      style: { position: "absolute", left: minX, top: minY },
-      children: /* @__PURE__ */ jsx("path", { d: strokePath(pts), strokeWidth: item.sw ?? 1.9 })
+      className: cls,
+      width: box.w,
+      height: box.h,
+      viewBox: `${box.x} ${box.y} ${box.w} ${box.h}`,
+      style: { position: "absolute", left: box.x, top: box.y },
+      children: geo.paths.map((p, i) => /* @__PURE__ */ jsx(
+        "path",
+        {
+          d: p.d,
+          className: p.fill ? "fill" : void 0,
+          strokeWidth: p.fill ? void 0 : sw,
+          strokeDasharray: p.dashed ? `${Math.max(4, sw * 3)} ${Math.max(4, sw * 2.4)}` : void 0
+        },
+        i
+      ))
     }
   );
 }
@@ -6342,7 +7662,7 @@ function ItemBody({ id, item, c, dropIndex, selected }) {
     case "text":
       return /* @__PURE__ */ jsx(TextView, { id, item, c });
     case "draw":
-      return /* @__PURE__ */ jsx(DrawView, { item, selected });
+      return /* @__PURE__ */ jsx(DrawView, { item, selected, erasing: c.erasing?.has(id) });
     case "live":
       return /* @__PURE__ */ jsx(LiveView, { id, item, c });
     default:
@@ -6746,7 +8066,7 @@ function Wires({ doc, getRect, version, hidden, fresh, selected, draft, onSelect
   }, [doc, version, hidden, fresh, getRect]);
   return /* @__PURE__ */ jsxs("svg", { className: "hb-wires", width: "1", height: "1", "aria-hidden": "true", children: [
     wires.map((w) => {
-      const ink = w.hermes ? "var(--accent)" : "color-mix(in srgb, var(--ink) 55%, transparent)";
+      const ink2 = w.hermes ? "var(--accent)" : "color-mix(in srgb, var(--ink) 55%, transparent)";
       const sel = selected.has(w.id);
       return /* @__PURE__ */ jsxs("g", { className: w.fresh ? "fresh" : void 0, children: [
         /* @__PURE__ */ jsx(
@@ -6774,12 +8094,12 @@ function Wires({ doc, getRect, version, hidden, fresh, selected, draft, onSelect
             y: y - 1.15,
             width: 2.3,
             height: 2.3,
-            fill: ink,
+            fill: ink2,
             style: w.fresh ? { animationDelay: `${i * 14}ms` } : void 0
           },
           i
-        )) : /* @__PURE__ */ jsx("path", { d: w.d, fill: "none", stroke: ink, strokeWidth: 1.3 }),
-        /* @__PURE__ */ jsx("rect", { x: w.port[0] - 2.5, y: w.port[1] - 2.5, width: 5, height: 5, fill: ink }),
+        )) : /* @__PURE__ */ jsx("path", { d: w.d, fill: "none", stroke: ink2, strokeWidth: 1.3 }),
+        /* @__PURE__ */ jsx("rect", { x: w.port[0] - 2.5, y: w.port[1] - 2.5, width: 5, height: 5, fill: ink2 }),
         /* @__PURE__ */ jsx(
           "path",
           {
@@ -6851,6 +8171,19 @@ const KEY_TOOL = Object.fromEntries(TOOLS.flat().map((x) => [x.key.toLowerCase()
 const PLACE = ["note", "todo", "col", "link", "board", "embed", "image"];
 const EDITABLE = /* @__PURE__ */ new Set(["card", "todo", "col", "frame", "box", "text", "image"]);
 const INTO_COLUMN = /* @__PURE__ */ new Set(["card", "todo", "link", "image", "video", "board"]);
+const INK_KEY = "hb.ink";
+const ERASER_R = 9;
+const INK_HINT = {
+  pen: "board.hint.ink.pen",
+  hl: "board.hint.ink.pen",
+  eraser: "board.hint.ink.eraser",
+  lasso: "board.hint.ink.lasso",
+  line: "board.hint.ink.shape",
+  arrow: "board.hint.ink.shape",
+  rect: "board.hint.ink.shape",
+  ellipse: "board.hint.ink.shape"
+};
+const sameSet = (a, b) => a.size === b.length && b.every((x) => a.has(x));
 const reduced = () => typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
 function isTyping(target) {
   const el = target;
@@ -6883,7 +8216,23 @@ function BoardView({ bid, onOpenBoard, onHome }) {
   const [delta, setDelta] = useState(null);
   const [resize, setResize] = useState(null);
   const [marquee, setMarquee] = useState(null);
-  const [live, setLive] = useState(null);
+  const [ink2, setInkState] = useState(() => parseInk(readLocal(INK_KEY)));
+  const inkRef = useRef(ink2);
+  inkRef.current = ink2;
+  const setInk = useCallback((next) => {
+    setInkState(next);
+    writeLocal(INK_KEY, JSON.stringify(next));
+  }, []);
+  const [erasing, setErasing] = useState(/* @__PURE__ */ new Set());
+  const erasingRef = useRef(erasing);
+  erasingRef.current = erasing;
+  const stroke = useRef(null);
+  const eraser = useRef(null);
+  const liveSvgRef = useRef(null);
+  const livePathRef = useRef(null);
+  const liveHeadRef = useRef(null);
+  const ringRef = useRef(null);
+  const liveRaf = useRef(0);
   const [draft, setDraft] = useState(null);
   const [kidDrag, setKidDrag] = useState(null);
   const [hidden, setHidden] = useState(/* @__PURE__ */ new Set());
@@ -7050,9 +8399,9 @@ function BoardView({ bid, onOpenBoard, onHome }) {
     const ctx2 = canvas.getContext("2d");
     const rects = Object.values(d.items).map(approxRect).filter(Boolean);
     const b = boundsOf(rects) ?? visible;
-    const W2 = canvas.clientWidth, H = canvas.clientHeight, pad2 = 30;
-    const s = Math.min(W2 / (b.w + pad2 * 2), H / (b.h + pad2 * 2));
-    const ox = (W2 - b.w * s) / 2 - b.x * s, oy = (H - b.h * s) / 2 - b.y * s;
+    const W = canvas.clientWidth, H = canvas.clientHeight, pad2 = 30;
+    const s = Math.min(W / (b.w + pad2 * 2), H / (b.h + pad2 * 2));
+    const ox = (W - b.w * s) / 2 - b.x * s, oy = (H - b.h * s) / 2 - b.y * s;
     if (ctx2) {
       ctx2.globalAlpha = 0.75;
       ctx2.strokeStyle = accentRef.current;
@@ -7278,10 +8627,15 @@ function BoardView({ bid, onOpenBoard, onHome }) {
     if (!d) return;
     const ops = [];
     const next = /* @__PURE__ */ new Set();
+    const regroup = /* @__PURE__ */ new Map();
     for (const id of selected) {
       const it = d.items[id];
       if (!it || it.k === "line" || it.k === "col") continue;
       const { by: _by, in: inCol, ...rest } = it;
+      if (rest.g) {
+        if (!regroup.has(rest.g)) regroup.set(rest.g, newGroupId());
+        rest.g = regroup.get(rest.g);
+      }
       const ref = newRef();
       next.add(ref);
       const r = getRect(id);
@@ -7292,6 +8646,15 @@ function BoardView({ bid, onOpenBoard, onHome }) {
       setSelected(next);
     }
   }, [commit, getRect, selected]);
+  const toggleGroup = useCallback(() => {
+    const d = docRef.current;
+    if (!d) return;
+    const ids = [...selected].filter((id) => d.items[id]?.k === "draw");
+    if (ids.length < 2 || ids.length !== selected.size) return;
+    const gs = new Set(ids.map((id) => d.items[id].g));
+    const g = gs.size === 1 && !gs.has(void 0) ? null : newGroupId();
+    commit(ids.map((id) => ({ op: "set", id, p: { g } })));
+  }, [commit, selected]);
   const continueInSession = useCallback(async () => {
     const d = docRef.current;
     if (!d) return;
@@ -7330,6 +8693,163 @@ function BoardView({ bid, onOpenBoard, onHome }) {
   const onChatSent = useCallback((_text, how) => {
     if (how === "handoff") flash(t2("board.toast.promptCopied"));
   }, [flash, t2]);
+  const drawLive = useCallback(() => {
+    liveRaf.current = 0;
+    const er = eraser.current, d = docRef.current;
+    if (er && er.trail.length && d) {
+      const r = ERASER_R / view.current.z;
+      const hits = new Set(er.sweep ? erasingRef.current : []);
+      for (const p of er.trail) for (const id of eraseHits(d.items, p, r)) hits.add(id);
+      er.trail = er.trail.slice(-1);
+      const list = [...hits];
+      if (!sameSet(erasingRef.current, list)) {
+        erasingRef.current = hits;
+        setErasing(hits);
+      }
+    }
+    const svg = liveSvgRef.current, path = livePathRef.current, head = liveHeadRef.current;
+    if (!svg || !path || !head) return;
+    const s = stroke.current;
+    if (!s) {
+      path.setAttribute("d", "");
+      head.setAttribute("d", "");
+      return;
+    }
+    const k = inkRef.current;
+    const sw = inkWidth(k, s.tool);
+    const r1 = (v) => Math.round(v * 10) / 10;
+    const fill = s.tool === "pen" && k.sm > 0 && !k.ds;
+    svg.setAttribute("class", `hb-draw hb-live${s.tool === "lasso" ? " lasso" : ""}${s.tool === "hl" ? " hl" : ""}${k.c !== "ink" && s.tool !== "lasso" ? ` c-${k.c}` : ""}`);
+    path.setAttribute("class", fill ? "fill" : "");
+    path.setAttribute("stroke-width", String(s.tool === "lasso" ? 1.2 / view.current.z : sw));
+    const dash = s.tool === "lasso" ? `${4 / view.current.z} ${3 / view.current.z}` : k.ds && !fill ? `${Math.max(4, sw * 3)} ${Math.max(4, sw * 2.4)}` : "";
+    if (dash) path.setAttribute("stroke-dasharray", dash);
+    else path.removeAttribute("stroke-dasharray");
+    head.setAttribute("stroke-width", String(sw));
+    if (s.tool === "lasso") {
+      path.setAttribute("d", s.loop.length > 1 ? `M${s.loop.map(([x, y]) => `${r1(x)} ${r1(y)}`).join(" L")} Z` : "");
+      head.setAttribute("d", "");
+      return;
+    }
+    if (isShape(s.tool)) {
+      const [p0, p1] = shapePoints(s.tool, s.a, s.b, { shift: s.shift, alt: s.alt });
+      path.setAttribute("d", shapePath(s.tool, p0, p1));
+      head.setAttribute("d", s.tool === "arrow" ? arrowHead(p0, p1, sw) : "");
+      return;
+    }
+    const pts = s.pts.slice();
+    const prs = s.pr.slice();
+    for (const q of [s.raw, s.pred]) if (q) {
+      pts.push(q);
+      prs.push(prs[prs.length - 1] ?? 0.5);
+    }
+    head.setAttribute("d", "");
+    if (fill) {
+      const pen = s.pointerType === "pen" && Math.max(...prs) - Math.min(...prs) > 0.05;
+      path.setAttribute("d", outlinePath(freehandOutline(pts, sw * 1.35, pen ? prs : void 0)));
+    } else {
+      path.setAttribute("d", strokePath(pts.map(([x, y]) => [r1(x), r1(y)])));
+    }
+  }, []);
+  const scheduleLive = useCallback(() => {
+    if (!liveRaf.current) liveRaf.current = requestAnimationFrame(drawLive);
+  }, [drawLive]);
+  useEffect(() => () => cancelAnimationFrame(liveRaf.current), []);
+  useEffect(() => {
+    if (tool !== "draw") {
+      stroke.current = null;
+      eraser.current = null;
+      setErasing((cur) => cur.size ? /* @__PURE__ */ new Set() : cur);
+    } else if (ink2.tool !== "eraser") {
+      eraser.current = null;
+      setErasing((cur) => cur.size ? /* @__PURE__ */ new Set() : cur);
+    }
+  }, [tool, ink2.tool]);
+  const worldMapper = () => {
+    const rect = vpRef.current.getBoundingClientRect();
+    const v = view.current;
+    return (cx2, cy2) => [(cx2 - rect.left - v.x) / v.z, (cy2 - rect.top - v.y) / v.z];
+  };
+  const onInkMove = (e) => {
+    const vp = vpRef.current;
+    if (!vp) return;
+    const W = worldMapper();
+    const k = inkRef.current;
+    const ring = ringRef.current;
+    if (ring) {
+      const rect = vp.getBoundingClientRect();
+      ring.style.transform = `translate(${e.clientX - rect.left}px, ${e.clientY - rect.top}px)`;
+    }
+    const native = e.nativeEvent;
+    const batch = native.getCoalescedEvents?.() ?? [];
+    const events = batch.length ? batch : [native];
+    if (k.tool === "eraser") {
+      const er = eraser.current ?? (eraser.current = { trail: [], sweep: false });
+      er.sweep = drag.current?.kind === "erase";
+      if (!er.sweep) er.trail = [];
+      for (const ev of events) er.trail.push(W(ev.clientX, ev.clientY));
+      scheduleLive();
+      return;
+    }
+    const s = stroke.current;
+    if (!s || !drag.current) return;
+    if (s.tool === "lasso") {
+      for (const ev of events) s.loop.push(W(ev.clientX, ev.clientY));
+    } else if (isShape(s.tool)) {
+      s.b = W(e.clientX, e.clientY);
+      s.shift = e.shiftKey;
+      s.alt = e.altKey;
+    } else {
+      for (const ev of events) {
+        const [fx, fy] = s.euro ? s.euro.filter(ev.clientX, ev.clientY, ev.timeStamp) : [ev.clientX, ev.clientY];
+        s.pts.push(W(fx, fy));
+        s.pr.push(ev.pressure || 0.5);
+      }
+      s.raw = W(e.clientX, e.clientY);
+      const pred = native.getPredictedEvents?.() ?? [];
+      s.pred = pred.length ? W(pred[pred.length - 1].clientX, pred[pred.length - 1].clientY) : null;
+    }
+    scheduleLive();
+  };
+  const finishInk = (d) => {
+    const s = stroke.current;
+    stroke.current = null;
+    scheduleLive();
+    if (!s) return;
+    const k = inkRef.current;
+    const z = view.current.z;
+    if (s.tool === "lasso") {
+      setSelected(expandGroups(d.items, lassoHits(d.items, s.loop)));
+      return;
+    }
+    const sw = inkWidth(k, s.tool);
+    const style = {};
+    if (k.c !== "ink") style.c = k.c;
+    if (k.ds) style.ds = true;
+    if (isShape(s.tool)) {
+      const [p0, p1] = shapePoints(s.tool, s.a, s.b, { shift: s.shift, alt: s.alt });
+      if (Math.hypot(p1[0] - p0[0], p1[1] - p0[1]) < 3 / z) return;
+      const st2 = toStroke([p0, p1]);
+      commit([{ op: "add", ref: newRef(), item: { k: "draw", x: st2.x, y: st2.y, d: st2.d, sw, tl: s.tool, ...style } }]);
+      return;
+    }
+    const raw = s.raw ? [...s.pts, s.raw] : s.pts;
+    const prs = s.raw ? [...s.pr, s.pr[s.pr.length - 1] ?? 0.5] : s.pr;
+    let pts = finishStroke(raw, z, s.pointerType, k.sm);
+    if (!pts.length) return;
+    if (pts.length === 1) pts = [pts[0], pts[0]];
+    const st = toStroke(pts);
+    const item = { k: "draw", x: st.x, y: st.y, d: st.d, sw, ...style };
+    if (s.tool === "hl") item.tl = "hl";
+    else if (k.sm > 0 && !k.ds) {
+      item.sm = true;
+      if (s.pointerType === "pen") {
+        const pr = pressureDigits(raw, prs, pts);
+        if (pr) item.pr = pr;
+      }
+    }
+    commit([{ op: "add", ref: newRef(), item }]);
+  };
   const onPointerDown = (e) => {
     const d = docRef.current;
     if (!d || e.button === 2) return;
@@ -7356,8 +8876,39 @@ function BoardView({ bid, onOpenBoard, onHome }) {
       return;
     }
     if (tool === "draw") {
-      drag.current = { ...base, kind: "draw", pts: [[w.x, w.y]] };
-      setLive([[w.x, w.y]]);
+      const k = inkRef.current;
+      const p = [w.x, w.y];
+      if (k.tool === "eraser") {
+        drag.current = { ...base, kind: "erase" };
+        eraser.current = { trail: [p], sweep: true };
+        erasingRef.current = /* @__PURE__ */ new Set();
+        scheduleLive();
+        return;
+      }
+      if (k.tool === "lasso" && selBounds && selected.size && intersects(selBounds, { x: w.x, y: w.y, w: 0.01, h: 0.01 })) {
+        drag.current = { ...base, kind: "move", ids: [...selected].filter((x) => d.items[x] && !d.items[x].in && d.items[x].k !== "line") };
+        return;
+      }
+      const prm = k.tool === "pen" || k.tool === "hl" ? euroFor(e.pointerType || "mouse", k.sm) : null;
+      const euro = prm ? new OneEuro2D(prm) : null;
+      if (euro) euro.filter(e.clientX, e.clientY, e.timeStamp);
+      stroke.current = {
+        tool: k.tool,
+        pointerType: e.pointerType || "mouse",
+        euro,
+        pts: [p],
+        pr: [e.pressure || 0.5],
+        raw: null,
+        pred: null,
+        a: p,
+        b: p,
+        shift: e.shiftKey,
+        alt: e.altKey,
+        loop: [p]
+      };
+      if (k.tool === "lasso") setSelected(/* @__PURE__ */ new Set());
+      drag.current = { ...base, kind: k.tool === "lasso" ? "lasso" : "ink" };
+      scheduleLive();
       return;
     }
     if (tool === "arrow") {
@@ -7384,11 +8935,12 @@ function BoardView({ bid, onOpenBoard, onHome }) {
     if (itemEl && tool === "select") {
       const id = itemEl.dataset.iid;
       let sel = selected;
+      const group = expandGroups(d.items, [id]);
       if (e.shiftKey) {
         sel = new Set(selected);
-        if (sel.has(id)) sel.delete(id);
-        else sel.add(id);
-      } else if (!selected.has(id)) sel = /* @__PURE__ */ new Set([id]);
+        if (sel.has(id)) group.forEach((x) => sel.delete(x));
+        else group.forEach((x) => sel.add(x));
+      } else if (!selected.has(id)) sel = group;
       setSelected(sel);
       drag.current = { ...base, kind: "move", ids: [...sel].filter((x) => d.items[x] && !d.items[x].in && d.items[x].k !== "line") };
       return;
@@ -7428,8 +8980,9 @@ function BoardView({ bid, onOpenBoard, onHome }) {
     return null;
   };
   const onPointerMove = (e) => {
+    if (tool === "draw") onInkMove(e);
     const g = drag.current;
-    if (!g) return;
+    if (!g || g.kind === "ink" || g.kind === "erase" || g.kind === "lasso") return;
     const dx = e.clientX - g.sx, dy = e.clientY - g.sy;
     if (!g.moved && Math.hypot(dx, dy) > 3) g.moved = true;
     if (!g.moved) return;
@@ -7451,10 +9004,6 @@ function BoardView({ bid, onOpenBoard, onHome }) {
         setMarquee({ x: Math.min(s.x, w.x), y: Math.min(s.y, w.y), w: Math.abs(w.x - s.x), h: Math.abs(w.y - s.y) });
         break;
       }
-      case "draw":
-        g.pts.push([w.x, w.y]);
-        setLive(g.pts.slice());
-        break;
       case "arrow": {
         const r = getRect(g.from);
         if (r) setDraft({ from: r, to: [w.x, w.y] });
@@ -7520,15 +9069,23 @@ function BoardView({ bid, onOpenBoard, onHome }) {
         const r = getRect(id);
         if (r && intersects(r, m)) sel.add(id);
       }
-      setSelected(sel);
+      setSelected(expandGroups(d.items, sel));
       return;
     }
-    if (g.kind === "draw") {
-      setLive(null);
-      const pts = simplify(g.pts ?? [], 1.5);
-      if (pts.length < 2) return;
-      const s = toStroke(pts);
-      commit([{ op: "add", ref: newRef(), item: { k: "draw", x: s.x, y: s.y, d: s.d, sw: 1.9 } }]);
+    if (g.kind === "ink" || g.kind === "lasso") {
+      finishInk(d);
+      return;
+    }
+    if (g.kind === "erase") {
+      drawLive();
+      if (eraser.current) {
+        eraser.current.sweep = false;
+        eraser.current.trail = [];
+      }
+      const ids = [...erasingRef.current].filter((id) => d.items[id]);
+      erasingRef.current = /* @__PURE__ */ new Set();
+      setErasing(/* @__PURE__ */ new Set());
+      if (ids.length) commit(ids.map((id) => ({ op: "del", id })));
       return;
     }
     if (g.kind === "arrow") {
@@ -7614,6 +9171,14 @@ function BoardView({ bid, onOpenBoard, onHome }) {
   useEffect(() => {
     const onKey = (e) => {
       if (!rootRef.current?.isConnected || ask || confirmReq) return;
+      const live = stroke.current;
+      if (live && isShape(live.tool) && (e.key === "Shift" || e.key === "Alt")) {
+        live.shift = e.shiftKey;
+        live.alt = e.altKey;
+        if (e.key === "Alt") e.preventDefault();
+        scheduleLive();
+        return;
+      }
       if (e.key === " " && !isTyping(e.target)) {
         space.current = e.type === "keydown";
         if (e.type === "keydown") e.preventDefault();
@@ -7637,6 +9202,11 @@ function BoardView({ bid, onOpenBoard, onHome }) {
         duplicate();
         return;
       }
+      if (mod2 && e.key.toLowerCase() === "g") {
+        e.preventDefault();
+        toggleGroup();
+        return;
+      }
       if (mod2 && e.key.toLowerCase() === "a") {
         e.preventDefault();
         const d = docRef.current;
@@ -7657,6 +9227,12 @@ function BoardView({ bid, onOpenBoard, onHome }) {
       if (e.key === "Escape") {
         if (connectFrom) {
           setConnectFrom(null);
+          return;
+        }
+        if (stroke.current) {
+          stroke.current = null;
+          drag.current = null;
+          scheduleLive();
           return;
         }
         setSelected(/* @__PURE__ */ new Set());
@@ -7700,6 +9276,30 @@ function BoardView({ bid, onOpenBoard, onHome }) {
         commit([...selected].filter((id) => d.items[id] && !d.items[id].in && d.items[id].k !== "line").map((id) => ({ op: "set", id, p: { x: (d.items[id].x ?? 0) + dx, y: (d.items[id].y ?? 0) + dy } })));
         return;
       }
+      if (e.key.toLowerCase() === "d" && e.shiftKey) {
+        setTool("draw");
+        setInk({ ...inkRef.current, tool: "hl" });
+        return;
+      }
+      if (tool === "draw") {
+        const k = inkRef.current;
+        if (e.key === "[" || e.key === "]") {
+          setInk(stepWidth(k, e.key === "]" ? 1 : -1));
+          return;
+        }
+        if (/^[1-6]$/.test(e.key)) {
+          setInk({ ...k, c: INK_COLORS[Number(e.key) - 1] });
+          return;
+        }
+        if (e.key.toLowerCase() === "e") {
+          setInk({ ...k, tool: "eraser" });
+          return;
+        }
+        if (e.key.toLowerCase() === "d") {
+          setInk({ ...k, tool: "pen" });
+          return;
+        }
+      }
       const tl = KEY_TOOL[e.key.toLowerCase()];
       if (tl) {
         if (tl === "image") {
@@ -7720,7 +9320,7 @@ function BoardView({ bid, onOpenBoard, onHome }) {
       window.removeEventListener("keydown", onKey);
       window.removeEventListener("keyup", onKey);
     };
-  }, [ask, center, commit, confirmReq, connectFrom, continueInSession, deleteSelection, duplicate, fit, openChat, selected, sync, zoomAt]);
+  }, [ask, center, commit, confirmReq, connectFrom, continueInSession, deleteSelection, duplicate, fit, openChat, scheduleLive, selected, setInk, sync, tool, toggleGroup, zoomAt]);
   useEffect(() => {
     const onPaste = (e) => {
       if (!rootRef.current?.isConnected || isTyping(e.target) || ask) return;
@@ -7786,6 +9386,7 @@ function BoardView({ bid, onOpenBoard, onHome }) {
     liveActions,
     liveActionsDown,
     runLiveAction,
+    erasing,
     openBoard: (id) => onOpenBoard(id),
     addToColumn: (col) => {
       const ref = newRef();
@@ -7812,7 +9413,7 @@ function BoardView({ bid, onOpenBoard, onHome }) {
         id
       );
     }
-  } : null, [Frame, commit, doc, editing, hidden, kidDrag, liveActions, liveActionsDown, onOpenBoard, playing, regEl, runLiveAction, selected, t2, update]);
+  } : null, [Frame, commit, doc, editing, erasing, hidden, kidDrag, liveActions, liveActionsDown, onOpenBoard, playing, regEl, runLiveAction, selected, t2, update]);
   const ctxRef = useRef(ctx);
   ctxRef.current = ctx;
   const selBounds = useMemo(() => {
@@ -7831,6 +9432,7 @@ function BoardView({ bid, onOpenBoard, onHome }) {
   })();
   const hermesVerbs = (() => {
     if (!selKinds.length) return [];
+    if (selKinds.length > 1 && selKinds.every((k) => k === "draw")) return ["board.verb.diagram"];
     if (selKinds.length > 1) return ["board.verb.group", "board.verb.summarize"];
     switch (selKinds[0]) {
       case "draw":
@@ -7867,8 +9469,12 @@ function BoardView({ bid, onOpenBoard, onHome }) {
       setTool("select");
     }
   };
+  const canGroup = !!doc && selIds.length > 1 && selIds.every((id) => doc.items[id].k === "draw");
+  const groupOf = new Set(selIds.map((id) => doc?.items[id]?.g));
+  const isGrouped = canGroup && groupOf.size === 1 && !groupOf.has(void 0);
   useLayoutEffect(() => {
-    selRef.current = selBounds && selKinds.length && tool === "select" && !connectFrom && !menu ? selBounds : null;
+    const selecting = tool === "select" || tool === "draw" && ink2.tool === "lasso";
+    selRef.current = selBounds && selKinds.length && selecting && !connectFrom && !menu ? selBounds : null;
     placeCtx();
   });
   useEffect(() => rootRef.current ? installTips(rootRef.current) : void 0, [!!doc]);
@@ -7902,6 +9508,7 @@ function BoardView({ bid, onOpenBoard, onHome }) {
       if (openTarget) out2.push({ id: "open", label: t2("board.ctx.open"), icon: "board" in openTarget ? "openBoard" : "open", run: runOpen });
       if (canConnect) out2.push({ id: "connect", label: t2("board.ctx.connect"), icon: "connect", run: startConnect });
       if (canDuplicate) out2.push({ id: "dup", label: t2("board.ctx.duplicate"), icon: "duplicate", kbd: `${mod}D`, run: duplicate });
+      if (canGroup) out2.push({ id: "grp", label: t2(isGrouped ? "board.ctx.ungroup" : "board.ctx.group"), icon: isGrouped ? "ungroup" : "group", kbd: `${mod}G`, run: toggleGroup });
       out2.push({ sep: true });
       out2.push({ id: "del", label: t2("board.ctx.delete"), icon: "delete", kbd: "Del", danger: true, run: deleteSelection });
       return out2;
@@ -7945,11 +9552,12 @@ function BoardView({ bid, onOpenBoard, onHome }) {
     ] });
   }
   const items = Object.entries(doc.items).filter(([, it]) => !it.in && it.k !== "line");
-  items.sort(([, a], [, b]) => (a.k === "frame" ? -1 : 0) - (b.k === "frame" ? -1 : 0));
+  const layer = (it) => it.k === "frame" ? 0 : it.k === "draw" && it.tl === "hl" ? 1 : 2;
+  items.sort(([, a], [, b]) => layer(a) - layer(b));
   const sessionShort = doc.session?.id ? doc.session.id.slice(-4) : null;
   const savedTs = sync.savedAt ? sync.savedAt / 1e3 : doc.updated;
-  const vpCls = `hb-viewport${tool === "pan" ? " tool-pan" : ""}${tool === "draw" ? " tool-draw" : ""}${tool === "arrow" || connectFrom ? " tool-arrow" : ""}${PLACE.includes(tool) ? " tool-place" : ""}`;
-  const hint = connectFrom ? t2("board.hint.connect") : TOOL_HINT[tool] ? t2(TOOL_HINT[tool]) : "";
+  const vpCls = `hb-viewport${tool === "pan" ? " tool-pan" : ""}${tool === "draw" ? ` tool-draw ink-${ink2.tool}` : ""}${tool === "arrow" || connectFrom ? " tool-arrow" : ""}${PLACE.includes(tool) ? " tool-place" : ""}`;
+  const hint = connectFrom ? t2("board.hint.connect") : tool === "draw" ? t2(INK_HINT[ink2.tool]) : TOOL_HINT[tool] ? t2(TOOL_HINT[tool]) : "";
   const zoomBy = (f) => {
     const vp = vpRef.current;
     zoomAt(f, vp.clientWidth / 2, vp.clientHeight / 2);
@@ -7967,6 +9575,7 @@ function BoardView({ bid, onOpenBoard, onHome }) {
         onPointerCancel: onPointerUp,
         onContextMenu,
         onDoubleClick: (e) => {
+          if (tool === "draw") return;
           const target = e.target;
           const iid = target.closest("[data-iid]")?.dataset.iid;
           if (iid) {
@@ -8016,7 +9625,7 @@ function BoardView({ bid, onOpenBoard, onHome }) {
                   className: cls,
                   "data-iid": id,
                   ref: regEl(id),
-                  style: { left: x, top: y, width, height, zIndex: it.k === "frame" ? 0 : sel ? 3 : 1 },
+                  style: { left: x, top: y, width, height, zIndex: layer(it) < 2 ? 0 : sel ? 3 : 1 },
                   children: [
                     /* @__PURE__ */ jsx(ItemBody, { id, item: it, c: ctx, dropIndex, selected: sel }),
                     sel && it.k !== "draw" && selected.size === 1 && /* @__PURE__ */ jsxs(Fragment, { children: [
@@ -8031,10 +9640,14 @@ function BoardView({ bid, onOpenBoard, onHome }) {
               );
             }),
             kidDrag && doc.items[kidDrag.id] && /* @__PURE__ */ jsx("div", { className: "hb-ghost", style: { left: kidDrag.x - 20, top: kidDrag.y - 12, width: 264 }, children: /* @__PURE__ */ jsx(ItemBody, { id: kidDrag.id, item: doc.items[kidDrag.id], c: ctx, dropIndex: null, selected: true }) }),
-            live && live.length > 1 && /* @__PURE__ */ jsx("svg", { className: "hb-draw", style: { position: "absolute", left: 0, top: 0, overflow: "visible" }, width: "1", height: "1", children: /* @__PURE__ */ jsx("path", { d: strokePath(live.map(([x, y]) => [Math.round(x), Math.round(y)])), strokeWidth: 1.9 }) }),
+            tool === "draw" && /* @__PURE__ */ jsxs("svg", { ref: liveSvgRef, className: "hb-draw hb-live", style: { position: "absolute", left: 0, top: 0, overflow: "visible" }, width: "1", height: "1", children: [
+              /* @__PURE__ */ jsx("path", { ref: livePathRef, d: "" }),
+              /* @__PURE__ */ jsx("path", { ref: liveHeadRef, d: "" })
+            ] }),
             marquee && /* @__PURE__ */ jsx("div", { className: "hb-marquee", style: { left: marquee.x, top: marquee.y, width: marquee.w, height: marquee.h } }),
             /* @__PURE__ */ jsx(HermesCursor, { ref: cursorRef, reducedMotion: reduced(), onActive: (on, act) => setCursorAct(on ? act : null) })
           ] }),
+          tool === "draw" && ink2.tool === "eraser" && /* @__PURE__ */ jsx("div", { className: "hb-eraser", ref: ringRef, style: { width: ERASER_R * 2, height: ERASER_R * 2 } }),
           items.length === 0 && /* @__PURE__ */ jsxs("div", { className: "hb-empty", children: [
             /* @__PURE__ */ jsx("span", { className: "ico", children: /* @__PURE__ */ jsx(Icon, { name: "note", size: 18 }) }),
             /* @__PURE__ */ jsx("div", { className: "hd", children: t2("board.empty.title") }),
@@ -8068,6 +9681,7 @@ function BoardView({ bid, onOpenBoard, onHome }) {
           openTarget && /* @__PURE__ */ jsx("button", { className: "ib", "data-tip": t2("board.ctx.open"), "aria-label": t2("board.ctx.open"), onClick: runOpen, children: /* @__PURE__ */ jsx(Icon, { name: "board" in openTarget ? "openBoard" : "open" }) }),
           canConnect && /* @__PURE__ */ jsx("button", { className: "ib", "data-tip": t2("board.ctx.connect"), "aria-label": t2("board.ctx.connect"), onClick: startConnect, children: /* @__PURE__ */ jsx(Icon, { name: "connect" }) }),
           canDuplicate && /* @__PURE__ */ jsx("button", { className: "ib", "data-tip": t2("board.ctx.duplicate"), "data-kbd": `${mod}D`, "aria-label": t2("board.ctx.duplicate"), onClick: duplicate, children: /* @__PURE__ */ jsx(Icon, { name: "duplicate" }) }),
+          canGroup && /* @__PURE__ */ jsx("button", { className: "ib", "data-tip": t2(isGrouped ? "board.ctx.ungroup" : "board.ctx.group"), "data-kbd": `${mod}G`, "aria-label": t2(isGrouped ? "board.ctx.ungroup" : "board.ctx.group"), onClick: toggleGroup, children: /* @__PURE__ */ jsx(Icon, { name: isGrouped ? "ungroup" : "group" }) }),
           /* @__PURE__ */ jsx("button", { className: "ib danger", "data-tip": t2("board.ctx.delete"), "data-kbd": "Del", "aria-label": t2("board.ctx.delete"), onClick: deleteSelection, children: /* @__PURE__ */ jsx(Icon, { name: "delete" }) })
         ]
       }
@@ -8140,6 +9754,7 @@ function BoardView({ bid, onOpenBoard, onHome }) {
         t2("board.continue")
       ] })
     ] }),
+    tool === "draw" && /* @__PURE__ */ jsx(InkBar, { ink: ink2, onChange: setInk, t: t2 }),
     /* @__PURE__ */ jsxs("footer", { className: "hb-status", children: [
       TOOLS.map((group, gi) => /* @__PURE__ */ jsx("div", { className: "seg", children: group.map((x) => /* @__PURE__ */ jsx(
         "button",
@@ -8395,16 +10010,16 @@ function goBoard(id) {
   openBoard(id);
   window.setTimeout(notifyBoardRoute, 0);
 }
-function BoardCard({ row: row2, onOpen, onDelete }) {
+function BoardCard({ row, onOpen, onDelete }) {
   const t2 = useT();
   const [doc, setDoc] = useState(null);
   useEffect(() => {
     let live = true;
-    loadBoardDoc(row2.id, true).then((d) => live && setDoc(d));
+    loadBoardDoc(row.id, true).then((d) => live && setDoc(d));
     return () => {
       live = false;
     };
-  }, [row2.id, row2.seq]);
+  }, [row.id, row.seq]);
   return /* @__PURE__ */ jsxs(
     "div",
     {
@@ -8418,13 +10033,13 @@ function BoardCard({ row: row2, onOpen, onDelete }) {
       children: [
         /* @__PURE__ */ jsx("div", { className: "pv", children: /* @__PURE__ */ jsx(BoardPreview, { doc }) }),
         /* @__PURE__ */ jsxs("div", { className: "ttl", children: [
-          /* @__PURE__ */ jsx("b", { children: row2.name }),
+          /* @__PURE__ */ jsx("b", { children: row.name }),
           /* @__PURE__ */ jsx("span", { className: "go", children: /* @__PURE__ */ jsx(Icon, { name: "openBoard", size: 13 }) })
         ] }),
         /* @__PURE__ */ jsxs("div", { className: "meta", children: [
-          /* @__PURE__ */ jsx("span", { children: t2("board.ref.meta", { n: row2.count, when: ago(t2, row2.updated) }) }),
+          /* @__PURE__ */ jsx("span", { children: t2("board.ref.meta", { n: row.count, when: ago(t2, row.updated) }) }),
           /* @__PURE__ */ jsx("span", { className: "sp" }),
-          row2.session && /* @__PURE__ */ jsx("span", { className: "sig", children: /* @__PURE__ */ jsx(Cad, {}) }),
+          row.session && /* @__PURE__ */ jsx("span", { className: "sig", children: /* @__PURE__ */ jsx(Cad, {}) }),
           /* @__PURE__ */ jsx(
             "button",
             {
@@ -9451,7 +11066,7 @@ function HomeGrid() {
     }
   );
 }
-const homeCss = "/* Home page — rice-style widget grid.\n * Every color routes through --home-accent (the active theme's primary),\n * so switching themes recolors the whole page with zero widget changes.\n * Swap teal (#2dd4bf) stays fixed: it is interaction semantics, not theme. */\n\n.home-root {\n  --home-accent: var(--color-primary, var(--ui-accent, #ffd700));\n  --home-accent-dim: color-mix(in srgb, var(--home-accent) 55%, #000);\n  /* Readable secondary text (headers, captions): dim was ~3:1 on the glass. */\n  --home-accent-soft: color-mix(in srgb, var(--home-accent) 82%, #9aa3b5);\n  --home-surface: color-mix(\n    in srgb,\n    var(--home-accent) 6%,\n    var(--ui-editor-surface-background, rgb(10 10 14 / 0.55))\n  );\n  --home-border: color-mix(in srgb, var(--home-accent) 18%, transparent);\n  --home-error: var(--color-destructive, #e25555);\n  position: relative;\n  height: 100%;\n  overflow: auto;\n  font-family: var(--theme-font-mono, ui-monospace, monospace);\n  color: var(--color-foreground, var(--ui-text-primary, #d8dce6));\n}\n\n.home-stage {\n  position: relative;\n  min-height: 60vh;\n  touch-action: none;\n}\n\n.home-widget {\n  position: absolute;\n  border-radius: 8px;\n  padding: 10px 12px;\n  background: var(--home-surface);\n  border: 1px solid var(--home-border);\n  backdrop-filter: blur(12px);\n  -webkit-backdrop-filter: blur(12px);\n  box-shadow: 0 10px 30px rgb(0 0 0 / 0.5);\n  overflow: hidden;\n  transition: left 0.18s ease, top 0.18s ease;\n  container-type: size;\n  font-size: 11px;\n  line-height: 1.5;\n  /* Promote each widget to its own compositor layer so the constantly\n   * repainting matrix canvas doesn't force the neighbours' backdrop-filter\n   * to recompose every frame — that recomposition is what produced the\n   * horizontal flicker sweeping across the glass panels. */\n  transform: translateZ(0);\n  contain: paint;\n}\n.home-root.editing .home-widget { user-select: none; }\n.home-widget.dragging {\n  transition: none;\n  opacity: 0.9;\n  border-color: var(--home-accent);\n  z-index: 50;\n  cursor: grabbing;\n}\n.home-widget.swap-target {\n  border-color: #2dd4bf;\n  box-shadow: 0 0 0 1px rgb(45 212 191 / 0.5), 0 10px 30px rgb(0 0 0 / 0.5);\n}\n/* Over the trash zone — about to be deleted. */\n.home-widget.trashing {\n  opacity: 0.45;\n  border-color: var(--home-error);\n  box-shadow: 0 0 0 1px color-mix(in srgb, var(--home-error) 60%, transparent),\n    0 10px 30px rgb(0 0 0 / 0.5);\n}\n\n/* Floating label that follows the pointer while dragging a new widget in. */\n.home-add-ghost {\n  position: fixed;\n  z-index: 70;\n  transform: translate(-50%, -140%);\n  padding: 4px 10px;\n  border-radius: 6px;\n  font-size: 11px;\n  white-space: nowrap;\n  pointer-events: none;\n  color: var(--home-accent);\n  background: var(--home-surface);\n  border: 1px solid var(--home-accent);\n  backdrop-filter: blur(12px);\n  -webkit-backdrop-filter: blur(12px);\n  box-shadow: 0 8px 24px rgb(0 0 0 / 0.45);\n}\n\n/* Header: short lead rule · TITLE · hairline that fades out. Drawn with CSS\n * (not box-drawing glyphs) so the gaps stay even and the rule never touches\n * the text, whatever the font or title length. */\n.home-widget .hd {\n  display: flex;\n  align-items: center;\n  gap: 10px;\n  min-height: 16px;\n  font-size: 9.5px;\n  letter-spacing: 0.18em;\n  margin-bottom: 8px;\n  font-weight: 700;\n  text-transform: uppercase;\n  color: var(--home-accent-soft);\n  white-space: nowrap;\n  overflow: hidden;\n}\n.home-widget .hd .hd-t { flex: none; }\n.home-widget .hd::before,\n.home-widget .hd::after {\n  content: \"\";\n  height: 1px;\n  flex: none;\n}\n.home-widget .hd::before {\n  width: 12px;\n  background: currentColor;\n  opacity: 0.45;\n}\n.home-widget .hd::after {\n  flex: 1 1 auto;\n  min-width: 0;\n  background: linear-gradient(to right, currentColor, transparent 92%);\n  opacity: 0.28;\n}\n.home-root.editing .home-widget .hd { cursor: grab; }\n\n.home-widget .rs {\n  position: absolute;\n  right: 2px;\n  bottom: 2px;\n  width: 13px;\n  height: 13px;\n  cursor: nwse-resize;\n  border-right: 2px solid color-mix(in srgb, var(--home-accent) 45%, transparent);\n  border-bottom: 2px solid color-mix(in srgb, var(--home-accent) 45%, transparent);\n  border-radius: 2px;\n  z-index: 3;\n}\n.home-widget .wremove {\n  position: absolute;\n  top: 4px;\n  right: 6px;\n  z-index: 3;\n  background: none;\n  border: none;\n  color: var(--home-error);\n  font-size: 13px;\n  line-height: 1;\n  cursor: pointer;\n  padding: 2px 4px;\n}\n.home-widget .werr { color: var(--home-error); }\n/* Data-source states (widget-state.ts): honest copy per failure kind. */\n.home-widget .wstate { display: block; font-size: 10px; letter-spacing: 0.04em; }\n.home-widget .wstate::before { content: \"● \"; }\n.home-widget .wstate-offline { color: var(--home-error); }\n.home-widget .wstate-unavailable { color: #f5b945; }\n.home-widget .hd .hd-stale { color: #f5b945; letter-spacing: 0.1em; opacity: 0.8; }\n\n/* ── hover controls (contextual chrome, rest mode only) ──\n * Reusable floating control rendered inside a widget body. Hidden by default,\n * fades in while hovering the widget, and fully suppressed in edit mode so it\n * never fights drag/resize. Widgets opt in by rendering <HoverCtl>/<HoverArrows>. */\n.hover-ctl {\n  /* Sits IN the header row: same top as the widget padding, same height as .hd,\n   * right-aligned at the end of the header rule. No chip: bare glyphs, like the rest. */\n  position: absolute;\n  top: 10px;\n  right: 12px;\n  height: 16px;\n  z-index: 4;\n  display: flex;\n  align-items: center;\n  gap: 6px;\n  white-space: nowrap;\n  opacity: 0;\n  pointer-events: none;\n  transition: opacity 0.16s ease;\n}\n/* Visible only while the pointer is over the widget. Keyboard users still get them\n * (:focus-visible), but a mouse click no longer leaves them stuck on screen. */\n.home-widget:hover .hover-ctl,\n.hover-ctl:has(:focus-visible) { opacity: 1; pointer-events: auto; }\n/* While the controls show, the header rule stops short of them... */\n.home-widget:hover .hd::after,\n.home-widget:has(.hover-ctl :focus-visible) .hd::after {\n  margin-right: calc(var(--ctl-w, 0px) + 10px);\n}\n/* ...and when the widget is too narrow for title + controls, the title steps aside. */\n.home-widget[data-ctl-tight]:hover .hd .hd-t,\n.home-widget[data-ctl-tight]:hover .hd::before { opacity: 0; }\n.home-widget .hd .hd-t,\n.home-widget .hd::before,\n.home-widget .hd::after { transition: opacity 0.16s ease, margin-right 0.16s ease; }\n/* Multi-row controls (Pomodoro steppers) don't fit the header: they sit below it. */\n.hover-ctl.pomo-set { top: 30px; height: auto; }\n.home-root.editing .hover-ctl { display: none; }\n@media (hover: none) {\n  /* Touch: no hover, so keep controls reachable but understated. */\n  .hover-ctl { opacity: 0.5; pointer-events: auto; }\n}\n\n.hv-arrow {\n  background: none;\n  border: none;\n  cursor: pointer;\n  padding: 0 3px;\n  color: var(--home-accent-dim);\n  font-size: 14px;\n  line-height: 1;\n  font-family: inherit;\n}\n.hv-arrow:hover:not(:disabled) { color: var(--home-accent); }\n.hv-arrow:disabled { opacity: 0.3; cursor: default; }\n.hv-label {\n  font-size: 9px;\n  letter-spacing: 0.1em;\n  text-transform: uppercase;\n  color: var(--home-accent-dim);\n  white-space: nowrap;\n}\n.hv-label-btn {\n  background: none;\n  border: none;\n  cursor: pointer;\n  font: inherit;\n  letter-spacing: 0.1em;\n  padding: 0;\n}\n.hv-label-btn:hover { color: var(--home-accent); }\n\n/* Toggle/option buttons inside a hover control (clock format, host view…). */\n.hv-opt {\n  background: none;\n  border: none;\n  cursor: pointer;\n  font: inherit;\n  font-size: 9px;\n  letter-spacing: 0.08em;\n  text-transform: uppercase;\n  color: var(--home-accent-dim);\n  padding: 0 4px;\n  border-radius: 4px;\n}\n.hv-opt:hover { color: var(--home-accent); }\n.hv-opt.on { color: #000; background: var(--home-accent); }\n\n/* Extra detail that smoothly expands on widget hover (rest mode only). Uses\n * the 0fr→1fr grid trick so it animates real height without a fixed value. */\n.hover-reveal {\n  display: grid;\n  grid-template-rows: 0fr;\n  opacity: 0;\n  transition: grid-template-rows 0.25s ease, opacity 0.2s ease, margin-top 0.25s ease;\n}\n.home-widget:hover .hover-reveal { grid-template-rows: 1fr; opacity: 1; margin-top: 4px; }\n.home-root.editing .hover-reveal { grid-template-rows: 0fr; opacity: 0; margin-top: 0; }\n.hover-reveal > * { overflow: hidden; min-height: 0; }\n\n.home-ghost {\n  position: absolute;\n  border: 1.5px dashed color-mix(in srgb, var(--home-accent) 70%, transparent);\n  border-radius: 8px;\n  background: color-mix(in srgb, var(--home-accent) 7%, transparent);\n  display: none;\n  z-index: 5;\n  pointer-events: none;\n  transition: left 0.18s ease, top 0.18s ease, width 0.18s ease, height 0.18s ease;\n}\n.home-ghost.visible { display: block; }\n.home-ghost.swap {\n  border-color: rgb(45 212 191 / 0.85);\n  background: rgb(45 212 191 / 0.08);\n}\n\n/* ── widget content primitives (responsive to the widget's own size) ── */\n.home-widget .rows { column-gap: 18px; }\n@container (min-width: 380px) {\n  .home-widget .rows { columns: 2; column-rule: 1px solid rgb(255 255 255 / 0.06); }\n}\n@container (min-width: 600px) {\n  .home-widget .rows { columns: 3; }\n}\n.home-widget .row {\n  display: flex;\n  justify-content: space-between;\n  gap: 6px;\n  padding: 1px 0;\n  border-bottom: 1px solid rgb(255 255 255 / 0.04);\n  break-inside: avoid;\n}\n.home-widget .row:last-child { border-bottom: none; }\n/* Names flex and ellipsize at the real column width instead of a fixed\n * character slice that cut words mid-glyph (\"bitacoras-guayab\"). */\n.home-widget .row > * { flex: none; }\n.home-widget .row > .row-name {\n  flex: 1 1 auto;\n  min-width: 0;\n  overflow: hidden;\n  white-space: nowrap;\n  text-overflow: ellipsis;\n}\n\n.home-widget .meters { column-gap: 18px; }\n@container (min-width: 380px) {\n  .home-widget .meters { columns: 2; }\n}\n.home-widget .meter {\n  display: flex;\n  align-items: center;\n  gap: 6px;\n  margin: 3px 0;\n  break-inside: avoid;\n}\n.home-widget .meter .lbl { width: 34px; color: var(--color-muted-foreground, #7d8496); font-size: 10px; }\n.home-widget .meter .track {\n  flex: 1;\n  height: 7px;\n  border-radius: 2px;\n  background: rgb(255 255 255 / 0.07);\n  overflow: hidden;\n}\n.home-widget .meter .fill {\n  height: 100%;\n  background: linear-gradient(90deg, var(--home-accent-dim), var(--home-accent));\n  transition: width 0.6s ease;\n}\n.home-widget .meter .val { width: 44px; text-align: right; font-size: 10px; }\n\n.home-widget .ok { color: var(--home-accent); }\n.home-widget .dim { color: var(--color-muted-foreground, #6b7387); }\n.home-widget .bigval {\n  font-size: min(9cqw, 18cqh);\n  font-weight: 700;\n  color: var(--home-accent);\n}\n\n.home-clock-wrap {\n  display: flex;\n  flex-direction: column;\n  align-items: center;\n  justify-content: center;\n  height: calc(100% - 18px);\n}\n.home-clock {\n  font-size: min(26cqw, 52cqh);\n  font-weight: 800;\n  color: var(--home-accent);\n  letter-spacing: 0.02em;\n  text-shadow: 0 0 24px color-mix(in srgb, var(--home-accent) 35%, transparent);\n  line-height: 1;\n}\n.home-clock-ampm {\n  font-size: 0.32em;\n  vertical-align: 0.9em;\n  margin-left: 0.2em;\n  letter-spacing: 0.05em;\n  color: var(--home-accent-dim);\n}\n.home-clock-sub {\n  color: var(--home-accent-dim);\n  font-size: max(9px, min(3.4cqw, 8cqh));\n  letter-spacing: 0.14em;\n  text-transform: uppercase;\n  margin-top: 1cqh;\n}\n\n.home-ascii-wrap {\n  display: flex;\n  flex-direction: column;\n  align-items: center;\n  justify-content: center;\n  height: calc(100% - 18px);\n}\n.home-ascii {\n  font-size: min(5.6cqw, 5.4cqh);\n  line-height: 1.05;\n  white-space: pre;\n  text-align: center;\n  background: linear-gradient(\n    180deg,\n    var(--home-accent-dim),\n    var(--home-accent) 40%,\n    var(--home-accent) 60%,\n    var(--home-accent-dim)\n  );\n  -webkit-background-clip: text;\n  background-clip: text;\n  color: transparent;\n  filter: drop-shadow(0 0 10px color-mix(in srgb, var(--home-accent) 25%, transparent));\n}\n.home-ascii-caduceus {\n  transform: scaleX(0.88);\n  transform-origin: center;\n}\n.home-ascii-ver {\n  text-align: center;\n  color: var(--home-accent-soft);\n  font-size: max(8px, min(2.6cqw, 5cqh));\n  letter-spacing: 0.22em;\n  margin-top: 1.5cqh;\n}\n\n.home-spark {\n  display: flex;\n  align-items: flex-end;\n  gap: 2px;\n  height: max(18px, 22cqh);\n  margin: 6px 0 4px;\n}\n.home-spark i {\n  flex: 1;\n  background: linear-gradient(180deg, var(--home-accent), var(--home-accent-dim));\n  border-radius: 1px 1px 0 0;\n  opacity: 0.85;\n  transition: height 0.6s ease, opacity 0.15s ease;\n  cursor: default;\n}\n.home-spark i:hover { opacity: 1; }\n\n/* Hover tooltip over a bar (tokens widget). Anchored to the bar via inline\n * `left` + `translateX`, which clamps it inside the clipped widget; the appear/\n * disappear slide+fade runs on the independent `translate` property so it never\n * fights the positioning transform. */\n.home-spark-wrap { position: relative; }\n.home-spark-tip {\n  position: absolute;\n  bottom: 100%;\n  margin-bottom: 6px;\n  padding: 3px 7px;\n  border-radius: 6px;\n  background: color-mix(in srgb, var(--home-accent) 10%, rgb(8 8 12 / 0.96));\n  border: 1px solid var(--home-border);\n  color: rgb(236 236 242);\n  font-size: 10px;\n  line-height: 1.3;\n  white-space: nowrap;\n  pointer-events: none;\n  opacity: 0;\n  translate: 0 4px;\n  transition: opacity 0.18s ease, translate 0.18s ease, transform 0.18s ease;\n  z-index: 6;\n}\n.home-spark-tip.show { opacity: 1; translate: 0 0; }\n.home-spark-tip b { color: var(--home-accent); font-weight: 600; }\n\n/* Line/area chart (tokens widget, alternative to the bars). Stretched to fill\n * via preserveAspectRatio=none; the stroke stays crisp with non-scaling-stroke. */\n.home-area {\n  display: block;\n  width: 100%;\n  height: max(18px, 22cqh);\n  margin: 6px 0 4px;\n  overflow: visible;\n}\n.home-area rect { cursor: default; }\n\n/* Host graphs view: four live sparklines (cpu / ram / load / proc) in a 2×2\n * grid over a rolling one-minute window. Fills the widget below the header\n * (same absolute pattern as the canvas widgets); cells reuse .home-area but\n * stretch to their cell height instead of the tokens widget's fixed band. */\n.host-sparks {\n  position: absolute;\n  inset: 30px 12px 10px;\n  display: grid;\n  grid-template-columns: 1fr 1fr;\n  grid-template-rows: 1fr 1fr;\n  gap: 4px 12px;\n  min-height: 0;\n}\n.host-spark {\n  display: flex;\n  flex-direction: column;\n  min-height: 0;\n  min-width: 0;\n}\n.host-spark-head {\n  display: flex;\n  justify-content: space-between;\n  align-items: baseline;\n  font-size: max(8px, min(3.2cqw, 6cqh));\n  letter-spacing: 0.14em;\n  text-transform: uppercase;\n}\n.host-spark-head .val {\n  font-variant-numeric: tabular-nums;\n  color: var(--home-accent);\n}\n.host-spark .home-area {\n  flex: 1;\n  height: auto;\n  min-height: 12px;\n  margin: 2px 0 0;\n}\n\n/* Small vertical divider between the range arrows and the toggles. */\n.tok-div {\n  width: 1px;\n  align-self: stretch;\n  margin: 2px 2px;\n  background: var(--home-border);\n}\n\n/* Totals line, regrouped: each label sticks to its value, groups spaced evenly\n * (the old `.row` space-between scattered the six tokens across the full width). */\n.tok-stats {\n  display: flex;\n  flex-wrap: wrap;\n  gap: 2px 14px;\n  padding: 3px 0 1px;\n  font-variant-numeric: tabular-nums;\n}\n.tok-stats > span { white-space: nowrap; }\n.tok-stats .dim { margin-right: 2px; }\n\n/* Grouped usage (tokens widget, by provider / by model): one row per group\n * with a faint share bar behind it, width = --share of the grouped total. */\n.tok-groups { padding-top: 3px; font-variant-numeric: tabular-nums; }\n.home-widget .row.tok-group {\n  background: linear-gradient(\n    90deg,\n    color-mix(in srgb, var(--home-accent) 16%, transparent) var(--share, 0%),\n    transparent var(--share, 0%)\n  );\n  border-radius: 2px;\n  padding-left: 3px;\n}\n.tok-share { min-width: 3ch; text-align: right; }\n.tok-group-note,\n.tok-group-more { font-size: 9.5px; padding-top: 1px; }\n\n/* ── spend widget ── */\n.home-spend { font-variant-numeric: tabular-nums; }\n.spend-head { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\n.spend-est {\n  margin-left: 6px;\n  padding: 0 4px;\n  border: 1px solid var(--home-border);\n  border-radius: 3px;\n  font-size: 9px;\n  letter-spacing: 0.06em;\n  color: var(--color-muted-foreground, #6b7387);\n  vertical-align: 2px;\n}\n.spend-providers { padding-top: 2px; }\n.spend-covered {\n  margin-top: 4px;\n  padding: 2px 0 2px 6px;\n  border-left: 2px solid color-mix(in srgb, var(--home-accent) 35%, transparent);\n  color: var(--home-accent-soft, var(--home-accent));\n}\n.spend-covered > div { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\n.spend-month {\n  margin-top: 4px;\n  padding-top: 3px;\n  border-top: 1px solid rgb(255 255 255 / 0.06);\n}\n.spend-month .spend-flag { white-space: nowrap; }\n.spend-top-head {\n  font-size: 9.5px;\n  letter-spacing: 0.12em;\n  text-transform: uppercase;\n  padding: 2px 0 1px;\n}\n.spend-month.spend-near .spend-flag,\n.spend-month.spend-pace .spend-flag { color: color-mix(in srgb, var(--home-accent) 50%, var(--home-error)); }\n.spend-month.spend-over,\n.spend-month.spend-over .spend-flag { color: var(--home-error); }\n.spend-top { margin-top: 3px; }\n.home-widget .row.spend-session { cursor: pointer; border-radius: 2px; }\n.home-widget .row.spend-session:hover { background: color-mix(in srgb, var(--home-accent) 10%, transparent); }\n.home-widget .row.spend-session:hover .row-name { color: var(--home-accent); }\n.home-root.editing .home-widget .row.spend-session { cursor: inherit; }\n.spend-tag {\n  font-size: 9px;\n  letter-spacing: 0.06em;\n  text-transform: uppercase;\n  color: var(--color-muted-foreground, #6b7387);\n  align-self: center;\n}\n.spend-tag-metered { color: var(--home-accent); }\n.spend-cost { min-width: 6ch; text-align: right; }\n.spend-foot { display: flex; flex-wrap: wrap; gap: 0 10px; font-size: 9.5px; padding-top: 2px; }\n.spend-cap-val { min-width: 4ch; text-align: center; color: var(--home-accent); }\n\n/* Sessions widget: per-row token count (shown while sorting/filtering by it). */\n.ses-tok { font-variant-numeric: tabular-nums; color: var(--home-accent-soft); }\n\n/* ── logs widget (per-file record list) ── */\n.logs-sub {\n  display: flex;\n  justify-content: space-between;\n  align-items: baseline;\n  gap: 8px;\n}\n.logs-file {\n  font-size: 11px;\n  font-weight: 600;\n  letter-spacing: 0.06em;\n  color: var(--home-accent);\n}\n/* The wrapper owns the widget's remaining height so the list scrolls inside it\n * instead of growing past the bottom edge (the old calc() resolved against an\n * auto-height parent and never clamped). */\n.home-logs-wrap {\n  display: flex;\n  flex-direction: column;\n  height: calc(100% - 21px);\n  min-height: 0;\n}\n.home-logs {\n  display: flex;\n  flex-direction: column;\n  gap: 1px;\n  flex: 1 1 0;\n  min-height: 0;\n  overflow-y: auto;\n  margin-top: 3px;\n  /* Rows that don't fit fade out instead of being sliced by the edge. */\n  mask-image: linear-gradient(180deg, #000 calc(100% - 14px), transparent);\n}\n.log-row {\n  display: flex;\n  gap: 6px;\n  align-items: baseline;\n  padding: 1px 0;\n  border-bottom: 1px solid rgb(255 255 255 / 0.04);\n  cursor: default;\n}\n.log-row:last-child { border-bottom: none; }\n.log-lvl {\n  flex: none;\n  width: 32px;\n  font-size: 9px;\n  font-weight: 600;\n  letter-spacing: 0.03em;\n}\n.log-lvl.lvl-error { color: var(--home-error); }\n.log-lvl.lvl-warn { color: #f5b945; }\n.log-lvl.lvl-info { color: var(--color-muted-foreground, #6b7387); }\n.log-time {\n  flex: none;\n  font-size: 9px;\n  color: var(--color-muted-foreground, #6b7387);\n  font-variant-numeric: tabular-nums;\n}\n.log-msg {\n  flex: 1;\n  min-width: 0;\n  font-size: 10px;\n  white-space: nowrap;\n  overflow: hidden;\n  text-overflow: ellipsis;\n}\n\n.home-matrix-c {\n  position: absolute;\n  inset: 0;\n  top: 24px;\n  width: 100%;\n  height: calc(100% - 24px);\n}\n\n/* ── notes widget ── */\n.home-notes { display: flex; flex-direction: column; gap: 1px; height: calc(100% - 18px); overflow-y: auto; }\n.home-notes .note-row {\n  display: flex;\n  align-items: baseline;\n  gap: 7px;\n  padding: 1px 0;\n  border-bottom: 1px solid rgb(255 255 255 / 0.04);\n}\n.home-notes .note-mark {\n  cursor: pointer;\n  width: 12px;\n  text-align: center;\n  color: var(--home-accent);\n  flex-shrink: 0;\n}\n.home-notes .note-mark.done { color: var(--color-muted-foreground, #6b7387); }\n.home-notes .note-text { cursor: text; flex: 1; min-width: 0; overflow-wrap: anywhere; }\n.home-notes .note-text.done {\n  text-decoration: line-through;\n  color: var(--color-muted-foreground, #6b7387);\n}\n.home-notes .note-input {\n  flex: 1;\n  min-width: 0;\n  background: none;\n  border: none;\n  border-bottom: 1px dashed var(--home-border);\n  outline: none;\n  color: inherit;\n  font: inherit;\n  padding: 0;\n}\n.home-notes .note-add {\n  align-self: flex-start;\n  margin-top: 4px;\n  background: none;\n  border: none;\n  cursor: pointer;\n  color: var(--home-accent-dim);\n  font-size: 14px;\n  line-height: 1;\n  padding: 2px 6px 2px 2px;\n}\n.home-notes .note-add:hover { color: var(--home-accent); }\n\n/* ── canvas widgets (heartbeat, life) ── */\n.home-canvas {\n  position: absolute;\n  inset: 0;\n  top: 24px;\n  width: 100%;\n  height: calc(100% - 24px);\n}\n/* Life is drawable in rest mode — signal it with a crosshair. */\n.home-root:not(.editing) .home-life { cursor: crosshair; }\n\n/* ── moon ── */\n.home-moon-wrap {\n  display: flex;\n  flex-direction: column;\n  align-items: center;\n  height: calc(100% - 18px);\n}\n.home-moon-c { flex: 1; width: 100%; min-height: 0; }\n.home-moon-label {\n  color: var(--home-accent-dim);\n  font-size: max(8px, min(3cqw, 6cqh));\n  letter-spacing: 0.14em;\n  text-transform: uppercase;\n}\n\n/* ── pomodoro / countdown ── */\n.home-pomo .home-clock,\n.home-count .home-clock { cursor: pointer; }\n.home-pomo .home-clock.paused { opacity: 0.55; }\n.home-pomo .pomo-sub { cursor: pointer; }\n.home-count .count-label { cursor: pointer; }\n.home-count .count-input,\n.home-pomo .count-input { max-width: 92%; text-align: center; color-scheme: dark; }\n\n/* ── countdown segment editor (alarm-style spinners) ── */\n.count-edit {\n  display: flex;\n  flex-direction: column;\n  align-items: center;\n  justify-content: center;\n  gap: 3px;\n  height: calc(100% - 18px);\n}\n.count-edit-row { display: flex; align-items: center; gap: 5px; }\n.count-seg { display: flex; flex-direction: column; align-items: center; }\n.count-seg .seg-btn {\n  background: none;\n  border: none;\n  cursor: pointer;\n  padding: 0;\n  line-height: 0.6;\n  font-size: 8px;\n  color: var(--home-accent-dim);\n}\n.count-seg .seg-btn:hover { color: var(--home-accent); }\n.count-seg .seg-val {\n  background: none;\n  border: none;\n  outline: none;\n  text-align: center;\n  color: var(--home-accent);\n  font: inherit;\n  font-weight: 800;\n  font-size: max(12px, min(7cqw, 15cqh));\n  padding: 1px 0;\n  border-bottom: 1px solid transparent;\n  letter-spacing: 0.02em;\n}\n.count-seg input.seg-val:focus { border-bottom-color: var(--home-accent); }\n.count-seg .seg-static { cursor: default; }\n.count-colon {\n  font-weight: 800;\n  color: var(--home-accent-dim);\n  font-size: max(12px, min(7cqw, 15cqh));\n}\n.count-done {\n  margin-top: 3px;\n  background: none;\n  border: 1px solid var(--home-border);\n  border-radius: 6px;\n  color: var(--home-accent);\n  cursor: pointer;\n  font: inherit;\n  font-size: 10px;\n  letter-spacing: 0.08em;\n  text-transform: uppercase;\n  padding: 2px 12px;\n}\n.count-done:hover { border-color: var(--home-accent); }\n.home-pomo .pomo-min {\n  font-size: min(20cqw, 40cqh);\n  font-weight: 800;\n  color: var(--home-accent);\n  max-width: 70%;\n}\n/* Hover steppers for the pomodoro work/break lengths. */\n.hover-ctl.pomo-set { flex-direction: column; align-items: flex-end; gap: 1px; }\n.pomo-stepper { display: flex; align-items: center; gap: 3px; }\n.pomo-stepper .hv-label:nth-child(3) { min-width: 16px; text-align: center; color: var(--home-accent); }\n\n/* ── calendar ── */\n.home-cal { height: calc(100% - 18px); display: flex; flex-direction: column; }\n.home-cal-month {\n  text-align: center;\n  color: var(--home-accent-dim);\n  font-size: max(9px, min(3.2cqw, 7cqh));\n  letter-spacing: 0.14em;\n  text-transform: uppercase;\n  margin-bottom: 4px;\n}\n.home-cal-grid {\n  flex: 1;\n  display: grid;\n  grid-template-columns: repeat(7, 1fr);\n  align-content: space-evenly;\n  justify-items: center;\n  font-size: max(8px, min(3cqw, 6.5cqh));\n}\n.home-cal-h { color: var(--color-muted-foreground, #6b7387); }\n.home-cal-d { color: var(--color-foreground, #d8dce6); opacity: 0.75; }\n.home-cal-today {\n  color: #000;\n  background: var(--home-accent);\n  border-radius: 4px;\n  padding: 0 4px;\n  font-weight: 700;\n}\n/* Density tiers, chosen from the widget's cell width (see CalendarWidget). */\n.home-cal.tier-mini .home-cal-month {\n  font-size: max(8px, min(4cqw, 8cqh));\n  margin-bottom: 2px;\n}\n.home-cal.tier-mini .home-cal-grid { font-size: max(9px, min(4cqw, 8cqh)); }\n.home-cal.tier-large .home-cal-month {\n  font-size: max(11px, min(3cqw, 7cqh));\n  margin-bottom: 7px;\n}\n.home-cal.tier-large .home-cal-grid { row-gap: 3px; }\n.home-cal.tier-large .home-cal-h { font-weight: 700; opacity: 0.8; }\n.home-cal.tier-large .home-cal-today { padding: 1px 6px; }\n\n/* ── page chrome ── */\n/* Edit affordance lives BELOW the grid, centered. It fades in once the user\n * starts scrolling down (or immediately when the grid is short enough that\n * there's nothing to scroll), keeping the home clean on first paint. While\n * editing it sticks to the bottom of the viewport so it stays reachable. */\n.home-editbar {\n  display: flex;\n  justify-content: center;\n  gap: 10px;\n  padding: 22px 12px 30px;\n  opacity: 0;\n  transition: opacity 0.25s ease;\n  pointer-events: none;\n}\n.home-editbar.visible {\n  opacity: 1;\n  pointer-events: auto;\n}\n.home-root.editing .home-editbar {\n  position: sticky;\n  bottom: 0;\n}\n.home-fab {\n  position: relative;\n  width: 38px;\n  height: 38px;\n  border-radius: 50%;\n  display: flex;\n  align-items: center;\n  justify-content: center;\n  font-size: 15px;\n  cursor: pointer;\n  color: var(--home-accent);\n  background: var(--home-surface);\n  border: 1px solid var(--home-border);\n  backdrop-filter: blur(12px);\n  -webkit-backdrop-filter: blur(12px);\n  transition:\n    border-color 0.25s ease,\n    background 0.35s ease,\n    box-shadow 0.45s ease,\n    transform 0.4s cubic-bezier(0.34, 1.4, 0.64, 1);\n}\n.home-fab:hover {\n  border-color: var(--home-accent);\n  transform: scale(1.06);\n}\n.home-fab:active { transform: scale(0.94); }\n.home-fab.active {\n  background: color-mix(in srgb, var(--home-accent) 22%, transparent);\n  /* Warm Hermes glow ring when edit mode engages. */\n  animation: home-fab-glow 0.55s ease-out;\n}\n\n/* Crossfading edit ✎ ↔ done ✓ glyphs — each rotates and scales through the\n * swap with a gentle overshoot, matching the dashboard's soft motion. */\n.home-fab-ico {\n  position: absolute;\n  inset: 0;\n  display: flex;\n  align-items: center;\n  justify-content: center;\n  transition:\n    opacity 0.3s ease,\n    transform 0.45s cubic-bezier(0.34, 1.45, 0.64, 1);\n}\n.ico-edit { opacity: 1; transform: rotate(0) scale(1); }\n.ico-done { opacity: 0; transform: rotate(-120deg) scale(0.3); }\n.home-fab.active .ico-edit { opacity: 0; transform: rotate(120deg) scale(0.3); }\n.home-fab.active .ico-done { opacity: 1; transform: rotate(0) scale(1); }\n\n.home-fab-spin {\n  display: inline-block;\n  animation: home-fab-spin-in 0.5s cubic-bezier(0.34, 1.4, 0.64, 1);\n}\n\n/* The restore-default button slides up into place, like the dashboard's\n * dialog-in entrance. */\n.home-fab-enter {\n  animation: home-fab-enter 0.32s cubic-bezier(0.34, 1.3, 0.64, 1);\n}\n\n@keyframes home-fab-glow {\n  0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--home-accent) 55%, transparent); }\n  100% { box-shadow: 0 0 0 13px transparent; }\n}\n@keyframes home-fab-spin-in {\n  from { transform: rotate(-150deg); opacity: 0.3; }\n  to   { transform: rotate(0); opacity: 1; }\n}\n@keyframes home-fab-enter {\n  from { opacity: 0; transform: translateY(6px) scale(0.9); }\n  to   { opacity: 1; transform: translateY(0) scale(1); }\n}\n\n@media (prefers-reduced-motion: reduce) {\n  .home-fab,\n  .home-fab-ico,\n  .home-fab-spin,\n  .home-fab-enter { animation: none; transition: opacity 0.2s ease; }\n}\n\n/* ── toast (plugin-local; the host toast isn't exposed in the SDK) ── */\n.home-toast {\n  position: fixed;\n  bottom: 18px;\n  left: 50%;\n  transform: translateX(-50%);\n  z-index: 80;\n  padding: 8px 16px;\n  border-radius: 8px;\n  font-size: 12px;\n  color: var(--home-error, #e25555);\n  background: var(--home-surface);\n  border: 1px solid var(--home-error, #e25555);\n  backdrop-filter: blur(12px);\n  -webkit-backdrop-filter: blur(12px);\n  box-shadow: 0 8px 24px rgb(0 0 0 / 0.45);\n  animation: home-toast-in 0.25s ease;\n}\n@keyframes home-toast-in {\n  from { opacity: 0; transform: translateX(-50%) translateY(8px); }\n  to { opacity: 1; transform: translateX(-50%) translateY(0); }\n}\n\n/* Catalog reveal: the wrapper animates its row track 0fr → 1fr so the panel\n * grows/collapses its real height smoothly (no grid jump), with a matching\n * fade. Kept mounted so the exit animates too. */\n.home-catalog-wrap {\n  display: grid;\n  grid-template-rows: 0fr;\n  margin: 0 12px;\n  opacity: 0;\n  pointer-events: none;\n  transition:\n    grid-template-rows 0.34s cubic-bezier(0.34, 1.2, 0.64, 1),\n    opacity 0.28s ease,\n    margin-bottom 0.34s ease;\n}\n.home-catalog-wrap.open {\n  grid-template-rows: 1fr;\n  opacity: 1;\n  pointer-events: auto;\n  margin-bottom: 8px;\n}\n.home-catalog {\n  overflow: hidden;\n  min-height: 0;\n  border-radius: 8px;\n  background: var(--home-surface);\n  border: 1px solid var(--home-border);\n  backdrop-filter: blur(12px);\n  -webkit-backdrop-filter: blur(12px);\n  transition: border-color 0.2s ease, background 0.2s ease;\n}\n/* Highlighted as a delete target while a widget is dragged over it. */\n.home-catalog-wrap.trash-active .home-catalog {\n  border-color: var(--home-error);\n  border-style: dashed;\n  background: color-mix(in srgb, var(--home-error) 10%, var(--home-surface));\n}\n.home-catalog-inner {\n  display: flex;\n  flex-wrap: wrap;\n  align-items: center;\n  gap: 8px;\n  padding: 10px;\n}\n.home-catalog-hint {\n  font-size: 10px;\n  letter-spacing: 0.04em;\n  color: var(--color-muted-foreground, #6b7387);\n  margin-right: 4px;\n}\n.home-catalog-wrap.trash-active .home-catalog-hint { color: var(--home-error); }\n.home-catalog-chip { touch-action: none; }\n.home-catalog-chip {\n  font-family: inherit;\n  font-size: 11px;\n  padding: 4px 10px;\n  border-radius: 6px;\n  cursor: pointer;\n  background: none;\n  border: 1px dashed var(--home-border);\n  color: var(--color-foreground, #d8dce6);\n  transition: border-color 0.2s ease, color 0.2s ease, transform 0.2s ease;\n}\n.home-catalog-chip:hover {\n  border-color: var(--home-accent);\n  color: var(--home-accent);\n  transform: translateY(-1px);\n}\n.home-catalog-chip:active { transform: scale(0.95); }\n.home-catalog .empty { color: var(--color-muted-foreground, #6b7387); font-size: 11px; }\n\n@media (prefers-reduced-motion: reduce) {\n  .home-catalog-wrap { transition: opacity 0.2s ease; }\n}\n\n/* ── projects widget (~/projects/<name>/status.json) ── */\n.home-projects {\n  display: flex;\n  flex-direction: column;\n  gap: 3px;\n  max-height: calc(100% - 18px);\n  overflow-y: auto;\n}\n.project-row {\n  display: flex;\n  align-items: center;\n  gap: 6px;\n  padding: 2px 6px;\n  border-radius: 4px;\n  border-left: 2px solid var(--home-border);\n  background: color-mix(in srgb, var(--home-accent) 4%, transparent);\n  cursor: pointer;\n}\n.project-row:hover,\n.project-item.open .project-row { background: color-mix(in srgb, var(--home-accent) 10%, transparent); }\n.project-row.ok { border-left-color: var(--home-accent); }\n.project-row.warn { border-left-color: color-mix(in srgb, var(--home-accent) 50%, var(--home-error)); }\n.project-row.err { border-left-color: var(--home-error); }\n.project-icon { font-size: 9px; color: var(--color-muted-foreground, #6b7387); }\n.project-row.ok .project-icon { color: var(--home-accent); }\n.project-row.warn .project-icon { color: color-mix(in srgb, var(--home-accent) 50%, var(--home-error)); }\n.project-row.err .project-icon { color: var(--home-error); }\n.project-name {\n  flex: 1 1 auto;\n  min-width: 0;\n  overflow: hidden;\n  white-space: nowrap;\n  text-overflow: ellipsis;\n}\n.project-stats { font-variant-numeric: tabular-nums; color: var(--home-accent-soft); font-size: 10px; }\n.project-time { color: var(--color-muted-foreground, #6b7387); font-size: 9.5px; white-space: nowrap; }\n.project-caret { color: var(--color-muted-foreground, #6b7387); font-size: 9px; width: 10px; text-align: center; }\n.project-detail {\n  margin: 1px 0 3px 12px;\n  padding: 4px 8px;\n  border-left: 1px dashed var(--home-border);\n  display: flex;\n  flex-direction: column;\n  gap: 3px;\n  font-size: 10px;\n}\n.project-detail-row { line-height: 1.4; }\n.project-alerts ul { margin: 2px 0 0 14px; padding: 0; list-style: disc; }\n.project-alerts li { color: var(--home-error); }\n\n/* ── boards (full page inside the Home tab on the web dashboard) ── */\n.home-board-page { position: relative; height: calc(100vh - 72px); min-height: 480px; }\n.home-board-page.desktop { height: 100%; }\n";
+const homeCss = "/* Home page — rice-style widget grid.\n * Every color routes through --home-accent (the active theme's primary),\n * so switching themes recolors the whole page with zero widget changes.\n * Swap teal (#2dd4bf) stays fixed: it is interaction semantics, not theme. */\n\n.home-root {\n  --home-accent: var(--color-primary, var(--ui-accent, #ffd700));\n  --home-accent-dim: color-mix(in srgb, var(--home-accent) 55%, #000);\n  /* Readable secondary text (headers, captions): dim was ~3:1 on the glass. */\n  --home-accent-soft: color-mix(in srgb, var(--home-accent) 82%, #9aa3b5);\n  --home-surface: color-mix(\n    in srgb,\n    var(--home-accent) 6%,\n    var(--ui-editor-surface-background, rgb(10 10 14 / 0.55))\n  );\n  --home-border: color-mix(in srgb, var(--home-accent) 18%, transparent);\n  --home-error: var(--color-destructive, #e25555);\n  position: relative;\n  height: 100%;\n  overflow: auto;\n  font-family: var(--theme-font-mono, ui-monospace, monospace);\n  color: var(--color-foreground, var(--ui-text-primary, #d8dce6));\n}\n\n.home-stage {\n  position: relative;\n  min-height: 60vh;\n  touch-action: none;\n}\n\n.home-widget {\n  position: absolute;\n  border-radius: 8px;\n  padding: 10px 12px;\n  background: var(--home-surface);\n  border: 1px solid var(--home-border);\n  backdrop-filter: blur(12px);\n  -webkit-backdrop-filter: blur(12px);\n  box-shadow: 0 10px 30px rgb(0 0 0 / 0.5);\n  overflow: hidden;\n  transition: left 0.18s ease, top 0.18s ease;\n  container-type: size;\n  font-size: 11px;\n  line-height: 1.5;\n  /* Promote each widget to its own compositor layer so the constantly\n   * repainting matrix canvas doesn't force the neighbours' backdrop-filter\n   * to recompose every frame — that recomposition is what produced the\n   * horizontal flicker sweeping across the glass panels. */\n  transform: translateZ(0);\n  contain: paint;\n}\n.home-root.editing .home-widget { user-select: none; }\n.home-widget.dragging {\n  transition: none;\n  opacity: 0.9;\n  border-color: var(--home-accent);\n  z-index: 50;\n  cursor: grabbing;\n}\n.home-widget.swap-target {\n  border-color: #2dd4bf;\n  box-shadow: 0 0 0 1px rgb(45 212 191 / 0.5), 0 10px 30px rgb(0 0 0 / 0.5);\n}\n/* Over the trash zone — about to be deleted. */\n.home-widget.trashing {\n  opacity: 0.45;\n  border-color: var(--home-error);\n  box-shadow: 0 0 0 1px color-mix(in srgb, var(--home-error) 60%, transparent),\n    0 10px 30px rgb(0 0 0 / 0.5);\n}\n\n/* Floating label that follows the pointer while dragging a new widget in. */\n.home-add-ghost {\n  position: fixed;\n  z-index: 70;\n  transform: translate(-50%, -140%);\n  padding: 4px 10px;\n  border-radius: 6px;\n  font-size: 11px;\n  white-space: nowrap;\n  pointer-events: none;\n  color: var(--home-accent);\n  background: var(--home-surface);\n  border: 1px solid var(--home-accent);\n  backdrop-filter: blur(12px);\n  -webkit-backdrop-filter: blur(12px);\n  box-shadow: 0 8px 24px rgb(0 0 0 / 0.45);\n}\n\n/* Header: short lead rule · TITLE · hairline that fades out. Drawn with CSS\n * (not box-drawing glyphs) so the gaps stay even and the rule never touches\n * the text, whatever the font or title length. */\n.home-widget .hd {\n  display: flex;\n  align-items: center;\n  gap: 10px;\n  min-height: 16px;\n  font-size: 9.5px;\n  letter-spacing: 0.18em;\n  margin-bottom: 8px;\n  font-weight: 700;\n  text-transform: uppercase;\n  color: var(--home-accent-soft);\n  white-space: nowrap;\n  overflow: hidden;\n}\n.home-widget .hd .hd-t { flex: none; }\n.home-widget .hd::before,\n.home-widget .hd::after {\n  content: \"\";\n  height: 1px;\n  flex: none;\n}\n.home-widget .hd::before {\n  width: 12px;\n  background: currentColor;\n  opacity: 0.45;\n}\n.home-widget .hd::after {\n  flex: 1 1 auto;\n  min-width: 0;\n  background: linear-gradient(to right, currentColor, transparent 92%);\n  opacity: 0.28;\n}\n.home-root.editing .home-widget .hd { cursor: grab; }\n\n.home-widget .rs {\n  position: absolute;\n  right: 2px;\n  bottom: 2px;\n  width: 13px;\n  height: 13px;\n  cursor: nwse-resize;\n  border-right: 2px solid color-mix(in srgb, var(--home-accent) 45%, transparent);\n  border-bottom: 2px solid color-mix(in srgb, var(--home-accent) 45%, transparent);\n  border-radius: 2px;\n  z-index: 3;\n}\n.home-widget .wremove {\n  position: absolute;\n  top: 4px;\n  right: 6px;\n  z-index: 3;\n  background: none;\n  border: none;\n  color: var(--home-error);\n  font-size: 13px;\n  line-height: 1;\n  cursor: pointer;\n  padding: 2px 4px;\n}\n.home-widget .werr { color: var(--home-error); }\n/* Data-source states (widget-state.ts): honest copy per failure kind. */\n.home-widget .wstate { display: block; font-size: 10px; letter-spacing: 0.04em; }\n.home-widget .wstate::before { content: \"● \"; }\n.home-widget .wstate-offline { color: var(--home-error); }\n.home-widget .wstate-unavailable { color: #f5b945; }\n.home-widget .hd .hd-stale { color: #f5b945; letter-spacing: 0.1em; opacity: 0.8; }\n\n/* ── hover controls (contextual chrome, rest mode only) ──\n * Reusable floating control rendered inside a widget body. Hidden by default,\n * fades in while hovering the widget, and fully suppressed in edit mode so it\n * never fights drag/resize. Widgets opt in by rendering <HoverCtl>/<HoverArrows>. */\n.hover-ctl {\n  /* Sits IN the header row: same top as the widget padding, same height as .hd,\n   * right-aligned at the end of the header rule. No chip: bare glyphs, like the rest. */\n  position: absolute;\n  top: 10px;\n  right: 12px;\n  height: 16px;\n  z-index: 4;\n  display: flex;\n  align-items: center;\n  gap: 6px;\n  white-space: nowrap;\n  opacity: 0;\n  pointer-events: none;\n  transition: opacity 0.16s ease;\n}\n/* Visible only while the pointer is over the widget. Keyboard users still get them\n * (:focus-visible), but a mouse click no longer leaves them stuck on screen. */\n.home-widget:hover .hover-ctl,\n.hover-ctl:has(:focus-visible) { opacity: 1; pointer-events: auto; }\n/* While the controls show, the header rule stops short of them... */\n.home-widget:hover .hd::after,\n.home-widget:has(.hover-ctl :focus-visible) .hd::after {\n  margin-right: calc(var(--ctl-w, 0px) + 10px);\n}\n/* ...and when the widget is too narrow for title + controls, the title steps aside. */\n.home-widget[data-ctl-tight]:hover .hd .hd-t,\n.home-widget[data-ctl-tight]:hover .hd::before { opacity: 0; }\n.home-widget .hd .hd-t,\n.home-widget .hd::before,\n.home-widget .hd::after { transition: opacity 0.16s ease, margin-right 0.16s ease; }\n/* Multi-row controls (Pomodoro steppers) don't fit the header: they sit below it. */\n.hover-ctl.pomo-set { top: 30px; height: auto; }\n.home-root.editing .hover-ctl { display: none; }\n@media (hover: none) {\n  /* Touch: no hover, so keep controls reachable but understated. */\n  .hover-ctl { opacity: 0.5; pointer-events: auto; }\n}\n\n.hv-arrow {\n  background: none;\n  border: none;\n  cursor: pointer;\n  padding: 0 3px;\n  color: var(--home-accent-dim);\n  font-size: 14px;\n  line-height: 1;\n  font-family: inherit;\n}\n.hv-arrow:hover:not(:disabled) { color: var(--home-accent); }\n.hv-arrow:disabled { opacity: 0.3; cursor: default; }\n.hv-label {\n  font-size: 9px;\n  letter-spacing: 0.1em;\n  text-transform: uppercase;\n  color: var(--home-accent-dim);\n  white-space: nowrap;\n}\n.hv-label-btn {\n  background: none;\n  border: none;\n  cursor: pointer;\n  font: inherit;\n  letter-spacing: 0.1em;\n  padding: 0;\n}\n.hv-label-btn:hover { color: var(--home-accent); }\n\n/* Toggle/option buttons inside a hover control (clock format, host view…). */\n.hv-opt {\n  background: none;\n  border: none;\n  cursor: pointer;\n  font: inherit;\n  font-size: 9px;\n  letter-spacing: 0.08em;\n  text-transform: uppercase;\n  color: var(--home-accent-dim);\n  padding: 0 4px;\n  border-radius: 4px;\n}\n.hv-opt:hover { color: var(--home-accent); }\n.hv-opt.on { color: #000; background: var(--home-accent); }\n\n/* Extra detail that smoothly expands on widget hover (rest mode only). Uses\n * the 0fr→1fr grid trick so it animates real height without a fixed value. */\n.hover-reveal {\n  display: grid;\n  grid-template-rows: 0fr;\n  opacity: 0;\n  transition: grid-template-rows 0.25s ease, opacity 0.2s ease, margin-top 0.25s ease;\n}\n.home-widget:hover .hover-reveal { grid-template-rows: 1fr; opacity: 1; margin-top: 4px; }\n.home-root.editing .hover-reveal { grid-template-rows: 0fr; opacity: 0; margin-top: 0; }\n.hover-reveal > * { overflow: hidden; min-height: 0; }\n\n.home-ghost {\n  position: absolute;\n  border: 1.5px dashed color-mix(in srgb, var(--home-accent) 70%, transparent);\n  border-radius: 8px;\n  background: color-mix(in srgb, var(--home-accent) 7%, transparent);\n  display: none;\n  z-index: 5;\n  pointer-events: none;\n  transition: left 0.18s ease, top 0.18s ease, width 0.18s ease, height 0.18s ease;\n}\n.home-ghost.visible { display: block; }\n.home-ghost.swap {\n  border-color: rgb(45 212 191 / 0.85);\n  background: rgb(45 212 191 / 0.08);\n}\n\n/* ── widget content primitives (responsive to the widget's own size) ── */\n.home-widget .rows { column-gap: 18px; }\n@container (min-width: 380px) {\n  .home-widget .rows { columns: 2; column-rule: 1px solid rgb(255 255 255 / 0.06); }\n}\n@container (min-width: 600px) {\n  .home-widget .rows { columns: 3; }\n}\n.home-widget .row {\n  display: flex;\n  justify-content: space-between;\n  gap: 6px;\n  padding: 1px 0;\n  border-bottom: 1px solid rgb(255 255 255 / 0.04);\n  break-inside: avoid;\n}\n.home-widget .row:last-child { border-bottom: none; }\n/* Names flex and ellipsize at the real column width instead of a fixed\n * character slice that cut words mid-glyph (\"bitacoras-guayab\"). */\n.home-widget .row > * { flex: none; }\n.home-widget .row > .row-name {\n  flex: 1 1 auto;\n  min-width: 0;\n  overflow: hidden;\n  white-space: nowrap;\n  text-overflow: ellipsis;\n}\n\n.home-widget .meters { column-gap: 18px; }\n@container (min-width: 380px) {\n  .home-widget .meters { columns: 2; }\n}\n.home-widget .meter {\n  display: flex;\n  align-items: center;\n  gap: 6px;\n  margin: 3px 0;\n  break-inside: avoid;\n}\n.home-widget .meter .lbl { width: 34px; color: var(--color-muted-foreground, #7d8496); font-size: 10px; }\n.home-widget .meter .track {\n  flex: 1;\n  height: 7px;\n  border-radius: 2px;\n  background: rgb(255 255 255 / 0.07);\n  overflow: hidden;\n}\n.home-widget .meter .fill {\n  height: 100%;\n  background: linear-gradient(90deg, var(--home-accent-dim), var(--home-accent));\n  transition: width 0.6s ease;\n}\n.home-widget .meter .val { width: 44px; text-align: right; font-size: 10px; }\n\n.home-widget .ok { color: var(--home-accent); }\n.home-widget .dim { color: var(--color-muted-foreground, #6b7387); }\n.home-widget .bigval {\n  font-size: min(9cqw, 18cqh);\n  font-weight: 700;\n  color: var(--home-accent);\n}\n\n.home-clock-wrap {\n  display: flex;\n  flex-direction: column;\n  align-items: center;\n  justify-content: center;\n  height: calc(100% - 18px);\n}\n.home-clock {\n  font-size: min(26cqw, 52cqh);\n  font-weight: 800;\n  color: var(--home-accent);\n  letter-spacing: 0.02em;\n  text-shadow: 0 0 24px color-mix(in srgb, var(--home-accent) 35%, transparent);\n  line-height: 1;\n}\n.home-clock-ampm {\n  font-size: 0.32em;\n  vertical-align: 0.9em;\n  margin-left: 0.2em;\n  letter-spacing: 0.05em;\n  color: var(--home-accent-dim);\n}\n.home-clock-sub {\n  color: var(--home-accent-dim);\n  font-size: max(9px, min(3.4cqw, 8cqh));\n  letter-spacing: 0.14em;\n  text-transform: uppercase;\n  margin-top: 1cqh;\n}\n\n.home-ascii-wrap {\n  display: flex;\n  flex-direction: column;\n  align-items: center;\n  justify-content: center;\n  height: calc(100% - 18px);\n}\n/* The emblem slot takes the room left by the version line; the canvas is laid over it\n * absolutely, so painting never feeds back into layout (no shift on resize). */\n.home-emblem {\n  position: relative;\n  flex: 1;\n  min-height: 0;\n  align-self: stretch;\n  color: var(--home-accent);\n}\n.home-emblem canvas {\n  position: absolute;\n  inset: 0;\n  width: 100%;\n  height: 100%;\n  filter: drop-shadow(0 0 10px color-mix(in srgb, var(--home-accent) 25%, transparent));\n}\n/* Fallback when canvas is unavailable: the official caduceus as braille text. */\n.home-ascii {\n  position: absolute;\n  inset: 0;\n  display: grid;\n  place-items: center;\n  font-size: min(5.6cqw, 5.4cqh);\n  line-height: 1.05;\n  white-space: pre;\n  text-align: center;\n  color: var(--home-accent);\n}\n.home-ascii-ver {\n  text-align: center;\n  color: var(--home-accent-soft);\n  font-size: max(8px, min(2.6cqw, 5cqh));\n  letter-spacing: 0.22em;\n  margin-top: 1.5cqh;\n  flex: none;\n}\n\n.home-spark {\n  display: flex;\n  align-items: flex-end;\n  gap: 2px;\n  height: max(18px, 22cqh);\n  margin: 6px 0 4px;\n}\n.home-spark i {\n  flex: 1;\n  background: linear-gradient(180deg, var(--home-accent), var(--home-accent-dim));\n  border-radius: 1px 1px 0 0;\n  opacity: 0.85;\n  transition: height 0.6s ease, opacity 0.15s ease;\n  cursor: default;\n}\n.home-spark i:hover { opacity: 1; }\n\n/* Hover tooltip over a bar (tokens widget). Anchored to the bar via inline\n * `left` + `translateX`, which clamps it inside the clipped widget; the appear/\n * disappear slide+fade runs on the independent `translate` property so it never\n * fights the positioning transform. */\n.home-spark-wrap { position: relative; }\n.home-spark-tip {\n  position: absolute;\n  bottom: 100%;\n  margin-bottom: 6px;\n  padding: 3px 7px;\n  border-radius: 6px;\n  background: color-mix(in srgb, var(--home-accent) 10%, rgb(8 8 12 / 0.96));\n  border: 1px solid var(--home-border);\n  color: rgb(236 236 242);\n  font-size: 10px;\n  line-height: 1.3;\n  white-space: nowrap;\n  pointer-events: none;\n  opacity: 0;\n  translate: 0 4px;\n  transition: opacity 0.18s ease, translate 0.18s ease, transform 0.18s ease;\n  z-index: 6;\n}\n.home-spark-tip.show { opacity: 1; translate: 0 0; }\n.home-spark-tip b { color: var(--home-accent); font-weight: 600; }\n\n/* Line/area chart (tokens widget, alternative to the bars). Stretched to fill\n * via preserveAspectRatio=none; the stroke stays crisp with non-scaling-stroke. */\n.home-area {\n  display: block;\n  width: 100%;\n  height: max(18px, 22cqh);\n  margin: 6px 0 4px;\n  overflow: visible;\n}\n.home-area rect { cursor: default; }\n\n/* Host graphs view: four live sparklines (cpu / ram / load / proc) in a 2×2\n * grid over a rolling one-minute window. Fills the widget below the header\n * (same absolute pattern as the canvas widgets); cells reuse .home-area but\n * stretch to their cell height instead of the tokens widget's fixed band. */\n.host-sparks {\n  position: absolute;\n  inset: 30px 12px 10px;\n  display: grid;\n  grid-template-columns: 1fr 1fr;\n  grid-template-rows: 1fr 1fr;\n  gap: 4px 12px;\n  min-height: 0;\n}\n.host-spark {\n  display: flex;\n  flex-direction: column;\n  min-height: 0;\n  min-width: 0;\n}\n.host-spark-head {\n  display: flex;\n  justify-content: space-between;\n  align-items: baseline;\n  font-size: max(8px, min(3.2cqw, 6cqh));\n  letter-spacing: 0.14em;\n  text-transform: uppercase;\n}\n.host-spark-head .val {\n  font-variant-numeric: tabular-nums;\n  color: var(--home-accent);\n}\n.host-spark .home-area {\n  flex: 1;\n  height: auto;\n  min-height: 12px;\n  margin: 2px 0 0;\n}\n\n/* Small vertical divider between the range arrows and the toggles. */\n.tok-div {\n  width: 1px;\n  align-self: stretch;\n  margin: 2px 2px;\n  background: var(--home-border);\n}\n\n/* Totals line, regrouped: each label sticks to its value, groups spaced evenly\n * (the old `.row` space-between scattered the six tokens across the full width). */\n.tok-stats {\n  display: flex;\n  flex-wrap: wrap;\n  gap: 2px 14px;\n  padding: 3px 0 1px;\n  font-variant-numeric: tabular-nums;\n}\n.tok-stats > span { white-space: nowrap; }\n.tok-stats .dim { margin-right: 2px; }\n\n/* Grouped usage (tokens widget, by provider / by model): one row per group\n * with a faint share bar behind it, width = --share of the grouped total. */\n.tok-groups { padding-top: 3px; font-variant-numeric: tabular-nums; }\n.home-widget .row.tok-group {\n  background: linear-gradient(\n    90deg,\n    color-mix(in srgb, var(--home-accent) 16%, transparent) var(--share, 0%),\n    transparent var(--share, 0%)\n  );\n  border-radius: 2px;\n  padding-left: 3px;\n}\n.tok-share { min-width: 3ch; text-align: right; }\n.tok-group-note,\n.tok-group-more { font-size: 9.5px; padding-top: 1px; }\n\n/* ── spend widget ── */\n.home-spend { font-variant-numeric: tabular-nums; }\n.spend-head { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\n.spend-est {\n  margin-left: 6px;\n  padding: 0 4px;\n  border: 1px solid var(--home-border);\n  border-radius: 3px;\n  font-size: 9px;\n  letter-spacing: 0.06em;\n  color: var(--color-muted-foreground, #6b7387);\n  vertical-align: 2px;\n}\n.spend-providers { padding-top: 2px; }\n.spend-covered {\n  margin-top: 4px;\n  padding: 2px 0 2px 6px;\n  border-left: 2px solid color-mix(in srgb, var(--home-accent) 35%, transparent);\n  color: var(--home-accent-soft, var(--home-accent));\n}\n.spend-covered > div { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\n.spend-month {\n  margin-top: 4px;\n  padding-top: 3px;\n  border-top: 1px solid rgb(255 255 255 / 0.06);\n}\n.spend-month .spend-flag { white-space: nowrap; }\n.spend-top-head {\n  font-size: 9.5px;\n  letter-spacing: 0.12em;\n  text-transform: uppercase;\n  padding: 2px 0 1px;\n}\n.spend-month.spend-near .spend-flag,\n.spend-month.spend-pace .spend-flag { color: color-mix(in srgb, var(--home-accent) 50%, var(--home-error)); }\n.spend-month.spend-over,\n.spend-month.spend-over .spend-flag { color: var(--home-error); }\n.spend-top { margin-top: 3px; }\n.home-widget .row.spend-session { cursor: pointer; border-radius: 2px; }\n.home-widget .row.spend-session:hover { background: color-mix(in srgb, var(--home-accent) 10%, transparent); }\n.home-widget .row.spend-session:hover .row-name { color: var(--home-accent); }\n.home-root.editing .home-widget .row.spend-session { cursor: inherit; }\n.spend-tag {\n  font-size: 9px;\n  letter-spacing: 0.06em;\n  text-transform: uppercase;\n  color: var(--color-muted-foreground, #6b7387);\n  align-self: center;\n}\n.spend-tag-metered { color: var(--home-accent); }\n.spend-cost { min-width: 6ch; text-align: right; }\n.spend-foot { display: flex; flex-wrap: wrap; gap: 0 10px; font-size: 9.5px; padding-top: 2px; }\n.spend-cap-val { min-width: 4ch; text-align: center; color: var(--home-accent); }\n\n/* Sessions widget: per-row token count (shown while sorting/filtering by it). */\n.ses-tok { font-variant-numeric: tabular-nums; color: var(--home-accent-soft); }\n\n/* ── logs widget (per-file record list) ── */\n.logs-sub {\n  display: flex;\n  justify-content: space-between;\n  align-items: baseline;\n  gap: 8px;\n}\n.logs-file {\n  font-size: 11px;\n  font-weight: 600;\n  letter-spacing: 0.06em;\n  color: var(--home-accent);\n}\n/* The wrapper owns the widget's remaining height so the list scrolls inside it\n * instead of growing past the bottom edge (the old calc() resolved against an\n * auto-height parent and never clamped). */\n.home-logs-wrap {\n  display: flex;\n  flex-direction: column;\n  height: calc(100% - 21px);\n  min-height: 0;\n}\n.home-logs {\n  display: flex;\n  flex-direction: column;\n  gap: 1px;\n  flex: 1 1 0;\n  min-height: 0;\n  overflow-y: auto;\n  margin-top: 3px;\n  /* Rows that don't fit fade out instead of being sliced by the edge. */\n  mask-image: linear-gradient(180deg, #000 calc(100% - 14px), transparent);\n}\n.log-row {\n  display: flex;\n  gap: 6px;\n  align-items: baseline;\n  padding: 1px 0;\n  border-bottom: 1px solid rgb(255 255 255 / 0.04);\n  cursor: default;\n}\n.log-row:last-child { border-bottom: none; }\n.log-lvl {\n  flex: none;\n  width: 32px;\n  font-size: 9px;\n  font-weight: 600;\n  letter-spacing: 0.03em;\n}\n.log-lvl.lvl-error { color: var(--home-error); }\n.log-lvl.lvl-warn { color: #f5b945; }\n.log-lvl.lvl-info { color: var(--color-muted-foreground, #6b7387); }\n.log-time {\n  flex: none;\n  font-size: 9px;\n  color: var(--color-muted-foreground, #6b7387);\n  font-variant-numeric: tabular-nums;\n}\n.log-msg {\n  flex: 1;\n  min-width: 0;\n  font-size: 10px;\n  white-space: nowrap;\n  overflow: hidden;\n  text-overflow: ellipsis;\n}\n\n.home-matrix-c {\n  position: absolute;\n  inset: 0;\n  top: 24px;\n  width: 100%;\n  height: calc(100% - 24px);\n}\n\n/* ── notes widget ── */\n.home-notes { display: flex; flex-direction: column; gap: 1px; height: calc(100% - 18px); overflow-y: auto; }\n.home-notes .note-row {\n  display: flex;\n  align-items: baseline;\n  gap: 7px;\n  padding: 1px 0;\n  border-bottom: 1px solid rgb(255 255 255 / 0.04);\n}\n.home-notes .note-mark {\n  cursor: pointer;\n  width: 12px;\n  text-align: center;\n  color: var(--home-accent);\n  flex-shrink: 0;\n}\n.home-notes .note-mark.done { color: var(--color-muted-foreground, #6b7387); }\n.home-notes .note-text { cursor: text; flex: 1; min-width: 0; overflow-wrap: anywhere; }\n.home-notes .note-text.done {\n  text-decoration: line-through;\n  color: var(--color-muted-foreground, #6b7387);\n}\n.home-notes .note-input {\n  flex: 1;\n  min-width: 0;\n  background: none;\n  border: none;\n  border-bottom: 1px dashed var(--home-border);\n  outline: none;\n  color: inherit;\n  font: inherit;\n  padding: 0;\n}\n.home-notes .note-add {\n  align-self: flex-start;\n  margin-top: 4px;\n  background: none;\n  border: none;\n  cursor: pointer;\n  color: var(--home-accent-dim);\n  font-size: 14px;\n  line-height: 1;\n  padding: 2px 6px 2px 2px;\n}\n.home-notes .note-add:hover { color: var(--home-accent); }\n\n/* ── canvas widgets (heartbeat, life) ── */\n.home-canvas {\n  position: absolute;\n  inset: 0;\n  top: 24px;\n  width: 100%;\n  height: calc(100% - 24px);\n}\n/* Life is drawable in rest mode — signal it with a crosshair. */\n.home-root:not(.editing) .home-life { cursor: crosshair; }\n\n/* ── moon ── */\n.home-moon-wrap {\n  display: flex;\n  flex-direction: column;\n  align-items: center;\n  height: calc(100% - 18px);\n}\n.home-moon-c { flex: 1; width: 100%; min-height: 0; }\n.home-moon-label {\n  color: var(--home-accent-dim);\n  font-size: max(8px, min(3cqw, 6cqh));\n  letter-spacing: 0.14em;\n  text-transform: uppercase;\n}\n\n/* ── pomodoro / countdown ── */\n.home-pomo .home-clock,\n.home-count .home-clock { cursor: pointer; }\n.home-pomo .home-clock.paused { opacity: 0.55; }\n.home-pomo .pomo-sub { cursor: pointer; }\n.home-count .count-label { cursor: pointer; }\n.home-count .count-input,\n.home-pomo .count-input { max-width: 92%; text-align: center; color-scheme: dark; }\n\n/* ── countdown segment editor (alarm-style spinners) ── */\n.count-edit {\n  display: flex;\n  flex-direction: column;\n  align-items: center;\n  justify-content: center;\n  gap: 3px;\n  height: calc(100% - 18px);\n}\n.count-edit-row { display: flex; align-items: center; gap: 5px; }\n.count-seg { display: flex; flex-direction: column; align-items: center; }\n.count-seg .seg-btn {\n  background: none;\n  border: none;\n  cursor: pointer;\n  padding: 0;\n  line-height: 0.6;\n  font-size: 8px;\n  color: var(--home-accent-dim);\n}\n.count-seg .seg-btn:hover { color: var(--home-accent); }\n.count-seg .seg-val {\n  background: none;\n  border: none;\n  outline: none;\n  text-align: center;\n  color: var(--home-accent);\n  font: inherit;\n  font-weight: 800;\n  font-size: max(12px, min(7cqw, 15cqh));\n  padding: 1px 0;\n  border-bottom: 1px solid transparent;\n  letter-spacing: 0.02em;\n}\n.count-seg input.seg-val:focus { border-bottom-color: var(--home-accent); }\n.count-seg .seg-static { cursor: default; }\n.count-colon {\n  font-weight: 800;\n  color: var(--home-accent-dim);\n  font-size: max(12px, min(7cqw, 15cqh));\n}\n.count-done {\n  margin-top: 3px;\n  background: none;\n  border: 1px solid var(--home-border);\n  border-radius: 6px;\n  color: var(--home-accent);\n  cursor: pointer;\n  font: inherit;\n  font-size: 10px;\n  letter-spacing: 0.08em;\n  text-transform: uppercase;\n  padding: 2px 12px;\n}\n.count-done:hover { border-color: var(--home-accent); }\n.home-pomo .pomo-min {\n  font-size: min(20cqw, 40cqh);\n  font-weight: 800;\n  color: var(--home-accent);\n  max-width: 70%;\n}\n/* Hover steppers for the pomodoro work/break lengths. */\n.hover-ctl.pomo-set { flex-direction: column; align-items: flex-end; gap: 1px; }\n.pomo-stepper { display: flex; align-items: center; gap: 3px; }\n.pomo-stepper .hv-label:nth-child(3) { min-width: 16px; text-align: center; color: var(--home-accent); }\n\n/* ── calendar ── */\n.home-cal { height: calc(100% - 18px); display: flex; flex-direction: column; }\n.home-cal-month {\n  text-align: center;\n  color: var(--home-accent-dim);\n  font-size: max(9px, min(3.2cqw, 7cqh));\n  letter-spacing: 0.14em;\n  text-transform: uppercase;\n  margin-bottom: 4px;\n}\n.home-cal-grid {\n  flex: 1;\n  display: grid;\n  grid-template-columns: repeat(7, 1fr);\n  align-content: space-evenly;\n  justify-items: center;\n  font-size: max(8px, min(3cqw, 6.5cqh));\n}\n.home-cal-h { color: var(--color-muted-foreground, #6b7387); }\n.home-cal-d { color: var(--color-foreground, #d8dce6); opacity: 0.75; }\n.home-cal-today {\n  color: #000;\n  background: var(--home-accent);\n  border-radius: 4px;\n  padding: 0 4px;\n  font-weight: 700;\n}\n/* Density tiers, chosen from the widget's cell width (see CalendarWidget). */\n.home-cal.tier-mini .home-cal-month {\n  font-size: max(8px, min(4cqw, 8cqh));\n  margin-bottom: 2px;\n}\n.home-cal.tier-mini .home-cal-grid { font-size: max(9px, min(4cqw, 8cqh)); }\n.home-cal.tier-large .home-cal-month {\n  font-size: max(11px, min(3cqw, 7cqh));\n  margin-bottom: 7px;\n}\n.home-cal.tier-large .home-cal-grid { row-gap: 3px; }\n.home-cal.tier-large .home-cal-h { font-weight: 700; opacity: 0.8; }\n.home-cal.tier-large .home-cal-today { padding: 1px 6px; }\n\n/* ── page chrome ── */\n/* Edit affordance lives BELOW the grid, centered. It fades in once the user\n * starts scrolling down (or immediately when the grid is short enough that\n * there's nothing to scroll), keeping the home clean on first paint. While\n * editing it sticks to the bottom of the viewport so it stays reachable. */\n.home-editbar {\n  display: flex;\n  justify-content: center;\n  gap: 10px;\n  padding: 22px 12px 30px;\n  opacity: 0;\n  transition: opacity 0.25s ease;\n  pointer-events: none;\n}\n.home-editbar.visible {\n  opacity: 1;\n  pointer-events: auto;\n}\n.home-root.editing .home-editbar {\n  position: sticky;\n  bottom: 0;\n}\n.home-fab {\n  position: relative;\n  width: 38px;\n  height: 38px;\n  border-radius: 50%;\n  display: flex;\n  align-items: center;\n  justify-content: center;\n  font-size: 15px;\n  cursor: pointer;\n  color: var(--home-accent);\n  background: var(--home-surface);\n  border: 1px solid var(--home-border);\n  backdrop-filter: blur(12px);\n  -webkit-backdrop-filter: blur(12px);\n  transition:\n    border-color 0.25s ease,\n    background 0.35s ease,\n    box-shadow 0.45s ease,\n    transform 0.4s cubic-bezier(0.34, 1.4, 0.64, 1);\n}\n.home-fab:hover {\n  border-color: var(--home-accent);\n  transform: scale(1.06);\n}\n.home-fab:active { transform: scale(0.94); }\n.home-fab.active {\n  background: color-mix(in srgb, var(--home-accent) 22%, transparent);\n  /* Warm Hermes glow ring when edit mode engages. */\n  animation: home-fab-glow 0.55s ease-out;\n}\n\n/* Crossfading edit ✎ ↔ done ✓ glyphs — each rotates and scales through the\n * swap with a gentle overshoot, matching the dashboard's soft motion. */\n.home-fab-ico {\n  position: absolute;\n  inset: 0;\n  display: flex;\n  align-items: center;\n  justify-content: center;\n  transition:\n    opacity 0.3s ease,\n    transform 0.45s cubic-bezier(0.34, 1.45, 0.64, 1);\n}\n.ico-edit { opacity: 1; transform: rotate(0) scale(1); }\n.ico-done { opacity: 0; transform: rotate(-120deg) scale(0.3); }\n.home-fab.active .ico-edit { opacity: 0; transform: rotate(120deg) scale(0.3); }\n.home-fab.active .ico-done { opacity: 1; transform: rotate(0) scale(1); }\n\n.home-fab-spin {\n  display: inline-block;\n  animation: home-fab-spin-in 0.5s cubic-bezier(0.34, 1.4, 0.64, 1);\n}\n\n/* The restore-default button slides up into place, like the dashboard's\n * dialog-in entrance. */\n.home-fab-enter {\n  animation: home-fab-enter 0.32s cubic-bezier(0.34, 1.3, 0.64, 1);\n}\n\n@keyframes home-fab-glow {\n  0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--home-accent) 55%, transparent); }\n  100% { box-shadow: 0 0 0 13px transparent; }\n}\n@keyframes home-fab-spin-in {\n  from { transform: rotate(-150deg); opacity: 0.3; }\n  to   { transform: rotate(0); opacity: 1; }\n}\n@keyframes home-fab-enter {\n  from { opacity: 0; transform: translateY(6px) scale(0.9); }\n  to   { opacity: 1; transform: translateY(0) scale(1); }\n}\n\n@media (prefers-reduced-motion: reduce) {\n  .home-fab,\n  .home-fab-ico,\n  .home-fab-spin,\n  .home-fab-enter { animation: none; transition: opacity 0.2s ease; }\n}\n\n/* ── toast (plugin-local; the host toast isn't exposed in the SDK) ── */\n.home-toast {\n  position: fixed;\n  bottom: 18px;\n  left: 50%;\n  transform: translateX(-50%);\n  z-index: 80;\n  padding: 8px 16px;\n  border-radius: 8px;\n  font-size: 12px;\n  color: var(--home-error, #e25555);\n  background: var(--home-surface);\n  border: 1px solid var(--home-error, #e25555);\n  backdrop-filter: blur(12px);\n  -webkit-backdrop-filter: blur(12px);\n  box-shadow: 0 8px 24px rgb(0 0 0 / 0.45);\n  animation: home-toast-in 0.25s ease;\n}\n@keyframes home-toast-in {\n  from { opacity: 0; transform: translateX(-50%) translateY(8px); }\n  to { opacity: 1; transform: translateX(-50%) translateY(0); }\n}\n\n/* Catalog reveal: the wrapper animates its row track 0fr → 1fr so the panel\n * grows/collapses its real height smoothly (no grid jump), with a matching\n * fade. Kept mounted so the exit animates too. */\n.home-catalog-wrap {\n  display: grid;\n  grid-template-rows: 0fr;\n  margin: 0 12px;\n  opacity: 0;\n  pointer-events: none;\n  transition:\n    grid-template-rows 0.34s cubic-bezier(0.34, 1.2, 0.64, 1),\n    opacity 0.28s ease,\n    margin-bottom 0.34s ease;\n}\n.home-catalog-wrap.open {\n  grid-template-rows: 1fr;\n  opacity: 1;\n  pointer-events: auto;\n  margin-bottom: 8px;\n}\n.home-catalog {\n  overflow: hidden;\n  min-height: 0;\n  border-radius: 8px;\n  background: var(--home-surface);\n  border: 1px solid var(--home-border);\n  backdrop-filter: blur(12px);\n  -webkit-backdrop-filter: blur(12px);\n  transition: border-color 0.2s ease, background 0.2s ease;\n}\n/* Highlighted as a delete target while a widget is dragged over it. */\n.home-catalog-wrap.trash-active .home-catalog {\n  border-color: var(--home-error);\n  border-style: dashed;\n  background: color-mix(in srgb, var(--home-error) 10%, var(--home-surface));\n}\n.home-catalog-inner {\n  display: flex;\n  flex-wrap: wrap;\n  align-items: center;\n  gap: 8px;\n  padding: 10px;\n}\n.home-catalog-hint {\n  font-size: 10px;\n  letter-spacing: 0.04em;\n  color: var(--color-muted-foreground, #6b7387);\n  margin-right: 4px;\n}\n.home-catalog-wrap.trash-active .home-catalog-hint { color: var(--home-error); }\n.home-catalog-chip { touch-action: none; }\n.home-catalog-chip {\n  font-family: inherit;\n  font-size: 11px;\n  padding: 4px 10px;\n  border-radius: 6px;\n  cursor: pointer;\n  background: none;\n  border: 1px dashed var(--home-border);\n  color: var(--color-foreground, #d8dce6);\n  transition: border-color 0.2s ease, color 0.2s ease, transform 0.2s ease;\n}\n.home-catalog-chip:hover {\n  border-color: var(--home-accent);\n  color: var(--home-accent);\n  transform: translateY(-1px);\n}\n.home-catalog-chip:active { transform: scale(0.95); }\n.home-catalog .empty { color: var(--color-muted-foreground, #6b7387); font-size: 11px; }\n\n@media (prefers-reduced-motion: reduce) {\n  .home-catalog-wrap { transition: opacity 0.2s ease; }\n}\n\n/* ── projects widget (~/projects/<name>/status.json) ── */\n.home-projects {\n  display: flex;\n  flex-direction: column;\n  gap: 3px;\n  max-height: calc(100% - 18px);\n  overflow-y: auto;\n}\n.project-row {\n  display: flex;\n  align-items: center;\n  gap: 6px;\n  padding: 2px 6px;\n  border-radius: 4px;\n  border-left: 2px solid var(--home-border);\n  background: color-mix(in srgb, var(--home-accent) 4%, transparent);\n  cursor: pointer;\n}\n.project-row:hover,\n.project-item.open .project-row { background: color-mix(in srgb, var(--home-accent) 10%, transparent); }\n.project-row.ok { border-left-color: var(--home-accent); }\n.project-row.warn { border-left-color: color-mix(in srgb, var(--home-accent) 50%, var(--home-error)); }\n.project-row.err { border-left-color: var(--home-error); }\n.project-icon { font-size: 9px; color: var(--color-muted-foreground, #6b7387); }\n.project-row.ok .project-icon { color: var(--home-accent); }\n.project-row.warn .project-icon { color: color-mix(in srgb, var(--home-accent) 50%, var(--home-error)); }\n.project-row.err .project-icon { color: var(--home-error); }\n.project-name {\n  flex: 1 1 auto;\n  min-width: 0;\n  overflow: hidden;\n  white-space: nowrap;\n  text-overflow: ellipsis;\n}\n.project-stats { font-variant-numeric: tabular-nums; color: var(--home-accent-soft); font-size: 10px; }\n.project-time { color: var(--color-muted-foreground, #6b7387); font-size: 9.5px; white-space: nowrap; }\n.project-caret { color: var(--color-muted-foreground, #6b7387); font-size: 9px; width: 10px; text-align: center; }\n.project-detail {\n  margin: 1px 0 3px 12px;\n  padding: 4px 8px;\n  border-left: 1px dashed var(--home-border);\n  display: flex;\n  flex-direction: column;\n  gap: 3px;\n  font-size: 10px;\n}\n.project-detail-row { line-height: 1.4; }\n.project-alerts ul { margin: 2px 0 0 14px; padding: 0; list-style: disc; }\n.project-alerts li { color: var(--home-error); }\n\n/* ── boards (full page inside the Home tab on the web dashboard) ── */\n.home-board-page { position: relative; height: calc(100vh - 72px); min-height: 480px; }\n.home-board-page.desktop { height: 100%; }\n";
 const boardCss = `/* Board — "Mesa de despacho" (hd-canvas-plan/mockup-v2). Everything is scoped under .hb.
  * One accent: the theme primary. Hermes is a material (dot matrix + caduceus), not a hue.
  * Two families, both the host's: Hermes Desktop's UI sans for text and controls, the Home's
@@ -9707,10 +11322,52 @@ const boardCss = `/* Board — "Mesa de despacho" (hd-canvas-plan/mockup-v2). Ev
 /* sketch labels: the UI sans in italic, Alberto's voice without a third family */
 .hb-text.s { font: italic 400 17px/1.25 var(--sans); color: var(--ink); opacity: .92; white-space: pre-wrap; }
 
-/* freehand */
-.hb-draw { overflow: visible; pointer-events: none; }
-.hb-draw path { fill: none; stroke: var(--ink); stroke-linecap: round; stroke-linejoin: round; opacity: .88; pointer-events: stroke; }
-.hb-draw.sel path { stroke: var(--accent); }
+/* freehand and shapes. A restrained palette: the theme's ink and accent plus four muted
+ * mid-tones that read on dark and light themes alike. */
+.hb {
+  --pen-sage: #7fa287; --pen-clay: #c47e62; --pen-slate: #7c93b4; --pen-sand: #bfa060;
+}
+.hb-draw { --pen: var(--ink); overflow: visible; pointer-events: none; }
+.hb-draw.c-accent { --pen: var(--accent); }
+.hb-draw.c-sage { --pen: var(--pen-sage); }
+.hb-draw.c-clay { --pen: var(--pen-clay); }
+.hb-draw.c-slate { --pen: var(--pen-slate); }
+.hb-draw.c-sand { --pen: var(--pen-sand); }
+.hb-draw path { fill: none; stroke: var(--pen); stroke-linecap: round; stroke-linejoin: round; opacity: .88; pointer-events: visibleStroke; }
+.hb-draw path.fill { fill: var(--pen); stroke: none; pointer-events: visibleFill; }
+/* highlighter: wide and translucent, layered under the ink (see BoardView's z-order) */
+.hb-draw.hl path { opacity: .3; stroke-linecap: round; }
+.hb-draw.sel:not(.c-accent, .c-sage, .c-clay, .c-slate, .c-sand) { --pen: var(--accent); }
+.hb-draw.sel { filter: drop-shadow(0 0 2.5px color-mix(in srgb, var(--accent) 65%, transparent)); }
+/* eraser hover preview / sweep: what goes, fades */
+.hb-draw.erasing path { opacity: .16; transition: opacity .1s var(--out); }
+.hb-live, .hb-live path { pointer-events: none !important; }
+.hb-live.lasso path { stroke: var(--accent); opacity: .9; fill: color-mix(in srgb, var(--accent) 6%, transparent); }
+.hb-viewport.ink-eraser { cursor: none; }
+.hb-eraser { position: absolute; left: 0; top: 0; margin: calc(var(--r, 9px) * -1) 0 0 calc(var(--r, 9px) * -1); border-radius: 50%;
+  border: 1.5px solid var(--ink-2); box-shadow: 0 0 0 1px color-mix(in srgb, var(--bg) 70%, transparent); pointer-events: none; z-index: 5; }
+
+/* the Draw tool's sub-toolbar: status-bar chrome, floating just above it */
+.hb-inkbar { position: absolute; left: 8px; bottom: 48px; z-index: 21; display: flex; flex-wrap: wrap; align-items: center;
+  max-width: calc(100% - 16px); padding: 0 2px; border-radius: var(--r-float); background: var(--float-bg);
+  border: 1px solid var(--float-line); box-shadow: var(--lift); color: var(--ink-2); animation: hb-pop .14s var(--out); }
+.hb.chat-open .hb-inkbar { max-width: calc(100% - var(--chat-w, 380px) - 16px); }
+.hb-inkbar .seg { display: flex; align-items: center; gap: 2px; height: 36px; padding: 0 4px; border-right: 1px solid var(--rule); flex: none; }
+.hb-inkbar .seg:last-child { border-right: 0; }
+.hb-inkbar .seg.off { opacity: .38; }
+.hb-inkbar .tool:disabled { cursor: default; background: none; }
+.hb-inkbar .tool.sw i { display: block; border-radius: 50%; background: currentColor; }
+.hb-inkbar .tool.sw-c { width: 26px; }
+.hb-inkbar .tool.sw-c i { --pen: var(--ink); width: 13px; height: 13px; border-radius: 50%; background: var(--pen);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--bg) 30%, transparent); }
+.hb-inkbar .tool.sw-c.c-accent i { --pen: var(--accent); }
+.hb-inkbar .tool.sw-c.c-sage i { --pen: var(--pen-sage); }
+.hb-inkbar .tool.sw-c.c-clay i { --pen: var(--pen-clay); }
+.hb-inkbar .tool.sw-c.c-slate i { --pen: var(--pen-slate); }
+.hb-inkbar .tool.sw-c.c-sand i { --pen: var(--pen-sand); }
+.hb-inkbar .tool.sw-c.on { background: var(--hover); box-shadow: inset 0 0 0 1px var(--rule-3); }
+.hb-inkbar .tool.smooth { position: relative; }
+.hb-inkbar .tool.smooth b { position: absolute; right: 3px; bottom: 2px; font: 700 8px/1 var(--mono); }
 
 /* selection: accent hairline + print crop marks (the resize handles) */
 .hb-item.sel > .hb-card, .hb-item.sel > .hb-box { border-color: var(--accent) !important; }

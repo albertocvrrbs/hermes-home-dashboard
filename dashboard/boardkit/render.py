@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import io
+import math
 from pathlib import Path
 from typing import Any, Dict, Iterable, Optional, Tuple
 
@@ -13,6 +14,42 @@ BG = (3, 25, 25)
 INK = (243, 236, 227)
 ACCENT = (255, 227, 196)
 RULE = (60, 70, 66)
+PEN = {"accent": ACCENT, "sage": (127, 162, 135), "clay": (196, 126, 98), "slate": (124, 147, 180), "sand": (191, 160, 96)}
+
+
+def _layer(it: Dict[str, Any]) -> int:
+    """Frames at the back, highlighter strokes under the ink, then everything else."""
+    if it.get("k") == "frame":
+        return 0
+    return 1 if it.get("k") == "draw" and it.get("tl") == "hl" else 2
+
+
+def _ink(draw: Any, it: Dict[str, Any], tx: Any, scale: float) -> None:
+    pts = [tx(it["x"] + px, it["y"] + py) for px, py in _points(it)]
+    if not pts:
+        return
+    color = PEN.get(it.get("c"), INK)
+    tl = it.get("tl")
+    width = max(2, int(round(float(it.get("sw") or 1.9) * 1.6 * scale)))
+    if tl == "hl":
+        color = tuple(int(c * 0.32 + b * 0.68) for c, b in zip(color, BG))
+        width = max(4, int(round(float(it.get("sw") or 16) * scale)))
+    if tl in ("rect", "ellipse") and len(pts) >= 2:
+        (ax, ay), (bx, by) = pts[0], pts[-1]
+        box = [min(ax, bx), min(ay, by), max(ax, bx), max(ay, by)]
+        (draw.rectangle if tl == "rect" else draw.ellipse)(box, outline=color, width=width)
+        return
+    if len(pts) == 1:
+        pts = pts * 2
+    if tl in ("line", "arrow"):
+        pts = [pts[0], pts[-1]]
+    draw.line(pts, fill=color, width=width, joint="curve")
+    if tl == "arrow":
+        (ax, ay), (bx, by) = pts
+        ang = math.atan2(by - ay, bx - ax)
+        head = max(9.0, float(it.get("sw") or 1.9) * 4.2) * scale
+        for side in (-0.5, 0.5):
+            draw.line([(bx, by), (bx - head * math.cos(ang + side), by - head * math.sin(ang + side))], fill=color, width=width)
 
 
 def _rect(it: Dict[str, Any], items: Dict[str, Dict[str, Any]]) -> Optional[Tuple[int, int, int, int]]:
@@ -76,14 +113,12 @@ def render_png(doc: Dict[str, Any], store: assets_mod.AssetStore, out_path: Path
         return (x - x0) * scale, (y - y0) * scale
 
     centers: Dict[str, Tuple[float, float]] = {}
-    for k, (x, y, w, h) in rects.items():
+    for k, (x, y, w, h) in sorted(rects.items(), key=lambda kv: _layer(items[kv[0]])):
         it = items[k]
         centers[k] = (x + w / 2, y + h / 2)
         a, b = tx(x, y), tx(x + w, y + h)
         if it["k"] == "draw":
-            pts = [tx(it["x"] + px, it["y"] + py) for px, py in _points(it)]
-            if len(pts) > 1:
-                draw.line(pts, fill=INK, width=max(2, int(3 * scale)), joint="curve")
+            _ink(draw, it, tx, scale)
             continue
         if it["k"] == "text":
             draw.text(a, str(it.get("text", ""))[:120], fill=ACCENT if it.get("size") == "h" else INK, font=font)

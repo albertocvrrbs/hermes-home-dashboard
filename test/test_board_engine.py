@@ -104,6 +104,73 @@ class AddSetDelTest(unittest.TestCase):
             engine.apply_batch(blank(), [{"op": "add", "item": {"k": "draw", "x": 0, "y": 0, "d": "M0 0 javascript:"}}], by="u")
 
 
+class InkFieldsTest(unittest.TestCase):
+    """Draw-tool styling (1.9.2): optional fields, validated, backward compatible."""
+
+    def add(self, **item):
+        doc, inv, _ = engine.apply_batch(blank(), [{"op": "add", "item": {"k": "draw", "x": 0, "y": 0, "d": "0,0 40,30", **item}}], by="u")
+        return doc, inv
+
+    def test_plain_stroke_unchanged(self):
+        doc, _ = self.add(sw=1.9)
+        self.assertEqual(doc["items"]["0"], {"k": "draw", "x": 0, "y": 0, "d": "0,0 40,30", "sw": 1.9})
+
+    def test_shapes_colors_and_flags_are_kept(self):
+        doc, _ = self.add(tl="arrow", c="sage", ds=True, sw=3.5, g="ab12")
+        it = doc["items"]["0"]
+        self.assertEqual((it["tl"], it["c"], it["ds"], it["g"]), ("arrow", "sage", True, "ab12"))
+        for tl in ("hl", "line", "rect", "ellipse"):
+            self.assertEqual(self.add(tl=tl)[0]["items"]["0"]["tl"], tl)
+
+    def test_smooth_pressure(self):
+        doc, _ = self.add(sm=True, pr="39")
+        self.assertEqual((doc["items"]["0"]["sm"], doc["items"]["0"]["pr"]), (True, "39"))
+
+    def test_bad_values_reject_the_batch(self):
+        for bad in ({"tl": "star"}, {"c": "#ff0000"}, {"c": "ink"}, {"ds": False}, {"ds": "yes"}, {"sm": 1},
+                    {"pr": "12a"}, {"pr": "1" * 401}, {"g": "Group!"}, {"g": "x" * 13}):
+            with self.assertRaises(engine.OpError, msg=str(bad)):
+                self.add(**bad)
+
+    def test_new_fields_only_on_draw_items(self):
+        doc, _, _ = engine.apply_batch(blank(), [{"op": "add", "item": {"k": "card", "x": 0, "y": 0, "text": "hi", "c": "sage", "g": "ab"}}], by="u")
+        self.assertNotIn("c", doc["items"]["0"])
+        self.assertNotIn("g", doc["items"]["0"])
+
+    def test_group_set_and_clear_are_undoable(self):
+        doc, _ = self.add()
+        doc2, inv, _ = engine.apply_batch(doc, [{"op": "set", "id": "0", "p": {"g": "k2"}}], by="u")
+        self.assertEqual(doc2["items"]["0"]["g"], "k2")
+        doc3, _, _ = engine.apply_batch(doc2, inv, by="u")
+        self.assertNotIn("g", doc3["items"]["0"])
+        doc4, _, _ = engine.apply_batch(doc2, [{"op": "set", "id": "0", "p": {"g": None, "ds": True}}], by="u")
+        self.assertNotIn("g", doc4["items"]["0"])
+        self.assertTrue(doc4["items"]["0"]["ds"])
+
+    def test_summary_names_shapes(self):
+        from dashboard.boardkit import summary
+        doc, _ = self.add(tl="rect", c="clay", ds=True)
+        line = summary.item_line("0", doc["items"]["0"])
+        self.assertIn("rectangle clay dashed", line)
+        self.assertIn("sketch 2pts", summary.item_line("0", self.add()[0]["items"]["0"]))
+
+    def test_render_draws_every_ink_kind(self):
+        try:
+            import PIL  # noqa: F401
+        except ImportError:
+            self.skipTest("Pillow not installed")
+        import tempfile
+        from pathlib import Path
+        from dashboard.boardkit import render
+        doc, _, _ = engine.apply_batch(blank(), [
+            {"op": "add", "item": {"k": "draw", "x": 0, "y": 0, "d": "0,0 80,20", "tl": tl, "c": "slate", "sw": 3.5}}
+            for tl in ("hl", "line", "arrow", "rect", "ellipse")] + [
+            {"op": "add", "item": {"k": "draw", "x": 0, "y": 40, "d": "0,0 10,10 30,5", "sm": True, "pr": "159"}}], by="u")
+        with tempfile.TemporaryDirectory() as tmp:
+            out = render.render_png(doc, None, Path(tmp) / "x.png")
+            self.assertTrue(Path(out["path"]).exists())
+
+
 class ColumnsTest(unittest.TestCase):
     def setUp(self):
         self.doc, _, _ = engine.apply_batch(blank(), [
