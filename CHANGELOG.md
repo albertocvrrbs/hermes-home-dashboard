@@ -20,6 +20,64 @@ clone, they never build).
 
 ---
 
+## 1.9.3
+
+Direct editing, arrange and insert on connectors, a real camera, and HTML embeds
+that can wear the Hermes theme. Plus a round of visual and i18n fixes.
+
+**Gateway restart needed.** This release changes the Python board engine
+(`shape` kind, `insert_on_edge` / `tidy` ops, `theme` and `sh` fields). The
+plugin loads, but a running Hermes gateway keeps the old Python until it is
+restarted; the Webapp is served by the gateway. Until then new fields are
+dropped silently and the new ops answer with an error. Restart the gateway
+after updating (and `hermes-dashboard` if you run it as a service).
+
+- **Edit in place.** Double-click (or double-tap) a note, to-do title or item,
+  column title, link/video title, image caption, shape or connector label and
+  you type right there, caret under the pointer. The double-tap is detected by
+  the board itself: the old `dblclick` was swallowed by pointer capture. Select
+  an item and type to start editing, or press `F2` / `Enter`.
+- **Arrange and snap.** *Arrange* (toolbar, right-click menu, `Ctrl/Cmd+Shift+O`)
+  lays the selection or the whole board out in reading order with even gaps, as
+  one undo step; items that stay put (wired ones, frames) are obstacles, so the
+  tidied block never lands on top of them. Dragging snaps to the grid and to
+  neighbours' edges and centres, with guides; hold `Ctrl/Cmd` to place freely.
+  Connectors follow every frame while you drag, resize or arrange (the wires
+  are memoised and re-routed only for the items that moved).
+- **Insert on a connector.** Hover a connector (or select it on touch) and press
+  its **+**: pick a rectangle, diamond, pill, circle, text, note, to-do... and
+  it lands in the middle of the connector, making room, in one undo step. New
+  `shape` item kind (`sh`: rect, diamond, pill, circle) and agent ops
+  `insert_on_edge` and `tidy`.
+- **Camera.** One eased, interruptible controller drives every move (fit, zoom to
+  selection with `Z`, step zoom, `Ctrl`+wheel notch). `window.__hbCamera` exposes
+  `flyTo` / `getView` / `setView` / `fit` with a manual clock for frame-by-frame
+  capture (`docs/camera-api.md`). Opening a sub-board flies into its card and
+  crossfades into the board; the Home's Board widget hands off into the page
+  the same way.
+- **Level of detail.** Zoomed out, titles stay legible (counter-scaled), body text
+  becomes skeleton lines and images switch to small thumbnails, so a 150-item
+  board stays smooth. The minimap is cached and `M` toggles it.
+- **Faithful miniatures.** The Board widget on the Home and nested-board cards
+  render the real item components (same renderers and styles) scaled down,
+  instead of a flat sketch.
+- **Themed HTML embeds (opt-in).** An embed Hermes creates can carry `theme`:
+  Hermes' colour variables, fonts, transparent background and a responsive
+  bridge (`window.hermes`: size, zoom, theme change, Chart.js / ECharts
+  defaults). Toggle it per card from its menu; your own HTML is shown untouched.
+  The agent rules cover it and an advisory lint flags embeds that fight the card.
+- **Fixes.** Live cards keep metric values whole and accents intact; connector
+  labels sit above cards in their own layer; sub-board cards follow their
+  child board; the board chat shows what Hermes is doing instead of ids;
+  dates, gateway states and board deep links follow the plugin language; Tokens
+  no longer sticks on *loading* and each source lands as soon as it answers;
+  Home rows stretch to fill tall windows; the edit button uses lucide icons;
+  long titles, tags and headings stay inside narrow cards; deleting a selection
+  with a cascade no longer fails the whole batch and a rejected batch shows a
+  notice.
+
+---
+
 ## 1.9.2
 
 A real dot-matrix Hermes emblem, and a Draw tool with proper ink.

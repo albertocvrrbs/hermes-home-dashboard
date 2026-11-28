@@ -322,6 +322,19 @@ made; your work stays solid.
   text, note, to-do or any other card in the middle: the connector splits in two,
   the next steps make room, and you are already typing in the new shape. Hermes
   does the same with `{op:'insert_on_edge'}`, and arranges with `{op:'tidy'}`.
+- **Camera and transitions.** Every move (fit `F`, zoom to selection `Z`, step
+  zoom with `+` / `-` or a `Ctrl`+wheel notch) is eased and interruptible: touch
+  the board and it stops where you are. Opening a sub-board flies into its card
+  and crossfades into the board, and the Home widget hands off into the page the
+  same way. Scripts can drive it with `window.__hbCamera` (see
+  [`docs/camera-api.md`](docs/camera-api.md)).
+- **Zoomed out, still legible.** Level of detail keeps titles readable at any
+  zoom, turns body text into skeleton lines and swaps images for thumbnails, so
+  large boards stay smooth. `M` toggles the minimap.
+- **Themed HTML embeds.** Embeds Hermes creates can opt in to the Hermes theme:
+  its colour variables, fonts, a transparent background and `window.hermes`
+  (card size, zoom, theme changes, Chart.js and ECharts defaults). Toggle it
+  from the card's menu; HTML you bring yourself is never touched.
 - **Paste anything.** A URL becomes a link card with title, description,
   favicon and image. A YouTube, Vimeo, Loom or X link, or a direct video file,
   becomes a playable card. An image, or an image URL, becomes an image card.
@@ -390,7 +403,7 @@ made; your work stays solid.
   `⇧D` highlighter · `E` eraser · `[` `]` width · `1`–`6` colour · `⌘G` group.
 
 ![Right-click menu: Hermes' verbs first, then edit, connect, duplicate and delete](assets/screenshot-board-menu.png)
-- **On the Home** the Board widget shows a live preview of a board; its hover
+- **On the Home** the Board widget shows a faithful miniature of a board (the real cards, scaled down); its hover
   controls cycle boards, create one or open the list. Click it to open the page. On Desktop, *Boards* is in the
   sidebar and the command palette.
 

@@ -8018,7 +8018,7 @@ function themeVars(t2) {
 }
 function baseCss(t2) {
   const vars = Object.entries(themeVars(t2)).map(([k, v]) => `${k}:${v.replace(/[<>{};]/g, "")}`).join(";");
-  return `:root{${vars};color-scheme:${t2.scheme}}*,*::before,*::after{box-sizing:border-box}html,body{width:100%;height:100%;margin:0;background:transparent;color:var(--foreground);font:13px/1.45 var(--font-sans);-webkit-font-smoothing:antialiased}img,video,canvas,svg{max-width:100%}code,pre,kbd,samp{font-family:var(--font-mono)}*{scrollbar-width:thin;scrollbar-color:var(--border) transparent}`;
+  return `:root{${vars};color-scheme:${t2.scheme}}*,*::before,*::after{box-sizing:border-box}html,body{width:100%;height:100%;margin:0;background:transparent;color:var(--foreground);font:13px/1.45 var(--font-sans);-webkit-font-smoothing:antialiased}body{display:flow-root}img,video,canvas,svg{max-width:100%}code,pre,kbd,samp{font-family:var(--font-mono)}*{scrollbar-width:thin;scrollbar-color:var(--border) transparent}`;
 }
 const BRIDGE_JS = `(function(){
 var W=window,D=document,P=W.parent,H=W.hermes={size:{w:0,h:0,dpr:W.devicePixelRatio||1,zoom:1},theme:__HERMES_THEME__,_r:[],_t:[]};
