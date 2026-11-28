@@ -263,6 +263,7 @@ const es: Messages = {
   "board.state.session": "sesión vinculada",
   "board.state.noSession": "sin sesión todavía",
   "board.continue": "Continuar en sesión",
+  "board.ctx.zoomTo": "Acercar a la selección",
   "board.fit": "Ajustar al contenido",
   "board.zoomIn": "Acercar",
   "board.zoomOut": "Alejar",

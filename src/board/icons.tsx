@@ -4,7 +4,7 @@
 import {
   Palette, Activity, BookOpen, Eye, FilePen, FileText, Globe, Search, Wrench, ArrowUp, ArrowUpRight, Bell, Bot, Brain, BrushCleaning, CalendarArrowDown, ChartLine, Check,
   ChevronLeft, ChevronRight, Circle, Diamond, Ellipsis, LayoutGrid, Magnet, RectangleHorizontal, Type, CircleAlert, CircleCheck, CodeXml, Columns3, Copy, Cpu, Database, Download, Eraser,
-  FlaskConical, Gauge, GitBranch, Group, Hand, HardDrive, Highlighter, Image, LassoSelect, LayoutDashboard, Link, ListPlus, ListTodo,
+  FlaskConical, Focus, Gauge, GitBranch, Group, Hand, HardDrive, Highlighter, Image, LassoSelect, LayoutDashboard, Link, ListPlus, ListTodo,
   Maximize2, MessageSquareText, MousePointer2, MoveUpRight, PanelRightClose, Pause, Pen, Pencil, PencilLine, Play,
   Plus, Power, Redo2, RotateCcw, RefreshCw, Rocket, RotateCw, Route, Scan, Server, Slash, Spline, Split, Square, SquareArrowOutUpRight, SquareDashed,
   SquareDashedMousePointer, SquareTerminal, StickyNote, TextQuote, Timer, Trash2, Undo2, Ungroup, Upload, Video,
@@ -30,6 +30,7 @@ export const ICONS = {
   zoomIn: ZoomIn,
   zoomOut: ZoomOut,
   fit: Scan,
+  focus: Focus,
   undo: Undo2,
   redo: Redo2,
   edit: Pencil,

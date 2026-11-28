@@ -202,7 +202,10 @@ export function wheelIntent(e: WheelLike, trackpadRecent = false): "zoom" | "pan
 export function wheelZoomFactor(e: WheelLike): number {
   const unit = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? 800 : 1;
   const px = Math.max(-240, Math.min(240, e.deltaY * unit));
-  const k = e.ctrlKey || e.metaKey ? 0.01 : 0.0015;
+  // A pinch sends small, fractional deltas and is direct; ctrl + a mouse-wheel notch is a whole
+  // 50+ px step and takes the wheel's gentler rate (three notches used to cross the whole range).
+  const modNotch = (e.ctrlKey || e.metaKey) && e.deltaMode === 0 && e.deltaX === 0 && Number.isInteger(e.deltaY) && Math.abs(e.deltaY) >= 50;
+  const k = modNotch ? 0.0025 : e.ctrlKey || e.metaKey ? 0.01 : 0.0015;
   return Math.exp(-px * k);
 }
 

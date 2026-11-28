@@ -18,6 +18,15 @@ export function previewRects(doc: BoardDoc): { r: Rect; h: boolean; frame: boole
   return out;
 }
 
+/** Where the board's content lands in a W x H preview: scale and offset (CSS px). Shared by the
+ *  dot drawing and by overlays (the minimap's view frame) so they always agree. */
+export function previewGeometry(doc: BoardDoc | null, W: number, H: number, pad = 30): { s: number; ox: number; oy: number; b: Rect } {
+  const rects = doc ? previewRects(doc) : [];
+  const b = boundsOf(rects.map((x) => x.r)) ?? { x: 0, y: 0, w: 1, h: 1 };
+  const s = Math.min(W / (b.w + pad * 2), H / (b.h + pad * 2));
+  return { s, ox: (W - b.w * s) / 2 - b.x * s, oy: (H - b.h * s) / 2 - b.y * s, b };
+}
+
 /** Draw onto a canvas sized in CSS px (handles devicePixelRatio). */
 export function drawPreview(canvas: HTMLCanvasElement, doc: BoardDoc | null, opts: PreviewOptions): void {
   const dpr = Math.min(2, window.devicePixelRatio || 1);
@@ -33,10 +42,7 @@ export function drawPreview(canvas: HTMLCanvasElement, doc: BoardDoc | null, opt
   ctx.clearRect(0, 0, W, H);
   const cell = opts.cell ?? 6;
   const rects = doc ? previewRects(doc) : [];
-  const b = boundsOf(rects.map((x) => x.r)) ?? { x: 0, y: 0, w: 1, h: 1 };
-  const pad = 30;
-  const s = Math.min(W / (b.w + pad * 2), H / (b.h + pad * 2));
-  const ox = (W - b.w * s) / 2 - b.x * s, oy = (H - b.h * s) / 2 - b.y * s;
+  const { s, ox, oy } = previewGeometry(doc, W, H);
   ctx.fillStyle = opts.accent;
   for (let y = cell / 2; y < H; y += cell) {
     for (let x = cell / 2; x < W; x += cell) {
