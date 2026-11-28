@@ -82,6 +82,9 @@ Found while building the launch board with real Hermes, by chat only.
   The board's size guesses (fit, minimap, layout on the server) follow the same rules for images,
   videos and board cards.
 
+- A board card Hermes adds without a title is named after its board, so the tour HUD, his outline and
+  the render say "Training Room" instead of a stop number.
+
 ## 1.10.0 — video parity
 
 Everything the launch video shows now works for real, with real Hermes, from one chat

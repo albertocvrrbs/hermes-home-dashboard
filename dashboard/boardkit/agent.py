@@ -456,7 +456,10 @@ class BoardAgent:
             note = args.get("note") if isinstance(args.get("note"), str) else None
             embed_warnings = self._embed_warnings(doc, args.get("ops")) + self._comp_warnings(doc, args.get("ops"))
             report: Dict[str, Any] = {}
-            new, entry = self.svc.commit(doc["id"], args.get("ops"), by="h", note=note, previews="wait", report=report)
+            ops = args.get("ops")
+            if isinstance(ops, list):  # a board card without a title is named after its board (tour HUD, outline, render)
+                ops = [self._name_board_card(o) for o in ops]
+            new, entry = self.svc.commit(doc["id"], ops, by="h", note=note, previews="wait", report=report)
             for op in entry.get("ops") or []:  # a board card makes the board it opens a sub-board of this one
                 it = op.get("item") if op.get("op") == "put" else None
                 if isinstance(it, dict) and it.get("k") == "board" and it.get("ref"):
@@ -499,6 +502,16 @@ class BoardAgent:
             return _dump(info)
         except (NotFound, engine.OpError, RuntimeError, ValueError) as e:
             return _dump({"error": str(e)})
+
+    def _name_board_card(self, op: Any) -> Any:
+        it = op.get("item") if isinstance(op, dict) and op.get("op") == "add" else None
+        if not isinstance(it, dict) or it.get("k") != "board" or it.get("title") or not isinstance(it.get("ref"), str):
+            return op
+        try:
+            name = self.svc.store.load(it["ref"]).get("name")
+        except Exception:
+            return op
+        return {**op, "item": {**it, "title": name}} if name else op
 
     def _render_path(self, bid: str):
         """A fresh file per render (vision tools refuse to reload the same path), keeping the last 6."""

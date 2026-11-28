@@ -161,6 +161,8 @@ class SubBoardTest(unittest.TestCase):
         self.assertIsNone(self.svc.store.load(sub).get("session"))
         self.call("board_apply", {"ops": [{"op": "add", "item": {"k": "board", "x": 0, "y": 0, "ref": sub}}]})
         self.assertEqual(self.svc.store.load(sub)["parent"], main)  # the board card adopted it
+        card = [v for v in self.svc.store.load(main)["items"].values() if v["k"] == "board"][0]
+        self.assertEqual(card["title"], "Training Room")  # named after its board (tour HUD, outline)
         other = self.call("board_read", {"board": "Exam", "create": True, "parent": main})["board"]
         self.assertEqual(self.svc.store.load(other)["parent"], main)
         # a session with no board yet still links to the first board it opens
