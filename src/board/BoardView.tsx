@@ -24,7 +24,7 @@ import { ItemBody, itemForUrl, type ItemCtx } from "./items";
 import { BoardMenu, type MenuEntry } from "./Menu";
 import { installTips } from "./tips";
 import { drawPreview } from "./preview";
-import { approxRect, DEFAULT_SIZE, itemLabel, newRef, SHAPE_SIZE, type BoardDoc, type Entry, type Item, type Op, type Point } from "./model";
+import { approxRect, DEFAULT_SIZE, itemLabel, newRef, normalizeDeletes, SHAPE_SIZE, type BoardDoc, type Entry, type Item, type Op, type Point } from "./model";
 import { extractUrl } from "./urlKind";
 import { HERMES_ACTIVE_S, useBoard } from "./useBoard";
 import { Wires, type WiresHandle } from "./Wires";
@@ -191,6 +191,7 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
   const [ask, setAsk] = useState<null | { kind: "link" | "embed"; at: { x: number; y: number }; edge?: string }>(null);
   const [askValue, setAskValue] = useState("");
   const [toast, setToast] = useState<string | null>(null);
+  const flashRef = useRef<(msg: string) => void>(() => {});
   const [chatOpen, setChatOpen] = useState(() => readLocal(CHAT_OPEN_KEY) === "1");
   const [chatW, setChatW] = useState(() => Math.min(CHAT_MAX_W, Math.max(CHAT_MIN_W, Number(readLocal(CHAT_W_KEY)) || 380)));
   const [chatSentAt, setChatSentAt] = useState(0);
@@ -220,6 +221,7 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
     setToast(msg);
     window.setTimeout(() => setToast((cur) => (cur === msg ? null : cur)), 3200);
   }, []);
+  flashRef.current = flash;
 
   // ── live cards: the owner's action allowlist, refreshed now and then ─────
   const loadActions = useCallback(() => {
@@ -314,7 +316,8 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
     setEditHint((h) => (h && ids[h.id] ? { ...h, id: ids[h.id] } : h));
     setEditLabel((l) => (l ? swap(l) : l));
   }, []);
-  const sync = useBoard(bid, onHermes, onRemap);
+  const onReject = useCallback((msg: string) => flashRef.current(t("board.toast.rejected", { error: msg })), [t]);
+  const sync = useBoard(bid, onHermes, onRemap, onReject);
   const doc = sync.doc;
   const docRef = useRef(doc);
   docRef.current = doc;
@@ -747,8 +750,8 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
   const deleteSelection = useCallback(() => {
     const d = docRef.current;
     if (!d || !selected.size) return;
-    const ops: Op[] = [...selected].filter((id) => d.items[id]).map((id) => ({ op: "del", id }));
-    commit(ops);
+    const ops: Op[] = normalizeDeletes(d, selected).map((id) => ({ op: "del", id }));
+    if (ops.length) commit(ops);
     setSelected(new Set());
   }, [commit, selected]);
 
@@ -1273,7 +1276,7 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
     if (g.kind === "erase") {
       drawLive(); // fold in the last stretch of the sweep before reading it
       if (eraser.current) { eraser.current.sweep = false; eraser.current.trail = []; }
-      const ids = [...erasingRef.current].filter((id) => d.items[id]);
+      const ids = normalizeDeletes(d, erasingRef.current);
       erasingRef.current = new Set();
       setErasing(new Set());
       if (ids.length) commit(ids.map((id) => ({ op: "del", id }) as Op));

@@ -27,6 +27,8 @@ export function useBoard(
   onHermesEntries?: (entries: Entry[], doc: BoardDoc) => void,
   /** The server gave optimistic `$ref` items their real ids (so the UI can carry selection / editing over). */
   onRemap?: (ids: Record<string, string>) => void,
+  /** The server refused a batch (the optimistic change is rolled back): tell the user why. */
+  onReject?: (message: string) => void,
 ): BoardSync {
   const [confirmed, setConfirmed] = useState<BoardDoc | null>(null);
   const [pending, setPending] = useState<Pending[]>([]);
@@ -42,6 +44,8 @@ export function useBoard(
   hermesCb.current = onHermesEntries;
   const remapCb = useRef(onRemap);
   remapCb.current = onRemap;
+  const rejectCb = useRef(onReject);
+  rejectCb.current = onReject;
   const alive = useRef(true);
 
   const setDoc = (d: BoardDoc | null) => { confirmedRef.current = d; setConfirmed(d); };
@@ -103,7 +107,9 @@ export function useBoard(
       if (batch.undoable && !res.entry.noop) setStacks((s) => ({ undo: [...s.undo.slice(-99), res.entry.s], redo: [] }));
     } catch (e) {
       if (!alive.current) return;
-      setError(String((e as Error)?.message ?? e));
+      const msg = String((e as Error)?.message ?? e);
+      setError(msg);
+      rejectCb.current?.(msg);
       setQueue(pendingRef.current.filter((p) => p !== batch));
       void pull();
     } finally {

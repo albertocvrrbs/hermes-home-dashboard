@@ -436,6 +436,7 @@ const en = {
   "board.video.noPoster": "no preview yet",
   "board.video.loading": "Loading…",
   "board.toast.uploadingVideo": "uploading video… {pct} %",
+  "board.toast.rejected": "change not saved, undone: {error}",
   "board.toast.videoFailed": "video not added: {error}",
   "board.live.st.running": "running",
   "board.live.st.paused": "paused",

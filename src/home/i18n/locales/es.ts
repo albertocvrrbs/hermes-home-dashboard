@@ -437,6 +437,7 @@ const es: Messages = {
   "board.video.noPoster": "sin vista previa aún",
   "board.video.loading": "Cargando…",
   "board.toast.uploadingVideo": "subiendo video… {pct} %",
+  "board.toast.rejected": "no se guardó el cambio, se deshizo: {error}",
   "board.toast.videoFailed": "no se agregó el video: {error}",
   "board.live.st.running": "corriendo",
   "board.live.st.paused": "en pausa",

@@ -143,6 +143,30 @@ export function applyOp(doc: BoardDoc, op: Op): void {
   }
 }
 
+/**
+ * The ids a bulk delete should send: existing, unique, minus whatever another selected id already
+ * removes (kids of a selected column, connectors attached to a removed item). The server treats
+ * those as no-ops too; this keeps batches and optimistic state minimal.
+ */
+export function normalizeDeletes(doc: BoardDoc, ids: Iterable<string>): string[] {
+  const want = [...new Set(ids)].filter((id) => doc.items[id]);
+  const set = new Set(want);
+  const gone = new Set<string>();
+  for (const id of want) {
+    const it = doc.items[id];
+    if (it.in && set.has(it.in)) gone.add(id);
+    if (it.k === "col") for (const kid of it.kids ?? []) gone.add(kid);
+  }
+  const removed = new Set([...set].filter((id) => !(doc.items[id].in && set.has(doc.items[id].in!))));
+  for (const id of want) if (doc.items[id].k === "col") for (const kid of doc.items[id].kids ?? []) removed.add(kid);
+  return want.filter((id) => {
+    const it = doc.items[id];
+    if (gone.has(id)) return false;
+    if (it.k === "line") return ![it.a, it.b].some((e) => typeof e === "string" && removed.has(e));
+    return true;
+  });
+}
+
 export function applyOps(doc: BoardDoc, ops: readonly Op[]): BoardDoc {
   const next = clone(doc);
   for (const op of ops) applyOp(next, op);
