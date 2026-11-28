@@ -46,6 +46,30 @@ class AgentToolsTest(unittest.TestCase):
         self.assertEqual(entry["by"], "h")
         self.assertEqual(entry["note"], "Drew the flow")
 
+    def test_tidy_and_insert_on_edge_through_board_apply(self):
+        bid = self.call("board_read", {"board": "Flow", "create": True})["board"]
+        res = self.call("board_apply", {"board": bid, "ops": [
+            {"op": "add", "ref": "$a", "item": {"k": "box", "x": 5, "y": 5, "w": 200, "h": 62, "title": "Start"}},
+            {"op": "add", "ref": "$b", "item": {"k": "box", "x": 260, "y": 5, "w": 200, "h": 62, "title": "End"}},
+            {"op": "add", "ref": "$e", "item": {"k": "line", "a": "$a", "b": "$b"}},
+        ]})
+        edge = res["ids"]["$e"]
+        res = self.call("board_apply", {"board": bid, "note": "Added a decision", "ops": [
+            {"op": "insert_on_edge", "edge": edge, "ref": "$d", "item": {"k": "shape", "sh": "diamond", "title": "ok?"}}]})
+        self.assertNotIn("error", res)
+        doc = self.svc.store.load(bid)
+        self.assertEqual(sum(1 for v in doc["items"].values() if v["k"] == "line"), 2)
+        diamond = doc["items"][res["ids"]["$d"]]
+        self.assertEqual((diamond["k"], diamond["sh"], diamond["by"]), ("shape", "diamond", "h"))
+        res = self.call("board_apply", {"board": bid, "ops": [{"op": "tidy", "ids": [k for k, v in doc["items"].items() if v["k"] != "line"]}]})
+        self.assertNotIn("error", res)
+        doc = self.svc.store.load(bid)
+        boxes = sorted((v["x"], v["y"]) for v in doc["items"].values() if v["k"] != "line")
+        self.assertEqual(boxes[0][0] % 24, 0)               # the layout starts on the grid
+        self.assertEqual(len({y for _, y in boxes}), 1)     # one reading row
+        outline = self.call("board_read", {"board": bid, "full": True})
+        self.assertIn("shape:diamond*", json.dumps(outline))
+
     def test_board_defaults_to_the_linked_session(self):
         bid = self.call("board_read", {"board": "Mine", "create": True})["board"]
         out = self.call("board_read", {})

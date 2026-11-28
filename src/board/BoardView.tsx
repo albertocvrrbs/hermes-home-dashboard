@@ -24,10 +24,13 @@ import { ItemBody, itemForUrl, type ItemCtx } from "./items";
 import { BoardMenu, type MenuEntry } from "./Menu";
 import { installTips } from "./tips";
 import { drawPreview } from "./preview";
-import { approxRect, DEFAULT_SIZE, itemLabel, newRef, type BoardDoc, type Entry, type Item, type Op, type Point } from "./model";
+import { approxRect, DEFAULT_SIZE, itemLabel, newRef, normalizeDeletes, SHAPE_SIZE, type BoardDoc, type Entry, type Item, type Op, type Point } from "./model";
 import { extractUrl } from "./urlKind";
 import { HERMES_ACTIVE_S, useBoard } from "./useBoard";
-import { Wires } from "./Wires";
+import { Wires, type WiresHandle } from "./Wires";
+import { dblAction, EDITABLE, isTap, mapCaret, nextTap, pointerKind, typeToEditChar, type EditHint, type TapPoint } from "./gesture";
+import { downstream, insertPlan, snapMove, tidyPlan, type Block, type Guide } from "./layout";
+import { EdgePicker, type PickSpec } from "./EdgePicker";
 
 type Tool = "select" | "pan" | "note" | "todo" | "link" | "image" | "col" | "board" | "embed" | "arrow" | "draw";
 
@@ -53,7 +56,11 @@ const readLocal = (k: string): string | null => { try { return localStorage.getI
 const writeLocal = (k: string, v: string) => { try { localStorage.setItem(k, v); } catch { /* private mode */ } };
 const KEY_TOOL: Record<string, Tool> = Object.fromEntries(TOOLS.flat().map((x) => [x.key.toLowerCase(), x.tool]));
 const PLACE: Tool[] = ["note", "todo", "col", "link", "board", "embed", "image"];
-const EDITABLE = new Set(["card", "todo", "col", "frame", "box", "text", "image"]);
+const SNAP_KEY = "hb.snap";
+/** Screen px within which a neighbour's edge or centre pulls a dragged card in. */
+const SNAP_PX = 6;
+const TIDY_MS = 260;
+const ease = (t: number) => 1 - Math.pow(1 - t, 3);
 const INTO_COLUMN = new Set(["card", "todo", "link", "image", "video", "board"]);
 
 interface Drag {
@@ -61,6 +68,19 @@ interface Drag {
   sx: number; sy: number; moved: boolean;
   view?: View; ids?: string[]; id?: string; w0?: number; h0?: number;
   pts?: Point[]; from?: string;
+  /** move: rects of what is in flight, the neighbours to snap to, the offset reached so far */
+  fl?: Flight; dd?: { dx: number; dy: number };
+}
+
+/** A set of items being moved without re-rendering React: their rects at the start, what
+ *  hangs off them (column kids), the connectors to keep in step, and the snap neighbours. */
+interface Flight {
+  ids: string[];
+  base: Map<string, Rect>;
+  kids: Map<string, string[]>;
+  affected: Set<string>;
+  union: Rect;
+  others: Rect[];
 }
 
 /** A stroke, shape or lasso in progress. Points are world coordinates; freehand points are
@@ -128,7 +148,21 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
 
   const [tool, setTool] = useState<Tool>("select");
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [editing, setEditing] = useState<string | null>(null);
+  const [editing, setEditingRaw] = useState<string | null>(null);
+  const [editHint, setEditHint] = useState<EditHint | null>(null);
+  const [editLabel, setEditLabel] = useState<string | null>(null);
+  const [edgePick, setEdgePick] = useState<null | { id: string; x: number; y: number }>(null);
+  const [snapOn, setSnapOn] = useState(() => readLocal(SNAP_KEY) !== "0");
+  const snapRef = useRef(snapOn);
+  snapRef.current = snapOn;
+  const downAt = useRef<TapPoint | null>(null);
+  const lastTap = useRef<TapPoint | null>(null);
+  const wiresRef = useRef<WiresHandle>(null);
+  const guidesRef = useRef<HTMLDivElement>(null);
+  const liveRects = useRef(new Map<string, Rect>());
+  const flip = useRef<null | { from: Map<string, Rect>; ids: string[] }>(null);
+  const flipRaf = useRef(0);
+  const pendingEdge = useRef<string | null>(null);
   const [playing, setPlaying] = useState<string | null>(null);
   const [delta, setDelta] = useState<{ dx: number; dy: number } | null>(null);
   const [resize, setResize] = useState<{ id: string; w: number; h: number } | null>(null);
@@ -154,9 +188,10 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
   const [layoutV, setLayoutV] = useState(0);
   const [log, setLog] = useState<LogLine[]>([]);
   const [logOn, setLogOn] = useState(false);
-  const [ask, setAsk] = useState<null | { kind: "link" | "embed"; at: { x: number; y: number } }>(null);
+  const [ask, setAsk] = useState<null | { kind: "link" | "embed"; at: { x: number; y: number }; edge?: string }>(null);
   const [askValue, setAskValue] = useState("");
   const [toast, setToast] = useState<string | null>(null);
+  const flashRef = useRef<(msg: string) => void>(() => {});
   const [chatOpen, setChatOpen] = useState(() => readLocal(CHAT_OPEN_KEY) === "1");
   const [chatW, setChatW] = useState(() => Math.min(CHAT_MAX_W, Math.max(CHAT_MIN_W, Number(readLocal(CHAT_W_KEY)) || 380)));
   const [chatSentAt, setChatSentAt] = useState(0);
@@ -174,10 +209,19 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
   }>(null);
   const Frame = hostSandboxedFrame();
 
+  const setEditing = useCallback((id: string | null) => { setEditingRaw(id); if (!id) setEditHint(null); }, []);
+  /** Edit in place: the caret goes where the user clicked (`caret`), or a typed character seeds the field. */
+  const startEdit = useCallback((id: string, hint?: Omit<EditHint, "id">) => {
+    setEditHint(hint ? { id, ...hint } : null);
+    setEditingRaw(id);
+    setSelected(new Set([id]));
+  }, []);
+
   const flash = useCallback((msg: string) => {
     setToast(msg);
     window.setTimeout(() => setToast((cur) => (cur === msg ? null : cur)), 3200);
   }, []);
+  flashRef.current = flash;
 
   // ── live cards: the owner's action allowlist, refreshed now and then ─────
   const loadActions = useCallback(() => {
@@ -260,7 +304,20 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [t]);
 
-  const sync = useBoard(bid, onHermes);
+  // Optimistic items get a `$ref` id until the server confirms; the real id arrives a moment
+  // later. Keep React keys (so an open editor survives) and carry selection / editing over.
+  const keyAlias = useRef(new Map<string, string>());
+  const keyOf = useCallback((id: string) => keyAlias.current.get(id) ?? id, []);
+  const onRemap = useCallback((ids: Record<string, string>) => {
+    for (const [ref, id] of Object.entries(ids)) keyAlias.current.set(id, keyAlias.current.get(ref) ?? ref);
+    const swap = (id: string) => ids[id] ?? id;
+    setSelected((s) => (Object.keys(ids).some((r) => s.has(r)) ? new Set([...s].map(swap)) : s));
+    setEditingRaw((e) => (e ? swap(e) : e));
+    setEditHint((h) => (h && ids[h.id] ? { ...h, id: ids[h.id] } : h));
+    setEditLabel((l) => (l ? swap(l) : l));
+  }, []);
+  const onReject = useCallback((msg: string) => flashRef.current(t("board.toast.rejected", { error: msg })), [t]);
+  const sync = useBoard(bid, onHermes, onRemap, onReject);
   const doc = sync.doc;
   const docRef = useRef(doc);
   docRef.current = doc;
@@ -277,6 +334,9 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
     const it = docRef.current?.items[id];
     return it ? approxRect(it) : null;
   }, []);
+
+  /** Rect of an item, honouring the offsets of items currently in flight (drag, tidy). */
+  const getRectLive = useCallback((id: string): Rect | null => liveRects.current.get(id) ?? getRect(id), [getRect]);
 
   function locateFor(id: string, fallback?: BoardDoc): { x: number; y: number } | null {
     const known = fallback?.items[id];
@@ -454,7 +514,14 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
     return { x: (vp.clientWidth / 2 - v.x) / v.z, y: (vp.clientHeight / 2 - v.y) / v.z };
   }, []);
 
+  const insertRef = useRef<(edge: string, item: Item) => string | null>(() => null);
   const add = useCallback((item: Item, at?: { x: number; y: number }, edit = false): string => {
+    if (pendingEdge.current) {
+      const edge = pendingEdge.current;
+      pendingEdge.current = null;
+      const made = insertRef.current(edge, item);
+      if (made) return made;
+    }
     const ref = newRef();
     const p = at ?? lastPoint.current ?? center();
     const placed: Item = item.in ? item : { ...item, x: Math.round(p.x), y: Math.round(p.y) };
@@ -463,6 +530,180 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
     if (edit) setEditing(ref);
     return ref;
   }, [center, commit]);
+
+  /** Caret for a double click: the character offset under the pointer inside the field's source text. */
+  const editHintAt = (target: HTMLElement, x: number, y: number, it: Item): Omit<EditHint, "id"> | undefined => {
+    const fieldEl = target.closest("[data-field]") as HTMLElement | null;
+    if (!fieldEl) return undefined;
+    const field = fieldEl.dataset.field!;
+    const dd = document as unknown as {
+      caretPositionFromPoint?: (x: number, y: number) => { offsetNode: Node; offset: number } | null;
+      caretRangeFromPoint?: (x: number, y: number) => Range | null;
+    };
+    let node: Node | null = null, off = 0;
+    if (dd.caretPositionFromPoint) { const c = dd.caretPositionFromPoint(x, y); if (c) { node = c.offsetNode; off = c.offset; } }
+    else if (dd.caretRangeFromPoint) { const r = dd.caretRangeFromPoint(x, y); if (r) { node = r.startContainer; off = r.startOffset; } }
+    if (!node || !fieldEl.contains(node)) return { field };
+    const range = document.createRange();
+    range.selectNodeContents(fieldEl);
+    range.setEnd(node, off);
+    const source = field === "title" ? it.title : field === "text" ? it.text : field === "cap" ? it.cap
+      : field.startsWith("row:") ? it.items?.[Number(field.slice(4))]?.t : "";
+    return { field, caret: mapCaret(fieldEl.textContent ?? "", range.toString().length, source ?? "") };
+  };
+
+  /** Items (and the kids of columns) glide from `from` to where the document now has them. */
+  const flipFrom = useCallback((from: Map<string, Rect>, ids: string[]) => { flip.current = { from, ids }; }, []);
+  useLayoutEffect(() => {
+    const f = flip.current;
+    if (!f) return;
+    flip.current = null;
+    cancelAnimationFrame(flipRaf.current);
+    if (reduced()) return;
+    const d = docRef.current;
+    const moving: { id: string; dx: number; dy: number; to: Rect; kids: [string, Rect, number, number][] }[] = [];
+    for (const id of f.ids) {
+      const to = getRect(id), from = f.from.get(id);
+      if (!to || !from || !els.current.get(id)) continue;
+      const dx = from.x - to.x, dy = from.y - to.y;
+      if (Math.abs(dx) + Math.abs(dy) < 0.5) continue;
+      const kids: [string, Rect, number, number][] = [];
+      for (const k of d?.items[id]?.k === "col" ? d.items[id].kids ?? [] : []) { const kr = getRect(k); if (kr) kids.push([k, kr, dx, dy]); }
+      moving.push({ id, dx, dy, to, kids });
+    }
+    if (!moving.length) return;
+    const affected = new Set<string>();
+    for (const m of moving) { affected.add(m.id); m.kids.forEach((k) => affected.add(k[0])); }
+    const t0 = performance.now();
+    const frame = (now: number) => {
+      const k = Math.min(1, (now - t0) / TIDY_MS);
+      const left = 1 - ease(k);
+      for (const m of moving) {
+        const el = els.current.get(m.id);
+        if (el) el.style.transform = k >= 1 ? "" : `translate(${m.dx * left}px, ${m.dy * left}px)`;
+        if (k >= 1) liveRects.current.delete(m.id);
+        else liveRects.current.set(m.id, { x: m.to.x + m.dx * left, y: m.to.y + m.dy * left, w: m.to.w, h: m.to.h });
+        for (const [kid, kr] of m.kids) {
+          if (k >= 1) liveRects.current.delete(kid);
+          else liveRects.current.set(kid, { x: kr.x + m.dx * left, y: kr.y + m.dy * left, w: kr.w, h: kr.h });
+        }
+      }
+      wiresRef.current?.refresh(affected);
+      if (k < 1) flipRaf.current = requestAnimationFrame(frame);
+    };
+    // first frame at the old positions, so nothing flashes at the new ones
+    frame(t0);
+    flipRaf.current = requestAnimationFrame(frame);
+  }, [doc, getRect]);
+  useEffect(() => () => cancelAnimationFrame(flipRaf.current), []);
+
+  const tidy = useCallback(() => {
+    const d = docRef.current;
+    if (!d) return;
+    const sel = [...selected].filter((id) => d.items[id]);
+    const explicit = sel.length > 1;
+    const topOf = (id: string) => d.items[id]?.in ?? id;
+    const pool: string[] = [];
+    const wired = new Set<string>();
+    const frames: Rect[] = [];
+    if (explicit) pool.push(...expandGroups(d.items, sel));
+    else {
+      for (const [id, it] of Object.entries(d.items)) {
+        if (it.k === "line") { for (const e of [it.a, it.b]) if (typeof e === "string" && d.items[e]) wired.add(topOf(e)); }
+        else if (it.k === "frame") { const r = getRect(id); if (r) frames.push(r); }
+        else if (!it.in) pool.push(id);
+      }
+    }
+    const groups = new Map<string, string[]>();
+    const blocks: Block[] = [];
+    const rectOf = (ids: string[]) => boundsOf(ids.map((i) => getRect(i)).filter(Boolean) as Rect[]);
+    for (const id of pool) {
+      const it = d.items[id];
+      if (!it || it.in || it.k === "line" || it.k === "frame") continue;
+      if (!explicit) {
+        if (wired.has(id)) continue;
+        const r = getRect(id);
+        if (r && frames.some((f) => r.x + r.w / 2 >= f.x && r.x + r.w / 2 <= f.x + f.w && r.y + r.h / 2 >= f.y && r.y + r.h / 2 <= f.y + f.h)) continue;
+      }
+      if (it.k === "draw" && it.g) { groups.set(it.g, [...(groups.get(it.g) ?? []), id]); continue; }
+      if (it.k === "draw" && !explicit) continue;
+      const rect = rectOf([id]);
+      if (rect) blocks.push({ ids: [id], rect });
+    }
+    for (const ids of groups.values()) { const rect = rectOf(ids); if (rect) blocks.push({ ids: ids.sort(), rect }); }
+    const ops: Op[] = [];
+    const from = new Map<string, Rect>();
+    const moved: string[] = [];
+    for (const p of tidyPlan(blocks)) {
+      const b = blocks.find((x) => x.ids[0] === p.ids[0])!;
+      const dx = p.x - b.rect.x, dy = p.y - b.rect.y;
+      if (Math.abs(dx) < 0.5 && Math.abs(dy) < 0.5) continue;
+      for (const id of p.ids) {
+        const it = d.items[id];
+        ops.push({ op: "set", id, p: { x: Math.round((it.x ?? 0) + dx), y: Math.round((it.y ?? 0) + dy) } });
+        const r = getRect(id);
+        if (r) { from.set(id, r); moved.push(id); }
+      }
+    }
+    if (!ops.length) { flash(t("board.tidy.none")); return; }
+    flipFrom(from, moved);
+    commit(ops);
+  }, [commit, flash, flipFrom, getRect, selected, t]);
+
+  /** Splits connector `edgeId` and puts `item` in the middle: A → new → B, as one batch (one undo). */
+  const insertOnEdge = useCallback((edgeId: string, item: Item): string | null => {
+    const d = docRef.current;
+    const line = d?.items[edgeId];
+    if (!d || !line || line.k !== "line" || line.a == null || line.b == null) return null;
+    const topOf = (id: string) => d.items[id]?.in ?? id;
+    const rectOf = (end: string | Point) => (Array.isArray(end) ? { x: end[0], y: end[1], w: 0, h: 0 } : getRect(topOf(end)));
+    const ra = rectOf(line.a), rb = rectOf(line.b);
+    if (!ra || !rb) return null;
+    const [dw, dh] = (item.k === "shape" ? SHAPE_SIZE[item.sh ?? "rect"] : undefined) ?? DEFAULT_SIZE[item.k] ?? [200, 100];
+    const bTop = typeof line.b === "string" && !d.items[line.b]?.in ? line.b : null;
+    const plan = insertPlan(ra, rb, { w: item.w ?? dw, h: item.h ?? dh }, { shiftB: !!bTop });
+    const ref = newRef();
+    const ops: Op[] = [
+      { op: "add", ref, item: { ...item, x: plan.x, y: plan.y } },
+      { op: "set", id: edgeId, p: { b: ref } },
+      { op: "add", ref: newRef(), item: { k: "line", a: ref, b: line.b } },
+    ];
+    const from = new Map<string, Rect>();
+    const moved: string[] = [];
+    if (bTop && (plan.shift.dx || plan.shift.dy)) {
+      const edges: [string, string][] = Object.entries(d.items)
+        .filter(([k, v]) => v.k === "line" && k !== edgeId && typeof v.a === "string" && typeof v.b === "string")
+        .map(([, v]) => [topOf(v.a as string), topOf(v.b as string)]);
+      const stop = typeof line.a === "string" ? topOf(line.a) : "";
+      for (const id of downstream(edges, bTop, stop)) {
+        const it = d.items[id];
+        if (!it || it.k === "line" || it.x == null || it.y == null) continue;
+        ops.push({ op: "set", id, p: { x: Math.round(it.x + plan.shift.dx), y: Math.round(it.y + plan.shift.dy) } });
+        const r = getRect(id);
+        if (r) { from.set(id, r); moved.push(id); }
+      }
+    }
+    if (moved.length) flipFrom(from, moved);
+    commit(ops);
+    if (EDITABLE.has(item.k) && item.k !== "image" && item.k !== "link" && item.k !== "video") startEdit(ref);
+    else setSelected(new Set([ref]));
+    return ref;
+  }, [commit, flipFrom, getRect, startEdit]);
+  insertRef.current = insertOnEdge;
+
+  const pickForEdge = (spec: PickSpec) => {
+    const pick = edgePick;
+    setEdgePick(null);
+    if (!pick) return;
+    if (spec.item) { insertOnEdge(pick.id, spec.item); return; }
+    const mid = center();
+    if (spec.ask === "link" || spec.ask === "embed") { setAskValue(""); setAsk({ kind: spec.ask, at: mid, edge: pick.id }); return; }
+    if (spec.ask === "image") { pendingEdge.current = pick.id; fileRef.current?.click(); return; }
+    if (spec.ask === "board") {
+      void boardsApi.create(t("board.untitled"), bid).then((child) => insertOnEdge(pick.id, { k: "board", ref: child.id }))
+        .catch((e) => flash(String(e?.message ?? e)));
+    }
+  };
 
   const addImageFiles = useCallback(async (files: File[], at?: { x: number; y: number }) => {
     let p = at ?? center();
@@ -509,8 +750,8 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
   const deleteSelection = useCallback(() => {
     const d = docRef.current;
     if (!d || !selected.size) return;
-    const ops: Op[] = [...selected].filter((id) => d.items[id]).map((id) => ({ op: "del", id }));
-    commit(ops);
+    const ops: Op[] = normalizeDeletes(d, selected).map((id) => ({ op: "del", id }));
+    if (ops.length) commit(ops);
     setSelected(new Set());
   }, [commit, selected]);
 
@@ -740,7 +981,9 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
     const d = docRef.current;
     if (!d || e.button === 2) return;
     const target = e.target as HTMLElement;
-    if (target.closest("[data-nodrag], .hb-ctx, input, textarea, a, iframe, video")) return;
+    pendingEdge.current = null;
+    if (target.closest("[data-nodrag], .hb-ctx, .hb-epick, input, textarea, iframe, video")) return;
+    downAt.current = { t: e.timeStamp, x: e.clientX, y: e.clientY, type: pointerKind(e.pointerType) };
     if (connectFrom) {
       const hit = target.closest("[data-kid], [data-iid]") as HTMLElement | null;
       const to = hit?.dataset.kid ?? hit?.dataset.iid;
@@ -748,7 +991,13 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
       setConnectFrom(null);
       return;
     }
-    if (editing && !target.closest(`[data-iid="${editing}"]`)) setEditing(null);
+    if (editing && !target.closest(`[data-iid="${editing}"], [data-kid="${editing}"]`)) {
+      // blur first so the field commits what was typed (a removed textarea never blurs)
+      (document.activeElement as HTMLElement | null)?.blur?.();
+      setEditing(null);
+    }
+    if (editLabel) { (document.activeElement as HTMLElement | null)?.blur?.(); setEditLabel(null); }
+    if (edgePick) setEdgePick(null);
     // an active embed gives the pointer back to the board when you click outside it
     if (playing && d.items[playing]?.k === "embed" && !target.closest(`[data-iid="${playing}"], [data-kid="${playing}"]`)) setPlaying(null);
     const w = toWorld(e.clientX, e.clientY);
@@ -833,6 +1082,56 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
     }
   };
 
+  // ── items in flight: moved without re-rendering React, connectors kept in step ──
+  const startFlight = (ids: string[]): Flight => {
+    const d = docRef.current!;
+    const base = new Map<string, Rect>(), kids = new Map<string, string[]>(), affected = new Set<string>();
+    for (const id of ids) {
+      const r = getRect(id);
+      if (!r) continue;
+      base.set(id, r);
+      affected.add(id);
+      const ks = d.items[id]?.k === "col" ? d.items[id].kids ?? [] : [];
+      if (ks.length) {
+        kids.set(id, ks);
+        for (const k of ks) { const kr = getRect(k); if (kr) base.set(k, kr); affected.add(k); }
+      }
+    }
+    const moved = new Set(ids);
+    const others: Rect[] = [];
+    for (const [id, it] of Object.entries(d.items)) {
+      if (moved.has(id) || it.in || it.k === "line" || it.k === "draw") continue;
+      const r = getRect(id);
+      if (r) others.push(r);
+    }
+    const rects = ids.map((id) => base.get(id)).filter(Boolean) as Rect[];
+    return { ids, base, kids, affected, union: boundsOf(rects) ?? { x: 0, y: 0, w: 0, h: 0 }, others };
+  };
+  const offsetFlight = (fl: Flight, dx: number, dy: number) => {
+    for (const id of fl.ids) {
+      const el = els.current.get(id);
+      if (el) el.style.transform = `translate(${dx}px, ${dy}px)`;
+    }
+    for (const [id, r] of fl.base) liveRects.current.set(id, { x: r.x + dx, y: r.y + dy, w: r.w, h: r.h });
+    wiresRef.current?.refresh(fl.affected);
+  };
+  const endFlight = (fl: Flight) => {
+    for (const id of fl.ids) { const el = els.current.get(id); if (el) el.style.transform = ""; }
+    for (const id of fl.base.keys()) liveRects.current.delete(id);
+    wiresRef.current?.refresh(fl.affected);
+  };
+  const paintGuides = (guides: Guide[]) => {
+    const el = guidesRef.current;
+    if (!el) return;
+    el.replaceChildren(...guides.slice(0, 16).map((g) => {
+      const i = document.createElement("i");
+      i.className = `hb-guide ${g.axis}`;
+      if (g.axis === "x") { i.style.left = `${g.pos}px`; i.style.top = `${g.from}px`; i.style.height = `${g.to - g.from}px`; }
+      else { i.style.top = `${g.pos}px`; i.style.left = `${g.from}px`; i.style.width = `${g.to - g.from}px`; }
+      return i;
+    }));
+  };
+
   const columnUnder = (cx: number, cy: number, skip?: string): { col: string; index: number } | null => {
     const d = docRef.current;
     for (const el of document.elementsFromPoint(cx, cy)) {
@@ -868,11 +1167,22 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
         view.current = { ...view.current, x: g.view!.x + dx, y: g.view!.y + dy };
         applyView();
         break;
-      case "move":
-        setDelta({ dx: dx / z, dy: dy / z });
+      case "move": {
+        if (!g.fl) { g.fl = startFlight(g.ids ?? []); setDelta({ dx: 0, dy: 0 }); }
+        let mx = dx / z, my = dy / z;
+        let guides: Guide[] = [];
+        if (snapRef.current && !(e.metaKey || e.ctrlKey) && g.fl.ids.length) {
+          const u = g.fl.union;
+          const s = snapMove({ x: u.x + mx, y: u.y + my, w: u.w, h: u.h }, g.fl.others, { thr: SNAP_PX / z });
+          mx += s.dx; my += s.dy; guides = s.guides;
+        }
+        g.dd = { dx: mx, dy: my };
+        offsetFlight(g.fl, mx, my);
+        paintGuides(guides);
         break;
+      }
       case "resize":
-        setResize({ id: g.id!, w: Math.max(120, g.w0! + dx / z), h: Math.max(40, g.h0! + dy / z) });
+        setResize({ id: g.id!, w: Math.max(docRef.current?.items[g.id!]?.k === "shape" ? 40 : 120, g.w0! + dx / z), h: Math.max(40, g.h0! + dy / z) });
         break;
       case "marquee": {
         const s = toWorld(g.sx, g.sy);
@@ -892,7 +1202,28 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
     }
   };
 
+  /** pointerup: finish the gesture, then see whether it completed a double tap (see gesture.ts). */
   const onPointerUp = (e: React.PointerEvent) => {
+    const g = drag.current;
+    const down = downAt.current;
+    const up: TapPoint = { t: e.timeStamp, x: e.clientX, y: e.clientY, type: pointerKind(e.pointerType) };
+    const tapped = !!g && !!down && e.type === "pointerup" && tool === "select" && (g.kind === "pan" || g.kind === "move" || g.kind === "kid") && isTap(down, up);
+    finishPointer(e);
+    downAt.current = null;
+    if (!tapped) { lastTap.current = null; return; }
+    // ⌘/Ctrl-click on a link title opens it (a plain click selects: the title is part of the card)
+    const under = document.elementFromPoint(e.clientX, e.clientY) as HTMLElement | null;
+    const link = under?.closest?.("a[href]") as HTMLAnchorElement | null;
+    if (link && (e.metaKey || e.ctrlKey)) { window.open(link.href, "_blank", "noopener,noreferrer"); lastTap.current = null; return; }
+    const r = nextTap(lastTap.current, up);
+    lastTap.current = r.last;
+    if (!r.double) return;
+    const fire = () => (under?.isConnected ? under : vpRef.current)?.dispatchEvent(
+      new MouseEvent("dblclick", { bubbles: true, cancelable: true, clientX: up.x, clientY: up.y, view: window, detail: 2 }));
+    // a finger's compatibility mouse events (and their focus change) land right after pointerup
+    if (up.type === "mouse") fire(); else window.setTimeout(fire, 90);
+  };
+  const finishPointer = (e: React.PointerEvent) => {
     const g = drag.current;
     drag.current = null;
     vpRef.current?.classList.remove("panning");
@@ -906,7 +1237,9 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
       return;
     }
     if (g.kind === "move") {
-      const dd = delta;
+      const dd = g.dd;
+      if (g.fl) endFlight(g.fl);
+      paintGuides([]);
       setDelta(null);
       if (!g.moved || !dd || !g.ids?.length) return;
       if (g.ids.length === 1 && INTO_COLUMN.has(d.items[g.ids[0]].k)) {
@@ -943,7 +1276,7 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
     if (g.kind === "erase") {
       drawLive(); // fold in the last stretch of the sweep before reading it
       if (eraser.current) { eraser.current.sweep = false; eraser.current.trail = []; }
-      const ids = [...erasingRef.current].filter((id) => d.items[id]);
+      const ids = normalizeDeletes(d, erasingRef.current);
       erasingRef.current = new Set();
       setErasing(new Set());
       if (ids.length) commit(ids.map((id) => ({ op: "del", id }) as Op));
@@ -1058,18 +1391,25 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
         return;
       }
       if (mod && e.key === "Enter") { e.preventDefault(); void continueInSession(); return; }
+      if (mod && e.shiftKey && e.key.toLowerCase() === "o") { e.preventDefault(); tidy(); return; }
       if (mod || e.altKey) return;
       if (e.key === "Delete" || e.key === "Backspace") { e.preventDefault(); deleteSelection(); return; }
       if (e.key === "Escape") {
         if (connectFrom) { setConnectFrom(null); return; }
         if (stroke.current) { stroke.current = null; drag.current = null; scheduleLive(); return; }
-        setSelected(new Set()); setTool("select"); setEditing(null); return;
+        setSelected(new Set()); setTool("select"); setEditing(null); setEdgePick(null); setEditLabel(null); return;
       }
-      if (e.key === "Enter" && selected.size === 1) {
+      if ((e.key === "Enter" || e.key === "F2") && selected.size === 1) {
         const id = [...selected][0];
         const it = docRef.current?.items[id];
-        if (it && EDITABLE.has(it.k)) { e.preventDefault(); setEditing(id); }
+        if (it && EDITABLE.has(it.k)) { e.preventDefault(); startEdit(id); }
         return;
+      }
+      // Figma-style: typing on a selected text-like item starts editing with that character
+      if (selected.size === 1 && tool === "select" && !connectFrom) {
+        const id = [...selected][0];
+        const ch = typeToEditChar(e, docRef.current?.items[id]?.k);
+        if (ch) { e.preventDefault(); startEdit(id, { seed: ch }); return; }
       }
       if (e.key === "/") { e.preventDefault(); openChat(true); return; }
       if (e.key === "f" || e.key === "F") { fit(); return; }
@@ -1103,7 +1443,7 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
     window.addEventListener("keydown", onKey);
     window.addEventListener("keyup", onKey);
     return () => { window.removeEventListener("keydown", onKey); window.removeEventListener("keyup", onKey); };
-  }, [ask, center, commit, confirmReq, connectFrom, continueInSession, deleteSelection, duplicate, fit, openChat, scheduleLive, selected, setInk, sync, tool, toggleGroup, zoomAt]);
+  }, [ask, center, commit, confirmReq, connectFrom, continueInSession, deleteSelection, duplicate, fit, openChat, scheduleLive, selected, setInk, startEdit, sync, tidy, tool, toggleGroup, zoomAt]);
 
   useEffect(() => {
     const onPaste = (e: ClipboardEvent) => {
@@ -1143,13 +1483,22 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
     return frame?.title || (on ? itemLabel(on).slice(0, 28) : "") || doc.name;
   })();
 
-  const regEl = useCallback((id: string) => (el: HTMLElement | null) => {
-    if (el) els.current.set(id, el);
-    else els.current.delete(id);
+  // One ref callback per id, forever: a new function each render would make React detach and
+  // re-attach every item's ref on every render, and a layout effect that runs in between (the
+  // connectors') would find no element and fall back to the document's guessed sizes.
+  const regCache = useRef(new Map<string, (el: HTMLElement | null) => void>());
+  const regEl = useCallback((id: string) => {
+    let f = regCache.current.get(id);
+    if (!f) {
+      f = (el: HTMLElement | null) => { if (el) els.current.set(id, el); else els.current.delete(id); };
+      regCache.current.set(id, f);
+    }
+    return f;
   }, []);
 
   const ctx: ItemCtx | null = useMemo(() => (doc ? {
-    doc, t, editing, setEditing, update, commit, playing, setPlaying, Frame, liveActions, liveActionsDown, runLiveAction, erasing,
+    doc, t, editing, setEditing, hint: editHint, update, commit, playing, setPlaying, Frame, liveActions, liveActionsDown, runLiveAction, erasing,
+    keyOf,
     openBoard: (id) => onOpenBoard(id),
     addToColumn: (col) => {
       const ref = newRef();
@@ -1162,13 +1511,12 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
       if (!it) return null;
       const cls = `hb-kid${selected.has(id) ? " sel" : ""}${kidDrag?.id === id ? " ghost" : ""}${hidden.has(id) ? " reveal-wait" : ""}`;
       return (
-        <div key={id} className={cls} data-kid={id} ref={regEl(id)}
-          onDoubleClick={(e) => { e.stopPropagation(); if (EDITABLE.has(it.k)) setEditing(id); }}>
+        <div key={keyOf(id)} className={cls} data-kid={id} ref={regEl(id)}>
           <ItemBody id={id} item={it} c={ctxRef.current!} dropIndex={null} selected={selected.has(id)} />
         </div>
       );
     },
-  } : null), [Frame, commit, doc, editing, erasing, hidden, kidDrag, liveActions, liveActionsDown, onOpenBoard, playing, regEl, runLiveAction, selected, t, update]);
+  } : null), [Frame, commit, doc, editing, editHint, erasing, hidden, kidDrag, liveActions, liveActionsDown, keyOf, onOpenBoard, playing, regEl, runLiveAction, selected, setEditing, t, update]);
   const ctxRef = useRef(ctx);
   ctxRef.current = ctx;
 
@@ -1259,6 +1607,7 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
       if (single?.k === "embed") out.push({ id: "theme", label: t(single.theme ? "board.embed.themeOff" : "board.embed.themeOn"), icon: "theme", run: () => update(selIds[0], { theme: single.theme ? null : true }) });
       if (canConnect) out.push({ id: "connect", label: t("board.ctx.connect"), icon: "connect", run: startConnect });
       if (canDuplicate) out.push({ id: "dup", label: t("board.ctx.duplicate"), icon: "duplicate", kbd: `${mod}D`, run: duplicate });
+      if (selIds.length > 1) out.push({ id: "tidy", label: t("board.tidy.selection"), icon: "tidy", kbd: `${mod}⇧O`, run: tidy });
       if (canGroup) out.push({ id: "grp", label: t(isGrouped ? "board.ctx.ungroup" : "board.ctx.group"), icon: isGrouped ? "ungroup" : "group", kbd: `${mod}G`, run: toggleGroup });
       out.push({ sep: true });
       out.push({ id: "del", label: t("board.ctx.delete"), icon: "delete", kbd: "Del", danger: true, run: deleteSelection });
@@ -1278,6 +1627,7 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
     for (const x of TOOLS[1]) out.push({ id: x.tool, label: t(x.label), icon: x.icon, kbd: x.key, run: place(x.tool) });
     out.push({ sep: true });
     out.push({ id: "all", label: t("board.menu.selectAll"), icon: "selectAll", kbd: `${mod}A`, run: () => setSelected(new Set(Object.keys(docRef.current?.items ?? {}).filter((k) => !docRef.current!.items[k].in))) });
+    out.push({ id: "tidy", label: t("board.tidy.all"), icon: "tidy", kbd: `${mod}⇧O`, run: tidy });
     out.push({ id: "fit", label: t("board.fit"), icon: "fit", kbd: "F", run: fit });
     out.push({ id: "chat", label: chatOpen ? t("board.chat.close") : t("board.chat.open"), icon: chatOpen ? "closePanel" : "chat", kbd: "/", run: () => (chatOpen ? closeChat() : openChat(true)) });
     return out;
@@ -1312,35 +1662,53 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
   return (
     <div ref={rootRef} className={rootCls} style={{ ["--chat-w" as string]: `${chatWidth}px` }}>
       <div className={vpCls} ref={vpRef} tabIndex={-1}
-        onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerCancel={onPointerUp}
+        onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerCancel={finishPointer}
         onContextMenu={onContextMenu}
         onDoubleClick={(e) => {
-          if (tool === "draw") return;
+          // Chromium retargets the native dblclick to this element (it holds the pointer capture);
+          // the real one is the event onPointerUp re-dispatches at the element under the pointer.
+          if (e.nativeEvent.isTrusted) return;
+          const d = docRef.current;
+          if (!d) return;
           const target = e.target as HTMLElement;
-          const iid = (target.closest("[data-iid]") as HTMLElement | null)?.dataset.iid;
-          if (iid) { const it = doc.items[iid]; if (it && EDITABLE.has(it.k)) setEditing(iid); return; }
-          if (target.closest("[data-nodrag], .hb-ctx")) return;
-          add({ k: "card", w: 256 }, toWorld(e.clientX, e.clientY), true);
+          const hit = target.closest("[data-kid], [data-iid]") as HTMLElement | null;
+          const id = hit?.dataset.kid ?? hit?.dataset.iid;
+          const it = id ? d.items[id] : undefined;
+          const act = dblAction({ kind: it?.k ?? null, tool, chrome: !!target.closest("[data-nodrag], .hb-ctx, .hb-epick, .hb-ask") });
+          if (act === "new") add({ k: "card", w: 256 }, toWorld(e.clientX, e.clientY), true);
+          else if (act === "open" && it?.ref) onOpenBoard(it.ref);
+          else if (act === "edit" && id && it) startEdit(id, editHintAt(target, e.clientX, e.clientY, it));
         }}
         onDragOver={(e) => e.preventDefault()} onDrop={onDrop}>
         <div className="hb-grid" ref={gridRef} />
         <div className="hb-world" ref={worldRef}>
-          <Wires doc={doc} getRect={getRect} version={layoutV + (delta ? 1 : 0)} hidden={hidden} fresh={fresh}
-            selected={selected} draft={draft}
-            onSelect={(id, additive) => setSelected((s) => { const n = additive ? new Set(s) : new Set<string>(); n.add(id); return n; })} />
+          <Wires ref={wiresRef} doc={doc} getRect={getRectLive} version={layoutV + (delta ? 1 : 0)} hidden={hidden} fresh={fresh}
+            selected={selected} draft={draft} editLabel={editLabel} insertLabel={t("board.insert.hint")}
+            onSelect={(id, additive) => setSelected((s) => { const n = additive ? new Set(s) : new Set<string>(); n.add(id); return n; })}
+            onDouble={(id) => { setSelected(new Set([id])); setEditLabel(id); }}
+            onLabel={(id, v) => {
+              setEditLabel(null);
+              if (v === null) return;
+              const next = v.trim();
+              if (next !== (docRef.current?.items[id]?.label ?? "")) update(id, { label: next || null });
+            }}
+            onInsert={(id, at) => {
+              const rr = rootRef.current?.getBoundingClientRect();
+              if (rr) setEdgePick({ id, x: at.x - rr.left, y: at.y - rr.top });
+            }} />
           {items.map(([id, it]) => {
             const sel = selected.has(id);
             const moving = delta && sel;
             const x = (it.x ?? 0) + (moving ? delta!.dx : 0);
             const y = (it.y ?? 0) + (moving ? delta!.dy : 0);
             const rs = resize?.id === id ? resize : null;
-            const [dw] = DEFAULT_SIZE[it.k] ?? [200, 100];
+            const [dw, dh] = (it.k === "shape" ? SHAPE_SIZE[it.sh ?? "rect"] : undefined) ?? DEFAULT_SIZE[it.k] ?? [200, 100];
             const width = it.k === "draw" ? undefined : (rs?.w ?? it.w ?? (it.k === "text" ? undefined : dw));
-            const height = RESIZE_H.has(it.k) ? (rs?.h ?? it.h ?? (it.k === "frame" ? 320 : it.k === "box" ? 62 : undefined)) : undefined;
+            const height = RESIZE_H.has(it.k) ? (rs?.h ?? it.h ?? (it.k === "frame" ? 320 : it.k === "box" ? 62 : it.k === "shape" ? dh : undefined)) : undefined;
             const cls = `hb-item${sel ? " sel" : ""}${moving ? " dragging" : ""}${hidden.has(id) ? " reveal-wait" : ""}${fresh.has(id) && !reduced() ? " just-placed" : ""}${connectFrom === id ? " connect-from" : ""}`;
             const dropIndex = kidDrag?.col === id ? kidDrag.index : null;
             return (
-              <div key={id} className={cls} data-iid={id} ref={regEl(id)}
+              <div key={keyOf(id)} className={cls} data-iid={id} ref={regEl(id)}
                 style={{ left: x, top: y, width, height, zIndex: layer(it) < 2 ? 0 : sel ? 3 : 1 }}>
                 <ItemBody id={id} item={it} c={ctx} dropIndex={dropIndex} selected={sel} />
                 {sel && it.k !== "draw" && selected.size === 1 && (
@@ -1354,6 +1722,7 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
               <ItemBody id={kidDrag.id} item={doc.items[kidDrag.id]} c={ctx} dropIndex={null} selected />
             </div>
           )}
+          <div className="hb-guides" ref={guidesRef} />
           {tool === "draw" && (
             <svg ref={liveSvgRef} className="hb-draw hb-live" style={{ position: "absolute", left: 0, top: 0, overflow: "visible" }} width="1" height="1">
               <path ref={livePathRef} d="" />
@@ -1393,6 +1762,7 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
           {openTarget && <button className="ib" data-tip={t("board.ctx.open")} aria-label={t("board.ctx.open")} onClick={runOpen}><Icon name={"board" in openTarget ? "openBoard" : "open"} /></button>}
           {canConnect && <button className="ib" data-tip={t("board.ctx.connect")} aria-label={t("board.ctx.connect")} onClick={startConnect}><Icon name="connect" /></button>}
           {canDuplicate && <button className="ib" data-tip={t("board.ctx.duplicate")} data-kbd={`${mod}D`} aria-label={t("board.ctx.duplicate")} onClick={duplicate}><Icon name="duplicate" /></button>}
+          {selIds.length > 1 && <button className="ib" data-tip={t("board.tidy.selection")} data-kbd={`${mod}⇧O`} aria-label={t("board.tidy.selection")} onClick={tidy}><Icon name="tidy" /></button>}
           {canGroup && <button className="ib" data-tip={t(isGrouped ? "board.ctx.ungroup" : "board.ctx.group")} data-kbd={`${mod}G`} aria-label={t(isGrouped ? "board.ctx.ungroup" : "board.ctx.group")} onClick={toggleGroup}><Icon name={isGrouped ? "ungroup" : "group"} /></button>}
           <button className="ib danger" data-tip={t("board.ctx.delete")} data-kbd="Del" aria-label={t("board.ctx.delete")} onClick={deleteSelection}><Icon name="delete" /></button>
         </div>
@@ -1454,6 +1824,13 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
         ))}
         <span className="hint" aria-live="polite">{hint}</span>
         <div className="seg">
+          <button className="tool" aria-label={selIds.length > 1 ? t("board.tidy.selection") : t("board.tidy.all")}
+            data-tip={selIds.length > 1 ? t("board.tidy.selection") : t("board.tidy.all")} data-kbd={`${mod}⇧O`} onClick={tidy}><Icon name="tidy" size={15} /></button>
+          <button className={`tool${snapOn ? " on" : ""}`} aria-pressed={snapOn} aria-label={t("board.snap")}
+            data-tip={`${t("board.snap")} · ${t("board.snap.hold", { mod })}`}
+            onClick={() => { setSnapOn(!snapOn); writeLocal(SNAP_KEY, snapOn ? "0" : "1"); }}><Icon name="snap" size={15} /></button>
+        </div>
+        <div className="seg">
           <button className="tool" disabled={!sync.canUndo} aria-label={t("board.undo")} data-tip={t("board.undo")} data-kbd={`${mod}Z`} onClick={sync.undo}><Icon name="undo" size={15} /></button>
           <button className="tool" disabled={!sync.canRedo} aria-label={t("board.redo")} data-tip={t("board.redo")} data-kbd={`${mod}⇧Z`} onClick={sync.redo}><Icon name="redo" size={15} /></button>
         </div>
@@ -1499,6 +1876,11 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
       {chatOpen && (
         <ChatPanel doc={doc} t={t} width={chatWidth} selected={selIds} sentAt={chatSentAt} inputRef={chatInputRef}
           onWidth={resizeChat} onClose={closeChat} onContinue={() => void continueInSession()} onSent={onChatSent} />
+      )}
+
+      {edgePick && rootRef.current && (
+        <EdgePicker at={{ x: edgePick.x, y: edgePick.y }} t={t} bounds={{ w: rootRef.current.clientWidth, h: rootRef.current.clientHeight }}
+          onPick={pickForEdge} onClose={() => setEdgePick(null)} />
       )}
 
       {menu && rootRef.current && (
@@ -1553,14 +1935,19 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
     const v = askValue.trim();
     if (ask.kind === "link") {
       const url = extractUrl(v) ?? extractUrl(`https://${v}`);
-      if (!url || !addUrl(url, ask.at)) { flash(t("board.toast.badUrl")); return; }
+      const item = url ? itemForUrl(url) : null;
+      if (!url || !item) { flash(t("board.toast.badUrl")); return; }
+      if (ask.edge) insertOnEdge(ask.edge, item); else addUrl(url, ask.at);
       setAsk(null);
       return;
     }
     if (!v) return;
-    const at = ask.at;
+    const at = ask.at, edge = ask.edge;
     setAsk(null);
-    void boardsApi.uploadHtml(v).then((r) => add({ k: "embed", asset: r.asset, title: t("board.embed.title") }, at))
+    void boardsApi.uploadHtml(v).then((r) => {
+      const item: Item = { k: "embed", asset: r.asset, title: t("board.embed.title") };
+      if (edge) insertOnEdge(edge, item); else add(item, at);
+    })
       .catch((e) => flash(String(e?.message ?? e)));
   }
 }

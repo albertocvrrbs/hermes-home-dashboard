@@ -3,7 +3,7 @@
 // Rendered like Desktop's sidebar: 24-unit viewBox, 2px round stroke, currentColor.
 import {
   Palette, Activity, BookOpen, Eye, FilePen, FileText, Globe, Search, Wrench, ArrowUp, ArrowUpRight, Bell, Bot, Brain, BrushCleaning, CalendarArrowDown, ChartLine, Check,
-  ChevronLeft, ChevronRight, Circle, CircleAlert, CircleCheck, CodeXml, Columns3, Copy, Cpu, Database, Download, Eraser,
+  ChevronLeft, ChevronRight, Circle, Diamond, Ellipsis, LayoutGrid, Magnet, RectangleHorizontal, Type, CircleAlert, CircleCheck, CodeXml, Columns3, Copy, Cpu, Database, Download, Eraser,
   FlaskConical, Gauge, GitBranch, Group, Hand, HardDrive, Highlighter, Image, LassoSelect, LayoutDashboard, Link, ListPlus, ListTodo,
   Maximize2, MessageSquareText, MousePointer2, MoveUpRight, PanelRightClose, Pause, Pen, Pencil, PencilLine, Play,
   Plus, Power, Redo2, RotateCcw, RefreshCw, Rocket, RotateCw, Route, Scan, Server, Slash, Spline, Split, Square, SquareArrowOutUpRight, SquareDashed,
@@ -11,6 +11,9 @@ import {
   Workflow, X, Zap, ZoomIn, ZoomOut,
   type IconNode,
 } from "lucide";
+
+// lucide has no plain stadium; this is its rectangle with full corner radius, same 24-unit grid
+const PILL: IconNode = [["rect", { x: 2, y: 7, width: 20, height: 10, rx: 5 }]];
 
 export const ICONS = {
   select: MousePointer2,
@@ -75,6 +78,15 @@ export const ICONS = {
   dashed: SquareDashed,
   smooth: Spline,
   ungroup: Ungroup,
+  // layout
+  tidy: LayoutGrid,
+  snap: Magnet,
+  more: Ellipsis,
+  text: Type,
+  shapeRect: RectangleHorizontal,
+  shapeDiamond: Diamond,
+  shapePill: PILL,
+  shapeCircle: Circle,
 } satisfies Record<string, IconNode>;
 
 /** Icons a live card may name (header `icon`, button `icon`). Unknown names fall back. */

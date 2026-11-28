@@ -16,12 +16,15 @@ import { VideoStage } from "./video";
 import { embedDocument, type EmbedTheme } from "./embedBridge";
 import { readTheme, useEmbedBridge } from "./useEmbedBridge";
 import type { BoardDoc, Item, Op, TodoItem } from "./model";
+import type { EditHint } from "./gesture";
 
 export interface ItemCtx {
   doc: BoardDoc;
   t: Translate;
   editing: string | null;
   setEditing: (id: string | null) => void;
+  /** Where editing started (double click point, typed character), for the item being edited. */
+  hint: EditHint | null;
   update: (id: string, p: Record<string, unknown>) => void;
   commit: (ops: Op[]) => void;
   playing: string | null;
@@ -29,6 +32,8 @@ export interface ItemCtx {
   Frame?: SandboxedFrameComponent;
   openBoard: (id: string) => void;
   renderKid: (id: string) => ReactNode;
+  /** Stable React key for an item (optimistic ids are swapped for real ones under the same key). */
+  keyOf: (id: string) => string;
   addToColumn: (col: string) => void;
   /** Live cards: the owner's action allowlist (null while loading) and the button handler
    *  (resolves null when the user cancels the confirm dialog). */
@@ -51,17 +56,29 @@ function useAsset(aid: string | undefined): string | null {
   return url;
 }
 
-/** Auto-growing textarea that commits on blur / Escape / ⌘Enter. */
-function EditText({ value, onDone, placeholder, className, single }: {
-  value: string; onDone: (v: string) => void; placeholder?: string; className?: string; single?: boolean;
+/** The hint that applies to one field of item `id`: caret / seed, and whether it takes focus.
+ *  With no hint every field of an edited item mounts and the `dflt` one ends up focused. */
+function fieldHint(c: ItemCtx, id: string, field: string, dflt = false): { caret?: number; seed?: string; focus: boolean } {
+  const h = c.hint && c.hint.id === id ? c.hint : null;
+  const mine = h?.field ? h.field === field : dflt;
+  return { caret: mine ? h?.caret : undefined, seed: mine ? h?.seed : undefined, focus: mine };
+}
+
+/** Auto-growing textarea. Enter / Esc / click outside commit; Shift+Enter is a newline in the
+ *  multi-line ones. `caret` (offset in `value`) puts the caret where the user double-clicked;
+ *  `seed` is a character typed to start editing. `onDone` also says whether focus left the card. */
+function EditText({ value, onDone, placeholder, className, single, caret, seed, focus = true, onEnter }: {
+  value: string; onDone: (v: string, leaving: boolean) => void; placeholder?: string; className?: string; single?: boolean;
+  caret?: number; seed?: string; focus?: boolean; onEnter?: () => void;
 }) {
   const ref = useRef<HTMLTextAreaElement>(null);
-  const [v, setV] = useState(value);
+  const [v, setV] = useState(seed ? value + seed : value);
   useEffect(() => {
     const el = ref.current;
-    if (!el) return;
-    el.focus();
-    el.setSelectionRange(el.value.length, el.value.length);
+    if (!el || !focus) return;
+    el.focus({ preventScroll: true });
+    const at = seed ? el.value.length : Math.max(0, Math.min(el.value.length, caret ?? el.value.length));
+    el.setSelectionRange(at, at);
   }, []);
   useEffect(() => {
     const el = ref.current;
@@ -76,12 +93,19 @@ function EditText({ value, onDone, placeholder, className, single }: {
       placeholder={placeholder}
       data-nodrag=""
       onChange={(e) => setV(single ? e.target.value.replace(/\n/g, " ") : e.target.value)}
-      onBlur={() => onDone(v)}
+      onBlur={(e) => {
+        const to = e.relatedTarget as HTMLElement | null;
+        const card = e.currentTarget.closest("[data-iid], [data-kid]");
+        onDone(v, !(to && card?.contains(to)));
+      }}
       onKeyDown={(e) => {
         e.stopPropagation();
-        if (e.key === "Escape" || (e.key === "Enter" && (e.metaKey || e.ctrlKey || single))) {
+        if (e.nativeEvent.isComposing) return;
+        if (e.key === "Escape") { e.preventDefault(); (e.target as HTMLTextAreaElement).blur(); return; }
+        if (e.key === "Enter" && !e.shiftKey) {
           e.preventDefault();
-          (e.target as HTMLTextAreaElement).blur();
+          if (onEnter && !e.metaKey && !e.ctrlKey) onEnter();
+          else (e.target as HTMLTextAreaElement).blur();
         }
       }}
     />
@@ -109,19 +133,21 @@ export function CardView({ id, item, c }: { id: string; item: Item; c: ItemCtx }
   const text = item.text ?? "";
   const quote = !item.title && text.length > 0 && text.length <= 160 && !text.includes("\n");
   if (editing) {
+    const th = fieldHint(c, id, "title"), bh = fieldHint(c, id, "text", true);
     return (
       <div className={`hb-card hb-note${item.by === "h" ? " dm" : ""}`}>
-        <h4><EditText single value={item.title ?? ""} placeholder={c.t("board.card.titlePh")}
-          onDone={(v) => { if (v !== (item.title ?? "")) c.update(id, { title: v.trim() || null }); }} /></h4>
-        <div className="body"><EditText value={text} placeholder={c.t("board.card.textPh")}
-          onDone={(v) => { c.setEditing(null); if (v !== text) c.update(id, { text: v || null }); }} /></div>
+        <h4><EditText single value={item.title ?? ""} placeholder={c.t("board.card.titlePh")} caret={th.caret} seed={th.seed} focus={th.focus}
+          onEnter={() => (document.querySelector(`[data-iid="${id}"] .body textarea, [data-kid="${id}"] .body textarea`) as HTMLTextAreaElement | null)?.focus()}
+          onDone={(v, leaving) => { if (v !== (item.title ?? "")) c.update(id, { title: v.trim() || null }); if (leaving) c.setEditing(null); }} /></h4>
+        <div className="body"><EditText value={text} placeholder={c.t("board.card.textPh")} caret={bh.caret} seed={bh.seed} focus={bh.focus}
+          onDone={(v, leaving) => { if (leaving) c.setEditing(null); if (v !== text) c.update(id, { text: v || null }); }} /></div>
       </div>
     );
   }
   return (
     <div className={`hb-card hb-note${quote ? " quote" : ""}${item.by === "h" ? " dm" : ""}`}>
-      {item.title && <h4>{item.title}</h4>}
-      {text ? <div className="body"><RichText text={text} /></div>
+      {item.title && <h4 data-field="title">{item.title}</h4>}
+      {text ? <div className="body" data-field="text"><RichText text={text} /></div>
         : !item.title && <div className="body" style={{ opacity: 0.5 }}>{c.t("board.card.empty")}</div>}
       <Meta item={item} t={c.t} />
     </div>
@@ -137,11 +163,16 @@ export function TodoView({ id, item, c }: { id: string; item: Item; c: ItemCtx }
   const [editRow, setEditRow] = useState<number | null>(null);
   const [draft, setDraft] = useState("");
   const set = (next: TodoItem[]) => c.update(id, { items: next });
+  const rowHint = c.hint && c.hint.id === id && c.hint.field?.startsWith("row:") ? c.hint : null;
+  useEffect(() => {
+    if (rowHint && c.editing === id) setEditRow(Number(rowHint.field!.slice(4)));
+  }, [rowHint, c.editing, id]);
   return (
     <div className={`hb-card hb-todo${item.by === "h" ? " dm" : ""}`} style={{ width: item.w ?? 304 }}>
-      {c.editing === id
-        ? <div className="hd"><EditText single value={item.title ?? ""} onDone={(v) => { c.setEditing(null); c.update(id, { title: v.trim() || null }); }} /></div>
-        : <div className="hd"><span className="t">{item.title || c.t("board.todo.title")}</span><span className="n">{done}/{items.length}</span></div>}
+      {c.editing === id && !(c.hint?.id === id && c.hint.field?.startsWith("row:"))
+        ? <div className="hd"><EditText single value={item.title ?? ""} caret={fieldHint(c, id, "title", true).caret} seed={fieldHint(c, id, "title", true).seed}
+            onDone={(v) => { c.setEditing(null); c.update(id, { title: v.trim() || null }); }} /></div>
+        : <div className="hd"><span className="t" data-field="title">{item.title || c.t("board.todo.title")}</span><span className="n">{done}/{items.length}</span></div>}
       {items.length > 0 && items.length <= 40 && (
         <div className="cells">{items.map((x, i) => <i key={i} className={x.done ? "on" : undefined} />)}</div>
       )}
@@ -157,12 +188,13 @@ export function TodoView({ id, item, c }: { id: string; item: Item; c: ItemCtx }
               onClick={() => set(items.map((y, j) => (j === i ? { ...y, done: !y.done || undefined } : y)))}
               onKeyDown={(e) => { if (e.key === " " || e.key === "Enter") { e.preventDefault(); set(items.map((y, j) => (j === i ? { ...y, done: !y.done || undefined } : y))); } }} />
             {editRow === i
-              ? <span className="l"><EditText single value={x.t} onDone={(v) => {
+              ? <span className="l"><EditText single value={x.t} caret={rowHint?.field === `row:${i}` ? rowHint.caret : undefined} onDone={(v) => {
                   setEditRow(null);
+                  if (c.editing === id) c.setEditing(null);
                   if (!v.trim()) set(items.filter((_, j) => j !== i));
                   else if (v !== x.t) set(items.map((y, j) => (j === i ? { ...y, t: v.trim() } : y)));
                 }} /></span>
-              : <span className="l" onDoubleClick={(e) => { e.stopPropagation(); setEditRow(i); }}>{x.t}</span>}
+              : <span className="l" data-field={`row:${i}`}>{x.t}</span>}
             {x.due ? <span className={`side${dueLabel(c.t, x.due).today ? " due" : ""}`}>{dueLabel(c.t, x.due).text}</span>
               : x.by === "h" ? <span className="side sig"><Cad /></span> : null}
             <button className="rm" data-nodrag="" aria-label={c.t("board.todo.remove")}
@@ -190,11 +222,12 @@ export function ColumnView({ id, item, c, dropIndex }: { id: string; item: Item;
   return (
     <div className="hb-col" style={item.w ? { width: item.w } : undefined}>
       {c.editing === id
-        ? <div className="hd"><EditText single value={item.title ?? ""} onDone={(v) => { c.setEditing(null); c.update(id, { title: v.trim() || null }); }} /></div>
-        : <div className="hd"><span className="t">{item.title || c.t("board.col.title")}</span><span className="n">{kids.length}</span>{item.by === "h" && <span className="n sig"><Cad /></span>}</div>}
+        ? <div className="hd"><EditText single value={item.title ?? ""} caret={fieldHint(c, id, "title", true).caret} seed={fieldHint(c, id, "title", true).seed}
+            onDone={(v) => { c.setEditing(null); c.update(id, { title: v.trim() || null }); }} /></div>
+        : <div className="hd"><span className="t" data-field="title">{item.title || c.t("board.col.title")}</span><span className="n">{kids.length}</span>{item.by === "h" && <span className="n sig"><Cad /></span>}</div>}
       <div className={`track${dropIndex != null ? " drop" : ""}`} data-col={id}>
         {kids.map((k, i) => (
-          <div key={k} style={{ display: "contents" }}>
+          <div key={c.keyOf(k)} style={{ display: "contents" }}>
             {dropIndex === i && <div className="drop-line" />}
             {c.renderKid(k)}
           </div>
@@ -239,7 +272,10 @@ export function VideoView({ id, item, c }: { id: string; item: Item; c: ItemCtx 
       )}
       <div className="hb-link"><div className="body">
         <div className="dom"><span>{site}</span></div>
-        <h4>{item.url ? <a href={item.url} target="_blank" rel="noopener noreferrer" data-nodrag="">{title}</a> : title}</h4>
+        {c.editing === id
+          ? <h4><EditText single value={item.title ?? ""} placeholder={title} caret={fieldHint(c, id, "title", true).caret} seed={fieldHint(c, id, "title", true).seed}
+              onDone={(v) => { c.setEditing(null); if (v !== (item.title ?? "")) c.update(id, { title: v.trim() || null }); }} /></h4>
+          : <h4 data-field="title">{item.url ? <a href={item.url} target="_blank" rel="noopener noreferrer" draggable={false}>{title}</a> : title}</h4>}
         {item.desc && <p>{item.desc}</p>}
         {item.by === "h" && <div className="meta" style={{ marginTop: 9 }}><span className="sp" /><Sig /></div>}
       </div></div>
@@ -263,9 +299,12 @@ export function LinkView({ id, item, c }: { id: string; item: Item; c: ItemCtx }
           <div className="skel"><i /><i /><i /></div>
         ) : (
           <>
-            <h4><a href={item.url} target="_blank" rel="noopener noreferrer" data-nodrag="">
-              {item.title || (failed ? site : item.url)}
-            </a></h4>
+            {c.editing === id
+              ? <h4><EditText single value={item.title ?? ""} placeholder={failed ? site : item.url} caret={fieldHint(c, id, "title", true).caret} seed={fieldHint(c, id, "title", true).seed}
+                  onDone={(v) => { c.setEditing(null); if (v !== (item.title ?? "")) c.update(id, { title: v.trim() || null }); }} /></h4>
+              : <h4 data-field="title"><a href={item.url} target="_blank" rel="noopener noreferrer" draggable={false}>
+                  {item.title || (failed ? site : item.url)}
+                </a></h4>}
             {item.desc && <p>{item.desc}</p>}
             {(failed || !item.title) && item.url && <div className="url">{item.url}</div>}
           </>
@@ -288,9 +327,9 @@ export function ImageView({ id, item, c }: { id: string; item: Item; c: ItemCtx 
       </div>
       <div className="cap">
         {c.editing === id
-          ? <b style={{ flex: 1 }}><EditText single value={item.cap ?? ""} placeholder={c.t("board.image.capPh")}
+          ? <b style={{ flex: 1 }}><EditText single value={item.cap ?? ""} placeholder={c.t("board.image.capPh")} caret={fieldHint(c, id, "cap", true).caret}
               onDone={(v) => { c.setEditing(null); c.update(id, { cap: v.trim() || null }); }} /></b>
-          : <b>{item.cap || (item.url ? hostOf(item.url) : "")}</b>}
+          : <b data-field="cap">{item.cap || (item.url ? hostOf(item.url) : "")}</b>}
         {item.by === "h" && <Sig />}
       </div>
     </div>
@@ -439,8 +478,9 @@ export function FrameView({ id, item, c }: { id: string; item: Item; c: ItemCtx 
       <span className="lbl">
         {item.by === "h" && <Cad />}
         <span className="t">{c.editing === id
-          ? <EditText single value={item.title ?? ""} onDone={(v) => { c.setEditing(null); c.update(id, { title: v.trim() || null }); }} />
-          : (item.title || c.t("board.frame.title"))}</span>
+          ? <EditText single value={item.title ?? ""} caret={fieldHint(c, id, "title", true).caret} seed={fieldHint(c, id, "title", true).seed}
+              onDone={(v) => { c.setEditing(null); c.update(id, { title: v.trim() || null }); }} />
+          : <span data-field="title">{item.title || c.t("board.frame.title")}</span>}</span>
         {item.note && <em>{item.note}</em>}
       </span>
     </div>
@@ -453,8 +493,9 @@ export function BoxView({ id, item, c }: { id: string; item: Item; c: ItemCtx })
       {item.num && <span className="num">{item.num}</span>}
       <span style={{ minWidth: 0 }}>
         {c.editing === id
-          ? <b><EditText single value={item.title ?? ""} onDone={(v) => { c.setEditing(null); c.update(id, { title: v.trim() || null }); }} /></b>
-          : <b>{item.title || "…"}</b>}
+          ? <b><EditText single value={item.title ?? ""} caret={fieldHint(c, id, "title", true).caret} seed={fieldHint(c, id, "title", true).seed}
+              onDone={(v) => { c.setEditing(null); c.update(id, { title: v.trim() || null }); }} /></b>
+          : <b data-field="title">{item.title || "…"}</b>}
         {item.sub && <small>{item.sub}</small>}
       </span>
     </div>
@@ -464,10 +505,51 @@ export function BoxView({ id, item, c }: { id: string; item: Item; c: ItemCtx })
 export function TextView({ id, item, c }: { id: string; item: Item; c: ItemCtx }) {
   const size = item.size === "h" || item.size === "s" ? item.size : "p";
   if (c.editing === id) {
-    return <div className={`hb-text ${size}`}><EditText single={size === "h"} value={item.text ?? ""}
+    const h = fieldHint(c, id, "text", true);
+    return <div className={`hb-text ${size}`}><EditText single={size === "h"} value={item.text ?? ""} caret={h.caret} seed={h.seed}
       onDone={(v) => { c.setEditing(null); c.update(id, { text: v || null }); }} /></div>;
   }
-  return <div className={`hb-text ${size}`}>{item.text || c.t("board.text.empty")}</div>;
+  return <div className={`hb-text ${size}`} data-field="text">{item.text || c.t("board.text.empty")}</div>;
+}
+
+const SHAPE_DEFAULT: Record<string, [number, number]> = { rect: [160, 56], diamond: [150, 100], pill: [150, 48], circle: [72, 72] };
+
+/** Outline path of a flowchart shape in an exactly w × h box (px, so the stroke never distorts). */
+export function shapeOutline(sh: string, w: number, h: number): string {
+  const x0 = 0.75, y0 = 0.75, x1 = w - 0.75, y1 = h - 0.75, mx = w / 2, my = h / 2;
+  if (sh === "diamond") return `M${mx} ${y0} L${x1} ${my} L${mx} ${y1} L${x0} ${my}Z`;
+  if (sh === "circle") return `M${x0} ${my} A${mx - 0.75} ${my - 0.75} 0 1 0 ${x1} ${my} A${mx - 0.75} ${my - 0.75} 0 1 0 ${x0} ${my}Z`;
+  const r = sh === "pill" ? Math.min(mx, my) - 0.75 : 5;
+  return `M${x0 + r} ${y0} H${x1 - r} A${r} ${r} 0 0 1 ${x1} ${y0 + r} V${y1 - r} A${r} ${r} 0 0 1 ${x1 - r} ${y1} H${x0 + r} A${r} ${r} 0 0 1 ${x0} ${y1 - r} V${y0 + r} A${r} ${r} 0 0 1 ${x0 + r} ${y0}Z`;
+}
+
+export function ShapeView({ id, item, c }: { id: string; item: Item; c: ItemCtx }) {
+  const sh = item.sh ?? "rect";
+  const [dw, dh] = SHAPE_DEFAULT[sh] ?? SHAPE_DEFAULT.rect;
+  const ref = useRef<HTMLDivElement>(null);
+  const [box, setBox] = useState<{ w: number; h: number }>({ w: item.w ?? dw, h: item.h ?? dh });
+  useEffect(() => {
+    const el = ref.current;
+    const RO = (globalThis as { ResizeObserver?: typeof ResizeObserver }).ResizeObserver;
+    if (!el || !RO) return;
+    const ro = new RO(() => setBox((b) => (b.w === el.offsetWidth && b.h === el.offsetHeight ? b : { w: el.offsetWidth || b.w, h: el.offsetHeight || b.h })));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  const hint = fieldHint(c, id, "title", true);
+  return (
+    <div ref={ref} className={`hb-shape ${sh}${item.by === "h" ? " by-h" : ""}`}>
+      <svg className="o" width={box.w} height={box.h} viewBox={`0 0 ${box.w} ${box.h}`} aria-hidden="true">
+        <path d={shapeOutline(sh, box.w, box.h)} />
+      </svg>
+      <span className="t">
+        {c.editing === id
+          ? <EditText value={item.title ?? ""} placeholder={c.t("board.shape.ph")} caret={hint.caret} seed={hint.seed}
+              onDone={(v) => { c.setEditing(null); if (v !== (item.title ?? "")) c.update(id, { title: v.trim() || null }); }} />
+          : <span data-field="title">{item.title || ""}</span>}
+      </span>
+    </div>
+  );
 }
 
 export function DrawView({ item, selected, erasing }: { item: Item; selected: boolean; erasing?: boolean }) {
@@ -500,6 +582,7 @@ export function ItemBody({ id, item, c, dropIndex, selected }: {
     case "image": return <ImageView id={id} item={item} c={c} />;
     case "embed": return <EmbedView id={id} item={item} c={c} />;
     case "board": return <BoardRefView item={item} c={c} />;
+    case "shape": return <ShapeView id={id} item={item} c={c} />;
     case "frame": return <FrameView id={id} item={item} c={c} />;
     case "box": return <BoxView id={id} item={item} c={c} />;
     case "text": return <TextView id={id} item={item} c={c} />;

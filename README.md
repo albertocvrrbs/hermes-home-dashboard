@@ -305,6 +305,23 @@ made; your work stays solid.
 
 ![Your sketch on the left, Hermes' clean version on the right](assets/screenshot-board-flow.png)
 
+- **Edit in place, like a canvas app.** Double-click (or double-tap) a note, to-do
+  title or item, column title, link or video title, image caption, shape or
+  connector label and you are typing right there, caret under the pointer.
+  `Enter`, `Esc` or a click outside commits; `Shift+Enter` is a newline. Select a
+  note or text and just start typing, or press `F2` / `Enter`. Double-click a
+  sub-board card to open it, empty canvas to drop a new note.
+- **Arrange and snap.** *Arrange* (toolbar, right-click menu, `⌘⇧O` / `Ctrl+Shift+O`)
+  lays the selection, or the whole board, out in a clean grid in reading order
+  with even gaps, as one undo step. Items snap to the grid and to their
+  neighbours' edges and centres while you drag (guides show what they met;
+  hold `⌘` / `Ctrl` to place freely, or switch it off in the toolbar). Connectors
+  follow every frame while you drag, resize or arrange.
+- **Insert on a connector.** Hover a connector (or select it on touch) and press
+  its **+** to put a rectangle, diamond (decision), pill (start / end), circle,
+  text, note, to-do or any other card in the middle: the connector splits in two,
+  the next steps make room, and you are already typing in the new shape. Hermes
+  does the same with `{op:'insert_on_edge'}`, and arranges with `{op:'tidy'}`.
 - **Paste anything.** A URL becomes a link card with title, description,
   favicon and image. A YouTube, Vimeo, Loom or X link, or a direct video file,
   becomes a playable card. An image, or an image URL, becomes an image card.

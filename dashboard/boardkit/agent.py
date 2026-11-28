@@ -31,9 +31,14 @@ EMBED_RULES = (
 
 _OPS_HELP = (
     "ops: [{op:'add', ref:'$a', item:{k, x, y, w?, h?, ...}}, {op:'set', id, p:{...}} (null removes a field), "
-    "{op:'del', id}, {op:'board', p:{name}}]. Use '$refs' to point at items added in the same batch. "
+    "{op:'del', id}, {op:'board', p:{name}}, {op:'tidy', ids?:[...], gap?:24} (lay items out in a clean grid in reading "
+    "order, aligned to the 24px grid with uniform gaps; omit ids for the whole board, which leaves connected diagram "
+    "nodes, framed items and loose strokes alone), {op:'insert_on_edge', edge:<line id>, ref?:'$x', item:{k,...}} (put an "
+    "item in the middle of a connector: splits it into A->new->B, keeps the label on A->new, pushes B and what hangs off "
+    "it away if it is too tight; one undo step)]. Use '$refs' to point at items added in the same batch. "
     "Kinds: card{title,text,tags,due} · todo{title,items:[{t,done}]} · col{title} (add cards with in:'<col>') · "
-    "box{num,title,sub} (diagram node, ~196x62) · line{a,b,label} (connector; a/b = ids or [x,y]) · "
+    "box{num,title,sub} (diagram node, ~196x62) · shape{sh:'rect'|'diamond'|'pill'|'circle',title} (flowchart symbol: process, "
+    "decision, start/end, connector; ~160x56, diamond 150x100, pill 150x48, circle 72) · line{a,b,label} (connector; a/b = ids or [x,y]) · "
     "frame{title,note,w,h} (titled region) · text{text,size:'h'|'p'} · link{url} (preview fetched for you; video "
     "and image URLs become players/images) · embed{title,html,theme} (sandboxed HTML, scripts only, no network; ALWAYS send theme:true on HTML you write, see 'Embed rules') · "
     "draw{d:'x,y x,y …' ints relative to x,y, sw, tl?:'line'|'arrow'|'rect'|'ellipse'|'hl' (shapes: d = two points; "
