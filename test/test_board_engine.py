@@ -170,6 +170,30 @@ class InkFieldsTest(unittest.TestCase):
             out = render.render_png(doc, None, Path(tmp) / "x.png")
             self.assertTrue(Path(out["path"]).exists())
 
+    def test_render_shows_subtitles_labels_and_marks(self):
+        try:
+            from PIL import Image
+        except ImportError:
+            self.skipTest("Pillow not installed")
+        import tempfile
+        from pathlib import Path
+        from dashboard.boardkit import render
+        base, _, _ = engine.apply_batch(blank(), [
+            {"op": "add", "ref": "$a", "item": {"k": "box", "x": 0, "y": 0, "w": 300, "h": 80, "title": "Controller"}},
+            {"op": "add", "ref": "$b", "item": {"k": "box", "x": 600, "y": 0, "w": 300, "h": 80, "title": "Battery"}},
+            {"op": "add", "item": {"k": "line", "a": "$a", "b": "$b"}},
+        ], by="h")
+        rich, _, _ = engine.apply_batch(base, [
+            {"op": "set", "id": "0", "p": {"sub": "Radxa ZERO 3W + IMU", "mark": "ok"}},
+            {"op": "set", "id": "2", "p": {"label": "12 V"}},
+        ], by="h")
+        with tempfile.TemporaryDirectory() as tmp:
+            a = render.render_png(base, None, Path(tmp) / "a.png")
+            b = render.render_png(rich, None, Path(tmp) / "b.png")
+            pa, pb = Image.open(a["path"]).convert("RGB"), Image.open(b["path"]).convert("RGB")
+            changed = sum(1 for x, y in zip(pa.getdata(), pb.getdata()) if x != y)
+            self.assertGreater(changed, 200)  # subtitle, connector label and mark all drew something
+
 
 class ColumnsTest(unittest.TestCase):
     def setUp(self):

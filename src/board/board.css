@@ -253,6 +253,9 @@
 /* nested board */
 .hb-boardref { padding: 6px; cursor: pointer; }
 .hb-boardref .pv { height: 110px; background: var(--well); position: relative; overflow: hidden; border: 1px solid var(--rule); }
+/* a sub-board card with a height: the preview takes what the title row leaves */
+.hb-boardref.fill { height: 100%; display: flex; flex-direction: column; }
+.hb-boardref.fill .pv { flex: 1 1 auto; height: auto; min-height: 60px; }
 .hb-boardref .pv i { position: absolute; background: color-mix(in srgb, var(--accent) 12%, transparent); }
 .hb-boardref .pv i.c { background: color-mix(in srgb, var(--accent) 24%, transparent); }
 .hb-boardref .pv i.h { background: none; outline: 1px dotted color-mix(in srgb, var(--accent) 60%, transparent); outline-offset: -1px; }

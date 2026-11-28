@@ -29,3 +29,10 @@ test("data, version pin and sync updates replay as plain sets", () => {
   assert.equal(d.items["0"].sync, undefined);
   assert.deepEqual(groupsOf(d.items), ["s1"]);
 });
+
+test("sub-board cards take a height and their preview grows with the card", async () => {
+  const { RESIZE_H: R, boardPreviewH } = await import("../src/board/geometry.ts");
+  assert.ok(R.has("board"));
+  assert.equal(boardPreviewH(212), 110);
+  assert.ok(boardPreviewH(1200) > 600);
+});

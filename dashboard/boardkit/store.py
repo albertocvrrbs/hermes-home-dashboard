@@ -243,6 +243,23 @@ class BoardStore:
         except (FileNotFoundError, ValueError):
             return {}
 
+    def adopt(self, bid: Any, parent: str) -> bool:
+        """Make ``bid`` a sub-board of ``parent`` if it has no parent yet (a board card now points at it)."""
+        if not ids.valid_bid(bid) or not ids.valid_bid(parent) or bid == parent:
+            return False
+        done = {"v": False}
+
+        def fn(doc):
+            if doc.get("parent"):
+                return False
+            doc["parent"] = parent
+            done["v"] = True
+        try:
+            self._update(bid, fn)
+        except Exception:
+            return False
+        return done["v"]
+
     def link_session(self, bid: Any, session_id: str, profile: str = "default", force: bool = False) -> bool:
         if not isinstance(session_id, str) or not session_id or len(session_id) > 200:
             return False

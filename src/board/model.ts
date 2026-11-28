@@ -294,7 +294,9 @@ export function approxRect(item: Item): { x: number; y: number; w: number; h: nu
   if (item.k === "todo") h = 110 + 26 * (item.items?.length ?? 0);
   if (item.k === "live") h = item.h ?? liveHeight(item);
   // an imported picture / thumbnail is as tall as its aspect ratio says (+ padding and caption bar)
-  if (item.k === "image" && item.h == null && item.iw && item.ih) h = Math.round(((item.w ?? dw) - 14) * item.ih / item.iw + 56);
+  if (item.k === "image" && item.iw && item.ih) h = Math.round(((item.w ?? dw) - 14) * item.ih / item.iw + 56);
+  if (item.k === "video" && item.iw && item.ih) h = Math.round(((item.w ?? dw) - 2) * item.ih / item.iw + 84);
+  if (item.k === "board" && !item.h) h = Math.round(Math.max(110, (item.w ?? dw) * 0.52)) + 62;  // geometry.boardPreviewH
   if (item.k === "draw" && item.d) {
     const pts = item.d.split(" ").map((p) => p.split(",").map(Number));
     const xs = pts.map((p) => p[0]), ys = pts.map((p) => p[1]);

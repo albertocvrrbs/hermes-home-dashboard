@@ -6662,7 +6662,10 @@ function fitView(b, vp, pad2 = 60, maxZ = 1.25) {
 function intersects(a, b) {
   return a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
 }
-const RESIZE_H = /* @__PURE__ */ new Set(["frame", "box", "embed", "comp", "text", "shape"]);
+const RESIZE_H = /* @__PURE__ */ new Set(["frame", "box", "embed", "comp", "text", "shape", "board"]);
+function boardPreviewH(w) {
+  return Math.round(Math.max(110, (w ?? 212) * 0.52));
+}
 function resizePatch(kind, w, h) {
   const p = { w: Math.round(Math.max(kind === "shape" ? 40 : 120, w)) };
   if (RESIZE_H.has(kind)) p.h = Math.round(Math.max(40, h));
@@ -8203,7 +8206,9 @@ function approxRect(item) {
   if (item.k === "col") h = 60 + 96 * (item.kids?.length ?? 0);
   if (item.k === "todo") h = 110 + 26 * (item.items?.length ?? 0);
   if (item.k === "live") h = item.h ?? liveHeight(item);
-  if (item.k === "image" && item.h == null && item.iw && item.ih) h = Math.round(((item.w ?? dw) - 14) * item.ih / item.iw + 56);
+  if (item.k === "image" && item.iw && item.ih) h = Math.round(((item.w ?? dw) - 14) * item.ih / item.iw + 56);
+  if (item.k === "video" && item.iw && item.ih) h = Math.round(((item.w ?? dw) - 2) * item.ih / item.iw + 84);
+  if (item.k === "board" && !item.h) h = Math.round(Math.max(110, (item.w ?? dw) * 0.52)) + 62;
   if (item.k === "draw" && item.d) {
     const pts = item.d.split(" ").map((p) => p.split(",").map(Number));
     const xs2 = pts.map((p) => p[0]), ys2 = pts.map((p) => p[1]);
@@ -10207,14 +10212,14 @@ function BoardRefView({ item, c }) {
   return /* @__PURE__ */ jsxs(
     "div",
     {
-      className: `hb-card hb-boardref${item.by === "h" ? " dm" : ""}`,
+      className: `hb-card hb-boardref${item.by === "h" ? " dm" : ""}${item.h ? " fill" : ""}`,
       style: { width: item.w ?? 212 },
       onDoubleClick: (e) => {
         e.stopPropagation();
         if (item.ref) c.openBoard(item.ref);
       },
       children: [
-        /* @__PURE__ */ jsx("div", { className: "pv", children: /* @__PURE__ */ jsx(MiniBoard, { doc: child, id: item.ref }) }),
+        /* @__PURE__ */ jsx("div", { className: "pv", style: item.h ? void 0 : { height: boardPreviewH(item.w) }, children: /* @__PURE__ */ jsx(MiniBoard, { doc: child, id: item.ref }) }),
         /* @__PURE__ */ jsxs("div", { className: "ttl", children: [
           /* @__PURE__ */ jsx("b", { "data-tip": child?.name ?? item.title ?? void 0, children: child?.name ?? item.title ?? c.t("board.ref.missing") }),
           /* @__PURE__ */ jsx("span", { children: /* @__PURE__ */ jsx("button", { "data-nodrag": "", "data-tip": c.t("board.index.open"), "aria-label": c.t("board.index.open"), onClick: () => item.ref && c.openBoard(item.ref), children: /* @__PURE__ */ jsx(Icon, { name: "openBoard", size: 13 }) }) })
@@ -11288,8 +11293,8 @@ function MiniBody({ id, item, c }) {
   }
   if (item.k === "video" && item.sync) return /* @__PURE__ */ jsx(ItemBody, { id, item: { ...item, sync: void 0 }, c, dropIndex: null, selected: false });
   if (item.k === "board") {
-    return /* @__PURE__ */ jsxs("div", { className: `hb-card hb-boardref${item.by === "h" ? " dm" : ""}`, style: { width: item.w ?? 212 }, children: [
-      /* @__PURE__ */ jsx("div", { className: "pv" }),
+    return /* @__PURE__ */ jsxs("div", { className: `hb-card hb-boardref${item.by === "h" ? " dm" : ""}${item.h ? " fill" : ""}`, style: { width: item.w ?? 212 }, children: [
+      /* @__PURE__ */ jsx("div", { className: "pv", style: item.h ? void 0 : { height: boardPreviewH(item.w) } }),
       /* @__PURE__ */ jsx("div", { className: "ttl", children: /* @__PURE__ */ jsx("b", { children: item.title || itemLabel(item) }) }),
       /* @__PURE__ */ jsx("div", { className: "meta", children: /* @__PURE__ */ jsx("span", { children: " " }) })
     ] });
@@ -16490,6 +16495,9 @@ const boardCss = `/* Board — "Mesa de despacho" (hd-canvas-plan/mockup-v2). Ev
 /* nested board */
 .hb-boardref { padding: 6px; cursor: pointer; }
 .hb-boardref .pv { height: 110px; background: var(--well); position: relative; overflow: hidden; border: 1px solid var(--rule); }
+/* a sub-board card with a height: the preview takes what the title row leaves */
+.hb-boardref.fill { height: 100%; display: flex; flex-direction: column; }
+.hb-boardref.fill .pv { flex: 1 1 auto; height: auto; min-height: 60px; }
 .hb-boardref .pv i { position: absolute; background: color-mix(in srgb, var(--accent) 12%, transparent); }
 .hb-boardref .pv i.c { background: color-mix(in srgb, var(--accent) 24%, transparent); }
 .hb-boardref .pv i.h { background: none; outline: 1px dotted color-mix(in srgb, var(--accent) 60%, transparent); outline-offset: -1px; }

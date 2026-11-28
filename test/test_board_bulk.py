@@ -189,6 +189,83 @@ class ZonesTest(unittest.TestCase):
 
 
 class ArrangeAndPlaceTest(unittest.TestCase):
+    def _three_zones(self):
+        doc = engine.new_doc("abcd1234", "t", 0)
+        ops = []
+        for n in range(3):
+            y = n * 900
+            ops += [
+                {"op": "add", "ref": f"$f{n}", "item": {"k": "frame", "title": f"Z{n}", "x": 0, "y": y, "w": 800, "h": 600}},
+                {"op": "add", "ref": f"$a{n}", "item": {"k": "box", "title": "A", "x": 60, "y": y + 100}},
+                {"op": "add", "ref": f"$b{n}", "item": {"k": "box", "title": "B", "x": 500, "y": y + 300}},
+                {"op": "add", "item": {"k": "line", "a": f"$a{n}", "b": f"$b{n}"}},
+                {"op": "add", "item": {"k": "line", "a": [100, y + 500], "b": [300, y + 500]}},
+                {"op": "add", "item": {"k": "draw", "x": 600, "y": y + 450, "d": "0,0 40,30 80,0"}},
+            ]
+        doc, _, refs = engine.apply_batch(doc, ops, "h")
+        return doc, refs
+
+    @staticmethod
+    def _offsets(doc, fid, members):
+        f = doc["items"][fid]
+        out = []
+        for i in sorted(members):
+            it = doc["items"][i]
+            if it["k"] == "line":
+                out += [(i, e, it[e][0] - f["x"], it[e][1] - f["y"]) for e in ("a", "b") if isinstance(it.get(e), list)]
+            else:
+                out.append((i, it["x"] - f["x"], it["y"] - f["y"]))
+        return out
+
+    @staticmethod
+    def _members(doc, fid):
+        from dashboard.boardkit import bulk
+        return bulk.frame_members(engine._Batch(doc, "h"), fid)
+
+    def test_arrange_frames_moves_them_with_their_contents(self):
+        doc, refs = self._three_zones()
+        frames = [refs[f"$f{n}"] for n in range(3)]
+        mem = {f: self._members(doc, f) for f in frames}
+        self.assertTrue(all(len(m) == 4 for m in mem.values()))  # 2 boxes, the free line, the stroke
+        before = {f: self._offsets(doc, f, mem[f]) for f in frames}
+        new, inv, _ = engine.apply_batch(doc, [{"op": "arrange", "ids": frames, "cols": 3, "gap": 96}], "h")
+        ys = {new["items"][f]["y"] for f in frames}
+        self.assertEqual(len(ys), 1)  # one row now
+        self.assertEqual(len({new["items"][f]["x"] for f in frames}), 3)
+        for f in frames:
+            self.assertEqual(self._offsets(new, f, mem[f]), before[f])  # the diagram inside did not change shape
+        back, _, _ = engine.apply_batch(new, inv, "h")
+        self.assertEqual(back["items"], doc["items"])
+
+    def test_zones_take_existing_frames_and_sketches_as_blocks(self):
+        doc, refs = self._three_zones()
+        f0 = refs["$f0"]
+        mem = self._members(doc, f0)
+        before = self._offsets(doc, f0, mem)
+        new, _, out = engine.apply_batch(doc, [{"op": "zones", "layout": "row", "zones": [
+            {"title": "Idea", "ids": [f0]}, {"title": "Rest", "ids": [refs["$f1"], refs["$f2"]]}]}], "h")
+        self.assertEqual(self._offsets(new, f0, mem), before)
+        zones = [i for i, v in new["items"].items() if v["k"] == "frame" and v["title"] in ("Idea", "Rest")]
+        self.assertEqual(len(zones), 2)
+        idea = new["items"][[i for i in zones if new["items"][i]["title"] == "Idea"][0]]
+        inner = new["items"][f0]
+        self.assertTrue(idea["x"] <= inner["x"] and inner["x"] + inner["w"] <= idea["x"] + idea["w"])
+
+    def test_picture_height_follows_aspect_even_with_h(self):
+        # the board ignores h on image/video cards; layout must too or text lands on the video
+        doc = engine.new_doc("abcd1234", "t", 0)
+        doc, _, _ = engine.apply_batch(doc, [
+            {"op": "add", "item": {"k": "video", "x": 0, "y": 0, "w": 680, "h": 383, "iw": 960, "ih": 540, "src": "https://ex.com/a.mp4"}},
+        ], "h")
+        from dashboard.boardkit import bulk
+        tall = bulk._media_h("video", 680, 960, 540)
+        self.assertGreater(tall, 383)
+        self.assertEqual(engine._Batch(doc, "h").rect_of("0")["h"], tall)
+        new, _, _ = engine.apply_batch(doc, [{"op": "add", "item": {"k": "card", "x": 0, "y": 400, "text": "below"}},
+                                             {"op": "tidy"}], "h")
+        v, c = new["items"]["0"], new["items"]["1"]
+        self.assertTrue(c["y"] >= v["y"] + tall or c["x"] >= v["x"] + 680 or c["x"] + 256 <= v["x"])
+
     def test_arrange_frame_is_a_uniform_grid(self):
         doc = stations_doc(12)
         doc, _, refs = engine.apply_batch(doc, [{"op": "add", "ref": "$f", "item": {"k": "frame", "title": "F", "x": -400, "y": -300, "w": 1300, "h": 1300}}], "h")

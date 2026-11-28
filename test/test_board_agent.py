@@ -120,6 +120,55 @@ class AgentToolsTest(unittest.TestCase):
         out = self.call("board_render", {"board": bid})
         self.assertTrue(Path(out["path"]).exists())
 
+    def test_render_frame_brings_its_contents_and_rect_is_region(self):
+        try:
+            import PIL  # noqa: F401
+        except ImportError:
+            self.skipTest("Pillow not installed")
+        bid = self.call("board_read", {"board": "B", "create": True})["board"]
+        self.call("board_apply", {"board": bid, "ops": [
+            {"op": "add", "ref": "$f", "item": {"k": "frame", "x": 0, "y": 0, "w": 800, "h": 400, "title": "Brain"}},
+            {"op": "add", "ref": "$a", "item": {"k": "box", "x": 40, "y": 80, "title": "Sim"}},
+            {"op": "add", "ref": "$b", "item": {"k": "box", "x": 400, "y": 80, "title": "Net"}},
+            {"op": "add", "item": {"k": "line", "a": "$a", "b": "$b", "label": "obs"}},
+            {"op": "add", "item": {"k": "card", "x": 2000, "y": 2000, "text": "far away"}},
+        ]})
+        doc = self.svc.store.load(bid)
+        self.assertEqual(sorted(agent_mod._with_contents(doc, ["0"])), ["0", "1", "2", "3"])
+        out = self.call("board_render", {"board": bid, "ids": ["0"]})
+        self.assertLess(out["region"]["w"], 1000)  # the far card is not in it
+        out = self.call("board_render", {"board": bid, "rect": {"x": 0, "y": 0, "w": 500, "h": 300}})
+        self.assertEqual(out["region"], {"x": 0, "y": 0, "w": 500, "h": 300})
+
+
+class SubBoardTest(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.svc = BoardService(Path(self.tmp.name), fetcher=offline_fetcher())
+        self.agent = agent_mod.BoardAgent(self.svc, profile="default")
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def call(self, name, args, session="s1"):
+        return json.loads(getattr(self.agent, name)(args, session_id=session))
+
+    def test_sub_board_keeps_the_session_on_its_parent(self):
+        main = self.svc.store.create("Main")["id"]
+        self.assertTrue(self.svc.store.link_session(main, "s1"))
+        sub = self.call("board_read", {"board": "Training Room", "create": True})["board"]
+        self.assertEqual(self.svc.store.board_for_session("s1"), main)  # not stolen by the new board
+        self.assertIsNone(self.svc.store.load(sub).get("session"))
+        self.call("board_apply", {"ops": [{"op": "add", "item": {"k": "board", "x": 0, "y": 0, "ref": sub}}]})
+        self.assertEqual(self.svc.store.load(sub)["parent"], main)  # the board card adopted it
+        card = [v for v in self.svc.store.load(main)["items"].values() if v["k"] == "board"][0]
+        self.assertEqual(card["title"], "Training Room")  # named after its board (tour HUD, outline)
+        other = self.call("board_read", {"board": "Exam", "create": True, "parent": main})["board"]
+        self.assertEqual(self.svc.store.load(other)["parent"], main)
+        # a session with no board yet still links to the first board it opens
+        free = self.call("board_read", {"board": "Solo", "create": True}, session="s2")["board"]
+        self.assertEqual(self.svc.store.board_for_session("s2"), free)
+
 
 class HookTest(unittest.TestCase):
     def setUp(self):
@@ -165,7 +214,7 @@ class SchemaTest(unittest.TestCase):
     def test_schemas_are_compact_and_named(self):
         for name, schema in agent_mod.SCHEMAS.items():
             self.assertEqual(schema["name"], name)
-            self.assertLess(len(json.dumps(schema)), 5400, name)
+            self.assertLess(len(json.dumps(schema)), 5600, name)
 
 
 if __name__ == "__main__":

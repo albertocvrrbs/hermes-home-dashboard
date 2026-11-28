@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 import re
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 from . import compguide, components as comp_mod, embedlint, engine, summary
 from .render import render_png
@@ -81,14 +81,14 @@ _OPS_HELP = (
     "box{num,title,sub} (diagram node, ~196x62) · shape{sh:'rect'|'diamond'|'pill'|'circle',title} (flowchart symbol: process, "
     "decision, start/end, connector; ~160x56, diamond 150x100, pill 150x48, circle 72) · line{a,b,label} (connector; a/b = ids or [x,y]) · "
     "frame{title,note,w,h} (titled region) · text{text,size:'h'|'p'} · link{url} (preview fetched for you; video "
-    "and image URLs become players/images) · embed{title,html,theme} (sandboxed HTML, scripts only, no network; ALWAYS send theme:true on HTML you write, see 'Embed rules') · "
+    "and image URLs become players/images; image/video take w only) · embed{title,html,theme} (sandboxed HTML, scripts only, no network; ALWAYS send theme:true on HTML you write, see 'Embed rules') · "
     "draw{d:'x,y x,y …' ints relative to x,y, sw, tl?:'line'|'arrow'|'rect'|'ellipse'|'hl' (shapes: d = two points; "
     "hl = translucent highlighter), c?:'accent'|'sage'|'clay'|'slate'|'sand', ds?:true dashed, g?:group id} · "
-    "board{ref} · live{title, tpl:'training'|'job'|'stat' or blocks:[...], data:{...}, ttl, actions:[{action, label?, "
+    "board{ref} (sub-board: board_read {create:true, parent}) · live{title, tpl:'training'|'job'|'stat' or blocks:[...], data:{...}, ttl, actions:[{action, label?, "
     "args?}]} (a card bound to your own job: blocks header{title,sub,status,icon} progress{value 0-1,label,eta} "
     "metrics{items:[{label,value,fmt,delta,good}]} spark{series,label,fmt} media{video|image,poster,caption} "
     "text{value,lines} actions{items:[{action,label?,args?}]}; any value may be '$key' read from data; fmt num|int|pct|"
-    "usd|dur; status running|paused|done|error|idle). Update a live card later with {op:'live', id, data:{k:v} "
+    "usd|dur (pct: 77 = 77 %); status running|paused|done|error|idle). Update a live card later with {op:'live', id, data:{k:v} "
     "(null deletes), push:{series:[n]}, keep?} - cheap, no layout. Buttons can only name action ids the owner "
     "registered (board_read actions:true lists them); never put commands in a card. "
     "comp{comp:'<library name>', title, w, h, cdata:{...}, ver?, actions:[ids]} (runs a component YOU wrote with the "
@@ -109,6 +109,8 @@ SCHEMAS: Dict[str, Dict[str, Any]] = {
             "board": {"type": "string", "description": "Board id or name."},
             "full": {"type": "boolean", "description": "Whole outline instead of changes."},
             "create": {"type": "boolean", "description": "Create the board if no board has this name."},
+            "parent": {"type": "string", "description": "With create: the board this one is a sub-board of (id or "
+                       "name). A board card {k:'board', ref} also makes its board a sub-board of the card's board."},
             "actions": {"type": "boolean", "description": "Also list the live-card actions the owner registered "
                         "(ids you may put on live card buttons)."},
             "help": {"type": "string", "enum": ["bulk"], "description": "'bulk' returns the full syntax of import, set_where, "
@@ -121,7 +123,7 @@ SCHEMAS: Dict[str, Dict[str, Any]] = {
             "Write, version and manage CUSTOM COMPONENTS: HTML/JS cards you create for what the user needs, saved in "
             "their component library and reusable on any board. " + compguide.COMPONENT_RULES + " Actions: "
             "list {} · guide {} (the full window.hb v1 contract; read it before your first component) · get {name, "
-            "version?} (source files) · create|update {name, html | files:{'index.html':...,'app.js':...}, edits?:[{file?, "
+            "version?} (source files) · create|update {name, html | files:{'index.html':...,'app.js':...} | dir:'<local folder with index.html, app.js...>' (saves what you wrote and tested there without resending it), edits?:[{file?, "
             "find, replace}] (patch the current version), remove?:[files], replace?:true (start from empty), title?, "
             "desc?, note?} (every save = new version v1,v2...; sample.json = preview data) · diff {name, from?, to?} · "
             "rollback {name, to} (a new version copying the old one) · delete {name, confirm:true} · attach {board?, id, "
@@ -139,6 +141,8 @@ SCHEMAS: Dict[str, Dict[str, Any]] = {
             "note": {"type": "string"}, "version": {"type": "string"}, "from": {"type": "string"}, "to": {"type": "string"},
             "confirm": {"type": "boolean"}, "board": {"type": "string"}, "id": {"type": "string", "description": "attach: the comp card id."},
             "path": {"type": "string", "description": "attach: file on this machine to copy in."},
+            "dir": {"type": "string", "description": "create/update: a folder on this machine holding index.html and its "
+                    ".js/.css/.json/.svg/.txt/.md files (files:{} entries win over the folder's)."},
             "json": {}, "text": {"type": "string"},
             "x": {"type": "number"}, "y": {"type": "number"}, "w": {"type": "number"}, "h": {"type": "number"},
             "cdata": {"type": "object"},
@@ -164,11 +168,62 @@ SCHEMAS: Dict[str, Dict[str, Any]] = {
             "user's freehand sketches with your vision tool before redrawing them as clean boxes and lines."),
         "parameters": {"type": "object", "properties": {
             "board": {"type": "string"},
-            "ids": {"type": "array", "items": {"type": "string"}, "description": "Only these items."},
-            "region": {"type": "object", "description": "{x, y, w, h} in world px."},
+            "ids": {"type": "array", "items": {"type": "string"}, "description": "Only these items (a frame brings "
+                    "everything inside it)."},
+            "region": {"type": "object", "description": "{x, y, w, h} in world px (also accepted as `rect`)."},
         }},
     },
 }
+
+
+def _component_dir(path: str) -> Any:
+    """The component files in a local folder (what you wrote and tested there), or an error string."""
+    from pathlib import Path
+    from .components import CODE_EXT, MAX_FILE, MAX_FILES
+    from .importer import _SECRET
+    d = Path(path).expanduser()
+    if not d.is_dir():
+        return f"no such folder {str(d)[:120]}"
+    out: Dict[str, str] = {}
+    for f in sorted(d.iterdir()):
+        if not f.is_file() or f.name.startswith(".") or not f.name.lower().endswith(CODE_EXT) or _SECRET.search(f.name):
+            continue
+        if f.stat().st_size > MAX_FILE:
+            return f"{f.name} is over {MAX_FILE // 1000} KB: attach big data to the card instead (attach)"
+        try:
+            out[f.name] = f.read_text("utf-8")
+        except UnicodeDecodeError:
+            return f"{f.name} is not UTF-8 text"
+    if "index.html" not in out:
+        return f"{str(d)[:120]} has no index.html"
+    if len(out) > MAX_FILES:
+        return f"at most {MAX_FILES} files per component"
+    return out
+
+
+def _with_contents(doc: Dict[str, Any], ids: List[str]) -> List[str]:
+    """Render ids plus what they hold: a frame brings the items inside it, a column its cards, and
+    connectors come along when both of their ends are shown."""
+    from .render import _rect
+    items = doc.get("items") or {}
+    out = [i for i in ids if i in items]
+    seen = set(out)
+    for fid in [i for i in out if items[i].get("k") == "frame"]:
+        fr = _rect(items[fid], items)
+        if not fr:
+            continue
+        for k, it in items.items():
+            r = None if k in seen else _rect(it, items)
+            if r and fr[0] <= r[0] + r[2] / 2 <= fr[0] + fr[2] and fr[1] <= r[1] + r[3] / 2 <= fr[1] + fr[3]:
+                out.append(k)
+                seen.add(k)
+    for k, it in items.items():
+        if it.get("k") == "line" and k not in seen:
+            ends = [it.get("a"), it.get("b")]
+            if all(isinstance(e, str) and e in seen for e in ends):
+                out.append(k)
+                seen.add(k)
+    return out
 
 
 def _dump(data: Dict[str, Any]) -> str:
@@ -192,16 +247,24 @@ class BoardAgent:
     def _resolve(self, args: Dict[str, Any], session_id: Optional[str]):
         key = args.get("board")
         doc, created = None, False
+        home = self.svc.store.board_for_session(session_id) if session_id else None
         if isinstance(key, str) and key.strip():
             doc = self.svc.store.find(key)
             if doc is None and args.get("create"):
-                doc = self.svc.store.create(key.strip()[:200])
+                parent = args.get("parent")
+                if isinstance(parent, str) and parent.strip():
+                    pdoc = self.svc.store.find(parent)
+                    parent = pdoc["id"] if pdoc else None
+                else:
+                    parent = None
+                doc = self.svc.store.create(key.strip()[:200], parent)
                 created = True
-        elif session_id:
-            bid = self.svc.store.board_for_session(session_id)
-            doc = self.svc.store.load(bid) if bid else None
+        elif home:
+            doc = self.svc.store.load(home)
         newly_linked = False
-        if doc is not None and session_id and not doc.get("session"):
+        # a session keeps the board it belongs to: another board it reads or creates (a sub-board) is
+        # never linked in its place, or the chat panel and the change hook would follow the wrong board
+        if doc is not None and session_id and not doc.get("session") and (home is None or home == doc["id"]):
             newly_linked = self.svc.store.link_session(doc["id"], session_id, self.profile)
             if newly_linked:
                 doc = self.svc.store.load(doc["id"])
@@ -277,6 +340,11 @@ class BoardAgent:
             if act in ("create", "update"):
                 keys = ("html", "files", "edits", "remove", "replace", "title", "desc", "note")
                 kw = {k: args[k] for k in keys if k in args}
+                if args.get("dir"):
+                    files = _component_dir(str(args["dir"]))
+                    if isinstance(files, str):
+                        return _dump({"error": files})
+                    kw["files"] = {**files, **(kw.get("files") or {})}
                 if "replace" in kw:
                     kw["replace"] = kw["replace"] is True
                 res = self.svc.comp_save(name, by="h", **kw)
@@ -389,7 +457,14 @@ class BoardAgent:
             note = args.get("note") if isinstance(args.get("note"), str) else None
             embed_warnings = self._embed_warnings(doc, args.get("ops")) + self._comp_warnings(doc, args.get("ops"))
             report: Dict[str, Any] = {}
-            new, entry = self.svc.commit(doc["id"], args.get("ops"), by="h", note=note, previews="wait", report=report)
+            ops = args.get("ops")
+            if isinstance(ops, list):  # a board card without a title is named after its board (tour HUD, outline, render)
+                ops = [self._name_board_card(o) for o in ops]
+            new, entry = self.svc.commit(doc["id"], ops, by="h", note=note, previews="wait", report=report)
+            for op in entry.get("ops") or []:  # a board card makes the board it opens a sub-board of this one
+                it = op.get("item") if op.get("op") == "put" else None
+                if isinstance(it, dict) and it.get("k") == "board" and it.get("ref"):
+                    self.svc.store.adopt(it["ref"], doc["id"])
             if entry.get("noop"):
                 return _dump({"board": doc["id"], "seq": new["seq"], "warning": "nothing changed"})
             last = next((op.get("id") for op in reversed(entry.get("ops") or []) if op.get("id")), None)
@@ -418,12 +493,47 @@ class BoardAgent:
             if doc is None:
                 return self._missing(args)
             only = args.get("ids") if isinstance(args.get("ids"), list) else None
-            region = args.get("region") if isinstance(args.get("region"), dict) else None
-            info = render_png(doc, self.svc.assets, self.svc.root / "renders" / f"{doc['id']}.png", only, region)
-            info["hint"] = "Look at it with vision_analyze; world = region.x + px/scale."
+            region = args.get("region") or args.get("rect")  # `rect` is what agents reach for first
+            region = region if isinstance(region, dict) else None
+            if only:
+                only = _with_contents(doc, [str(i) for i in only])
+            info = render_png(doc, self.svc.assets, self._render_path(doc["id"]), only, region, self._board_name)
+            info["hint"] = ("Look at it with vision_analyze (a new file each call); world = region.x + px/scale. "
+                            "Components show as a labelled box: the preview cannot run their HTML.")
             return _dump(info)
         except (NotFound, engine.OpError, RuntimeError, ValueError) as e:
             return _dump({"error": str(e)})
+
+    def _name_board_card(self, op: Any) -> Any:
+        it = op.get("item") if isinstance(op, dict) and op.get("op") == "add" else None
+        if not isinstance(it, dict) or it.get("k") != "board" or it.get("title") or not isinstance(it.get("ref"), str):
+            return op
+        try:
+            name = self.svc.store.load(it["ref"]).get("name")
+        except Exception:
+            return op
+        return {**op, "item": {**it, "title": name}} if name else op
+
+    def _render_path(self, bid: str):
+        """A fresh file per render (vision tools refuse to reload the same path), keeping the last 6."""
+        import time as _time
+        folder = self.svc.root / "renders"
+        folder.mkdir(parents=True, exist_ok=True)
+        old = sorted(folder.glob(f"{bid}-*.png"), key=lambda p: p.stat().st_mtime)
+        for p in old[:-5]:
+            try:
+                p.unlink()
+            except OSError:
+                pass
+        return folder / f"{bid}-{int(_time.time() * 1000) % 100_000_000:08d}.png"
+
+    def _board_name(self, bid: str) -> Optional[str]:
+        try:
+            d = self.svc.store.load(bid)
+            n = sum(1 for v in (d.get("items") or {}).values() if v.get("k") != "line")
+            return f"{d.get('name') or bid} · {n} items"
+        except Exception:
+            return None
 
     # ── hook ─────────────────────────────────────────────────────────────
     def pre_llm_call(self, session_id: Optional[str] = None, user_message: Any = None,

@@ -20,6 +20,72 @@ clone, they never build).
 
 ---
 
+## 1.10.2 — fixes from the acceptance rehearsal
+
+Found while building the launch board with real Hermes, by chat only.
+
+**Gateway restart needed** (Python board engine and agent rules changed).
+
+- **`board_render` shows what the board shows:** box subtitles, card bodies and frame notes,
+  connector labels, status marks, sync chips and video posters; connectors stop at the items'
+  edges, images and videos get the height the board gives them (from their aspect), live and
+  component cards list their data, and text uses a system font with accents. `ids:[frame]` brings
+  everything inside the frame and `rect` is accepted for `region` (Hermes used both and got the
+  whole board, or only an empty frame). Hermes checks his layout with it and was shrinking
+  frames that were right.
+
+- **Live cards: `pct` is percent points** (77 shows 77 %), said in the tool description and the
+  examples guide; Hermes sent 0.77 (like `progress`) and the card showed 0.8 %.
+
+- **Image and video cards: height follows the picture.** The board ignores `h` on them, but layout
+  (`tidy`, `zones`, `arrange`, `place`) and `board_render` used it, so a note Hermes placed under a
+  video he had given `h` landed on the video's footer. The server now sizes them from the aspect,
+  like the board, and the tool says to send `w` only.
+
+- **`board_component create|update dir:"<folder>"`** saves the component files Hermes wrote and
+  tested in a local folder (index.html plus .js/.css/.json/.svg/.txt/.md; secret-looking names and
+  other files skipped). Building the spider network he wrote `app.js` to disk to test it, then had
+  to paste it again (and first saved a placeholder v1).
+
+- **Sub-boards Hermes makes stay sub-boards.** Creating or reading another board from a board's
+  session no longer re-links that session to the new board (the chat panel and the "what you
+  changed" hook were following the Training Room instead of the main board). `board_read
+  {create:true, parent}` makes a sub-board, and a board card Hermes adds adopts a parentless board,
+  so the breadcrumb goes back to its parent.
+
+- **`zones` and `arrange` move frames as blocks.** A picked frame brings everything inside it
+  (diagrams keep their shape, free connector ends follow) and picked strokes move as one sketch, so
+  "order everything by zones" on a finished board is one call. Before, frames and strokes were
+  skipped and diagram boxes were grid-packed one by one, so Hermes reordered the board by hand in
+  dozens of `set` ops.
+- **`board_render` reads like the board:** text wraps (it was cut at 120 characters, and Hermes was
+  splitting notes into several items), card bodies and box subtitles wrap to their height, a board
+  card names its sub-board, and every render is a new file (vision tools refuse to reload a path
+  they have seen three times, so Hermes was copying the PNG around). Free text gets a height
+  estimate from its lines for layout.
+
+- **`zones` and `arrange` move frames as blocks.** A picked frame brings everything inside it
+  (diagrams keep their shape, free connector ends follow) and picked strokes move as one sketch, so
+  "order everything by zones" on a finished board is one call. Before, frames and strokes were
+  skipped and diagram boxes were grid-packed one by one, so Hermes reordered the board by hand in
+  dozens of `set` ops.
+- **`board_render` reads like the board:** text wraps (it was cut at 120 characters, and Hermes was
+  splitting notes into several items), card bodies and box subtitles wrap to their height, a board
+  card names its sub-board, and every render is a new file (vision tools refuse to reload a path
+  they have seen three times, so Hermes was copying the PNG around). Free text gets a height
+  estimate from its lines for layout.
+
+- **Sub-board cards grow.** A board card takes a height (resize it, or Hermes sets `h`) and its
+  live preview fills the card; without a height the preview keeps the card's proportions. It used to
+  stay a 110 px strip however wide the card was, so the Training Room card left a big hole in its zone.
+  The board's size guesses (fit, minimap, layout on the server) follow the same rules for images,
+  videos and board cards.
+
+- A board card Hermes adds without a title is named after its board, so the tour HUD, his outline and
+  the render say "Training Room" instead of a stop number.
+
+---
+
 ## 1.10.1 — the board stays readable, nothing overlaps
 
 - **Zoom level of detail removed.** Zooming out no longer swaps text for
