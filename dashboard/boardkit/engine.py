@@ -13,6 +13,7 @@ import time
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from . import ids
+from . import layout
 from . import live as live_mod
 
 MAX_OPS = 200
@@ -27,8 +28,11 @@ DEFAULT_SIZE: Dict[str, Tuple[int, int]] = {
     "card": (256, 120), "todo": (304, 240), "col": (276, 320), "link": (276, 250),
     "image": (372, 260), "embed": (452, 320), "video": (400, 260), "board": (212, 170),
     "frame": (480, 320), "box": (196, 62), "text": (420, 40), "draw": (120, 80),
-    "live": (360, 300),
+    "live": (360, 300), "shape": (160, 56),
 }
+# flowchart shapes: rect (process), diamond (decision), pill (start/end), circle (connector)
+SHAPES = ("rect", "diamond", "pill", "circle")
+SHAPE_SIZE: Dict[str, Tuple[int, int]] = {"rect": (160, 56), "diamond": (150, 100), "pill": (150, 48), "circle": (72, 72)}
 
 _COMMON = ("x", "y", "w", "h", "in")
 FIELDS: Dict[str, Tuple[str, ...]] = {
@@ -46,6 +50,7 @@ FIELDS: Dict[str, Tuple[str, ...]] = {
     "draw": ("x", "y", "w", "h", "d", "sw", "tl", "c", "ds", "sm", "pr", "g"),
     "line": ("a", "b", "label"),
     "live": ("x", "y", "w", "h", "title", "blocks", "data", "ttl", "at", "tpl"),
+    "shape": ("x", "y", "w", "h", "title", "sh"),
 }
 KINDS = frozenset(FIELDS)
 
@@ -235,7 +240,7 @@ SANITIZE: Dict[str, Callable[[Any], Any]] = {
     "desc": _text(1000), "site": _text(200), "label": _text(200), "note": _text(1000),
     "due": _text(32), "num": _text(8),
     "url": _url, "src": _url,
-    "st": _enum("wait", "ok", "fail"), "size": _enum("h", "p", "s"),
+    "st": _enum("wait", "ok", "fail"), "size": _enum("h", "p", "s"), "sh": _enum(*SHAPES),
     "asset": _asset, "icon": _asset, "img": _asset, "ref": _bid,
     "tags": _tags, "items": _todo_items, "d": _stroke, "video": _video, "sw": _sw,
     "tl": _enum(*INK_TOOLS), "c": _enum(*INK_COLORS), "ds": _flag, "sm": _flag, "pr": _pressure, "g": _group,
@@ -526,9 +531,155 @@ class _Batch:
             return [], None
         return [{"op": "board", "p": inv_p}], {"op": "board", "p": {"name": self.doc["name"]}}
 
+    # ── macro ops: expand to plain add/set ops, so undo and the log see ordinary batches ──
+    def top_of(self, iid: str) -> str:
+        """The item that is actually on the canvas: a column kid sits inside its column."""
+        return self.items[iid].get("in") or iid
+
+    def rect_of(self, iid: str) -> Optional[Dict[str, float]]:
+        it = self.items.get(iid)
+        if it is None or it.get("k") == "line" or it.get("in") or "x" not in it or "y" not in it:
+            return None
+        k = it["k"]
+        dw, dh = DEFAULT_SIZE.get(k, (200, 100))
+        if k == "shape" and it.get("sh") in SHAPE_SIZE:
+            dw, dh = SHAPE_SIZE[it["sh"]]
+        w, h = it.get("w") or dw, it.get("h") or dh
+        if k == "col":
+            h = 60 + 96 * len(it.get("kids") or [])
+        elif k == "todo":
+            h = 110 + 26 * len(it.get("items") or [])
+        if k == "draw" and it.get("d"):
+            pts = [tuple(int(n) for n in p.split(",")) for p in it["d"].split(" ")]
+            xs, ys = [p[0] for p in pts], [p[1] for p in pts]
+            return {"x": it["x"] + min(xs), "y": it["y"] + min(ys), "w": max(xs) - min(xs) + 1, "h": max(ys) - min(ys) + 1}
+        return {"x": it["x"], "y": it["y"], "w": w, "h": h}
+
+    def expand_tidy(self, op: Dict[str, Any]) -> List[Dict[str, Any]]:
+        raw_ids = op.get("ids")
+        explicit = raw_ids is not None
+        chosen: Optional[set] = None
+        if explicit:
+            if not isinstance(raw_ids, list) or not raw_ids:
+                raise OpError("ids must be a non-empty list")
+            chosen = {self.resolve(i) for i in raw_ids}
+        gap = layout.TIDY_GAP
+        if op.get("gap") is not None:
+            gap = int(max(8, min(200, round(_num(op["gap"])))))
+        frames = [r for r in (self.rect_of(i) for i, v in self.items.items() if v["k"] == "frame") if r]
+        wired = set()
+        for v in self.items.values():
+            if v["k"] == "line":
+                for end in (v.get("a"), v.get("b")):
+                    if isinstance(end, str) and end in self.items:
+                        wired.add(self.top_of(end))
+        groups: Dict[str, List[str]] = {}
+        singles: List[str] = []
+        for iid, it in self.items.items():
+            if it["k"] in ("line", "frame") or it.get("in") or self.rect_of(iid) is None:
+                continue
+            if explicit:
+                pulled = it["k"] == "draw" and it.get("g") and any(
+                    c in chosen and self.items[c].get("g") == it["g"] for c in chosen if c in self.items)
+                if iid not in chosen and not pulled:
+                    continue
+            else:
+                if iid in wired:
+                    continue
+                r = self.rect_of(iid)
+                cx, cy = r["x"] + r["w"] / 2, r["y"] + r["h"] / 2
+                if any(f["x"] <= cx <= f["x"] + f["w"] and f["y"] <= cy <= f["y"] + f["h"] for f in frames):
+                    continue
+            if it["k"] == "draw":
+                if it.get("g"):
+                    groups.setdefault(it["g"], []).append(iid)
+                elif explicit:
+                    singles.append(iid)
+                continue
+            singles.append(iid)
+        blocks = []
+        for iid in singles:
+            blocks.append({"ids": [iid], "rect": self.rect_of(iid)})
+        for members in groups.values():
+            rects = [self.rect_of(m) for m in members]
+            x0, y0 = min(r["x"] for r in rects), min(r["y"] for r in rects)
+            x1, y1 = max(r["x"] + r["w"] for r in rects), max(r["y"] + r["h"] for r in rects)
+            blocks.append({"ids": sorted(members), "rect": {"x": x0, "y": y0, "w": x1 - x0, "h": y1 - y0}})
+        by_first = {b["ids"][0]: b for b in blocks}
+        out: List[Dict[str, Any]] = []
+        for placed in layout.tidy_plan(blocks, gap=gap):
+            rect = by_first[placed["ids"][0]]["rect"]
+            dx, dy = placed["x"] - _round_half_up(rect["x"]), placed["y"] - _round_half_up(rect["y"])
+            if not dx and not dy:
+                continue
+            for iid in placed["ids"]:
+                it = self.items[iid]
+                out.append({"op": "set", "id": iid, "p": {"x": int(it["x"]) + dx, "y": int(it["y"]) + dy}})
+        return out
+
+    def expand_insert(self, op: Dict[str, Any]) -> List[Dict[str, Any]]:
+        edge = self.resolve(op.get("edge"))
+        line = self.items[edge]
+        if line["k"] != "line":
+            raise OpError(f"{edge} is not a connector")
+        raw = op.get("item")
+        if not isinstance(raw, dict) or raw.get("k") not in KINDS or raw["k"] in ("line", "draw"):
+            raise OpError("insert_on_edge needs item.k (any kind except line and draw)")
+        if raw.get("in") is not None:
+            raise OpError("the inserted item sits on the canvas, not in a column")
+        ends: List[Dict[str, float]] = []
+        for key in ("a", "b"):
+            end = line[key]
+            if isinstance(end, list):
+                ends.append({"x": end[0], "y": end[1], "w": 0, "h": 0})
+                continue
+            rect = self.rect_of(self.top_of(end)) if end in self.items else None
+            if rect is None:
+                raise OpError(f"connector end {end} has no position")
+            ends.append(rect)
+        kind = raw["k"]
+        dw, dh = DEFAULT_SIZE.get(kind, (200, 100))
+        if kind == "shape":
+            dw, dh = SHAPE_SIZE.get(raw.get("sh") if raw.get("sh") in SHAPE_SIZE else "rect")
+        size = {"w": _num(raw["w"]) if raw.get("w") else dw, "h": _num(raw["h"]) if raw.get("h") else dh}
+        b_end = line["b"]
+        movable_b = isinstance(b_end, str) and b_end in self.items and not self.items[b_end].get("in")
+        plan = layout.insert_plan(ends[0], ends[1], size, shift_b=movable_b)
+        ref = op.get("ref")
+        if ref is None:
+            n = 0
+            ref = "$ins0"
+            while ref in self.refs:
+                n += 1
+                ref = f"$ins{n}"
+        item = {k: v for k, v in raw.items() if k != "in"}
+        item["x"], item["y"] = plan["x"], plan["y"]
+        out: List[Dict[str, Any]] = [
+            {"op": "add", "ref": ref, "item": item},
+            {"op": "set", "id": edge, "p": {"b": ref}},
+            {"op": "add", "item": {"k": "line", "a": ref, "b": copy.deepcopy(b_end)}},
+        ]
+        dx, dy = plan["shift"]["dx"], plan["shift"]["dy"]
+        if movable_b and (dx or dy):
+            a_end = line["a"]
+            edges = [(self.top_of(v["a"]), self.top_of(v["b"])) for k, v in self.items.items()
+                     if v["k"] == "line" and k != edge and isinstance(v.get("a"), str) and isinstance(v.get("b"), str)
+                     and v["a"] in self.items and v["b"] in self.items]
+            stop = self.top_of(a_end) if isinstance(a_end, str) and a_end in self.items else ""
+            for iid in layout.downstream(edges, self.top_of(b_end), stop):
+                it = self.items[iid]
+                if it["k"] != "line" and "x" in it and "y" in it:
+                    out.append({"op": "set", "id": iid, "p": {"x": int(it["x"]) + dx, "y": int(it["y"]) + dy}})
+        return out
+
 
 _OPS = {"add": _Batch.add, "put": _Batch.put, "set": _Batch.set, "del": _Batch.delete, "board": _Batch.board,
         "live": _Batch.live}
+_MACROS = {"tidy": _Batch.expand_tidy, "insert_on_edge": _Batch.expand_insert}
+
+
+def _round_half_up(n: float) -> int:
+    return int(math.floor(n + 0.5))
 
 
 def apply_batch(doc: Dict[str, Any], ops: Any, by: str = "u") -> Tuple[Dict[str, Any], List[Dict[str, Any]], Dict[str, str]]:
@@ -551,15 +702,17 @@ def apply_batch_ex(doc: Dict[str, Any], ops: Any, by: str = "u", now: Optional[f
     parts: List[List[Dict[str, Any]]] = []
     forward: List[Dict[str, Any]] = []
     for i, op in enumerate(ops):
-        if not isinstance(op, dict) or op.get("op") not in _OPS:
-            raise OpError(f"op {i}: unknown op (use add, set, del, board, live)")
+        if not isinstance(op, dict) or op.get("op") not in _OPS and op.get("op") not in _MACROS:
+            raise OpError(f"op {i}: unknown op (use add, set, del, board, live, tidy, insert_on_edge)")
         try:
-            inv, fwd = _OPS[op["op"]](batch, op)
+            prims = _MACROS[op["op"]](batch, op) if op["op"] in _MACROS else [op]
+            for prim in prims:
+                inv, fwd = _OPS[prim["op"]](batch, prim)
+                parts.append(inv)
+                if fwd is not None:
+                    forward.append(fwd)
         except OpError as e:
             raise OpError(f"op {i} ({op['op']}): {e}") from None
-        parts.append(inv)
-        if fwd is not None:
-            forward.append(fwd)
     if len(work["items"]) > MAX_ITEMS:
         raise OpError(f"a board holds at most {MAX_ITEMS} items")
     inverse = [inv for part in reversed(parts) for inv in part]

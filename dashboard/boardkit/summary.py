@@ -21,7 +21,7 @@ def label(item: Dict[str, Any], n: int = 60) -> str:
 
 def item_line(iid: str, it: Dict[str, Any], text_len: int = 80) -> str:
     k = it.get("k", "?")
-    parts = [f"{iid} {k}{'*' if it.get('by') == 'h' else ''}"]
+    parts = [f"{iid} {k}{':' + it['sh'] if k == 'shape' and it.get('sh') else ''}{'*' if it.get('by') == 'h' else ''}"]
     if k == "line":
         ends = []
         for end in ("a", "b"):
