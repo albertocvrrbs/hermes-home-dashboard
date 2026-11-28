@@ -398,7 +398,7 @@ made; your work stays solid.
   Ctrl/⌘+wheel and a trackpad pinch. A two-finger trackpad scroll, Space+drag
   or a drag on the empty table pans; Shift+wheel pans sideways.
 - **Keys:** `V` select · `H` pan · `N` note · `T` to-do · `C` column · `L` link ·
-  `I` image · `B` board · `E` embed · `A` arrow · `D` draw · `/` chat · `F` fit ·
+  `I` image · `B` board · `E` embed · `A` arrow · `D` draw · `/` chat · `F` fit · `M` map · `P` present ·
   `⌘Z` / `⌘⇧Z` undo / redo (Ctrl on Windows and Linux). While drawing: `D` pen ·
   `⇧D` highlighter · `E` eraser · `[` `]` width · `1`–`6` colour · `⌘G` group.
 
@@ -408,6 +408,65 @@ made; your work stays solid.
   sidebar and the command palette.
 
 ![Board widget on the Home](assets/screenshot-board-widget.png)
+
+### Presentation mode: tours
+
+Frames work as slides. **Present** (the header button, the right-click menu, or `P`) plays the board
+full-window: the camera flies from stop to stop with the same eased motion as the rest of the board
+(slower and more deliberate), the chrome steps aside, and a slim HUD shows `stop n/N`, the stop's title
+(a frame's note under it), one cell per stop, previous / next, auto-play and exit.
+
+- **What a stop is:** a frame, any item, a *board* card (the tour dives into that sub-board with the usual
+  zoom, plays that board's own tour, or just frames it if it has none, then climbs back and carries on with
+  the next stop), a world rect, or a saved camera view. With no stored tour, `P` plays the frames in
+  reading order (rows top to bottom, left to right).
+- **Keys:** `→` `↓` `Space` `Enter` next · `←` `↑` previous · `Home` / `End` · `P` auto-play on/off ·
+  `H` hide the HUD · `F` real fullscreen · `Esc` exit. The HUD fades when the pointer rests.
+- **Auto-play and dwell:** each stop may carry `dw` seconds; so can the tour (default for every stop).
+  Setting any dwell turns auto-play on; the player then waits that long at each stop and moves on, and `P`
+  (or `Space` while it runs) pauses it. A tour can `loop`.
+- **Build it by hand:** right-click the table: *Build tour from frames*, *Add this view to tour*, *Clear
+  tour*; right-click a selection: *Add to tour*.
+- **Hermes builds it in one call.** The tour lives in the board document (`doc.tour`) and is one op of
+  `board_apply`, so "arma un recorrido por las zonas" is a single batch, undoable in one step:
+
+```json
+{"op": "tour", "from": "frames", "dw": 4, "loop": true}
+{"op": "tour", "t": "Launch", "stops": ["<frame id>", {"id": "<item id>", "t": "caption", "dw": 6},
+  {"rect": {"x": 0, "y": 0, "w": 2400, "h": 1200}}, {"view": {"x": -120, "y": 40, "z": 0.8}}, "<board card id>"]}
+{"op": "tour", "add": ["<id>"], "at": 0, "remove": ["<id>", 3]}   {"op": "tour", "clear": true}
+```
+
+  `board_read` lists the tour in the outline (`tour loop dwell=4s: 1:<id> "Idea" > 2:...`); a stop whose item
+  was deleted is skipped when playing (and marked `(missing)`).
+- **For a recorder (QA API).** `window.__hbTour` (next to `__hbCamera` and `__hbClock`) drives the tour on the
+  camera clock, so a manual clock makes it frame-by-frame deterministic, dwell included:
+
+```js
+__hbClock.manual(true);
+const p = __hbTour.start({ from: 0, auto: false, duration: 900, hud: false });   // duration: ms per flight
+__hbClock.advance(1000 / 60);          // call per frame; flights and dwell follow this clock
+await __hbTour.next();                 // resolves when the camera arrives
+__hbTour.stops();                      // [{ stop, title, view }] what the tour will show
+__hbTour.state();                      // { on, i, n, auto, flying, done }
+__hbTour.goto(3); __hbTour.prev(); __hbTour.auto(true); __hbTour.hud(false); __hbTour.stop();
+```
+
+### Demo mode (recording)
+
+A switch for screen recordings. **Off by default, and it never changes stored data**, only what the page shows.
+Turn it on with `?demo` in the URL (it is remembered in the browser until `?demo=0`), or from the console:
+`__hbDemo.enable({ now: "2026-11-27T10:30:00", nomap: true })` (reloads). Options: `now=<ISO | epoch>` freezes
+the clock, `tick` keeps it running from `now`, `nomap` hides the board's overview map.
+
+| What | In demo mode |
+| --- | --- |
+| Clock | `Date.now()` / `new Date()` frozen for the page: clock widget, "saved hh:mm", "3 min ago", live-card freshness and stale. `__hbDemo.setNow(iso)` / `.advance(ms)` move it. Server timestamps (a board's last edit) are still real, so pick `now` just after seeding. |
+| Host | neutral host name |
+| Cron, Logs, Sessions | neutral demo rows (no names, no raw log lines, no session titles) |
+| Tokens, Spend | no money (Spend stands down) |
+| Board chat | no session ids in tooltips, no skill / command rows |
+| Minimap | `nomap`; also a toggle (`M`, or the map button in the status bar) for any time |
 
 ## Live cards
 

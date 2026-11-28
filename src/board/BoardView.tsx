@@ -1860,7 +1860,7 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
     out.push({ id: "fit", label: t("board.fit"), icon: "fit", kbd: "F", run: () => fit() });
     out.push({ sep: true });
     out.push({ id: "present", label: t("board.present.start"), icon: "present", kbd: "P", run: startPresenting });
-    out.push({ id: "tourFrames", label: t("board.tour.fromFrames"), icon: "tidy", run: tourFromFrames });
+    out.push({ id: "tourFrames", label: t("board.tour.fromFrames"), icon: "flow", run: tourFromFrames });
     out.push({ id: "tourView", label: t("board.tour.addView"), icon: "plus", run: tourAddView });
     if (docRef.current?.tour) out.push({ id: "tourClear", label: t("board.tour.clear"), icon: "delete", danger: true, run: tourClear });
     out.push({ sep: true });
