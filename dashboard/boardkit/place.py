@@ -138,9 +138,11 @@ def free_place(want: Dict[str, float], size: Dict[str, float], obstacles: Sequen
     wx, wy = _round(want["x"]), _round(want["y"])
     sw, sh = size["w"], size["h"]
 
+    order: List[Box] = list(obstacles)  # the nearest first once known: a taken spot fails fast
+
     def free(x: float, y: float) -> bool:
         box = {"x": x, "y": y, "w": sw, "h": sh}
-        return not any(collides(box, o, gap) for o in obstacles)
+        return not any(collides(box, o, gap) for o in order)
 
     def inside(x: float, y: float) -> bool:
         return (within is None or (x >= within["x"] and y >= within["y"]
@@ -151,6 +153,8 @@ def free_place(want: Dict[str, float], size: Dict[str, float], obstacles: Sequen
     cx, cy = wx + sw / 2, wy + sh / 2
     near = sorted(obstacles, key=lambda o: ((o["x"] + o["w"] / 2 - cx) ** 2 + (o["y"] + o["h"] / 2 - cy) ** 2,
                                             o["y"], o["x"]))[:NEAR]
+    seen = {id(o) for o in near}
+    order = near + [o for o in obstacles if id(o) not in seen]
     xs, ys = {wx}, {wy}
     for o in near:
         xs.update((_round(o["x"] + o["w"] + gap), _round(o["x"] - sw - gap), _round(o["x"])))

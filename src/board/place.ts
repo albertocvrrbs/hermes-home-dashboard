@@ -158,7 +158,8 @@ const NEAR = 100, UP = 3; // obstacles whose edges generate candidates; collisio
 export function freePlace(want: { x: number; y: number }, size: Size, obstacles: Box[], opts: PlaceOpts = {}): { x: number; y: number } {
   const gap = opts.gap ?? PLACE_GAP;
   const wx = round(want.x), wy = round(want.y);
-  const free = (x: number, y: number) => !obstacles.some((o) => collides({ x, y, w: size.w, h: size.h }, o, gap));
+  let order = obstacles; // the nearest first once known: a taken spot fails fast
+  const free = (x: number, y: number) => !order.some((o) => collides({ x, y, w: size.w, h: size.h }, o, gap));
   const inside = (x: number, y: number) => !opts.within || (x >= opts.within.x && y >= opts.within.y && x + size.w <= opts.within.x + opts.within.w && y + size.h <= opts.within.y + opts.within.h);
   if (free(wx, wy) && inside(wx, wy)) return { x: wx, y: wy };
 
@@ -167,6 +168,8 @@ export function freePlace(want: { x: number; y: number }, size: Size, obstacles:
     .map((o) => ({ o, d: (o.x + o.w / 2 - cx) ** 2 + (o.y + o.h / 2 - cy) ** 2 }))
     .sort((p, q) => p.d - q.d || p.o.y - q.o.y || p.o.x - q.o.x)
     .slice(0, NEAR).map((p) => p.o);
+  const nearSet = new Set(near);
+  order = [...near, ...obstacles.filter((o) => !nearSet.has(o))];
   const xs = new Set<number>([wx]), ys = new Set<number>([wy]);
   for (const o of near) {
     xs.add(round(o.x + o.w + gap)); xs.add(round(o.x - size.w - gap)); xs.add(round(o.x));
