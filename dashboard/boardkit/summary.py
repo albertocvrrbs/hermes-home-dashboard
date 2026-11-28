@@ -43,6 +43,8 @@ def item_line(iid: str, it: Dict[str, Any], text_len: int = 80) -> str:
         parts.append(str(it["num"]))
     if it.get("title"):
         parts.append(f'"{_clip(it["title"], 60)}"')
+    if it.get("mark"):
+        parts.append(f"mark={it['mark']}")
     if k == "card" and it.get("text"):
         parts.append(_clip(it["text"], text_len))
     elif k == "text" and it.get("text"):

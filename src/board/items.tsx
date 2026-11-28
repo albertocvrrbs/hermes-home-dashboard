@@ -1,9 +1,9 @@
 // Item renderers. Each renders the inside of one board item; positioning, selection and
 // dragging live in BoardView. Text is always React text, never HTML.
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import type { Translate } from "../home/i18n";
+import type { MessageKey, Translate } from "../home/i18n";
 import type { SandboxedFrameComponent } from "../sdk";
-import { assetHtml, assetUrl, boardsApi, type ActionResult } from "./api";
+import { assetHtml, assetUrl, boardsApi, openAsset, type ActionResult } from "./api";
 import type { LiveActionInfo, LiveActionRef } from "./live";
 import { Cad, RichText, Sig, ago, dueLabel } from "./bits";
 import { strokePath } from "./geometry";
@@ -337,19 +337,33 @@ export function LinkView({ id, item, c }: { id: string; item: Item; c: ItemCtx }
 
 // ── image ────────────────────────────────────────────────────────────────
 
+const FILE_LABEL: Record<string, string> = { pdf: "PDF", stl: "STL", obj: "OBJ", "3mf": "3MF" };
+
 export function ImageView({ id, item, c }: { id: string; item: Item; c: ItemCtx }) {
   const url = useAsset(item.asset);
   const ratio = item.iw && item.ih ? item.ih / item.iw : 0.6;
+  const fk = item.file ? item.fk ?? "pdf" : null;
+  const isPdf = fk === "pdf";
+  const [busy, setBusy] = useState(false);
+  const getFile = () => {
+    if (!item.file || busy) return;
+    setBusy(true);
+    openAsset(item.file, item.cap || "model").catch(() => undefined).finally(() => setBusy(false));
+  };
   return (
-    <div className={`hb-card hb-image${item.by === "h" ? " dm" : ""}`} style={{ width: item.w ?? 372 }}>
+    <div className={`hb-card hb-image${fk ? " has-file" : ""}${item.by === "h" ? " dm" : ""}`} style={{ width: item.w ?? 372 }}>
       <div className="art" style={!url ? { aspectRatio: `${1 / ratio}` } : undefined}>
-        {url && <Pic src={url} alt={item.cap ?? ""} />}
+        {url ? <Pic src={url} alt={item.cap ?? ""} />
+          : fk && <span className="file-ph"><Icon name={isPdf ? "fileDoc" : "model3d"} size={34} /></span>}
+        {fk && <span className="fbadge">{FILE_LABEL[fk]}{isPdf && item.pg ? ` · ${c.t("board.file.pages", { n: item.pg })}` : ""}</span>}
       </div>
       <div className="cap">
         {c.editing === id
           ? <b style={{ flex: 1 }}><EditText single value={item.cap ?? ""} placeholder={c.t("board.image.capPh")} caret={fieldHint(c, id, "cap", true).caret}
               onDone={(v) => { c.setEditing(null); c.update(id, { cap: v.trim() || null }); }} /></b>
           : <b data-field="cap">{item.cap || (item.url ? hostOf(item.url) : "")}</b>}
+        {fk && <button className="kbtn" data-nodrag="" data-tip={c.t(isPdf ? "board.file.open" : "board.file.download")}
+          aria-label={c.t(isPdf ? "board.file.open" : "board.file.download")} disabled={busy} onClick={getFile}><Icon name={isPdf ? "fileOpen" : "fileGet"} size={13} /></button>}
         {item.by === "h" && <Sig />}
       </div>
     </div>
@@ -589,8 +603,23 @@ export function DrawView({ item, selected, erasing }: { item: Item; selected: bo
   );
 }
 
+const MARK_ICON = { ok: "markOk", fail: "markFail", wait: "markWait" } as const;
+
+/** Status stamp (ok / fail / wait) on the corner of any card-like item. */
+export function Mark({ mark, t }: { mark: NonNullable<Item["mark"]>; t: ItemCtx["t"] }) {
+  return <i className={`hb-mark ${mark}`} role="img" aria-label={t(`board.mark.${mark}` as MessageKey)} data-tip={t(`board.mark.${mark}` as MessageKey)}><Icon name={MARK_ICON[mark]} size={11} /></i>;
+}
+
 /** Picks the renderer for an item. */
-export function ItemBody({ id, item, c, dropIndex, selected }: {
+export function ItemBody(props: {
+  id: string; item: Item; c: ItemCtx; dropIndex: number | null; selected: boolean;
+}) {
+  const mark = props.item.mark;
+  if (!mark || props.item.k === "line" || props.item.k === "draw" || props.item.k === "frame") return <ItemKind {...props} />;
+  return <><ItemKind {...props} /><Mark mark={mark} t={props.c.t} /></>;
+}
+
+function ItemKind({ id, item, c, dropIndex, selected }: {
   id: string; item: Item; c: ItemCtx; dropIndex: number | null; selected: boolean;
 }) {
   switch (item.k) {

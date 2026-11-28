@@ -12,6 +12,7 @@ import re
 import time
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
+from . import bulk
 from . import ids
 from . import layout
 from . import live as live_mod
@@ -35,22 +36,25 @@ SHAPES = ("rect", "diamond", "pill", "circle")
 SHAPE_SIZE: Dict[str, Tuple[int, int]] = {"rect": (160, 56), "diamond": (150, 100), "pill": (150, 48), "circle": (72, 72)}
 
 _COMMON = ("x", "y", "w", "h", "in")
+# ``mark`` is a status stamp (ok / fail / wait) Hermes or the user puts on any card-like item;
+# ``file`` / ``fk`` / ``pg`` point an imported image card at the original PDF / 3D file in the
+# asset store (``asset`` stays the thumbnail).
 FIELDS: Dict[str, Tuple[str, ...]] = {
-    "card": _COMMON + ("title", "text", "tags", "due"),
-    "todo": _COMMON + ("title", "items"),
-    "col": ("x", "y", "w", "h", "title", "kids"),
-    "link": _COMMON + ("url", "title", "desc", "site", "icon", "img", "st", "video"),
-    "image": _COMMON + ("asset", "cap", "iw", "ih", "url"),
-    "embed": _COMMON + ("asset", "title", "theme"),
-    "video": _COMMON + ("src", "title", "asset", "img", "dur", "iw", "ih"),
-    "board": _COMMON + ("ref", "title"),
+    "card": _COMMON + ("title", "text", "tags", "due", "mark"),
+    "todo": _COMMON + ("title", "items", "mark"),
+    "col": ("x", "y", "w", "h", "title", "kids", "mark"),
+    "link": _COMMON + ("url", "title", "desc", "site", "icon", "img", "st", "video", "mark"),
+    "image": _COMMON + ("asset", "cap", "iw", "ih", "url", "mark", "file", "fk", "pg"),
+    "embed": _COMMON + ("asset", "title", "theme", "mark"),
+    "video": _COMMON + ("src", "title", "asset", "img", "dur", "iw", "ih", "mark"),
+    "board": _COMMON + ("ref", "title", "mark"),
     "frame": ("x", "y", "w", "h", "title", "note"),
-    "box": ("x", "y", "w", "h", "title", "sub", "num"),
+    "box": ("x", "y", "w", "h", "title", "sub", "num", "mark"),
     "text": ("x", "y", "w", "h", "text", "size"),
     "draw": ("x", "y", "w", "h", "d", "sw", "tl", "c", "ds", "sm", "pr", "g"),
     "line": ("a", "b", "label"),
-    "live": ("x", "y", "w", "h", "title", "blocks", "data", "ttl", "at", "tpl"),
-    "shape": ("x", "y", "w", "h", "title", "sh"),
+    "live": ("x", "y", "w", "h", "title", "blocks", "data", "ttl", "at", "tpl", "mark"),
+    "shape": ("x", "y", "w", "h", "title", "sh", "mark"),
 }
 KINDS = frozenset(FIELDS)
 
@@ -241,6 +245,7 @@ SANITIZE: Dict[str, Callable[[Any], Any]] = {
     "due": _text(32), "num": _text(8),
     "url": _url, "src": _url,
     "st": _enum("wait", "ok", "fail"), "size": _enum("h", "p", "s"), "sh": _enum(*SHAPES),
+    "mark": _enum("wait", "ok", "fail"), "file": _asset, "fk": _enum("pdf", "stl", "obj", "3mf"), "pg": _int(1, 100_000),
     "asset": _asset, "icon": _asset, "img": _asset, "ref": _bid,
     "tags": _tags, "items": _todo_items, "d": _stroke, "video": _video, "sw": _sw,
     "tl": _enum(*INK_TOOLS), "c": _enum(*INK_COLORS), "ds": _flag, "sm": _flag, "theme": _flag, "pr": _pressure, "g": _group,
@@ -687,7 +692,9 @@ class _Batch:
 
 _OPS = {"add": _Batch.add, "put": _Batch.put, "set": _Batch.set, "del": _Batch.delete, "board": _Batch.board,
         "live": _Batch.live}
-_MACROS = {"tidy": _Batch.expand_tidy, "insert_on_edge": _Batch.expand_insert}
+_MACROS = {"tidy": _Batch.expand_tidy, "insert_on_edge": _Batch.expand_insert,
+           "place": lambda b, op: bulk.expand_place(b, op), "set_where": lambda b, op: bulk.expand_set_where(b, op),
+           "zones": lambda b, op: bulk.expand_zones(b, op), "arrange": lambda b, op: bulk.expand_arrange(b, op)}
 
 
 def _round_half_up(n: float) -> int:
@@ -715,7 +722,7 @@ def apply_batch_ex(doc: Dict[str, Any], ops: Any, by: str = "u", now: Optional[f
     forward: List[Dict[str, Any]] = []
     for i, op in enumerate(ops):
         if not isinstance(op, dict) or op.get("op") not in _OPS and op.get("op") not in _MACROS:
-            raise OpError(f"op {i}: unknown op (use add, set, del, board, live, tidy, insert_on_edge)")
+            raise OpError(f"op {i}: unknown op (use add, set, del, board, live, tidy, insert_on_edge, place, set_where, zones, arrange, import)")
         try:
             prims = _MACROS[op["op"]](batch, op) if op["op"] in _MACROS else [op]
             for prim in prims:

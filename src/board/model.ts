@@ -22,6 +22,11 @@ export interface Item {
   items?: TodoItem[]; kids?: string[];
   url?: string; desc?: string; site?: string; icon?: string; img?: string;
   st?: "wait" | "ok" | "fail"; video?: VideoRef;
+  /** status stamp Hermes (or the user) puts on any card-like item */
+  mark?: "ok" | "fail" | "wait";
+  /** image card imported from a project file: the original (pdf / 3D model) beside its thumbnail,
+   *  its type and the pdf page count */
+  file?: string; fk?: "pdf" | "stl" | "obj" | "3mf"; pg?: number;
   /** embed: Hermes theme + responsive bridge (off = the page renders exactly as authored) */
   theme?: boolean;
   asset?: string; cap?: string; iw?: number; ih?: number; src?: string;
@@ -266,6 +271,8 @@ export function approxRect(item: Item): { x: number; y: number; w: number; h: nu
   if (item.k === "col") h = 60 + 96 * (item.kids?.length ?? 0);
   if (item.k === "todo") h = 110 + 26 * (item.items?.length ?? 0);
   if (item.k === "live") h = item.h ?? liveHeight(item);
+  // an imported picture / thumbnail is as tall as its aspect ratio says (+ padding and caption bar)
+  if (item.k === "image" && item.h == null && item.iw && item.ih) h = Math.round(((item.w ?? dw) - 14) * item.ih / item.iw + 56);
   if (item.k === "draw" && item.d) {
     const pts = item.d.split(" ").map((p) => p.split(",").map(Number));
     const xs = pts.map((p) => p[0]), ys = pts.map((p) => p[1]);

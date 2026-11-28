@@ -177,6 +177,22 @@ export function assetUrl(aid: string): Promise<string> {
   return p;
 }
 
+/** Open (pdf) or save (3D model) the original of an imported file. Not cached: these can be big. */
+export async function openAsset(aid: string, name: string): Promise<void> {
+  const r = await boardsApi.asset(aid);
+  if (!r.data) throw new Error("not a file");
+  const url = URL.createObjectURL(b64ToBlob(r.data, r.mime));
+  const a = document.createElement("a");
+  a.href = url;
+  a.rel = "noopener noreferrer";
+  if (r.mime === "application/pdf") a.target = "_blank";
+  else a.download = `${name.replace(/[\\/:*?"<>|]+/g, "_") || "model"}.${aid.split(".")[1] ?? "bin"}`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 120_000);
+}
+
 export function assetHtml(aid: string): Promise<string> {
   let p = htmlCache.get(aid);
   if (!p) {

@@ -8,7 +8,7 @@ from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 from . import actions as actions_mod
 from . import assets as assets_mod
-from . import engine, ids, links, live as live_mod, posters as posters_mod, store as store_mod, urls
+from . import engine, ids, importer as importer_mod, links, live as live_mod, posters as posters_mod, store as store_mod, urls
 from .fetch import Fetcher
 
 PREVIEW_BUDGET_S = 9.0
@@ -22,6 +22,7 @@ class BoardService:
         self.link_cache = self.root / "links"
         self.fetcher = fetcher or Fetcher()
         self.posters = posters_mod.Posters(self.root, self.assets)
+        self.importer = importer_mod.Importer(self.assets, self.posters)
         # the allowlist sits beside the boards folder, in the plugin data dir
         self.actions = actions_mod.Registry(self.root.parent)
 
@@ -75,7 +76,7 @@ class BoardService:
         return out
 
     # ── op preparation (runs before the engine) ──────────────────────────
-    def prepare(self, ops: Any) -> Tuple[Any, List[Tuple[str, str]]]:
+    def prepare(self, ops: Any, by: str = "u", report: Optional[Dict[str, Any]] = None) -> Tuple[Any, List[Tuple[str, str]]]:
         """Turn agent/user conveniences into plain fields: embed ``html`` -> asset, a link
         ``url`` classified into image / video / link, and mark URLs that need a preview.
         Returns the ops and the list of ``(ref_or_id, url)`` to preview after commit."""
@@ -86,6 +87,9 @@ class BoardService:
         for i, op in enumerate(ops):
             if not isinstance(op, dict):
                 out.append(op)
+                continue
+            if op.get("op") == "import":
+                out.append(self._import(op, i, by, report))
                 continue
             op = dict(op)
             item = op.get("item") if op.get("op") == "add" else op.get("p") if op.get("op") == "set" else None
@@ -128,9 +132,24 @@ class BoardService:
             out.append(op)
         return out, todo
 
+    def _import(self, op: Dict[str, Any], i: int, by: str, report: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+        """``{op:'import', paths, ...}`` -> a ``place`` op with copied assets. Agent-only: reading
+        files off the machine is what the agent tool is for; the REST routes never get it."""
+        if by != "h":
+            raise engine.OpError(f"op {i} (import): only Hermes can import files (use board_apply)")
+        try:
+            place, rows, skipped = self.importer.run(op, i)
+        except importer_mod.ImportRefused as e:
+            raise engine.OpError(f"op {i} (import): {e}") from None
+        if report is not None:
+            report.setdefault("imported", []).extend(rows)
+            if skipped:
+                report.setdefault("skipped", []).extend(skipped)
+        return place
+
     def commit(self, bid: str, ops: Any, by: str = "u", note: Optional[str] = None,
-               previews: str = "background") -> Tuple[Dict[str, Any], Dict[str, Any]]:
-        prepared, todo = self.prepare(ops)
+               previews: str = "background", report: Optional[Dict[str, Any]] = None) -> Tuple[Dict[str, Any], Dict[str, Any]]:
+        prepared, todo = self.prepare(ops, by=by, report=report)
         doc, entry = self.store.commit(bid, prepared, by=by, note=note)
         refs = entry.get("ids") or {}
         pending = [(refs.get(r, r), url) for r, url in todo if ids.valid_item_id(refs.get(r, r))]

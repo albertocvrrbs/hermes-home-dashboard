@@ -18,6 +18,9 @@ EMBED_HOOK = (
     "(--foreground --muted-foreground --accent --border --card --chart-1..5, --font-sans/--font-mono), transparent "
     "background, %/flex/grid/viewBox instead of fixed px widths, redraw on window 'resize', no external fonts or libs.")
 
+BULK_HOOK = ("Big orders go in ONE board_apply: import project files (op:'import'), mark many items (op:'set_where', "
+             "mark ok/fail/wait), build zones and fill them (op:'zones'); board_read {help:'bulk'} has the syntax.")
+
 EMBED_RULES = (
     "Embed rules (HTML you write: charts, dashboards, widgets - set theme:true; leave theme off only to show the "
     "user's own pasted page untouched): the board injects CSS vars --foreground --muted-foreground --accent --border "
@@ -29,8 +32,36 @@ EMBED_RULES = (
     "'resize' (the card fires it with the real size). Warnings come back in the result; fix them."
 )
 
+BULK_RULES = (
+    'BIG ORDERS = ONE CALL (one board_apply = one undo step; never one call per item): '
+    "{op:'import', paths:['~/proj/renders/*_hero*.png', '~/proj/doc.pdf', '~/proj/parts/'] (files, globs or folders under the user's home; "
+    "max 40 files, raise limit up to 100), layout?:'grid'|'row'|'column', cols?, gap?, at?:{x,y}, into?:<frame or col id>, "
+    "caption?:'name'|'none'} COPIES the files into the board (never linked) and places them on a tidy grid: png/jpg/webp/gif/svg -> image cards, "
+    'mp4/webm/mov -> video cards (poster + duration), pdf -> card with the first page (click opens it), stl/obj/3mf -> shaded 3D thumbnail '
+    '(click downloads the model), md/txt/code/json/csv -> text cards, html -> untouched sandboxed embed. Hidden files (.env, .ssh ...), secrets '
+    "and anything outside the home folder are refused; the result lists the created 'imported' ids and what was 'skipped' and why. "
+    "{op:'set_where', where:{ids?, k?, tag?, text?, num?:'1-37', mark?, by?, frame?, in?}, p:{mark:'ok'|'fail'|'wait'|null, ...}} sets fields on EVERY match "
+    "(or rules:[{where,p},...], later rules win; it errors if a where matches nothing). 'mark' is a status stamp drawn on the item: use it for "
+    'ok/fail/wait states (37 stations in one op). '
+    "{op:'zones', zones:[{title, note?, where?:{...}|ids?:[...], ref?, frame?:<existing frame>, cols?, w?, h?}], layout?:'row'|'column'|'grid', gap?, "
+    'spacing?, cols?, at?} creates titled frames in that order (Idea -> Design -> ...), moves the matching items into each (first zone to match wins; '
+    'column kids only via where.in/ids), lays them on the 24px grid with uniform spacing, sizes the frames to fit and keeps the group clear of other '
+    "items. {op:'arrange', frame?:id | ids?:[...] | where?:{...}, cols?, gap?} grid-packs items (in a frame it also grows the frame). "
+    'A whole reorganisation is zones + set_where + arrange (+ connectors with $refs) in the same ops list. '
+)
+
+BULK_BRIEF = (
+    "BIG ORDERS = ONE CALL (one board_apply, one undo step; never one call per item): "
+    "{op:'import', paths:[files|globs|folders under the user's home], layout?:'grid'|'row'|'column', cols?, at?:{x,y}, into?:<frame|col id>, "
+    "caption?:'name'|'none'} copies project files in (png/jpg/webp/gif/svg, mp4/webm/mov, pdf, stl/obj/3mf with a 3D thumbnail, md/txt/code as "
+    "text cards; hidden and secret files refused); "
+    "{op:'set_where', where:{ids?,k?,tag?,text?,num?,mark?,frame?,in?}, p:{mark:'ok'|'fail'|'wait'|null, ...}} (or rules:[{where,p}]) edits every "
+    "match (mark = status stamp); {op:'zones', zones:[{title, where?|ids?, frame?, ref?}], layout?:'row'|'column'|'grid'} makes titled frames, moves "
+    "the matches in and grids them on 24px; {op:'arrange', frame?|ids?|where?, cols?} grid-packs. Full syntax: board_read {help:'bulk'}. "
+)
+
 _OPS_HELP = (
-    "ops: [{op:'add', ref:'$a', item:{k, x, y, w?, h?, ...}}, {op:'set', id, p:{...}} (null removes a field), "
+    BULK_BRIEF + "ops: [{op:'add', ref:'$a', item:{k, x, y, w?, h?, ...}}, {op:'set', id, p:{...}} (null removes a field), "
     "{op:'del', id}, {op:'board', p:{name}}, {op:'tidy', ids?:[...], gap?:24} (lay items out in a clean grid in reading "
     "order, aligned to the 24px grid with uniform gaps; omit ids for the whole board, which leaves connected diagram "
     "nodes, framed items and loose strokes alone), {op:'insert_on_edge', edge:<line id>, ref?:'$x', item:{k,...}} (put an "
@@ -67,6 +98,8 @@ SCHEMAS: Dict[str, Dict[str, Any]] = {
             "create": {"type": "boolean", "description": "Create the board if no board has this name."},
             "actions": {"type": "boolean", "description": "Also list the live-card actions the owner registered "
                         "(ids you may put on live card buttons)."},
+            "help": {"type": "string", "enum": ["bulk"], "description": "'bulk' returns the full syntax of import, set_where, "
+                     "zones, arrange and place (big orders in one board_apply)."},
         }},
     },
     "board_apply": {
@@ -175,6 +208,8 @@ class BoardAgent:
     def board_read(self, args: Dict[str, Any], session_id: Optional[str] = None, **_: Any) -> str:
         try:
             args = args or {}
+            if args.get("help") == "bulk":
+                return _dump({"help": BULK_RULES})
             if args.get("actions") and not args.get("board") and not session_id:
                 return _dump({"live_actions": self._actions()})
             doc, created, linked = self._resolve(args, session_id)
@@ -213,7 +248,8 @@ class BoardAgent:
                 return self._missing(args)
             note = args.get("note") if isinstance(args.get("note"), str) else None
             embed_warnings = self._embed_warnings(doc, args.get("ops"))
-            new, entry = self.svc.commit(doc["id"], args.get("ops"), by="h", note=note, previews="wait")
+            report: Dict[str, Any] = {}
+            new, entry = self.svc.commit(doc["id"], args.get("ops"), by="h", note=note, previews="wait", report=report)
             if entry.get("noop"):
                 return _dump({"board": doc["id"], "seq": new["seq"], "warning": "nothing changed"})
             last = next((op.get("id") for op in reversed(entry.get("ops") or []) if op.get("id")), None)
@@ -222,6 +258,12 @@ class BoardAgent:
             out: Dict[str, Any] = {"board": doc["id"], "seq": new["seq"], "ids": entry.get("ids", {})}
             if embed_warnings:
                 out["warnings"] = embed_warnings
+            if report.get("imported"):
+                ref_ids = out["ids"]
+                out["imported"] = [{**{k: v for k, v in row.items() if k != "ref"}, "id": ref_ids.get(row["ref"])}
+                                   for row in report["imported"]]
+            if report.get("skipped"):
+                out["skipped"] = report["skipped"][:30]
             waiting = [i for i, it in new["items"].items() if it.get("st") == "wait"]
             if waiting:
                 out["previews_pending"] = waiting
@@ -265,7 +307,7 @@ class BoardAgent:
             parts = []
             if linked_now or is_first_turn:
                 parts.append(f'This session is linked to the board "{doc["name"]}" ({bid}). Read it with board_read '
-                             "and write on it with board_apply (one batch per change set). " + EMBED_HOOK)
+                             "and write on it with board_apply (one batch per change set). " + BULK_HOOK + " " + EMBED_HOOK)
             changes = summary.changes_since(doc, store.entries(bid), doc.get("seen", 0), limit=HOOK_LIMIT)
             if changes:
                 parts.append(f'[Board "{doc["name"]}" ({bid}): the user changed it since your last turn: {changes}. '

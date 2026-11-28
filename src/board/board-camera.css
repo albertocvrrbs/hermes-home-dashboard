@@ -102,7 +102,7 @@
 .hb-world[data-lod] .hb-frame > i:nth-of-type(4) { border-width: 0 calc(1px * var(--ls-w, 1)) calc(1px * var(--ls-w, 1)) 0; }
 
 /* pictures: a thumbnail stands in below 50 % (decoding a full-size photo to paint 80 px is waste) */
-.hb img.lo { display: none; }
+.hb .hb-world img.lo { display: none; }  /* specific enough to beat `.hb-image .art img { display: block }` */
 .hb-world[data-lod="1"] img.lo, .hb-world[data-lod="2"] img.lo { display: block; }
 .hb-world[data-lod="1"] img.full, .hb-world[data-lod="2"] img.full { display: none; }
 .hb-world[data-lod="1"] .hb-embed .frame, .hb-world[data-lod="2"] .hb-embed .frame { visibility: hidden; }

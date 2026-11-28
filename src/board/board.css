@@ -24,6 +24,7 @@
   --rule-3: color-mix(in srgb, var(--accent) 42%, transparent);
   --tint: color-mix(in srgb, var(--accent) 6%, transparent);
   --warn: #f5b945;
+  --ok: var(--color-success, #3fb97f);
   --sans: var(--dt-font-sans, var(--theme-font-sans, system-ui, -apple-system, "Segoe UI", sans-serif));
   --mono: var(--theme-font-mono, ui-monospace, monospace);
   --r-panel: 4px; --r-card: 3px; --r-ctl: 3px; --r-float: 6px;
@@ -202,6 +203,20 @@
 .hb-image .art img { width: 100%; height: auto; display: block; }
 .hb-image .cap { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 6px 11px; min-height: 12px; }
 .hb-image .cap b { font: 600 13px/1.2 var(--sans); }
+/* imported file (pdf / 3D model): original kept beside its thumbnail */
+.hb-image .art { position: relative; }
+.hb-image .art .fbadge { position: absolute; left: 8px; top: 8px; padding: 2px 6px; border-radius: var(--r-ctl); font: 700 9.5px/1.3 var(--mono); letter-spacing: .08em;
+  color: var(--ink-2, var(--ink)); background: color-mix(in srgb, var(--bg) 78%, transparent); border: 1px solid var(--rule-2); backdrop-filter: blur(4px); }
+.hb-image .art .file-ph { display: grid; place-items: center; width: 100%; height: 100%; min-height: 120px; color: var(--ink-3); }
+.hb-image .cap .kbtn:disabled { opacity: .5; }
+.hb-image.has-file .art { background: var(--well); }
+/* status stamp */
+.hb-mark { position: absolute; right: -7px; top: -7px; width: 18px; height: 18px; border-radius: 50%; display: grid; place-items: center; pointer-events: none; z-index: 2;
+  color: var(--on-accent); border: 2px solid var(--bg); box-sizing: content-box; margin: -2px -2px 0 0; }
+.hb-mark.ok { background: var(--ok); } .hb-mark.fail { background: var(--danger); } .hb-mark.wait { background: var(--warn); }
+.hb-item:has(> .hb-mark.ok) > .hb-card, .hb-item:has(> .hb-mark.ok) > .hb-box { border-color: color-mix(in srgb, var(--ok) 55%, transparent); }
+.hb-item:has(> .hb-mark.fail) > .hb-card, .hb-item:has(> .hb-mark.fail) > .hb-box { border-color: color-mix(in srgb, var(--danger) 70%, transparent); }
+.hb-item:has(> .hb-mark.wait) > .hb-card, .hb-item:has(> .hb-mark.wait) > .hb-box { border-color: color-mix(in srgb, var(--warn) 60%, transparent); }
 
 /* embed: a window */
 .hb-embed { padding: 0; overflow: hidden; }
