@@ -1985,7 +1985,7 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
             const rs = resize?.id === id ? resize : null;
             const [dw, dh] = (it.k === "shape" ? SHAPE_SIZE[it.sh ?? "rect"] : undefined) ?? DEFAULT_SIZE[it.k] ?? [200, 100];
             const width = it.k === "draw" ? undefined : (rs?.w ?? it.w ?? (it.k === "text" ? undefined : dw));
-            const height = RESIZE_H.has(it.k) ? (rs?.h ?? it.h ?? (it.k === "frame" ? 320 : it.k === "box" ? 62 : it.k === "shape" ? dh : undefined)) : undefined;
+            const height = RESIZE_H.has(it.k) ? (rs?.h ?? it.h ?? (it.k === "frame" ? 320 : it.k === "box" ? 62 : it.k === "shape" ? dh : undefined)) : (it.k === "card" && it.h ? it.h : undefined);
             const cls = `hb-item${sel ? " sel" : ""}${moving ? " dragging" : ""}${hidden.has(id) ? " reveal-wait" : ""}${fresh.has(id) && !reduced() ? " just-placed" : ""}${connectFrom === id ? " connect-from" : ""}`;
             const dropIndex = kidDrag?.col === id ? kidDrag.index : null;
             return (

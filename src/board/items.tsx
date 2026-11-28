@@ -172,7 +172,7 @@ export function CardView({ id, item, c }: { id: string; item: Item; c: ItemCtx }
     );
   }
   return (
-    <div className={`hb-card hb-note${quote ? " quote" : ""}${item.by === "h" ? " dm" : ""}`}>
+    <div className={`hb-card hb-note${quote ? " quote" : ""}${item.h ? " capped" : ""}${item.by === "h" ? " dm" : ""}`}>
       {item.title && <h4 data-field="title">{item.title}</h4>}
       {text ? <div className="body" data-field="text"><RichText text={text} /></div>
         : !item.title && <div className="body" style={{ opacity: 0.5 }}>{c.t("board.card.empty")}</div>}

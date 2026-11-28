@@ -9668,7 +9668,7 @@ function CardView({ id, item, c }) {
       ) })
     ] });
   }
-  return /* @__PURE__ */ jsxs("div", { className: `hb-card hb-note${quote ? " quote" : ""}${item.by === "h" ? " dm" : ""}`, children: [
+  return /* @__PURE__ */ jsxs("div", { className: `hb-card hb-note${quote ? " quote" : ""}${item.h ? " capped" : ""}${item.by === "h" ? " dm" : ""}`, children: [
     item.title && /* @__PURE__ */ jsx("h4", { "data-field": "title", children: item.title }),
     text ? /* @__PURE__ */ jsx("div", { className: "body", "data-field": "text", children: /* @__PURE__ */ jsx(RichText, { text }) }) : !item.title && /* @__PURE__ */ jsx("div", { className: "body", style: { opacity: 0.5 }, children: c.t("board.card.empty") }),
     /* @__PURE__ */ jsx(Meta, { item, t: c.t })
@@ -14259,7 +14259,7 @@ function BoardView({ bid, onOpenBoard, onHome }) {
               const rs = resize?.id === id ? resize : null;
               const [dw, dh] = (it.k === "shape" ? SHAPE_SIZE[it.sh ?? "rect"] : void 0) ?? DEFAULT_SIZE[it.k] ?? [200, 100];
               const width = it.k === "draw" ? void 0 : rs?.w ?? it.w ?? (it.k === "text" ? void 0 : dw);
-              const height = RESIZE_H.has(it.k) ? rs?.h ?? it.h ?? (it.k === "frame" ? 320 : it.k === "box" ? 62 : it.k === "shape" ? dh : void 0) : void 0;
+              const height = RESIZE_H.has(it.k) ? rs?.h ?? it.h ?? (it.k === "frame" ? 320 : it.k === "box" ? 62 : it.k === "shape" ? dh : void 0) : it.k === "card" && it.h ? it.h : void 0;
               const cls = `hb-item${sel ? " sel" : ""}${moving ? " dragging" : ""}${hidden.has(id) ? " reveal-wait" : ""}${fresh.has(id) && !reduced() ? " just-placed" : ""}${connectFrom === id ? " connect-from" : ""}`;
               const dropIndex = kidDrag?.col === id ? kidDrag.index : null;
               return /* @__PURE__ */ jsxs(
@@ -16774,6 +16774,9 @@ const boardCss = `/* Board — "Mesa de despacho" (hd-canvas-plan/mockup-v2). Ev
 .hb-epick .kind { padding: 0 8px 0 6px; font: 400 10.5px/1 var(--mono); letter-spacing: .04em; color: var(--ink-3); text-transform: lowercase; }
 .hb-epick .sep { width: 1px; height: 18px; margin: 0 4px; background: var(--float-line); flex: none; }
 .hb-epick .row2 { flex-basis: 100%; display: flex; align-items: center; gap: 2px; padding-top: 3px; margin-top: 3px; border-top: 1px solid var(--float-line); }
+/* a card with a fixed height (an imported file excerpt) clips its body and fades out at the bottom */
+.hb-item > .hb-card.capped { height: 100%; overflow: hidden; display: flex; flex-direction: column; }
+.hb-card.capped > .body { flex: 1 1 auto; min-height: 0; overflow: hidden; -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 48px), transparent); mask-image: linear-gradient(to bottom, #000 calc(100% - 48px), transparent); }
 `;
 const HOME_DESKTOP_PATH = "/home";
 const BOARDS_DESKTOP_PATH = "/boards";

@@ -806,3 +806,7 @@
 .hb-epick .kind { padding: 0 8px 0 6px; font: 400 10.5px/1 var(--mono); letter-spacing: .04em; color: var(--ink-3); text-transform: lowercase; }
 .hb-epick .sep { width: 1px; height: 18px; margin: 0 4px; background: var(--float-line); flex: none; }
 .hb-epick .row2 { flex-basis: 100%; display: flex; align-items: center; gap: 2px; padding-top: 3px; margin-top: 3px; border-top: 1px solid var(--float-line); }
+
+/* a card with a fixed height (an imported file excerpt) clips its body and fades out at the bottom */
+.hb-item > .hb-card.capped { height: 100%; overflow: hidden; display: flex; flex-direction: column; }
+.hb-card.capped > .body { flex: 1 1 auto; min-height: 0; overflow: hidden; -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 48px), transparent); mask-image: linear-gradient(to bottom, #000 calc(100% - 48px), transparent); }
