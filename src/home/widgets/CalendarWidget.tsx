@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { HoverArrows } from "./HoverArrows";
-import { useT } from "../i18n";
+import { fmtDate, useT } from "../i18n";
 
 /** Month grid, today highlighted in the accent, weeks Monday-first. Hover
  *  arrows page through months (resets to the current month on reload). Picks a
@@ -23,10 +23,9 @@ export function CalendarWidget({ gridSize }: { gridSize: { gw: number; gh: numbe
   // Monday-first column index of day 1.
   const firstCol = (new Date(year, month, 1).getDay() + 6) % 7;
 
-  const monthLabel = view.toLocaleDateString(undefined, { month: "long", year: "numeric" });
+  const monthLabel = fmtDate(view, { month: "long", year: "numeric" });
   const dayLetters = Array.from({ length: 7 }, (_, i) =>
-    new Date(2024, 0, i + 1) // 2024-01-01 was a Monday
-      .toLocaleDateString(undefined, { weekday: "narrow" }),
+    fmtDate(new Date(2024, 0, i + 1), { weekday: "narrow" }), // 2024-01-01 was a Monday
   );
 
   const tier = gridSize.gw <= 2 ? "mini" : gridSize.gw >= 4 ? "large" : "normal";

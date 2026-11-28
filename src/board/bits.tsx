@@ -1,6 +1,7 @@
 // Small shared pieces: Hermes' pixel caduceus, time formatting, the **bold** subset.
 import type { ReactNode } from "react";
 import type { Translate } from "../home/i18n";
+import { fmtDate } from "../home/i18n/date";
 
 // The Home's dot-matrix caduceus reduced to a 9x11 bitmap (mockup-v2 #cad).
 const CAD: [number, number, number, number][] = [
@@ -30,7 +31,7 @@ export function ago(t: Translate, ts: number | undefined, now = Date.now() / 100
   if (s < 86400) return t("board.time.h", { n: Math.round(s / 3600) });
   if (s < 172800) return t("board.time.yesterday");
   const d = new Date(ts * 1000);
-  return d.toLocaleDateString(undefined, { month: "short", day: "numeric" }).toLowerCase();
+  return fmtDate(d, { month: "short", day: "numeric" }).toLowerCase();
 }
 
 export function clock(ts: number): string {

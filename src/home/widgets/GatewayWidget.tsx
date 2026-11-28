@@ -1,5 +1,6 @@
 import type { StatusResponse } from "@/api-types";
 import { useT } from "../i18n";
+import { stateLabel } from "./gatewayState";
 
 function hostOf(url: string): string {
   try { return new URL(url).host; } catch { return url; }
@@ -35,12 +36,12 @@ export function GatewayWidget({ status }: { status: StatusResponse | null }) {
         </div>
         <div className="row">
           <span className="dim">{t("gateway.state")}</span>
-          <span>{status.gateway_state ?? "—"}</span>
+          <span>{stateLabel(t, status.gateway_state)}</span>
         </div>
         {platforms.map(([name, p]) => (
           <div className="row" key={name}>
             <span className="dim">{name}</span>
-            <span className={p.state === "running" ? "ok" : "dim"}>{p.state}</span>
+            <span className={p.state === "running" || p.state === "connected" ? "ok" : "dim"}>{stateLabel(t, p.state)}</span>
           </div>
         ))}
       </div>

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { HoverCtl } from "./HoverArrows";
-import { useT } from "../i18n";
+import { fmtDate, useT } from "../i18n";
 
 interface Props {
   widgetProps: Record<string, unknown>;
@@ -53,7 +53,7 @@ export function ClockWidget({ widgetProps, onWidgetPropsChange }: Props) {
         {is12 && <span className="home-clock-ampm">{ampm}</span>}
       </div>
       <div className="home-clock-sub">
-        {now.toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long" })}
+        {fmtDate(now, { weekday: "long", day: "numeric", month: "long" })}
       </div>
     </div>
   );

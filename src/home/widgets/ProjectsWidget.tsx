@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { getProjects } from "@/sdk";
 import type { ProjectStatus } from "@/api-types";
-import { useT, type Translate } from "../i18n";
+import { fmtDate, useT, type Translate } from "../i18n";
 
 const POLL_MS = 30_000;
 
@@ -112,7 +112,7 @@ export function ProjectsWidget() {
                 )}
                 {p.lastUpdated && (
                   <div className="project-detail-row dim">
-                    {t("projects.updated", { when: new Date(p.lastUpdated).toLocaleString() })}
+                    {t("projects.updated", { when: fmtDate(new Date(p.lastUpdated), { dateStyle: "medium", timeStyle: "short" }) })}
                   </div>
                 )}
               </div>

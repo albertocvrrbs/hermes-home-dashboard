@@ -30,6 +30,11 @@ function saveLayout(layout: HomeLayout): Promise<unknown> {
 export default function HomePage() {
   // Boards open inside the Home tab on the web dashboard (#boards, #board=<id>).
   const boardRoute = useBoardRoute();
+  // Follow the dashboard's language on board pages too (a deep link never mounts the grid).
+  const dashboardLocale = useDashboardLocale();
+  useEffect(() => {
+    if (dashboardLocale !== null) setHostLanguage(dashboardLocale);
+  }, [dashboardLocale]);
   if (boardRoute !== undefined) {
     return (
       <div className="home-board-page">

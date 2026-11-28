@@ -1,6 +1,10 @@
 // Pure series helper for the Tokens widget, kept React-free for unit testing.
 import type { AnalyticsDailyEntry } from "@/api-types";
 
+/** Date formatter; the widget passes the plugin-language one, tests and other callers get the runtime default. */
+export type DateFmt = (date: Date, options: Intl.DateTimeFormatOptions) => string;
+const runtimeFmt: DateFmt = (date, options) => date.toLocaleDateString(undefined, options);
+
 /** How the Tokens widget breaks usage down under the chart. */
 export type GroupBy = "off" | "provider" | "model";
 export const GROUP_MODES: readonly GroupBy[] = ["off", "provider", "model"];
@@ -67,13 +71,13 @@ function parseDay(day: string): Date {
 
 /** One chart point per day, or one per calendar month when the range groups
  *  (the 6-month view). `label` is what the hover tooltip shows. */
-export function toBars(daily: AnalyticsDailyEntry[], byMonth: boolean): Bar[] {
+export function toBars(daily: AnalyticsDailyEntry[], byMonth: boolean, fmtDate: DateFmt = runtimeFmt): Bar[] {
   if (!byMonth) {
     return daily.map((d) => {
       const date = parseDay(d.day);
       const label = isNaN(date.getTime())
         ? d.day
-        : date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+        : fmtDate(date, { month: "short", day: "numeric" });
       return { key: d.day, label, tokens: d.input_tokens + d.output_tokens, cost: d.estimated_cost };
     });
   }
@@ -82,7 +86,7 @@ export function toBars(daily: AnalyticsDailyEntry[], byMonth: boolean): Bar[] {
     const date = parseDay(d.day);
     const valid = !isNaN(date.getTime());
     const key = valid ? `${date.getFullYear()}-${date.getMonth()}` : d.day.slice(0, 7);
-    const label = valid ? date.toLocaleDateString(undefined, { month: "short" }) : key;
+    const label = valid ? fmtDate(date, { month: "short" }) : key;
     const sort = valid ? date.getFullYear() * 12 + date.getMonth() : 0;
     const cur = months.get(key) ?? { key, label, tokens: 0, cost: 0, sort };
     cur.tokens += d.input_tokens + d.output_tokens;

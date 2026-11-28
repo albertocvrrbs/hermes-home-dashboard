@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { HoverArrows } from "./HoverArrows";
-import { useT } from "../i18n";
+import { fmtDate, useT } from "../i18n";
 
 interface Props {
   widgetProps: Record<string, unknown>;
@@ -11,7 +11,7 @@ const pad = (n: number) => String(n).padStart(2, "0");
 /** Short month name in the browser's locale (dates follow the locale, like
  *  every other date label on the Home), upper-cased: "JAN", "ENE". */
 const monthName = (mo: number) =>
-  new Date(2024, mo, 1).toLocaleDateString(undefined, { month: "short" }).replace(/\.$/, "").toUpperCase();
+  fmtDate(new Date(2024, mo, 1), { month: "short" }).replace(/\.$/, "").toUpperCase();
 
 interface Seg { y: number; mo: number; d: number; h: number; mi: number; }
 
@@ -180,7 +180,7 @@ export function CountdownWidget({ widgetProps, onWidgetPropsChange }: Props) {
     big = `${diff < 0 ? "+" : ""}${d > 0 ? `${d}d ` : ""}${pad(h)}:${pad(m)}`;
   }
   const dateLabel = !Number.isNaN(targetMs)
-    ? new Date(targetMs).toLocaleDateString(undefined, { month: "short", day: "numeric" })
+    ? fmtDate(new Date(targetMs), { month: "short", day: "numeric" })
     : t("count.setDate");
 
   return (

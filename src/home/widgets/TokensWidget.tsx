@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { api } from "@/sdk";
+import { Cancelled, fetchRetry } from "../fetchGuard";
 import type { AnalyticsResponse, ModelsAnalyticsEntry } from "@/api-types";
 import { formatTokenCount } from "../format";
-import { useT, type MessageKey } from "../i18n";
+import { fmtDate, useT, type MessageKey } from "../i18n";
 import { HoverCtl } from "./HoverArrows";
 import {
   GROUP_MODES, coerceGroupBy, groupUsage, toBars,
@@ -69,19 +70,29 @@ export function TokensWidget({ analytics, widgetProps, onWidgetPropsChange, grid
     if (group === "off") return;
     let cancelled = false;
     setModels(null); setModelsFailed(false);
-    api.getModelsAnalytics(range.days)
+    fetchRetry(() => api.getModelsAnalytics(range.days), { cancelled: () => cancelled })
       .then((r) => { if (!cancelled) setModels(Array.isArray(r?.models) ? r.models : []); })
-      .catch(() => { if (!cancelled) setModelsFailed(true); });
+      .catch((e) => { if (!cancelled && !(e instanceof Cancelled)) setModelsFailed(true); });
     return () => { cancelled = true; };
   }, [group, range.days]);
 
   useEffect(() => {
     let cancelled = false;
+    let retry: ReturnType<typeof setTimeout> | undefined;
     setFetched(null); setFailed(false);
-    api.getAnalytics(range.days)
-      .then((r) => { if (!cancelled) setFetched(r); })
-      .catch(() => { if (!cancelled) setFailed(true); });
-    return () => { cancelled = true; };
+    // Every attempt times out (a request the host never answers used to leave this on "loading…"
+    // for good); once the quick retries are spent the shared day poll stands in, and we keep trying.
+    const load = () => {
+      fetchRetry(() => api.getAnalytics(range.days), { cancelled: () => cancelled })
+        .then((r) => { if (!cancelled) { setFetched(r); setFailed(false); } })
+        .catch((e) => {
+          if (cancelled || e instanceof Cancelled) return;
+          setFailed(true);
+          retry = setTimeout(load, 20_000);
+        });
+    };
+    load();
+    return () => { cancelled = true; if (retry) clearTimeout(retry); };
   }, [range.days]);
 
   const setProp = (patch: Record<string, unknown>) =>
@@ -126,8 +137,8 @@ export function TokensWidget({ analytics, widgetProps, onWidgetPropsChange, grid
   // On-demand fetch, or a failed-fetch fallback to the shared day poll.
   const view = fetched ?? (failed ? analytics : null);
   const bars = useMemo(
-    () => toBars(view?.daily ?? [], range.byMonth),
-    [view, range.byMonth],
+    () => toBars(view?.daily ?? [], range.byMonth, fmtDate),
+    [view, range.byMonth, t],
   );
 
   // Breakdown rows. Provider identity only exists in the per (model,

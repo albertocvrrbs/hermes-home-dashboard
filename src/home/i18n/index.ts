@@ -11,6 +11,9 @@
 import { useEffect, useState } from "react";
 import { resolveLanguage, translate, type Dictionaries, type TranslateVars } from "./core";
 import type { MessageKey } from "./locales/en";
+import { fmtDate, setDateLocale } from "./date";
+
+export { fmtDate };
 
 export type { MessageKey } from "./locales/en";
 
@@ -43,6 +46,7 @@ function computeLanguage(): string {
 }
 
 let current = computeLanguage();
+setDateLocale(current);
 
 /** Report the host's UI language (null = the host doesn't expose one). */
 export function setHostLanguage(language: string | null | undefined): void {
@@ -50,6 +54,7 @@ export function setHostLanguage(language: string | null | undefined): void {
   const next = computeLanguage();
   if (next === current) return;
   current = next;
+  setDateLocale(next);
   listeners.forEach((l) => l());
 }
 
