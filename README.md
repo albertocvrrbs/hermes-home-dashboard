@@ -351,6 +351,12 @@ made; your work stays solid.
   assets; video cards made before 1.9.0 get theirs the first time they're
   shown, without editing the board. With no `ffmpeg`, the browser grabs the
   frame itself.
+- **Play all videos.** A board with two or more uploaded or direct videos gets
+  a play button in its top bar: every video plays at once, muted and looping,
+  without controls, so a wall of runs plays side by side. Press it again (or
+  leave the board) to stop. A video you click keeps its controls and sound;
+  synced videos follow their group's clock and YouTube/Vimeo players are left
+  alone.
 - **One session per board.** *Continue in session* (⌘↵ / Ctrl+↵) opens the
   session linked to the board. There, Hermes knows the board, and whatever you
   ask him gets drawn on it.

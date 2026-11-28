@@ -20,7 +20,9 @@ clone, they never build).
 
 ---
 
-## Unreleased — play all videos
+## 1.10.3 — play all videos
+
+**Gateway restart needed** (Python board engine and agent rules changed).
 
 - **Play all videos.** A board with two or more uploaded or direct videos gets a play button in its
   top bar: every video plays at once, muted and looping, without controls (a wall of runs, like a
