@@ -29,13 +29,22 @@ EMBED_RULES = (
     "'resize' (the card fires it with the real size). Warnings come back in the result; fix them."
 )
 
+TOUR_HOOK = (
+    "Tour (presentation): the user plays it full-window and the camera flies stop to stop. Frames are the slides: make a frame "
+    "per zone around its items, then ONE op {op:'tour', from:'frames'} (reading order). Or list stops: stops:[<id> | {id, "
+    "t?:caption, dw?:seconds} | {rect:{x,y,w,h}} | {view:{x,y,z}}]; an id may be a frame, any item or a board card (the player "
+    "zooms into the sub-board and back). dw = seconds a stop waits in auto-play, loop:true restarts, op-level dw = default, "
+    "t = title. Edit with add:[..] (+at), remove:[id|position], clear:true. First stop = opening shot (often a rect of the "
+    "whole board). board_read shows it as 'tour: 1:<id> ...'.")
+
 _OPS_HELP = (
     "ops: [{op:'add', ref:'$a', item:{k, x, y, w?, h?, ...}}, {op:'set', id, p:{...}} (null removes a field), "
     "{op:'del', id}, {op:'board', p:{name}}, {op:'tidy', ids?:[...], gap?:24} (lay items out in a clean grid in reading "
     "order, aligned to the 24px grid with uniform gaps; omit ids for the whole board, which leaves connected diagram "
     "nodes, framed items and loose strokes alone), {op:'insert_on_edge', edge:<line id>, ref?:'$x', item:{k,...}} (put an "
     "item in the middle of a connector: splits it into A->new->B, keeps the label on A->new, pushes B and what hangs off "
-    "it away if it is too tight; one undo step)]. Use '$refs' to point at items added in the same batch. "
+    "it away if it is too tight; one undo step), {op:'tour', stops:[...], add?:[...], at?, remove?:[...], from?:'frames'|'boards', "
+    "clear?:true, loop?, dw?, t?} (presentation tour: stops are ids, {rect}, {view}; from:'frames' = every frame in reading order)]. Use '$refs' to point at items added in the same batch. "
     "Kinds: card{title,text,tags,due} · todo{title,items:[{t,done}]} · col{title} (add cards with in:'<col>') · "
     "box{num,title,sub} (diagram node, ~196x62) · shape{sh:'rect'|'diamond'|'pill'|'circle',title} (flowchart symbol: process, "
     "decision, start/end, connector; ~160x56, diamond 150x100, pill 150x48, circle 72) · line{a,b,label} (connector; a/b = ids or [x,y]) · "
@@ -265,7 +274,7 @@ class BoardAgent:
             parts = []
             if linked_now or is_first_turn:
                 parts.append(f'This session is linked to the board "{doc["name"]}" ({bid}). Read it with board_read '
-                             "and write on it with board_apply (one batch per change set). " + EMBED_HOOK)
+                             "and write on it with board_apply (one batch per change set). " + EMBED_HOOK + " " + TOUR_HOOK)
             changes = summary.changes_since(doc, store.entries(bid), doc.get("seen", 0), limit=HOOK_LIMIT)
             if changes:
                 parts.append(f'[Board "{doc["name"]}" ({bid}): the user changed it since your last turn: {changes}. '

@@ -165,7 +165,7 @@ class SchemaTest(unittest.TestCase):
     def test_schemas_are_compact_and_named(self):
         for name, schema in agent_mod.SCHEMAS.items():
             self.assertEqual(schema["name"], name)
-            self.assertLess(len(json.dumps(schema)), 4000, name)
+            self.assertLess(len(json.dumps(schema)), 4600, name)
 
 
 if __name__ == "__main__":

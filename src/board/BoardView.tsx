@@ -21,13 +21,16 @@ import { InkBar } from "./InkBar";
 import { HermesCursor, type CursorHandle, type CursorStep } from "./HermesCursor";
 import { Camera, cameraClockApi, installCameraApi, viewForRect, type BoardCameraApi, type CameraRequest } from "./camera";
 import { applyLod } from "./lod";
+import { PresenterHud } from "./Presenter";
+import { usePresentation } from "./usePresentation";
+import { framesAsStops, withStop } from "./tour";
 import { arriveZoomIn, arriveZoomOut, prepareZoomIn, prepareZoomOut, takeHandoff, type Handoff } from "./handoff";
 import { Icon, type IconName } from "./icons";
 import { ItemBody, itemForUrl, type ItemCtx } from "./items";
 import { BoardMenu, type MenuEntry } from "./Menu";
 import { installTips } from "./tips";
 import { drawPreview, previewGeometry } from "./preview";
-import { approxRect, DEFAULT_SIZE, itemLabel, newRef, normalizeDeletes, SHAPE_SIZE, type BoardDoc, type Entry, type Item, type Op, type Point } from "./model";
+import { approxRect, DEFAULT_SIZE, itemLabel, newRef, normalizeDeletes, SHAPE_SIZE, type BoardDoc, type Entry, type Item, type Op, type Point, type TourStop } from "./model";
 import { extractUrl } from "./urlKind";
 import { HERMES_ACTIVE_S, useBoard } from "./useBoard";
 import { Wires, type WiresHandle } from "./Wires";
@@ -159,6 +162,7 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
   const autoFit = useRef(false);
   const autoFitUntil = useRef(0);
   const handoffRef = useRef<Handoff | null>(null);
+  const arrival = useRef<Promise<unknown> | null>(null);
 
   const [mapOff, setMapOff] = useState(() => readLocal("hb.map.off") === "1");
   const [tool, setTool] = useState<Tool>("select");
@@ -278,7 +282,7 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
     let changes = 0;
     for (const e of entries) {
       for (const op of e.ops) {
-        if (op.op === "board") continue;
+        if (op.op === "board" || op.op === "tour") continue;
         changes++;
         const id = op.op === "put" || op.op === "set" || op.op === "del" ? op.id : null;
         if (!id) continue;
@@ -579,9 +583,9 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
     handoffRef.current = h;
     if (h.kind === "in") {
       autoFit.current = false;
-      void arriveZoomIn(h, { cam: cam.current!, vp, root, target: view.current }, (start) => { view.current = start; applyView(); });
+      arrival.current = arriveZoomIn(h, { cam: cam.current!, vp, root, target: view.current }, (start) => { view.current = start; applyView(); });
     } else {
-      void arriveZoomOut(h, () => (h.child ? (vp.querySelector(`[data-mini="${h.child}"]`) as HTMLElement | null) : null), { w: window.innerWidth, h: window.innerHeight });
+      arrival.current = arriveZoomOut(h, () => (h.child ? (vp.querySelector(`[data-mini="${h.child}"]`) as HTMLElement | null) : null), { w: window.innerWidth, h: window.innerHeight });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [doc, bid, applyView, fit]);
@@ -1503,6 +1507,44 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
     return () => vp.removeEventListener("wheel", onWheel);
   }, [onWheel, hasDoc]);
 
+  // Presentation mode: the tour (frames as slides), played full-window with eased flights
+  const show = usePresentation({
+    bid, doc, docRef, cam, vpRef, view, applyView, getRect, contentBounds, openChild, closeToParent, arrival,
+    ready: !!doc, stopCamera,
+  });
+
+  // Tour authoring by hand (Hermes does the same with one `tour` op)
+  const startPresenting = useCallback(() => {
+    if (!show.stops.length) { flash(t("board.present.empty")); return; }
+    setSelected(new Set()); setMenu(null);
+    void show.start({ fullscreen: false });
+  }, [flash, show, t]);
+  const tourFromFrames = useCallback(() => {
+    const d = docRef.current;
+    const stops = d ? framesAsStops(d, getRect) : [];
+    if (!stops.length) { flash(t("board.tour.noFrames")); return; }
+    commit([{ op: "tour", tour: { ...(d?.tour ?? {}), stops } }]);
+    flash(t("board.tour.built", { n: stops.length }));
+  }, [commit, flash, getRect, t]);
+  const tourAdd = useCallback((stop: TourStop[]) => {
+    let tour = docRef.current?.tour;
+    for (const s of stop) tour = withStop(tour, s);
+    if (!tour) return;
+    commit([{ op: "tour", tour }]);
+    flash(t("board.tour.added", { n: tour.stops.length }));
+  }, [commit, flash, t]);
+  const tourAddSelection = useCallback(() => {
+    const d = docRef.current;
+    if (!d) return;
+    const ids = [...selectedRef.current].filter((id) => d.items[id] && d.items[id].k !== "line");
+    tourAdd(ids.map((id) => ({ k: d.items[id].k === "frame" ? "frame" : d.items[id].k === "board" ? "board" : "item", id }) as TourStop));
+  }, [tourAdd]);
+  const tourAddView = useCallback(() => {
+    const v = view.current;
+    tourAdd([{ k: "view", v: { x: Math.round(v.x), y: Math.round(v.y), z: Math.round(v.z * 1000) / 1000 } }]);
+  }, [tourAdd]);
+  const tourClear = useCallback(() => { commit([{ op: "tour", tour: null }]); flash(t("board.tour.cleared")); }, [commit, flash, t]);
+
   // The camera for the outside world: window.__hbCamera and `hb:camera` events (camera.ts), so a
   // script (the video director, a test) can fly it frame by frame on a clock it controls.
   useEffect(() => {
@@ -1596,6 +1638,7 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
       if (e.key === "f" || e.key === "F") { fit(); return; }
       if (e.key === "z" || e.key === "Z") { zoomToSelection(); return; }
       if (e.key === "m" || e.key === "M") { toggleMap(); return; }
+      if (e.key === "p" || e.key === "P") { e.preventDefault(); startPresenting(); return; }
       if (e.key === "+" || e.key === "=") { zoomStep(1.2); return; }
       if (e.key === "-") { zoomStep(1 / 1.2); return; }
       if (e.key.startsWith("Arrow") && selected.size) {
@@ -1626,7 +1669,7 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
     window.addEventListener("keydown", onKey);
     window.addEventListener("keyup", onKey);
     return () => { window.removeEventListener("keydown", onKey); window.removeEventListener("keyup", onKey); };
-  }, [ask, center, commit, confirmReq, connectFrom, continueInSession, deleteSelection, duplicate, fit, openChat, scheduleLive, selected, setInk, startEdit, sync, tidy, tool, toggleGroup, toggleMap, zoomStep, zoomToSelection]);
+  }, [ask, center, commit, confirmReq, connectFrom, continueInSession, deleteSelection, duplicate, fit, openChat, scheduleLive, selected, setInk, startEdit, startPresenting, sync, tidy, tool, toggleGroup, toggleMap, zoomStep, zoomToSelection]);
 
   useEffect(() => {
     const onPaste = (e: ClipboardEvent) => {
@@ -1789,6 +1832,7 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
       if (openTarget) out.push({ id: "open", label: t("board.ctx.open"), icon: "board" in openTarget ? "openBoard" : "open", run: runOpen });
       if (single?.k === "embed") out.push({ id: "theme", label: t(single.theme ? "board.embed.themeOff" : "board.embed.themeOn"), icon: "theme", run: () => update(selIds[0], { theme: single.theme ? null : true }) });
       out.push({ id: "zoomto", label: t("board.ctx.zoomTo"), icon: "focus", kbd: "Z", run: zoomToSelection });
+      out.push({ id: "tour+", label: t("board.tour.addSel"), icon: "present", run: tourAddSelection });
       if (canConnect) out.push({ id: "connect", label: t("board.ctx.connect"), icon: "connect", run: startConnect });
       if (canDuplicate) out.push({ id: "dup", label: t("board.ctx.duplicate"), icon: "duplicate", kbd: `${mod}D`, run: duplicate });
       if (selIds.length > 1) out.push({ id: "tidy", label: t("board.tidy.selection"), icon: "tidy", kbd: `${mod}⇧O`, run: tidy });
@@ -1813,6 +1857,12 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
     out.push({ id: "all", label: t("board.menu.selectAll"), icon: "selectAll", kbd: `${mod}A`, run: () => setSelected(new Set(Object.keys(docRef.current?.items ?? {}).filter((k) => !docRef.current!.items[k].in))) });
     out.push({ id: "tidy", label: t("board.tidy.all"), icon: "tidy", kbd: `${mod}⇧O`, run: tidy });
     out.push({ id: "fit", label: t("board.fit"), icon: "fit", kbd: "F", run: () => fit() });
+    out.push({ sep: true });
+    out.push({ id: "present", label: t("board.present.start"), icon: "present", kbd: "P", run: startPresenting });
+    out.push({ id: "tourFrames", label: t("board.tour.fromFrames"), icon: "tidy", run: tourFromFrames });
+    out.push({ id: "tourView", label: t("board.tour.addView"), icon: "plus", run: tourAddView });
+    if (docRef.current?.tour) out.push({ id: "tourClear", label: t("board.tour.clear"), icon: "delete", danger: true, run: tourClear });
+    out.push({ sep: true });
     out.push({ id: "chat", label: chatOpen ? t("board.chat.close") : t("board.chat.open"), icon: chatOpen ? "closePanel" : "chat", kbd: "/", run: () => (chatOpen ? closeChat() : openChat(true)) });
     return out;
   };
@@ -1820,7 +1870,7 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
   // The board keeps at least 620 px beside the chat; below that the chat floats over it.
   const chatFloat = rootW - CHAT_MIN_W < 620;
   const chatWidth = chatFloat ? Math.min(chatW, Math.max(260, rootW - 48)) : Math.min(chatW, rootW - 620);
-  const rootCls = `hb ${narrow}${chatOpen ? (chatFloat ? " chat-float" : " chat-open") : ""}`.trim();
+  const rootCls = `hb ${narrow}${show.presenting ? " presenting" : ""}${chatOpen ? (chatFloat ? " chat-float" : " chat-open") : ""}`.trim();
   if (!doc || !ctx) {
     return (
       <div ref={rootRef} className={rootCls}>
@@ -1978,6 +2028,10 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
           <span>{t("board.state.saved", { time: clock(savedTs) })}</span>
           <span className="sess" data-tip={doc.session?.id ? t("board.chat.sessionTip", { id: doc.session.id }) : undefined}>{sessionShort ? t("board.state.session") : t("board.state.noSession")}</span>
         </span>
+        <button className={`ib lg${doc.tour?.stops.length ? " has-tour" : ""}`} aria-label={t("board.present.start")}
+          data-tip={t("board.present.start")} data-kbd="P" onClick={startPresenting}>
+          <Icon name="present" size={15} />
+        </button>
         <button className={`ib lg${chatOpen ? " on" : ""}`} aria-pressed={chatOpen} aria-label={chatOpen ? t("board.chat.close") : t("board.chat.open")}
           data-tip={chatOpen ? t("board.chat.close") : t("board.chat.open")} data-kbd="/"
           onClick={() => (chatOpen ? closeChat() : openChat(true))}>
@@ -2023,6 +2077,7 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
           <button className="tool" aria-label={t("board.zoomOut")} data-tip={t("board.zoomOut")} data-kbd="−" onClick={() => zoomBy(1 / 1.2)}><Icon name="zoomOut" size={15} /></button>
           <span className="pct" ref={pctRef}>{Math.round(view.current.z * 100)}%</span>
           <button className="tool" aria-label={t("board.zoomIn")} data-tip={t("board.zoomIn")} data-kbd="+" onClick={() => zoomBy(1.2)}><Icon name="zoomIn" size={15} /></button>
+          <button className={`tool${mapOff ? "" : " on"}`} aria-pressed={!mapOff} aria-label={t("board.map.toggle")} data-tip={t("board.map.toggle")} data-kbd="M" onClick={toggleMap}><Icon name="map" size={15} /></button>
           <button className="tool" aria-label={t("board.fit")} data-tip={t("board.fit")} data-kbd="F" onClick={() => fit()}><Icon name="fit" size={15} /></button>
         </div>
       </footer>
@@ -2109,6 +2164,7 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
           </div>
         </div>
       )}
+      {show.presenting && <PresenterHud p={show} t={t} board={doc.name} />}
       {(toast || sync.error) && <div className="hb-toast" role="status">{toast || t("board.toast.offline")}</div>}
       <input ref={fileRef} type="file" accept="image/png,image/jpeg,image/gif,image/webp,video/mp4,video/webm,video/quicktime" multiple hidden
         onChange={(e) => { const files = [...(e.target.files ?? [])]; e.target.value = ""; void addImageFiles(files, lastPoint.current ?? undefined); }} />

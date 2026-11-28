@@ -5,6 +5,7 @@
  * Radii: flush chrome 0 · cards & buttons 3 · panels 4 · floating menus 6 · checkboxes 2.
  * Motion: 120-200 ms ease-out, none under prefers-reduced-motion. */
 @import "./board-camera.css";
+@import "./board-present.css";
 
 .hb {
   --accent: var(--color-primary, var(--ui-accent, #ffe3c4));
