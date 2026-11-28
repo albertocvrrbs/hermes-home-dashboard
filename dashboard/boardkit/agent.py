@@ -74,7 +74,8 @@ _OPS_HELP = (
     "order, aligned to the 24px grid with uniform gaps; omit ids for the whole board, which leaves connected diagram "
     "nodes, framed items and loose strokes alone), {op:'insert_on_edge', edge:<line id>, ref?:'$x', item:{k,...}} (put an "
     "item in the middle of a connector: splits it into A->new->B, keeps the label on A->new, pushes B and what hangs off "
-    "it away if it is too tight; one undo step), {op:'tour', stops:[...], add?:[...], at?, remove?:[...], from?:'frames'|'boards', "
+    "it away if it is too tight; one undo step), {op:'resolve_overlaps', ids?} (cards covering each other step apart; flows and "
+    "frames stay), {op:'tour', stops:[...], add?:[...], at?, remove?:[...], from?:'frames'|'boards', "
     "clear?:true, loop?, dw?, t?} (presentation tour: stops are ids, {rect}, {view}; from:'frames' = every frame in reading order)]. Use '$refs' to point at items added in the same batch. "
     "Kinds: card{title,text,tags,due} · todo{title,items:[{t,done}]} · col{title} (add cards with in:'<col>') · "
     "box{num,title,sub} (diagram node, ~196x62) · shape{sh:'rect'|'diamond'|'pill'|'circle',title} (flowchart symbol: process, "
@@ -93,7 +94,7 @@ _OPS_HELP = (
     "comp{comp:'<library name>', title, w, h, cdata:{...}, ver?, actions:[ids]} (runs a component YOU wrote with the "
     "board_component tool; update its data with {op:'comp', id, data:{k:v}|push:{k:n}}) · {op:'sync', ids:[video/comp "
     "cards], group?} links cards to one shared playhead (video = master), {op:'unsync', ids?|group?}. "
-    "Coordinates are world px; leave ~60px gaps; columns are 276 wide. " + EMBED_RULES
+    "Coordinates are world px; leave ~60px gaps; columns are 276 wide; an add whose spot is taken goes to the nearest free one. " + EMBED_RULES
 )
 
 SCHEMAS: Dict[str, Dict[str, Any]] = {

@@ -18,6 +18,8 @@ from __future__ import annotations
 import math
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
+from . import place as place_mod
+
 GRID = 24
 TOP_PAD = 72          # frame label + breathing room (multiple of the grid)
 SIDE_PAD = 24
@@ -349,17 +351,11 @@ def expand_place(batch: Any, op: Dict[str, Any]) -> List[Dict[str, Any]]:
         if isinstance(size, (list, tuple)) and len(size) == 2:
             sizes.append((int(size[0]), int(size[1])))
         else:
-            k = item["k"]
-            dw, dh = DEFAULT_SIZE.get(k, (200, 100))
-            if k == "shape":
-                dw, dh = SHAPE_SIZE.get(item.get("sh") if item.get("sh") in SHAPE_SIZE else "rect")
-            w, h = int(item.get("w") or dw), int(item.get("h") or dh)
-            if not item.get("h") and k in ("image", "video") and item.get("iw") and item.get("ih"):
-                h = _media_h(k, w, item["iw"], item["ih"])
-            elif not item.get("h") and k == "card":
-                h = _card_h(item, w)
-            sizes.append((w, h))
-        add: Dict[str, Any] = {"op": "add", "item": {k: v for k, v in item.items() if k not in ("x", "y")}}
+            # the shared estimate (place.py): media take their own shape, text its own height
+            est = place_mod.estimate_size(item)
+            sizes.append((int(est["w"]), int(est["h"])))
+        # the block is laid out here and placed clear of everything as a whole: no per-item nudging
+        add: Dict[str, Any] = {"op": "add", "item": {k: v for k, v in item.items() if k not in ("x", "y")}, "exact": True}
         if e.get("ref") is not None:
             add["ref"] = e["ref"]
         adds.append(add)
@@ -418,6 +414,13 @@ def expand_place(batch: Any, op: Dict[str, Any]) -> List[Dict[str, Any]]:
             cols = auto_cols(sizes, gap, aspect=1.6, maxcols=8)
         offs, W, H = pack(sizes, cols, gap)
         x0, y0 = _at(op["at"]) if op.get("at") is not None else _content_origin(batch)
+        # the whole block steps clear of what is already there (nearest free spot, on the grid)
+        spot = place_mod.free_place({"x": x0, "y": y0}, {"w": W, "h": H}, batch.obstacles(), gap=GRID)
+        if (spot["x"], spot["y"]) != (x0, y0):
+            x0, y0 = up(spot["x"]), up(spot["y"])
+            if any(place_mod.collides({"x": x0, "y": y0, "w": W, "h": H}, o, 0) for o in batch.obstacles()):
+                spot = place_mod.free_place({"x": x0, "y": y0}, {"w": W, "h": H}, batch.obstacles(), gap=2 * GRID)
+                x0, y0 = up(spot["x"]), up(spot["y"])
     for a, (dx, dy) in zip(adds, offs):
         a["item"]["x"], a["item"]["y"] = x0 + dx, y0 + dy
     return extra + adds

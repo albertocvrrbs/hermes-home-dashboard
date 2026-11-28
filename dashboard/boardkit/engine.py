@@ -10,12 +10,13 @@ import copy
 import math
 import re
 import time
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple
 
 from . import bulk
 from . import ids
 from . import layout
 from . import live as live_mod
+from . import place as place_mod
 from . import components as comp_mod
 from . import tour as tour_mod
 
@@ -292,6 +293,7 @@ class _Batch:
         self.now = int(now if now is not None else time.time())
         self.refs: Dict[str, str] = {}
         self._place: Optional[List[int]] = None
+        self._obs: Optional[Dict[str, Dict[str, float]]] = None  # placement obstacles, rebuilt after any change
         self.gone: set = set()  # ids deleted earlier in this batch (directly or by cascade)
 
     # ids
@@ -322,19 +324,124 @@ class _Batch:
         self.doc["n"] += 1
         return iid
 
-    # auto placement: right of existing content, stacked down
-    def place(self, kind: str) -> Tuple[int, int]:
+    # ── placement: nothing new lands on anything ──────────────────────────
+    # Without x/y an item goes right of the existing content (stacking down); with x/y it stays
+    # put unless it would cover something, then it takes the nearest free spot. Frames, lines,
+    # ink, text and diagram pieces are placed exactly where asked (they are layout, not content).
+    MOVABLE = ("card", "todo", "col", "link", "image", "embed", "video", "board", "live", "comp")
+    AUTO_H = ("image", "video", "link")  # their height is the content's, a stored h is ignored
+
+    def solid_rect(self, iid: str) -> Optional[Dict[str, float]]:
+        """The rect an item really covers on screen (rect_of, with media/text heights estimated)."""
+        r = self.rect_of(iid)
+        it = self.items.get(iid)
+        if r is None or it is None:
+            return None
+        k = it["k"]
+        if k in self.AUTO_H or (k == "card" and not it.get("h")):
+            r = dict(r)
+            r["h"] = place_mod.estimate_size(it)["h"]
+        return r
+
+    def obstacles(self, skip: Iterable[str] = ()) -> List[Dict[str, float]]:
+        if self._obs is None:
+            self._obs = {}
+            for iid, it in self.items.items():
+                if it.get("k") in ("line", "draw", "frame") or it.get("in"):
+                    continue
+                r = self.solid_rect(iid)
+                if r:
+                    self._obs[iid] = r
+        drop = set(skip)
+        return [r for iid, r in self._obs.items() if iid not in drop]
+
+    def frame_around(self, x: float, y: float) -> Optional[Dict[str, float]]:
+        best = None
+        for iid, it in self.items.items():
+            if it.get("k") == "frame":
+                r = self.rect_of(iid)
+                if r and r["x"] <= x <= r["x"] + r["w"] and r["y"] <= y <= r["y"] + r["h"]:
+                    if best is None or r["w"] * r["h"] < best["w"] * best["h"]:
+                        best = r
+        return best
+
+    def place_item(self, item: Dict[str, Any], exact: bool = False) -> Tuple[int, int]:
+        """Where a new top-level item goes (see above)."""
+        kind = item["k"]
+        size = place_mod.estimate_size(item)
+        if "x" in item and "y" in item:
+            if exact or kind not in self.MOVABLE:
+                return item["x"], item["y"]
+            want = {"x": item["x"], "y": item["y"]}
+            p = place_mod.free_place(want, size, self.obstacles(), within=self.frame_around(want["x"], want["y"]))
+            return p["x"], p["y"]
         if self._place is None:
             xs, ys = [], []
-            for it in self.items.values():
-                if "x" in it and "y" in it:
-                    w = it.get("w") or DEFAULT_SIZE.get(it["k"], (200, 100))[0]
-                    xs.append(it["x"] + w)
-                    ys.append(it["y"])
+            for iid, it in self.items.items():
+                r = self.solid_rect(iid) if not it.get("in") else None
+                if r:
+                    xs.append(r["x"] + r["w"])
+                    ys.append(r["y"])
             self._place = [max(xs) + 80 if xs else 0, min(ys) if ys else 0]
-        x, y = self._place
-        self._place[1] += DEFAULT_SIZE.get(kind, (200, 100))[1] + 24
-        return x, y
+        if kind not in self.MOVABLE:
+            x, y = self._place
+            self._place[1] += size["h"] + place_mod.PLACE_GAP
+            return x, y
+        p = place_mod.free_place({"x": self._place[0], "y": self._place[1]}, size, self.obstacles())
+        self._place = [p["x"], p["y"] + size["h"] + place_mod.PLACE_GAP]
+        return p["x"], p["y"]
+
+    def wired_ids(self) -> set:
+        out = set()
+        for v in self.items.values():
+            if v["k"] == "line":
+                for end in (v.get("a"), v.get("b")):
+                    if isinstance(end, str) and end in self.items:
+                        out.add(self.top_of(end))
+        return out
+
+    def expand_resolve(self, op: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """``{op:'resolve_overlaps', ids?}``: cards that cover each other step apart (nearest free
+        spot, kept inside their frame when there is room). Wired flows, frames, text and diagram
+        pieces stay put; a board without overlaps comes back unchanged. One undo step."""
+        chosen = None
+        if op.get("ids") is not None:
+            if not isinstance(op["ids"], list) or not op["ids"]:
+                raise OpError("ids must be a non-empty list")
+            chosen = {self.top_of(self.resolve(i)) for i in op["ids"]}
+        wired = self.wired_ids()
+        frames = [r for r in (self.rect_of(i) for i, v in self.items.items() if v["k"] == "frame") if r]
+        entries = []
+        for iid, it in self.items.items():
+            if it["k"] in ("line", "draw", "frame") or it.get("in"):
+                continue
+            r = self.solid_rect(iid)
+            if not r:
+                continue
+            anchored = iid in wired or it["k"] not in self.MOVABLE or (chosen is not None and iid not in chosen)
+            e: Dict[str, Any] = {"id": iid, "rect": r, "anchored": anchored}
+            cx, cy = r["x"] + r["w"] / 2, r["y"] + r["h"] / 2
+            inside = [f for f in frames if f["x"] <= cx <= f["x"] + f["w"] and f["y"] <= cy <= f["y"] + f["h"]]
+            if inside:
+                e["within"] = min(inside, key=lambda f: f["w"] * f["h"])
+            entries.append(e)
+        return [{"op": "set", "id": m["id"], "p": {"x": m["x"], "y": m["y"]}} for m in place_mod.resolve_plan(entries)]
+
+    def clear_around(self, changed: Dict[str, Dict[str, float]], keep: Iterable[str] = ()) -> List[Dict[str, Any]]:
+        """``changed`` items (id -> rect they will have) now sit where they are; loose cards they
+        cover step to the nearest free spot. Wired items, frames and ``keep`` never move."""
+        wired = set(keep) | set(changed) | self.wired_ids()
+        rects = {iid: r for iid, r in ((i, self.solid_rect(i)) for i, it in self.items.items()
+                                        if it["k"] not in ("line", "draw", "frame") and not it.get("in")) if r}
+        rects.update(changed)
+        hit = {iid for iid, r in rects.items()
+               if iid not in wired and self.items.get(iid, {}).get("k") in self.MOVABLE
+               and any(place_mod.overlaps(r, c, 1) for c in changed.values())}
+        if not hit:
+            return []
+        entries = [{"id": iid, "rect": r, "anchored": iid not in hit} for iid, r in rects.items()]
+        return [{"op": "set", "id": m["id"], "p": {"x": m["x"], "y": m["y"]}}
+                for m in place_mod.resolve_plan(entries)]
 
     # fields
     def clean_fields(self, kind: str, raw: Dict[str, Any]) -> Dict[str, Any]:
@@ -415,11 +522,13 @@ class _Batch:
             fwd = {"op": "put", "id": iid, "item": copy.deepcopy(item),
                    "at": self.items[cid]["kids"].index(iid)}
         else:
-            if kind != "line" and ("x" not in item or "y" not in item):
-                x, y = self.place(kind)
-                item.setdefault("x", x)
-                item.setdefault("y", y)
+            if kind != "line":
+                item["x"], item["y"] = self.place_item(item, exact=op.get("exact") is True)
             self.items[iid] = item
+            if self._obs is not None and kind not in ("line", "draw", "frame"):
+                r = self.solid_rect(iid)
+                if r:
+                    self._obs[iid] = r
             fwd = {"op": "put", "id": iid, "item": copy.deepcopy(item)}
         return [{"op": "del", "id": iid}], fwd
 
@@ -775,7 +884,7 @@ class _Batch:
         item = {k: v for k, v in raw.items() if k != "in"}
         item["x"], item["y"] = plan["x"], plan["y"]
         out: List[Dict[str, Any]] = [
-            {"op": "add", "ref": ref, "item": item},
+            {"op": "add", "ref": ref, "item": item, "exact": True},
             {"op": "set", "id": edge, "p": {"b": ref}},
             {"op": "add", "item": {"k": "line", "a": ref, "b": copy.deepcopy(b_end)}},
         ]
@@ -790,12 +899,22 @@ class _Batch:
                 it = self.items[iid]
                 if it["k"] != "line" and "x" in it and "y" in it:
                     out.append({"op": "set", "id": iid, "p": {"x": int(it["x"]) + dx, "y": int(it["y"]) + dy}})
+        # loose cards the new step (or the shifted flow) now covers make room; the flow stays put
+        changed: Dict[str, Dict[str, float]] = {}
+        est = place_mod.estimate_size({**item, "w": size["w"]} if not item.get("w") else item)
+        changed["$new"] = {"x": plan["x"], "y": plan["y"], "w": est["w"], "h": max(est["h"], size["h"])}
+        for o in out:
+            if o["op"] == "set" and "x" in o["p"]:
+                r = self.solid_rect(o["id"])
+                if r:
+                    changed[o["id"]] = {**r, "x": o["p"]["x"], "y": o["p"]["y"]}
+        out.extend(self.clear_around(changed))
         return out
 
 
 _OPS = {"add": _Batch.add, "put": _Batch.put, "set": _Batch.set, "del": _Batch.delete, "board": _Batch.board,
         "live": _Batch.live, "comp": _Batch.comp, "tour": _Batch.tour}
-_MACROS = {"tidy": _Batch.expand_tidy, "insert_on_edge": _Batch.expand_insert,
+_MACROS = {"tidy": _Batch.expand_tidy, "insert_on_edge": _Batch.expand_insert, "resolve_overlaps": _Batch.expand_resolve,
            "sync": _Batch.expand_sync, "unsync": _Batch.expand_sync,
            "place": lambda b, op: bulk.expand_place(b, op), "set_where": lambda b, op: bulk.expand_set_where(b, op),
            "zones": lambda b, op: bulk.expand_zones(b, op), "arrange": lambda b, op: bulk.expand_arrange(b, op)}
@@ -826,10 +945,12 @@ def apply_batch_ex(doc: Dict[str, Any], ops: Any, by: str = "u", now: Optional[f
     forward: List[Dict[str, Any]] = []
     for i, op in enumerate(ops):
         if not isinstance(op, dict) or op.get("op") not in _OPS and op.get("op") not in _MACROS:
-            raise OpError(f"op {i}: unknown op (use add, set, del, board, live, comp, tour, tidy, insert_on_edge, place, set_where, zones, arrange, import, sync, unsync)")
+            raise OpError(f"op {i}: unknown op (use add, set, del, board, live, comp, tour, tidy, insert_on_edge, resolve_overlaps, place, set_where, zones, arrange, import, sync, unsync)")
         try:
             prims = _MACROS[op["op"]](batch, op) if op["op"] in _MACROS else [op]
             for prim in prims:
+                if prim["op"] != "add":
+                    batch._obs = None  # something moved, grew or went away
                 inv, fwd = _OPS[prim["op"]](batch, prim)
                 parts.append(inv)
                 if fwd is not None:
