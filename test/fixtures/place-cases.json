@@ -1,0 +1,1103 @@
+{
+ "estimate": [
+  {
+   "name": "image 16:9 with caption",
+   "item": {
+    "k": "image",
+    "w": 372,
+    "iw": 1600,
+    "ih": 900,
+    "cap": "Piezas"
+   },
+   "expect": {
+    "w": 372,
+    "h": 246
+   }
+  },
+  {
+   "name": "image without caption",
+   "item": {
+    "k": "image",
+    "w": 372,
+    "iw": 1600,
+    "ih": 900
+   },
+   "expect": {
+    "w": 372,
+    "h": 230
+   }
+  },
+  {
+   "name": "image tall, long caption",
+   "item": {
+    "k": "image",
+    "w": 372,
+    "iw": 600,
+    "ih": 1000,
+    "cap": "Un pie de foto bastante largo que debería ocupar dos renglones en la tarjeta de imagen"
+   },
+   "expect": {
+    "w": 372,
+    "h": 657
+   }
+  },
+  {
+   "name": "image panorama",
+   "item": {
+    "k": "image",
+    "w": 372,
+    "iw": 2400,
+    "ih": 500,
+    "cap": "pano"
+   },
+   "expect": {
+    "w": 372,
+    "h": 119
+   }
+  },
+  {
+   "name": "image of unknown size",
+   "item": {
+    "k": "image",
+    "w": 300
+   },
+   "expect": {
+    "w": 300,
+    "h": 244
+   }
+  },
+  {
+   "name": "image default width",
+   "item": {
+    "k": "image",
+    "iw": 800,
+    "ih": 800
+   },
+   "expect": {
+    "w": 372,
+    "h": 387
+   }
+  },
+  {
+   "name": "uploaded video 16:9",
+   "item": {
+    "k": "video",
+    "w": 400,
+    "iw": 640,
+    "ih": 360,
+    "title": "clip"
+   },
+   "expect": {
+    "w": 400,
+    "h": 287
+   }
+  },
+  {
+   "name": "uploaded video portrait",
+   "item": {
+    "k": "video",
+    "w": 400,
+    "iw": 360,
+    "ih": 640,
+    "title": "clip"
+   },
+   "expect": {
+    "w": 400,
+    "h": 771
+   }
+  },
+  {
+   "name": "uploaded video absurdly wide is clamped",
+   "item": {
+    "k": "video",
+    "w": 400,
+    "iw": 5000,
+    "ih": 100,
+    "title": "clip"
+   },
+   "expect": {
+    "w": 400,
+    "h": 229
+   }
+  },
+  {
+   "name": "youtube link as video",
+   "item": {
+    "k": "video",
+    "w": 400,
+    "video": {
+     "p": "youtube",
+     "id": "abcdefghijk"
+    },
+    "title": "Título",
+    "desc": "autor"
+   },
+   "expect": {
+    "w": 400,
+    "h": 309
+   }
+  },
+  {
+   "name": "link with square thumbnail",
+   "item": {
+    "k": "link",
+    "title": "Título corto",
+    "desc": "Descripción de tres renglones. Descripción de tres renglones. Descripción de tres renglones. Descripción de tres renglones. ",
+    "url": "https://example.com/a",
+    "img": "x.png",
+    "iw": 800,
+    "ih": 800,
+    "st": "ok"
+   },
+   "expect": {
+    "w": 276,
+    "h": 321
+   }
+  },
+  {
+   "name": "link without picture",
+   "item": {
+    "k": "link",
+    "title": "Un título de enlace mucho más largo que ocupa varias líneas en la tarjeta",
+    "url": "https://example.com/b",
+    "st": "ok"
+   },
+   "expect": {
+    "w": 276,
+    "h": 100
+   }
+  },
+  {
+   "name": "link waiting for its preview",
+   "item": {
+    "k": "link",
+    "url": "https://example.com/c",
+    "st": "wait"
+   },
+   "expect": {
+    "w": 276,
+    "h": 243
+   }
+  },
+  {
+   "name": "link that failed",
+   "item": {
+    "k": "link",
+    "url": "https://example.com/d",
+    "st": "fail",
+    "site": "example.com"
+   },
+   "expect": {
+    "w": 276,
+    "h": 82
+   }
+  },
+  {
+   "name": "link with panorama thumbnail",
+   "item": {
+    "k": "link",
+    "title": "Panorama",
+    "img": "p.png",
+    "iw": 2400,
+    "ih": 500,
+    "url": "https://example.com/e",
+    "st": "ok"
+   },
+   "expect": {
+    "w": 276,
+    "h": 159
+   }
+  },
+  {
+   "name": "card, title only",
+   "item": {
+    "k": "card",
+    "w": 256,
+    "title": "Solo título"
+   },
+   "expect": {
+    "w": 256,
+    "h": 47
+   }
+  },
+  {
+   "name": "card, short quote",
+   "item": {
+    "k": "card",
+    "w": 256,
+    "text": "Solo texto corto"
+   },
+   "expect": {
+    "w": 256,
+    "h": 51
+   }
+  },
+  {
+   "name": "card, title and long text",
+   "item": {
+    "k": "card",
+    "w": 256,
+    "title": "Título",
+    "text": "Texto largo. Texto largo. Texto largo. Texto largo. Texto largo. Texto largo. Texto largo. Texto largo. Texto largo. Texto largo. Texto largo. Texto largo. Texto largo. Texto largo. Texto largo. Texto largo. Texto largo. Texto largo. Texto largo. Texto largo. Texto largo. Texto largo. Texto largo. Texto largo. Texto largo. Texto largo. Texto largo. Texto largo. Texto largo. Texto largo. Texto largo. Texto largo. Texto largo. Texto largo. Texto largo. Texto largo. Texto largo. Texto largo. Texto largo. Texto largo. Texto largo. Texto largo. Texto largo. Texto largo. Texto largo. Texto largo. Texto largo. Texto largo. Texto largo. Texto largo. Texto largo. Texto largo. Texto largo. Texto largo. Texto largo. Texto largo. Texto largo. Texto largo. Texto largo. Texto largo. "
+   },
+   "expect": {
+    "w": 256,
+    "h": 467
+   }
+  },
+  {
+   "name": "card, text tags due",
+   "item": {
+    "k": "card",
+    "w": 256,
+    "title": "Con tags",
+    "text": "uno\ndos\ntres",
+    "tags": [
+     "a",
+     "b"
+    ],
+    "due": "2026-12-01"
+   },
+   "expect": {
+    "w": 256,
+    "h": 129
+   }
+  },
+  {
+   "name": "todo with 3 rows",
+   "item": {
+    "k": "todo",
+    "items": [
+     {
+      "t": "a"
+     },
+     {
+      "t": "b"
+     },
+     {
+      "t": "c"
+     }
+    ]
+   },
+   "expect": {
+    "w": 304,
+    "h": 188
+   }
+  },
+  {
+   "name": "unknown kind falls back to the default",
+   "item": {
+    "k": "embed"
+   },
+   "expect": {
+    "w": 452,
+    "h": 320
+   }
+  }
+ ],
+ "free": [
+  {
+   "name": "free spot is kept",
+   "want": {
+    "x": 100,
+    "y": 100
+   },
+   "size": {
+    "w": 200,
+    "h": 100
+   },
+   "obstacles": [
+    {
+     "x": 0,
+     "y": 400,
+     "w": 300,
+     "h": 100
+    }
+   ],
+   "expect": {
+    "x": 100,
+    "y": 100
+   }
+  },
+  {
+   "name": "on top of a card: goes to its nearest free side",
+   "want": {
+    "x": 110,
+    "y": 100
+   },
+   "size": {
+    "w": 200,
+    "h": 100
+   },
+   "obstacles": [
+    {
+     "x": 100,
+     "y": 100,
+     "w": 256,
+     "h": 120
+    }
+   ],
+   "expect": {
+    "x": 110,
+    "y": 244
+   }
+  },
+  {
+   "name": "touching is not enough: the gap is kept",
+   "want": {
+    "x": 356,
+    "y": 100
+   },
+   "size": {
+    "w": 200,
+    "h": 100
+   },
+   "obstacles": [
+    {
+     "x": 100,
+     "y": 100,
+     "w": 256,
+     "h": 120
+    }
+   ],
+   "expect": {
+    "x": 380,
+    "y": 100
+   }
+  },
+  {
+   "name": "wedged between two cards",
+   "want": {
+    "x": 300,
+    "y": 100
+   },
+   "size": {
+    "w": 200,
+    "h": 100
+   },
+   "obstacles": [
+    {
+     "x": 0,
+     "y": 100,
+     "w": 300,
+     "h": 100
+    },
+    {
+     "x": 520,
+     "y": 100,
+     "w": 300,
+     "h": 100
+    }
+   ],
+   "expect": {
+    "x": 300,
+    "y": 224
+   }
+  },
+  {
+   "name": "surrounded: finds the ring outside",
+   "want": {
+    "x": 300,
+    "y": 300
+   },
+   "size": {
+    "w": 100,
+    "h": 100
+   },
+   "obstacles": [
+    {
+     "x": 250,
+     "y": 250,
+     "w": 200,
+     "h": 200
+    },
+    {
+     "x": 100,
+     "y": 100,
+     "w": 100,
+     "h": 100
+    },
+    {
+     "x": 500,
+     "y": 500,
+     "w": 100,
+     "h": 100
+    }
+   ],
+   "expect": {
+    "x": 474,
+    "y": 300
+   }
+  },
+  {
+   "name": "tight gap of 8",
+   "want": {
+    "x": 100,
+    "y": 100
+   },
+   "size": {
+    "w": 100,
+    "h": 100
+   },
+   "obstacles": [
+    {
+     "x": 150,
+     "y": 100,
+     "w": 100,
+     "h": 100
+    }
+   ],
+   "gap": 8,
+   "expect": {
+    "x": 100,
+    "y": 208
+   }
+  },
+  {
+   "name": "stays inside its frame when there is room",
+   "want": {
+    "x": 100,
+    "y": 100
+   },
+   "size": {
+    "w": 100,
+    "h": 60
+   },
+   "obstacles": [
+    {
+     "x": 80,
+     "y": 80,
+     "w": 140,
+     "h": 100
+    }
+   ],
+   "within": {
+    "x": 0,
+    "y": 0,
+    "w": 400,
+    "h": 400
+   },
+   "expect": {
+    "x": 100,
+    "y": 204
+   }
+  },
+  {
+   "name": "leaves the frame when it is full",
+   "want": {
+    "x": 10,
+    "y": 10
+   },
+   "size": {
+    "w": 100,
+    "h": 60
+   },
+   "obstacles": [
+    {
+     "x": 0,
+     "y": 0,
+     "w": 200,
+     "h": 200
+    }
+   ],
+   "within": {
+    "x": 0,
+    "y": 0,
+    "w": 200,
+    "h": 200
+   },
+   "expect": {
+    "x": 224,
+    "y": 10
+   }
+  },
+  {
+   "name": "negative coordinates",
+   "want": {
+    "x": -500,
+    "y": -300
+   },
+   "size": {
+    "w": 120,
+    "h": 80
+   },
+   "obstacles": [
+    {
+     "x": -520,
+     "y": -320,
+     "w": 200,
+     "h": 200
+    }
+   ],
+   "expect": {
+    "x": -296,
+    "y": -300
+   }
+  },
+  {
+   "name": "fractional want is rounded",
+   "want": {
+    "x": 10.5,
+    "y": 20.5
+   },
+   "size": {
+    "w": 50,
+    "h": 50
+   },
+   "obstacles": [],
+   "expect": {
+    "x": 11,
+    "y": 21
+   }
+  }
+ ],
+ "batch": [
+  {
+   "name": "six pasted images next to notes",
+   "want": {
+    "x": 0,
+    "y": 0
+   },
+   "sizes": [
+    {
+     "w": 372,
+     "h": 230
+    },
+    {
+     "w": 372,
+     "h": 657
+    },
+    {
+     "w": 372,
+     "h": 119
+    },
+    {
+     "w": 200,
+     "h": 231
+    },
+    {
+     "w": 372,
+     "h": 230
+    },
+    {
+     "w": 400,
+     "h": 340
+    }
+   ],
+   "obstacles": [
+    {
+     "x": -400,
+     "y": -260,
+     "w": 256,
+     "h": 100
+    },
+    {
+     "x": -120,
+     "y": -260,
+     "w": 256,
+     "h": 100
+    },
+    {
+     "x": 160,
+     "y": -260,
+     "w": 256,
+     "h": 100
+    },
+    {
+     "x": -400,
+     "y": -110,
+     "w": 256,
+     "h": 100
+    },
+    {
+     "x": -400,
+     "y": 60,
+     "w": 300,
+     "h": 190
+    }
+   ],
+   "expect": [
+    {
+     "x": 0,
+     "y": 0
+    },
+    {
+     "x": 0,
+     "y": 254
+    },
+    {
+     "x": 396,
+     "y": 0
+    },
+    {
+     "x": 396,
+     "y": 143
+    },
+    {
+     "x": 396,
+     "y": 398
+    },
+    {
+     "x": 396,
+     "y": 652
+    }
+   ]
+  },
+  {
+   "name": "onto an empty board",
+   "want": {
+    "x": 0,
+    "y": 0
+   },
+   "sizes": [
+    {
+     "w": 100,
+     "h": 100
+    },
+    {
+     "w": 100,
+     "h": 100
+    },
+    {
+     "w": 100,
+     "h": 100
+    }
+   ],
+   "obstacles": [],
+   "expect": [
+    {
+     "x": 0,
+     "y": 0
+    },
+    {
+     "x": 124,
+     "y": 0
+    },
+    {
+     "x": 0,
+     "y": 124
+    }
+   ]
+  }
+ ],
+ "resolve": [
+  {
+   "name": "tidy board comes back unchanged",
+   "entries": [
+    {
+     "id": "a",
+     "rect": {
+      "x": 0,
+      "y": 0,
+      "w": 100,
+      "h": 100
+     }
+    },
+    {
+     "id": "b",
+     "rect": {
+      "x": 124,
+      "y": 0,
+      "w": 100,
+      "h": 100
+     }
+    }
+   ],
+   "expect": []
+  },
+  {
+   "name": "two overlapping cards: the later one steps aside",
+   "entries": [
+    {
+     "id": "a",
+     "rect": {
+      "x": 0,
+      "y": 0,
+      "w": 200,
+      "h": 100
+     }
+    },
+    {
+     "id": "b",
+     "rect": {
+      "x": 50,
+      "y": 50,
+      "w": 200,
+      "h": 100
+     }
+    }
+   ],
+   "expect": [
+    {
+     "id": "b",
+     "x": 50,
+     "y": 124
+    }
+   ]
+  },
+  {
+   "name": "an anchored card never moves",
+   "entries": [
+    {
+     "id": "a",
+     "rect": {
+      "x": 0,
+      "y": 0,
+      "w": 200,
+      "h": 100
+     },
+     "anchored": true
+    },
+    {
+     "id": "b",
+     "rect": {
+      "x": 50,
+      "y": 50,
+      "w": 200,
+      "h": 100
+     }
+    }
+   ],
+   "expect": [
+    {
+     "id": "b",
+     "x": 50,
+     "y": 124
+    }
+   ]
+  },
+  {
+   "name": "image over two notes",
+   "entries": [
+    {
+     "id": "n1",
+     "rect": {
+      "x": 0,
+      "y": 0,
+      "w": 256,
+      "h": 80
+     }
+    },
+    {
+     "id": "n2",
+     "rect": {
+      "x": 280,
+      "y": 0,
+      "w": 256,
+      "h": 80
+     }
+    },
+    {
+     "id": "i1",
+     "rect": {
+      "x": 100,
+      "y": 40,
+      "w": 300,
+      "h": 200
+     }
+    },
+    {
+     "id": "n3",
+     "rect": {
+      "x": 0,
+      "y": 300,
+      "w": 256,
+      "h": 80
+     }
+    }
+   ],
+   "expect": [
+    {
+     "id": "i1",
+     "x": 280,
+     "y": 104
+    }
+   ]
+  },
+  {
+   "name": "stays in its frame",
+   "entries": [
+    {
+     "id": "a",
+     "rect": {
+      "x": 20,
+      "y": 20,
+      "w": 150,
+      "h": 100
+     }
+    },
+    {
+     "id": "b",
+     "rect": {
+      "x": 60,
+      "y": 60,
+      "w": 150,
+      "h": 100
+     },
+     "within": {
+      "x": 0,
+      "y": 0,
+      "w": 500,
+      "h": 500
+     }
+    }
+   ],
+   "expect": [
+    {
+     "id": "b",
+     "x": 60,
+     "y": 144
+    }
+   ]
+  },
+  {
+   "name": "a stack of five identical cards",
+   "entries": [
+    {
+     "id": "s0",
+     "rect": {
+      "x": 0,
+      "y": 0,
+      "w": 100,
+      "h": 60
+     }
+    },
+    {
+     "id": "s1",
+     "rect": {
+      "x": 0,
+      "y": 0,
+      "w": 100,
+      "h": 60
+     }
+    },
+    {
+     "id": "s2",
+     "rect": {
+      "x": 0,
+      "y": 0,
+      "w": 100,
+      "h": 60
+     }
+    },
+    {
+     "id": "s3",
+     "rect": {
+      "x": 0,
+      "y": 0,
+      "w": 100,
+      "h": 60
+     }
+    },
+    {
+     "id": "s4",
+     "rect": {
+      "x": 0,
+      "y": 0,
+      "w": 100,
+      "h": 60
+     }
+    }
+   ],
+   "expect": [
+    {
+     "id": "s1",
+     "x": 0,
+     "y": 84
+    },
+    {
+     "id": "s2",
+     "x": 124,
+     "y": 0
+    },
+    {
+     "id": "s3",
+     "x": 124,
+     "y": 84
+    },
+    {
+     "id": "s4",
+     "x": 0,
+     "y": 168
+    }
+   ]
+  }
+ ],
+ "push": [
+  {
+   "name": "a card grew over the one below",
+   "grown": "a",
+   "entries": [
+    {
+     "id": "a",
+     "rect": {
+      "x": 0,
+      "y": 0,
+      "w": 200,
+      "h": 200
+     }
+    },
+    {
+     "id": "b",
+     "rect": {
+      "x": 0,
+      "y": 150,
+      "w": 200,
+      "h": 100
+     }
+    }
+   ],
+   "expect": {
+    "moves": [
+     {
+      "id": "b",
+      "x": 0,
+      "y": 224
+     }
+    ],
+    "blocked": []
+   }
+  },
+  {
+   "name": "the push cascades",
+   "grown": "a",
+   "entries": [
+    {
+     "id": "a",
+     "rect": {
+      "x": 0,
+      "y": 0,
+      "w": 200,
+      "h": 200
+     }
+    },
+    {
+     "id": "b",
+     "rect": {
+      "x": 0,
+      "y": 180,
+      "w": 200,
+      "h": 100
+     }
+    },
+    {
+     "id": "c",
+     "rect": {
+      "x": 0,
+      "y": 290,
+      "w": 200,
+      "h": 100
+     }
+    }
+   ],
+   "expect": {
+    "moves": [
+     {
+      "id": "b",
+      "x": 0,
+      "y": 224
+     },
+     {
+      "id": "c",
+      "x": 0,
+      "y": 348
+     }
+    ],
+    "blocked": []
+   }
+  },
+  {
+   "name": "an anchored neighbour is reported, not moved",
+   "grown": "a",
+   "entries": [
+    {
+     "id": "a",
+     "rect": {
+      "x": 0,
+      "y": 0,
+      "w": 200,
+      "h": 200
+     }
+    },
+    {
+     "id": "b",
+     "rect": {
+      "x": 0,
+      "y": 150,
+      "w": 200,
+      "h": 100
+     },
+     "anchored": true
+    }
+   ],
+   "expect": {
+    "moves": [],
+    "blocked": [
+     "b"
+    ]
+   }
+  },
+  {
+   "name": "a card beside is pushed sideways when that is cheaper",
+   "grown": "a",
+   "entries": [
+    {
+     "id": "a",
+     "rect": {
+      "x": 0,
+      "y": 0,
+      "w": 200,
+      "h": 100
+     }
+    },
+    {
+     "id": "b",
+     "rect": {
+      "x": 190,
+      "y": 0,
+      "w": 100,
+      "h": 100
+     }
+    }
+   ],
+   "expect": {
+    "moves": [
+     {
+      "id": "b",
+      "x": 224,
+      "y": 0
+     }
+    ],
+    "blocked": []
+   }
+  },
+  {
+   "name": "nothing to push",
+   "grown": "a",
+   "entries": [
+    {
+     "id": "a",
+     "rect": {
+      "x": 0,
+      "y": 0,
+      "w": 100,
+      "h": 100
+     }
+    },
+    {
+     "id": "b",
+     "rect": {
+      "x": 300,
+      "y": 0,
+      "w": 100,
+      "h": 100
+     }
+    }
+   ],
+   "expect": {
+    "moves": [],
+    "blocked": []
+   }
+  }
+ ]
+}
