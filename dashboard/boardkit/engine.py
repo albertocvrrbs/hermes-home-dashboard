@@ -37,7 +37,7 @@ FIELDS: Dict[str, Tuple[str, ...]] = {
     "col": ("x", "y", "w", "h", "title", "kids"),
     "link": _COMMON + ("url", "title", "desc", "site", "icon", "img", "st", "video"),
     "image": _COMMON + ("asset", "cap", "iw", "ih", "url"),
-    "embed": _COMMON + ("asset", "title"),
+    "embed": _COMMON + ("asset", "title", "theme"),
     "video": _COMMON + ("src", "title", "asset", "img", "dur", "iw", "ih"),
     "board": _COMMON + ("ref", "title"),
     "frame": ("x", "y", "w", "h", "title", "note"),
@@ -238,7 +238,7 @@ SANITIZE: Dict[str, Callable[[Any], Any]] = {
     "st": _enum("wait", "ok", "fail"), "size": _enum("h", "p", "s"),
     "asset": _asset, "icon": _asset, "img": _asset, "ref": _bid,
     "tags": _tags, "items": _todo_items, "d": _stroke, "video": _video, "sw": _sw,
-    "tl": _enum(*INK_TOOLS), "c": _enum(*INK_COLORS), "ds": _flag, "sm": _flag, "pr": _pressure, "g": _group,
+    "tl": _enum(*INK_TOOLS), "c": _enum(*INK_COLORS), "ds": _flag, "sm": _flag, "theme": _flag, "pr": _pressure, "g": _group,
     "dur": _dur, "blocks": _live(live_mod.clean_blocks), "data": _live(live_mod.clean_data),
     "ttl": _int(5, 7 * 86400), "at": _int(0, 2**42), "tpl": _enum(*live_mod.TEMPLATES),
 }

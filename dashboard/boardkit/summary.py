@@ -67,7 +67,7 @@ def item_line(iid: str, it: Dict[str, Any], text_len: int = 80) -> str:
     elif k == "image":
         parts.append(f"image{' ' + _clip(it.get('cap'), 50) if it.get('cap') else ''}")
     elif k == "embed":
-        parts.append("html")
+        parts.append("html themed" if it.get("theme") else "html")
     elif k == "video" and it.get("src"):
         parts.append(f"<{_clip(it['src'], 90)}>")
     elif k == "board":

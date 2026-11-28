@@ -6,13 +6,28 @@ import json
 import re
 from typing import Any, Dict, Optional
 
-from . import engine, summary
+from . import embedlint, engine, summary
 from .render import render_png
 from .service import BoardService
 from .store import NotFound
 
 MARKER = re.compile(r"\[board:([a-z0-9]{8})\]")
 HOOK_LIMIT = 1500
+EMBED_HOOK = (
+    "HTML embeds you write (charts, widgets): set theme:true and build fluid - use the injected vars "
+    "(--foreground --muted-foreground --accent --border --card --chart-1..5, --font-sans/--font-mono), transparent "
+    "background, %/flex/grid/viewBox instead of fixed px widths, redraw on window 'resize', no external fonts or libs.")
+
+EMBED_RULES = (
+    "Embed rules (HTML you write: charts, dashboards, widgets - set theme:true; leave theme off only to show the "
+    "user's own pasted page untouched): the board injects CSS vars --foreground --muted-foreground --accent --border "
+    "--card --background --chart-1..5, --font-sans/--font-mono, a transparent background, zero margins and "
+    "color-scheme, and keeps window.hermes.{size,theme,onResize,onTheme} current. Build fluid: no fixed px widths "
+    "on html/body, sizes in %/flex/grid/container queries, svg with viewBox, no body background, no external fonts "
+    "or libs (no network: inline what you need), text var(--foreground)/var(--muted-foreground), gridlines "
+    "var(--border), series colours var(--chart-N) (Chart.js/ECharts defaults are set for you), and redraw on "
+    "'resize' (the card fires it with the real size). Warnings come back in the result; fix them."
+)
 
 _OPS_HELP = (
     "ops: [{op:'add', ref:'$a', item:{k, x, y, w?, h?, ...}}, {op:'set', id, p:{...}} (null removes a field), "
@@ -20,7 +35,7 @@ _OPS_HELP = (
     "Kinds: card{title,text,tags,due} · todo{title,items:[{t,done}]} · col{title} (add cards with in:'<col>') · "
     "box{num,title,sub} (diagram node, ~196x62) · line{a,b,label} (connector; a/b = ids or [x,y]) · "
     "frame{title,note,w,h} (titled region) · text{text,size:'h'|'p'} · link{url} (preview fetched for you; video "
-    "and image URLs become players/images) · embed{title,html} (sandboxed HTML, scripts only, no network) · "
+    "and image URLs become players/images) · embed{title,html,theme} (sandboxed HTML, scripts only, no network; ALWAYS send theme:true on HTML you write, see 'Embed rules') · "
     "draw{d:'x,y x,y …' ints relative to x,y, sw, tl?:'line'|'arrow'|'rect'|'ellipse'|'hl' (shapes: d = two points; "
     "hl = translucent highlighter), c?:'accent'|'sage'|'clay'|'slate'|'sand', ds?:true dashed, g?:group id} · "
     "board{ref} · live{title, tpl:'training'|'job'|'stat' or blocks:[...], data:{...}, ttl, actions:[{action, label?, "
@@ -30,7 +45,7 @@ _OPS_HELP = (
     "usd|dur; status running|paused|done|error|idle). Update a live card later with {op:'live', id, data:{k:v} "
     "(null deletes), push:{series:[n]}, keep?} - cheap, no layout. Buttons can only name action ids the owner "
     "registered (board_read actions:true lists them); never put commands in a card. "
-    "Coordinates are world px; leave ~60px gaps; columns are 276 wide."
+    "Coordinates are world px; leave ~60px gaps; columns are 276 wide. " + EMBED_RULES
 )
 
 SCHEMAS: Dict[str, Dict[str, Any]] = {
@@ -129,6 +144,28 @@ class BoardAgent:
             out["problems"] = reg["problems"][:5]
         return out
 
+    @staticmethod
+    def _embed_warnings(doc: Dict[str, Any], ops: Any) -> list:
+        """Advice on HTML embeds the agent is writing (never blocks the batch). Only themed embeds are
+        linted; one written without theme:true gets a single nudge."""
+        out: list = []
+        if not isinstance(ops, list):
+            return out
+        for i, op in enumerate(ops):
+            if not isinstance(op, dict) or op.get("op") not in ("add", "set"):
+                continue
+            body = op.get("item") if op["op"] == "add" else op.get("p")
+            if not isinstance(body, dict) or not isinstance(body.get("html"), str):
+                continue
+            prior = (doc.get("items") or {}).get(op.get("id"), {}) if op["op"] == "set" else {}
+            themed = body["theme"] is True if "theme" in body else bool(prior.get("theme"))
+            if not themed:
+                out.append(f"op {i}: html embed without theme:true. Set theme:true on HTML you write so it gets the "
+                           "board theme and responsive sizing.")
+                continue
+            out.extend(f"op {i}: {w}" for w in embedlint.lint_embed(body["html"]))
+        return out[:12]
+
     # ── tools ────────────────────────────────────────────────────────────
     def board_read(self, args: Dict[str, Any], session_id: Optional[str] = None, **_: Any) -> str:
         try:
@@ -170,6 +207,7 @@ class BoardAgent:
             if doc is None:
                 return self._missing(args)
             note = args.get("note") if isinstance(args.get("note"), str) else None
+            embed_warnings = self._embed_warnings(doc, args.get("ops"))
             new, entry = self.svc.commit(doc["id"], args.get("ops"), by="h", note=note, previews="wait")
             if entry.get("noop"):
                 return _dump({"board": doc["id"], "seq": new["seq"], "warning": "nothing changed"})
@@ -177,6 +215,8 @@ class BoardAgent:
             n = len(entry.get("ops") or [])
             self.svc.store.set_presence(doc["id"], (note or f"{n} change{'s' if n != 1 else ''}")[:80], on=last)
             out: Dict[str, Any] = {"board": doc["id"], "seq": new["seq"], "ids": entry.get("ids", {})}
+            if embed_warnings:
+                out["warnings"] = embed_warnings
             waiting = [i for i, it in new["items"].items() if it.get("st") == "wait"]
             if waiting:
                 out["previews_pending"] = waiting
@@ -220,7 +260,7 @@ class BoardAgent:
             parts = []
             if linked_now or is_first_turn:
                 parts.append(f'This session is linked to the board "{doc["name"]}" ({bid}). Read it with board_read '
-                             "and write on it with board_apply (one batch per change set).")
+                             "and write on it with board_apply (one batch per change set). " + EMBED_HOOK)
             changes = summary.changes_since(doc, store.entries(bid), doc.get("seen", 0), limit=HOOK_LIMIT)
             if changes:
                 parts.append(f'[Board "{doc["name"]}" ({bid}): the user changed it since your last turn: {changes}. '
