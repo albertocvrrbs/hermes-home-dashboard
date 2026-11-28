@@ -3,7 +3,7 @@
 // filled in lazily for videos that predate it); when the server can't make one, the browser
 // grabs a frame itself and stores it, and if even that is blocked (a cross-origin video
 // without CORS) the stage shows the video element paused at ~1 s.
-import { useEffect, useState } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 import { assetUrl, boardsApi, grabFrame, mediaUrl, rememberPoster, videoPoster, type VideoPoster } from "./api";
 import type { ItemCtx } from "./items";
 
@@ -54,9 +54,9 @@ export function useVideoPoster(src?: string, asset?: string, posterAsset?: strin
   return { ...st, setDur: (d: number) => setSt((s) => (s.dur ? s : { ...s, dur: d })) };
 }
 
-export function VideoStage({ playId, c, src, asset, posterAsset, posterUrl, dur, title, vert }: {
+export function VideoStage({ playId, c, src, asset, posterAsset, posterUrl, dur, title, vert, style }: {
   playId: string; c: ItemCtx; src?: string; asset?: string; posterAsset?: string; posterUrl?: string;
-  dur?: number; title?: string; vert?: boolean;
+  dur?: number; title?: string; vert?: boolean; style?: CSSProperties;
 }) {
   const poster = useVideoPoster(src, asset, posterAsset, posterUrl, dur);
   const playing = c.playing === playId;
@@ -73,7 +73,7 @@ export function VideoStage({ playId, c, src, asset, posterAsset, posterUrl, dur,
   const length = clockDuration(poster.dur);
   const url = asset ? blob : src;
   return (
-    <div className={`stage${vert ? " vert" : ""}`}>
+    <div className={`stage${vert ? " vert" : ""}`} style={style}>
       {playing && url && <video src={url} controls autoPlay preload="metadata" data-nodrag="" title={title} />}
       {!(playing && url) && (poster.url
         ? <img src={poster.url} alt="" draggable={false} />

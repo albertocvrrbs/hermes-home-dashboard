@@ -164,6 +164,8 @@
 /* link card */
 .hb-link { overflow: hidden; cursor: default; }
 .hb-link .thumb { height: 128px; border-bottom: 1px solid var(--rule); background: var(--well); overflow: hidden; display: block; }
+/* a thumbnail with a known size takes its own shape (clamped), not a fixed crop */
+.hb-link .thumb[style*="aspect-ratio"] { height: auto; min-height: 96px; max-height: 200px; }
 .hb-link .thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .hb-link .body { padding: 11px 14px 13px; }
 .hb-link .dom { display: flex; align-items: center; gap: 7px; font: 400 10.5px/1 var(--mono); color: var(--ink-3); min-width: 0; }
@@ -175,6 +177,7 @@
 .hb-link p { margin: 4px 0 0; font: 400 12.5px/1.42 var(--sans); color: var(--ink-2); display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
 .hb-link .url { margin-top: 6px; font: 400 10.5px/1.35 var(--mono); color: var(--ink-3); overflow-wrap: anywhere; }
 /* skeleton: rule lines, no shimmer */
+.hb-link .body.wait { min-height: 112px; box-sizing: border-box; }
 .hb-link .skel { display: grid; gap: 7px; margin-top: 10px; }
 .hb-link .skel i { height: 6px; background: color-mix(in srgb, var(--accent) 9%, transparent); }
 .hb-link .skel i:nth-child(1) { width: 78%; } .hb-link .skel i:nth-child(2) { width: 92%; } .hb-link .skel i:nth-child(3) { width: 54%; }
@@ -188,6 +191,8 @@
 .hb-video.vert .stage { aspect-ratio: 9 / 16; }
 .hb-video .stage img { width: 100%; height: 100%; object-fit: cover; display: block; opacity: .86; transition: opacity .16s; }
 .hb-video .stage:hover img { opacity: 1; }
+/* a clip with a known size has a stage of its own shape: show all of it */
+.hb-video .stage[style*="aspect-ratio"] img, .hb-video .stage[style*="aspect-ratio"] video.still { object-fit: contain; }
 .hb-video .stage iframe, .hb-video .stage video { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; display: block; background: #000; }
 .hb-video .play { position: absolute; left: 14px; bottom: 14px; display: inline-flex; align-items: center; gap: 8px; height: 30px; padding: 0 12px 0 10px; border-radius: var(--r-ctl); background: var(--accent); color: var(--on-accent) !important; font: 600 13px/1 var(--sans) !important; }
 .hb-video .play svg { width: 10px; height: 12px; fill: currentColor; }
@@ -200,6 +205,9 @@
 .hb-image { padding: 6px 6px 0; overflow: hidden; }
 .hb-image .art { line-height: 0; background: var(--well); min-height: 60px; }
 .hb-image .art img { width: 100%; height: auto; display: block; }
+/* the frame already has the picture's shape: the picture fills it, never taller, never doubled */
+.hb-image .art.fit { min-height: 0; position: relative; overflow: hidden; }
+.hb-image .art.fit img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
 .hb-image .cap { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 6px 11px; min-height: 12px; }
 .hb-image .cap b { font: 600 13px/1.2 var(--sans); }
 

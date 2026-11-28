@@ -14,6 +14,7 @@ import { MiniBoard } from "./miniboard";
 import { classifyUrl, hostOf, playerUrl } from "./urlKind";
 import { LiveView } from "./LiveCard";
 import { VideoStage } from "./video";
+import { aspectOf, stageAspect, thumbAspect } from "./place";
 import { embedDocument, type EmbedTheme } from "./embedBridge";
 import { readTheme, useEmbedBridge } from "./useEmbedBridge";
 import type { BoardDoc, Item, Op, TodoItem } from "./model";
@@ -258,12 +259,13 @@ export function VideoView({ id, item, c }: { id: string; item: Item; c: ItemCtx 
   const asset = item.k === "video" ? item.asset : undefined;
   const player = item.video ? playerUrl(item.video) : null;
   const vert = !!item.video?.vert;
+  const stageStyle = stageAspect(item);
   const site = item.site || (item.url ? hostOf(item.url) : direct ? hostOf(direct) : asset ? c.t("board.video.uploaded") : "");
   const title = item.title || (direct ? direct.split("/").pop() : "") || c.t("board.video.untitled");
   return (
     <div className={`hb-card hb-video${vert ? " vert" : ""}${item.by === "h" ? " dm" : ""}`}>
       {player ? (
-        <div className="stage">
+        <div className="stage" style={stageStyle}>
           {playing && (
             <iframe src={player} title={title} data-nodrag=""
               sandbox="allow-scripts allow-same-origin allow-presentation"
@@ -274,7 +276,7 @@ export function VideoView({ id, item, c }: { id: string; item: Item; c: ItemCtx 
           {!playing && <button className="play" data-nodrag="" onClick={() => c.setPlaying(id)}>{PLAY}{c.t("board.video.play")}</button>}
         </div>
       ) : (
-        <VideoStage playId={id} c={c} src={direct} asset={asset} posterAsset={item.img} dur={item.dur} title={title} />
+        <VideoStage playId={id} c={c} src={direct} asset={asset} posterAsset={item.img} dur={item.dur} title={title} style={stageStyle} />
       )}
       <div className="hb-link"><div className="body">
         <div className="dom"><span>{site}</span></div>
@@ -298,8 +300,8 @@ export function LinkView({ id, item, c }: { id: string; item: Item; c: ItemCtx }
   const site = item.site || (item.url ? hostOf(item.url) : "");
   return (
     <div className={`hb-card hb-link${item.by === "h" ? " dm" : ""}`}>
-      {(thumb || waiting) && <div className={`thumb${waiting ? " skel-thumb" : ""}`}>{thumb && <Pic src={thumb} />}</div>}
-      <div className="body">
+      {(thumb || waiting || item.img) && <div className={`thumb${waiting ? " skel-thumb" : ""}`} style={thumbAspect(item)}>{thumb && <Pic src={thumb} />}</div>}
+      <div className={`body${waiting ? " wait" : ""}`}>
         <div className="dom">{icon && <img src={icon} alt="" />}<span>{item.url ? hostOf(item.url) : site}</span></div>
         {waiting ? (
           <div className="skel"><i /><i /><i /></div>
@@ -325,10 +327,12 @@ export function LinkView({ id, item, c }: { id: string; item: Item; c: ItemCtx }
 
 export function ImageView({ id, item, c }: { id: string; item: Item; c: ItemCtx }) {
   const url = useAsset(item.asset);
-  const ratio = item.iw && item.ih ? item.ih / item.iw : 0.6;
+  // The frame has the picture's own shape before the picture arrives, so the card never grows
+  // (and never lands on its neighbours) when the bytes load.
+  const ratio = aspectOf(item);
   return (
     <div className={`hb-card hb-image${item.by === "h" ? " dm" : ""}`} style={{ width: item.w ?? 372 }}>
-      <div className="art" style={!url ? { aspectRatio: `${1 / ratio}` } : undefined}>
+      <div className={`art${ratio ? " fit" : ""}`} style={ratio ? { aspectRatio: `${ratio}` } : !url ? { aspectRatio: "4 / 3" } : undefined}>
         {url && <Pic src={url} alt={item.cap ?? ""} />}
       </div>
       <div className="cap">
