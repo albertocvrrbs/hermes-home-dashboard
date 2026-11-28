@@ -2,7 +2,7 @@
 // icons named here end up in the bundles: `lucide` is side-effect free, so the rest shakes out.
 // Rendered like Desktop's sidebar: 24-unit viewBox, 2px round stroke, currentColor.
 import {
-  Activity, BookOpen, Eye, FilePen, FileText, Globe, Search, Wrench, ArrowUp, ArrowUpRight, Bell, Bot, Brain, BrushCleaning, CalendarArrowDown, ChartLine, Check,
+  Palette, Activity, BookOpen, Eye, FilePen, FileText, Globe, Search, Wrench, ArrowUp, ArrowUpRight, Bell, Bot, Brain, BrushCleaning, CalendarArrowDown, ChartLine, Check,
   ChevronLeft, ChevronRight, Circle, CircleAlert, CircleCheck, CodeXml, Columns3, Copy, Cpu, Database, Download, Eraser,
   FlaskConical, Gauge, GitBranch, Group, Hand, HardDrive, Highlighter, Image, LassoSelect, LayoutDashboard, Link, ListPlus, ListTodo,
   Maximize2, MessageSquareText, MousePointer2, MoveUpRight, PanelRightClose, Pause, Pen, Pencil, PencilLine, Play,
@@ -48,6 +48,7 @@ export const ICONS = {
   next: ChevronRight,
   reload: RotateCw,
   taller: Maximize2,
+  theme: Palette,
   // Hermes verbs
   expand: ListPlus,
   split: Split,

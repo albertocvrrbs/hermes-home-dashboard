@@ -208,6 +208,7 @@
 .hb-embed .shield:hover span, .hb-embed .shield:focus-visible span { opacity: 1; }
 .hb-embed .foot { display: flex; justify-content: space-between; align-items: center; padding: 8px 12px 9px; border-top: 1px solid var(--rule); }
 .hb .kbtn { height: 24px; width: 24px; display: inline-grid; place-items: center; border-radius: var(--r-ctl); color: var(--ink-3); transition: color .14s var(--out), background-color .14s var(--out); }
+.hb .kbtn.on { color: var(--accent); }
 .hb .kbtn:hover { background: color-mix(in srgb, var(--accent) 7%, transparent); color: var(--ink); }
 
 /* nested board */

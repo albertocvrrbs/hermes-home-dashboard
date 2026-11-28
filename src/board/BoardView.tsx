@@ -1256,6 +1256,7 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
       }
       if (canEdit) out.push({ id: "edit", label: t("board.ctx.edit"), icon: "edit", kbd: "↵", run: () => setEditing(selIds[0]) });
       if (openTarget) out.push({ id: "open", label: t("board.ctx.open"), icon: "board" in openTarget ? "openBoard" : "open", run: runOpen });
+      if (single?.k === "embed") out.push({ id: "theme", label: t(single.theme ? "board.embed.themeOff" : "board.embed.themeOn"), icon: "theme", run: () => update(selIds[0], { theme: single.theme ? null : true }) });
       if (canConnect) out.push({ id: "connect", label: t("board.ctx.connect"), icon: "connect", run: startConnect });
       if (canDuplicate) out.push({ id: "dup", label: t("board.ctx.duplicate"), icon: "duplicate", kbd: `${mod}D`, run: duplicate });
       if (canGroup) out.push({ id: "grp", label: t(isGrouped ? "board.ctx.ungroup" : "board.ctx.group"), icon: isGrouped ? "ungroup" : "group", kbd: `${mod}G`, run: toggleGroup });

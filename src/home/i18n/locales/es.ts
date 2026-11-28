@@ -331,6 +331,8 @@ const es: Messages = {
   "board.embed.sandbox": "aislado: solo scripts, sin red",
   "board.embed.reload": "Recargar",
   "board.embed.taller": "Más alto",
+  "board.embed.themeOn": "Usar tema de Hermes",
+  "board.embed.themeOff": "Aspecto original",
   "board.embed.activate": "Clic para usar",
   "board.embed.live": "html en vivo",
   "board.ref.open": "abrir",

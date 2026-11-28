@@ -1,6 +1,6 @@
 // Item renderers. Each renders the inside of one board item; positioning, selection and
 // dragging live in BoardView. Text is always React text, never HTML.
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { Translate } from "../home/i18n";
 import type { SandboxedFrameComponent } from "../sdk";
 import { assetHtml, assetUrl, boardsApi, type ActionResult } from "./api";
@@ -13,6 +13,8 @@ import { drawPreview, accentOf } from "./preview";
 import { classifyUrl, hostOf, playerUrl } from "./urlKind";
 import { LiveView } from "./LiveCard";
 import { VideoStage } from "./video";
+import { embedDocument, type EmbedTheme } from "./embedBridge";
+import { readTheme, useEmbedBridge } from "./useEmbedBridge";
 import type { BoardDoc, Item, Op, TodoItem } from "./model";
 
 export interface ItemCtx {
@@ -308,32 +310,43 @@ export function EmbedView({ id, item, c }: { id: string; item: Item; c: ItemCtx 
   const [html, setHtml] = useState<string | null>(null);
   const [nonce, setNonce] = useState(0);
   const [tall, setTall] = useState(false);
+  const [base, setBase] = useState<EmbedTheme | null>(null);
+  const box = useRef<HTMLDivElement>(null);
+  const themed = item.theme === true;
   useEffect(() => {
     let live = true;
     if (item.asset) assetHtml(item.asset).then((h) => live && setHtml(h), () => live && setHtml(""));
     return () => { live = false; };
   }, [item.asset]);
+  // The look is read once, before the frame exists, so the document never reloads for a theme
+  // change; later changes reach the page through the bridge.
+  useLayoutEffect(() => { if (themed && !base && box.current) setBase(readTheme(box.current)); }, [themed, base]);
+  const doc = useMemo(() => (html == null ? null : embedDocument(html, themed, base)), [html, themed, base]);
+  useEmbedBridge(box, doc != null, themed, `${nonce}`);
   const Frame = c.Frame;
   const active = c.playing === id;
   const height = tall ? 520 : (item.h ? Math.max(120, item.h - 80) : 240);
+  const waiting = doc == null || (themed && !base);
   return (
     <div className={`hb-card hb-embed${item.by === "h" ? " dm" : ""}`} style={{ width: item.w ?? 452 }}>
       <div className="bar-e">
         <span className="file">{item.title || c.t("board.embed.title")}</span>
         <span className="sb">{c.t("board.embed.sandbox")}</span>
         <span className="tools">
+          <button className={`kbtn${themed ? " on" : ""}`} data-nodrag="" data-tip={c.t(themed ? "board.embed.themeOff" : "board.embed.themeOn")} aria-label={c.t(themed ? "board.embed.themeOff" : "board.embed.themeOn")} aria-pressed={themed}
+            onClick={() => c.update(id, { theme: themed ? null : true })}><Icon name="theme" size={13} /></button>
           <button className="kbtn" data-nodrag="" data-tip={c.t("board.embed.reload")} aria-label={c.t("board.embed.reload")} onClick={() => setNonce((n) => n + 1)}><Icon name="reload" size={13} /></button>
           <button className="kbtn" data-nodrag="" data-tip={c.t("board.embed.taller")} aria-label={c.t("board.embed.taller")} onClick={() => setTall((v) => !v)}><Icon name="taller" size={13} /></button>
         </span>
       </div>
-      <div data-nodrag="" style={{ height, position: "relative" }}>
+      <div ref={box} data-nodrag="" style={{ height, position: "relative" }}>
         {/* Until it's clicked, a shield keeps the wheel and drags on the board (an iframe eats
             them); clicking hands it the pointer, clicking elsewhere takes it back. */}
         {!active && <button className="shield" aria-label={c.t("board.embed.activate")} onClick={() => c.setPlaying(id)}>
           <span>{c.t("board.embed.activate")}</span></button>}
-        {html == null ? <div className="frame" style={{ height }} /> : Frame
-          ? <Frame key={nonce} src={toDataUrl(html)} title={item.title || "embed"} className="frame" style={{ height }} />
-          : <iframe key={nonce} className="frame" style={{ height }} sandbox="allow-scripts" srcDoc={html}
+        {waiting ? <div className="frame" style={{ height }} /> : Frame
+          ? <Frame key={`${nonce}${themed}`} src={toDataUrl(doc)} title={item.title || "embed"} className="frame" style={{ height }} />
+          : <iframe key={`${nonce}${themed}`} className="frame" style={{ height }} sandbox="allow-scripts" srcDoc={doc}
               title={item.title || "embed"} referrerPolicy="no-referrer" />}
       </div>
       <div className="foot meta"><span>{c.t("board.embed.live")}</span><span className="sp" />{item.by === "h" && <Sig />}</div>

@@ -330,6 +330,8 @@ const en = {
   "board.embed.sandbox": "sandbox: scripts only, no network",
   "board.embed.reload": "Reload",
   "board.embed.taller": "Taller",
+  "board.embed.themeOn": "Use Hermes theme",
+  "board.embed.themeOff": "Original look",
   "board.embed.activate": "Click to interact",
   "board.embed.live": "live html",
   "board.ref.open": "open",
