@@ -386,6 +386,7 @@ const en = {
   "board.tour.cleared": "Tour cleared",
   "board.tour.noFrames": "No frames to build a tour from",
   "board.map.toggle": "Overview map",
+  "demo.masked": "hidden in demo mode",
   "board.hint.pan": "Drag to move around the board",
   "board.hint.place": "Click on the board to place it · Esc to cancel",
   "board.hint.arrow": "Drag from one card to another",

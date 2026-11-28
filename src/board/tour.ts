@@ -238,7 +238,7 @@ export function carryOut(): string | null {
 
 export type CarryRole =
   /** a nested board the tour just dived into; `depth` = how many boards are waiting above it */
-  | { role: "child"; depth: number; duration?: number }
+  | { role: "child"; depth: number; auto: boolean; duration?: number }
   /** the board that dove in, back again: carry on from `index`; `depth` = boards still waiting above it */
   | { role: "resume"; index: number; auto: boolean; depth: number; duration?: number }
   | null;
@@ -248,7 +248,7 @@ export function claimCarry(bid: string): CarryRole {
   const c = carry;
   if (!c) return null;
   if (c.target !== bid) { carry = null; return null; }
-  if (c.phase === "in") return { role: "child", depth: c.stack.length, duration: c.duration };
+  if (c.phase === "in") return { role: "child", depth: c.stack.length, auto: c.stack[c.stack.length - 1]?.auto ?? false, duration: c.duration };
   const top = c.stack[c.stack.length - 1];
   const rest = c.stack.slice(0, -1);
   carry = rest.length ? { ...c, stack: rest, phase: "in", target: bid } : null;

@@ -21,6 +21,7 @@ import { InkBar } from "./InkBar";
 import { HermesCursor, type CursorHandle, type CursorStep } from "./HermesCursor";
 import { Camera, cameraClockApi, installCameraApi, viewForRect, type BoardCameraApi, type CameraRequest } from "./camera";
 import { applyLod } from "./lod";
+import { demoNomap, demoOn } from "../demo";
 import { PresenterHud } from "./Presenter";
 import { usePresentation } from "./usePresentation";
 import { framesAsStops, withStop } from "./tour";
@@ -164,7 +165,7 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
   const handoffRef = useRef<Handoff | null>(null);
   const arrival = useRef<Promise<unknown> | null>(null);
 
-  const [mapOff, setMapOff] = useState(() => readLocal("hb.map.off") === "1");
+  const [mapOff, setMapOff] = useState(() => readLocal("hb.map.off") === "1" || demoNomap());
   const [tool, setTool] = useState<Tool>("select");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [editing, setEditingRaw] = useState<string | null>(null);
@@ -1888,7 +1889,8 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
   const layer = (it: Item) => (it.k === "frame" ? 0 : it.k === "draw" && it.tl === "hl" ? 1 : 2);
   items.sort(([, a], [, b]) => layer(a) - layer(b));
   const sessionShort = doc.session?.id ? doc.session.id.slice(-4) : null;
-  const savedTs = sync.savedAt ? sync.savedAt / 1000 : doc.updated;
+  // a recording shows the page clock, not the server's last write
+  const savedTs = demoOn() ? Date.now() / 1000 : sync.savedAt ? sync.savedAt / 1000 : doc.updated;
   const vpCls = `hb-viewport${tool === "pan" ? " tool-pan" : ""}${tool === "draw" ? ` tool-draw ink-${ink.tool}` : ""}${tool === "arrow" || connectFrom ? " tool-arrow" : ""}${PLACE.includes(tool) ? " tool-place" : ""}`;
   const hint = connectFrom ? t("board.hint.connect") : tool === "draw" ? t(INK_HINT[ink.tool]) : TOOL_HINT[tool] ? t(TOOL_HINT[tool]!) : "";
   const zoomBy = (f: number) => zoomStep(f);
@@ -2026,7 +2028,7 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
         <span className="spacer" />
         <span className="hb-state">
           <span>{t("board.state.saved", { time: clock(savedTs) })}</span>
-          <span className="sess" data-tip={doc.session?.id ? t("board.chat.sessionTip", { id: doc.session.id }) : undefined}>{sessionShort ? t("board.state.session") : t("board.state.noSession")}</span>
+          <span className="sess" data-tip={doc.session?.id && !demoOn() ? t("board.chat.sessionTip", { id: doc.session.id }) : undefined}>{sessionShort ? t("board.state.session") : t("board.state.noSession")}</span>
         </span>
         <button className={`ib lg${doc.tour?.stops.length ? " has-tour" : ""}`} aria-label={t("board.present.start")}
           data-tip={t("board.present.start")} data-kbd="P" onClick={startPresenting}>

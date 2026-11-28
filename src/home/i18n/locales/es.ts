@@ -387,6 +387,7 @@ const es: Messages = {
   "board.tour.cleared": "Recorrido quitado",
   "board.tour.noFrames": "No hay marcos para armar un recorrido",
   "board.map.toggle": "Mapa de vista general",
+  "demo.masked": "oculto en modo demo",
   "board.hint.pan": "Arrastra para moverte por el pizarrón",
   "board.hint.place": "Haz clic en el pizarrón para colocarlo · Esc para cancelar",
   "board.hint.arrow": "Arrastra de una tarjeta a otra",

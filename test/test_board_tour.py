@@ -1,6 +1,11 @@
+import json
+import tempfile
 import unittest
+from pathlib import Path
 
+from dashboard.boardkit import agent as agent_mod
 from dashboard.boardkit import engine
+from dashboard.boardkit.service import BoardService
 
 
 def board():
@@ -84,6 +89,31 @@ class AgentTourTest(unittest.TestCase):
         self.assertIn("dwell=4s", line)
         self.assertIn("from:'frames'", agent.TOUR_HOOK)
         self.assertIn("tour", agent.SCHEMAS["board_apply"]["description"])
+
+
+class HermesOneCallTest(unittest.TestCase):
+    """'Build me a tour through the zones': frames + tour in a single board_apply, via the real tool."""
+
+    def test_zones_and_tour_in_one_board_apply(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            svc = BoardService(Path(tmp))
+            ag = agent_mod.BoardAgent(svc, profile="default")
+            bid = json.loads(ag.board_read({"board": "Zones", "create": True}, session_id="s1"))["board"]
+            res = json.loads(ag.board_apply({"board": bid, "note": "Zones and a tour", "ops": [
+                {"op": "add", "ref": "$b", "item": {"k": "frame", "x": 700, "y": 0, "w": 500, "h": 300, "title": "Brain"}},
+                {"op": "add", "ref": "$a", "item": {"k": "frame", "x": 0, "y": 0, "w": 500, "h": 300, "title": "Idea"}},
+                {"op": "tour", "from": "frames", "dw": 3, "loop": True}]}, session_id="s1"))
+            self.assertNotIn("error", res)
+            doc = svc.store.load(bid)
+            self.assertEqual([s["id"] for s in doc["tour"]["stops"]], [res["ids"]["$a"], res["ids"]["$b"]])
+            read = json.loads(ag.board_read({"board": bid, "full": True}, session_id="s1"))
+            self.assertIn("tour loop dwell=3s: 1:", read["outline"])
+            # it survives a reload
+            self.assertEqual(svc.store.load(bid)["tour"], doc["tour"])
+            # a bad stop is a clear error and changes nothing
+            bad = json.loads(ag.board_apply({"board": bid, "ops": [{"op": "tour", "stops": ["nope"]}]}, session_id="s1"))
+            self.assertIn("error", bad)
+            self.assertEqual(svc.store.load(bid)["tour"], doc["tour"])
 
 
 if __name__ == "__main__":

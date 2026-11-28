@@ -198,7 +198,7 @@ test("a board stop dives on next(); the carry brings the tour back to the next s
   assert.equal(r.player.state.on, false);
   assert.equal(r.log.length, 0, "diving is not the end of the tour");
   // the child board mounts and claims the carry...
-  assert.deepEqual(claimCarry("child001"), { role: "child", depth: 1, duration: undefined });
+  assert.deepEqual(claimCarry("child001"), { role: "child", depth: 1, auto: false, duration: undefined });
   // ...and when its tour ends it climbs back, and the parent resumes after the dive
   assert.equal(carryOut(), "k3x9p2qa");
   assert.deepEqual(claimCarry("k3x9p2qa"), { role: "resume", index: 2, auto: false, depth: 0, duration: undefined });

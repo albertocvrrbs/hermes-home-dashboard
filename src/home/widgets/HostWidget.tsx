@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { realNow } from "@/demo";
 import type { SystemStats } from "@/api-types";
 import { HoverArrows } from "./HoverArrows";
 import { useT, type MessageKey } from "../i18n";
@@ -111,7 +112,7 @@ export function HostWidget({ system, widgetProps, onWidgetPropsChange }: Props) 
     const tick = () => {
       const s = latest.current;
       if (!s) return;
-      setBuf((prev) => pushSample(prev, toSample(s, Date.now()), BUFFER_CAP));
+      setBuf((prev) => pushSample(prev, toSample(s, realNow()), BUFFER_CAP));
     };
     tick();
     const id = setInterval(tick, SAMPLE_MS);

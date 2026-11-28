@@ -84,7 +84,7 @@ export function usePresentation(d: PresentationDeps): Presentation {
     }
     if (depthRef.current > 0) {
       const b = contentBounds();
-      if (b) return [{ k: "view", r: b }];
+      if (b) return [{ k: "view", r: { x: b.x - 140, y: b.y - 120, w: b.w + 280, h: b.h + 240 } }];
     }
     return [];
   }, []);
@@ -98,7 +98,7 @@ export function usePresentation(d: PresentationDeps): Presentation {
     if (!r) return null;
     const size = { w: vp.clientWidth, h: vp.clientHeight };
     const frame = stop.k === "frame" || stop.k === "view";
-    return viewForRect(r, size, { pad: frame ? 56 : 110, maxZ: frame ? 1.6 : 1.35, minZ: 0.05 });
+    return viewForRect(r, size, { pad: frame ? 64 : 120, maxZ: frame ? 2.2 : 1.4, minZ: 0.05 });
   }, []);
 
   const playerRef = useRef<TourPlayer | null>(null);
@@ -214,7 +214,7 @@ export function usePresentation(d: PresentationDeps): Presentation {
     const role = claimCarry(d.bid);
     if (!role) return;
     const go = () => {
-      if (role.role === "child") { void begin(0, { auto: undefined, duration: role.duration }, role.depth); return; }
+      if (role.role === "child") { void begin(0, { auto: role.auto || undefined, duration: role.duration }, role.depth); return; }
       const n = stopsNow().length;
       depthRef.current = role.depth;
       if (role.index >= n) {
@@ -286,7 +286,7 @@ export function usePresentation(d: PresentationDeps): Presentation {
     return installTourApi(api);
   }, [d.bid, d.ready, player, start, stopsNow, viewOf]);
 
-  const stops = useMemo(() => stopsNow(), [stopsNow, doc, presenting]); // eslint-disable-line react-hooks/exhaustive-deps
+  const stops = useMemo(() => stopsNow(), [stopsNow, doc, presenting, ps.n, ps.on]); // eslint-disable-line react-hooks/exhaustive-deps
   const cur = stops[ps.i];
   return {
     presenting, ps, hud, stops, tour, stored, depth,

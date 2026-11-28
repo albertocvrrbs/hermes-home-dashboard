@@ -1,6 +1,7 @@
 // The chat panel docked to the right of a board: the linked session's recent turns, styled with
 // Hermes Desktop's own cues (your turns in the user bubble, Hermes' replies as plain text, tool
 // calls folded into one quiet line), and a composer that sends into that session.
+import { demoOn } from "../demo";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import type { MessageKey, Translate } from "../home/i18n";
 import { hostModelMenu, onGatewayEvent } from "../sdk";
@@ -37,6 +38,8 @@ export const CHAT_MAX_W = 640;
 /** One quiet line for a run of tool steps: an icon and what the work was, never the tool's id. The raw
  *  names stay in the tooltip for anyone debugging. */
 function ToolLine({ acts, names, t }: { acts: ToolAct[]; names: string[]; t: Translate }) {
+  // a recording keeps the story (reading, editing, looking) and drops the plumbing
+  if (demoOn()) acts = acts.filter((a) => a.kind !== "skill" && a.kind !== "command" && a.kind !== "other");
   if (!acts.length) return null;
   const label = (a: ToolAct) => (a.kind === "editBoard" && a.n ? t("board.chat.tool.editBoardN", { n: a.n }) : t(`board.chat.tool.${a.kind}` as MessageKey));
   // the board edit is the point of the run: lead with it
@@ -44,7 +47,7 @@ function ToolLine({ acts, names, t }: { acts: ToolAct[]; names: string[]; t: Tra
   const shown = ordered.slice(0, 2);
   const rest = ordered.length - shown.length;
   return (
-    <div className="ch-tool" data-tip={names.join(" · ")}>
+    <div className="ch-tool" data-tip={demoOn() ? undefined : names.join(" · ")}>
       <Icon name={`tool${ordered[0].kind[0].toUpperCase()}${ordered[0].kind.slice(1)}` as IconName} size={12} />
       <span className="txt">{shown.map(label).join(" · ")}{rest > 0 ? ` ${t("board.chat.more", { n: rest })}` : ""}</span>
     </div>
@@ -206,7 +209,7 @@ export function ChatPanel({ doc, t, width, selected, sentAt, onWidth, onClose, o
       <div className="grip" role="separator" aria-orientation="vertical" aria-label={t("board.chat.resize")} onPointerDown={startResize}
         onDoubleClick={() => onWidth(360)} />
       <header className="ch-top">
-        <span className="hd" data-tip={sessionId ? t("board.chat.sessionTip", { id: sessionId }) : undefined}><span className="who"><Cad />hermes</span></span>
+        <span className="hd" data-tip={sessionId && !demoOn() ? t("board.chat.sessionTip", { id: sessionId }) : undefined}><span className="who"><Cad />hermes</span></span>
         {sessionId && <SessionModelPill doc={doc} t={t} refreshKey={mode === "live" ? 0 : sentAt} />}
         <button className="ib" data-tip={t("board.continue")} data-kbd={`${modKey()}↵`} aria-label={t("board.continue")} onClick={onContinue}>
           <Icon name="open" />
