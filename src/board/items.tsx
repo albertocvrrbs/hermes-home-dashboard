@@ -11,7 +11,6 @@ import { inkGeometry } from "./ink";
 import { Icon } from "./icons";
 import { drawPreview, accentOf } from "./preview";
 import { MiniBoard } from "./miniboard";
-import { thumbUrl } from "./thumbs";
 import { classifyUrl, hostOf, playerUrl } from "./urlKind";
 import { LiveView } from "./LiveCard";
 import { VideoStage } from "./video";
@@ -66,22 +65,9 @@ function fieldHint(c: ItemCtx, id: string, field: string, dflt = false): { caret
   return { caret: mine ? h?.caret : undefined, seed: mine ? h?.seed : undefined, focus: mine };
 }
 
-/** A picture that also carries a small copy of itself: zoomed out, the board shows the copy
- *  (CSS, by level of detail), so painting 150 items never means decoding full-size photos. */
+/** A board picture. It scales with the board like everything else. */
 function Pic({ src, alt = "" }: { src: string; alt?: string }) {
-  const [lo, setLo] = useState<string | null>(null);
-  useEffect(() => {
-    let live = true;
-    setLo(null);
-    void thumbUrl(src).then((u) => { if (live) setLo(u); });
-    return () => { live = false; };
-  }, [src]);
-  return (
-    <>
-      <img className={lo ? "full" : undefined} src={src} alt={alt} draggable={false} />
-      {lo && <img className="lo" src={lo} alt="" draggable={false} />}
-    </>
-  );
+  return <img src={src} alt={alt} draggable={false} />;
 }
 
 /** Auto-growing textarea. Enter / Esc / click outside commit; Shift+Enter is a newline in the
