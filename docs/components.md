@@ -99,7 +99,8 @@ Also delivered to Hermes (`board_component action:"guide"`, tool descriptions, l
 - Everything inline: no CDN, no `@import`, no external fonts, no network.
 - Inputs through `hb.data`, big inputs through `hb.asset`, time through `hb.clock`.
 - Keep per-frame work small. Prefer `canvas` for thousands of marks.
-- Save with a short `note`; patch with `edits` instead of resending the file.
+- Save with a short `note`; patch with `edits` instead of resending the file. When you wrote and tested
+  the files in a local folder, save them with `dir:"<folder>"` instead of pasting them again.
 
 `board_component` lint (advisory, returned with every save) flags: no use of the bridge, no resize
 handling, network calls, many hardcoded colours, a private `requestAnimationFrame` loop that could

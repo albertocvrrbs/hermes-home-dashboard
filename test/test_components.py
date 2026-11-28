@@ -205,6 +205,21 @@ class ServiceAgentTest(unittest.TestCase):
         self.assertEqual(self.call("board_component", {"action": "delete", "name": "spark", "confirm": True}), {"deleted": True})
         self.assertIn("error", self.call("board_component", {"action": "get", "name": "spark"}))
 
+    def test_create_from_a_local_folder(self):
+        d = Path(self.tmp.name) / "work"
+        d.mkdir()
+        (d / "index.html").write_text('<div id=c></div><script src="app.js"></script>', "utf-8")
+        (d / "app.js").write_text("hb.onData(function(d){});hb.onResize(function(s){});", "utf-8")
+        (d / "trace.npz").write_bytes(b"\x00binary")  # not a component file: skipped
+        (d / "api_key.txt").write_text("nope", "utf-8")  # looks like a secret: skipped
+        r = self.call("board_component", {"action": "create", "name": "net", "dir": str(d)})
+        self.assertEqual(r["version"], "v1")
+        files = self.call("board_component", {"action": "get", "name": "net"})["files"]
+        self.assertEqual(sorted(files), ["app.js", "index.html"])
+        (d / "app.js").write_text("hb.onData(function(d){render()});hb.onResize(function(s){});function render(){}", "utf-8")
+        self.assertEqual(self.call("board_component", {"action": "update", "name": "net", "dir": str(d)})["version"], "v2")
+        self.assertIn("error", self.call("board_component", {"action": "create", "name": "x", "dir": str(d / "nope")}))
+
     def test_pinned_instances_are_not_touched(self):
         self.svc.comp_save("p", html=GOOD)
         bid = self.svc.store.create("B")["id"]

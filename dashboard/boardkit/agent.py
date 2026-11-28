@@ -120,7 +120,7 @@ SCHEMAS: Dict[str, Dict[str, Any]] = {
             "Write, version and manage CUSTOM COMPONENTS: HTML/JS cards you create for what the user needs, saved in "
             "their component library and reusable on any board. " + compguide.COMPONENT_RULES + " Actions: "
             "list {} · guide {} (the full window.hb v1 contract; read it before your first component) · get {name, "
-            "version?} (source files) · create|update {name, html | files:{'index.html':...,'app.js':...}, edits?:[{file?, "
+            "version?} (source files) · create|update {name, html | files:{'index.html':...,'app.js':...} | dir:'<local folder with index.html, app.js...>' (saves what you wrote and tested there without resending it), edits?:[{file?, "
             "find, replace}] (patch the current version), remove?:[files], replace?:true (start from empty), title?, "
             "desc?, note?} (every save = new version v1,v2...; sample.json = preview data) · diff {name, from?, to?} · "
             "rollback {name, to} (a new version copying the old one) · delete {name, confirm:true} · attach {board?, id, "
@@ -138,6 +138,8 @@ SCHEMAS: Dict[str, Dict[str, Any]] = {
             "note": {"type": "string"}, "version": {"type": "string"}, "from": {"type": "string"}, "to": {"type": "string"},
             "confirm": {"type": "boolean"}, "board": {"type": "string"}, "id": {"type": "string", "description": "attach: the comp card id."},
             "path": {"type": "string", "description": "attach: file on this machine to copy in."},
+            "dir": {"type": "string", "description": "create/update: a folder on this machine holding index.html and its "
+                    ".js/.css/.json/.svg/.txt/.md files (files:{} entries win over the folder's)."},
             "json": {}, "text": {"type": "string"},
             "x": {"type": "number"}, "y": {"type": "number"}, "w": {"type": "number"}, "h": {"type": "number"},
             "cdata": {"type": "object"},
@@ -169,6 +171,31 @@ SCHEMAS: Dict[str, Dict[str, Any]] = {
         }},
     },
 }
+
+
+def _component_dir(path: str) -> Any:
+    """The component files in a local folder (what you wrote and tested there), or an error string."""
+    from pathlib import Path
+    from .components import CODE_EXT, MAX_FILE, MAX_FILES
+    from .importer import _SECRET
+    d = Path(path).expanduser()
+    if not d.is_dir():
+        return f"no such folder {str(d)[:120]}"
+    out: Dict[str, str] = {}
+    for f in sorted(d.iterdir()):
+        if not f.is_file() or f.name.startswith(".") or not f.name.lower().endswith(CODE_EXT) or _SECRET.search(f.name):
+            continue
+        if f.stat().st_size > MAX_FILE:
+            return f"{f.name} is over {MAX_FILE // 1000} KB: attach big data to the card instead (attach)"
+        try:
+            out[f.name] = f.read_text("utf-8")
+        except UnicodeDecodeError:
+            return f"{f.name} is not UTF-8 text"
+    if "index.html" not in out:
+        return f"{str(d)[:120]} has no index.html"
+    if len(out) > MAX_FILES:
+        return f"at most {MAX_FILES} files per component"
+    return out
 
 
 def _with_contents(doc: Dict[str, Any], ids: List[str]) -> List[str]:
@@ -302,6 +329,11 @@ class BoardAgent:
             if act in ("create", "update"):
                 keys = ("html", "files", "edits", "remove", "replace", "title", "desc", "note")
                 kw = {k: args[k] for k in keys if k in args}
+                if args.get("dir"):
+                    files = _component_dir(str(args["dir"]))
+                    if isinstance(files, str):
+                        return _dump({"error": files})
+                    kw["files"] = {**files, **(kw.get("files") or {})}
                 if "replace" in kw:
                     kw["replace"] = kw["replace"] is True
                 res = self.svc.comp_save(name, by="h", **kw)

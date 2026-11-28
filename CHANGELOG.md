@@ -43,6 +43,11 @@ Found while building the launch board with real Hermes, by chat only.
   video he had given `h` landed on the video's footer. The server now sizes them from the aspect,
   like the board, and the tool says to send `w` only.
 
+- **`board_component create|update dir:"<folder>"`** saves the component files Hermes wrote and
+  tested in a local folder (index.html plus .js/.css/.json/.svg/.txt/.md; secret-looking names and
+  other files skipped). Building the spider network he wrote `app.js` to disk to test it, then had
+  to paste it again (and first saved a placeholder v1).
+
 ## 1.10.0 — video parity
 
 Everything the launch video shows now works for real, with real Hermes, from one chat
