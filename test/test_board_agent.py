@@ -141,6 +141,33 @@ class AgentToolsTest(unittest.TestCase):
         self.assertEqual(out["region"], {"x": 0, "y": 0, "w": 500, "h": 300})
 
 
+class SubBoardTest(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.svc = BoardService(Path(self.tmp.name), fetcher=offline_fetcher())
+        self.agent = agent_mod.BoardAgent(self.svc, profile="default")
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def call(self, name, args, session="s1"):
+        return json.loads(getattr(self.agent, name)(args, session_id=session))
+
+    def test_sub_board_keeps_the_session_on_its_parent(self):
+        main = self.svc.store.create("Main")["id"]
+        self.assertTrue(self.svc.store.link_session(main, "s1"))
+        sub = self.call("board_read", {"board": "Training Room", "create": True})["board"]
+        self.assertEqual(self.svc.store.board_for_session("s1"), main)  # not stolen by the new board
+        self.assertIsNone(self.svc.store.load(sub).get("session"))
+        self.call("board_apply", {"ops": [{"op": "add", "item": {"k": "board", "x": 0, "y": 0, "ref": sub}}]})
+        self.assertEqual(self.svc.store.load(sub)["parent"], main)  # the board card adopted it
+        other = self.call("board_read", {"board": "Exam", "create": True, "parent": main})["board"]
+        self.assertEqual(self.svc.store.load(other)["parent"], main)
+        # a session with no board yet still links to the first board it opens
+        free = self.call("board_read", {"board": "Solo", "create": True}, session="s2")["board"]
+        self.assertEqual(self.svc.store.board_for_session("s2"), free)
+
+
 class HookTest(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()

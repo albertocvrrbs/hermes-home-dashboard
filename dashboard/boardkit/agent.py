@@ -80,14 +80,14 @@ _OPS_HELP = (
     "box{num,title,sub} (diagram node, ~196x62) · shape{sh:'rect'|'diamond'|'pill'|'circle',title} (flowchart symbol: process, "
     "decision, start/end, connector; ~160x56, diamond 150x100, pill 150x48, circle 72) · line{a,b,label} (connector; a/b = ids or [x,y]) · "
     "frame{title,note,w,h} (titled region) · text{text,size:'h'|'p'} · link{url} (preview fetched for you; video "
-    "and image URLs become players/images; image and video cards take w only, their height follows the picture) · embed{title,html,theme} (sandboxed HTML, scripts only, no network; ALWAYS send theme:true on HTML you write, see 'Embed rules') · "
+    "and image URLs become players/images; image/video take w only) · embed{title,html,theme} (sandboxed HTML, scripts only, no network; ALWAYS send theme:true on HTML you write, see 'Embed rules') · "
     "draw{d:'x,y x,y …' ints relative to x,y, sw, tl?:'line'|'arrow'|'rect'|'ellipse'|'hl' (shapes: d = two points; "
     "hl = translucent highlighter), c?:'accent'|'sage'|'clay'|'slate'|'sand', ds?:true dashed, g?:group id} · "
-    "board{ref} · live{title, tpl:'training'|'job'|'stat' or blocks:[...], data:{...}, ttl, actions:[{action, label?, "
+    "board{ref} (sub-board: board_read {create:true, parent}) · live{title, tpl:'training'|'job'|'stat' or blocks:[...], data:{...}, ttl, actions:[{action, label?, "
     "args?}]} (a card bound to your own job: blocks header{title,sub,status,icon} progress{value 0-1,label,eta} "
     "metrics{items:[{label,value,fmt,delta,good}]} spark{series,label,fmt} media{video|image,poster,caption} "
     "text{value,lines} actions{items:[{action,label?,args?}]}; any value may be '$key' read from data; fmt num|int|pct|"
-    "usd|dur (pct takes percent points: 77 shows 77 %, unlike progress which is 0-1); status running|paused|done|error|idle). Update a live card later with {op:'live', id, data:{k:v} "
+    "usd|dur (pct: 77 = 77 %); status running|paused|done|error|idle). Update a live card later with {op:'live', id, data:{k:v} "
     "(null deletes), push:{series:[n]}, keep?} - cheap, no layout. Buttons can only name action ids the owner "
     "registered (board_read actions:true lists them); never put commands in a card. "
     "comp{comp:'<library name>', title, w, h, cdata:{...}, ver?, actions:[ids]} (runs a component YOU wrote with the "
@@ -108,6 +108,8 @@ SCHEMAS: Dict[str, Dict[str, Any]] = {
             "board": {"type": "string", "description": "Board id or name."},
             "full": {"type": "boolean", "description": "Whole outline instead of changes."},
             "create": {"type": "boolean", "description": "Create the board if no board has this name."},
+            "parent": {"type": "string", "description": "With create: the board this one is a sub-board of (id or "
+                       "name). A board card {k:'board', ref} also makes its board a sub-board of the card's board."},
             "actions": {"type": "boolean", "description": "Also list the live-card actions the owner registered "
                         "(ids you may put on live card buttons)."},
             "help": {"type": "string", "enum": ["bulk"], "description": "'bulk' returns the full syntax of import, set_where, "
@@ -244,16 +246,24 @@ class BoardAgent:
     def _resolve(self, args: Dict[str, Any], session_id: Optional[str]):
         key = args.get("board")
         doc, created = None, False
+        home = self.svc.store.board_for_session(session_id) if session_id else None
         if isinstance(key, str) and key.strip():
             doc = self.svc.store.find(key)
             if doc is None and args.get("create"):
-                doc = self.svc.store.create(key.strip()[:200])
+                parent = args.get("parent")
+                if isinstance(parent, str) and parent.strip():
+                    pdoc = self.svc.store.find(parent)
+                    parent = pdoc["id"] if pdoc else None
+                else:
+                    parent = None
+                doc = self.svc.store.create(key.strip()[:200], parent)
                 created = True
-        elif session_id:
-            bid = self.svc.store.board_for_session(session_id)
-            doc = self.svc.store.load(bid) if bid else None
+        elif home:
+            doc = self.svc.store.load(home)
         newly_linked = False
-        if doc is not None and session_id and not doc.get("session"):
+        # a session keeps the board it belongs to: another board it reads or creates (a sub-board) is
+        # never linked in its place, or the chat panel and the change hook would follow the wrong board
+        if doc is not None and session_id and not doc.get("session") and (home is None or home == doc["id"]):
             newly_linked = self.svc.store.link_session(doc["id"], session_id, self.profile)
             if newly_linked:
                 doc = self.svc.store.load(doc["id"])
@@ -447,6 +457,10 @@ class BoardAgent:
             embed_warnings = self._embed_warnings(doc, args.get("ops")) + self._comp_warnings(doc, args.get("ops"))
             report: Dict[str, Any] = {}
             new, entry = self.svc.commit(doc["id"], args.get("ops"), by="h", note=note, previews="wait", report=report)
+            for op in entry.get("ops") or []:  # a board card makes the board it opens a sub-board of this one
+                it = op.get("item") if op.get("op") == "put" else None
+                if isinstance(it, dict) and it.get("k") == "board" and it.get("ref"):
+                    self.svc.store.adopt(it["ref"], doc["id"])
             if entry.get("noop"):
                 return _dump({"board": doc["id"], "seq": new["seq"], "warning": "nothing changed"})
             last = next((op.get("id") for op in reversed(entry.get("ops") or []) if op.get("id")), None)

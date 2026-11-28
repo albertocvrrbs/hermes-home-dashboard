@@ -48,6 +48,12 @@ Found while building the launch board with real Hermes, by chat only.
   other files skipped). Building the spider network he wrote `app.js` to disk to test it, then had
   to paste it again (and first saved a placeholder v1).
 
+- **Sub-boards Hermes makes stay sub-boards.** Creating or reading another board from a board's
+  session no longer re-links that session to the new board (the chat panel and the "what you
+  changed" hook were following the Training Room instead of the main board). `board_read
+  {create:true, parent}` makes a sub-board, and a board card Hermes adds adopts a parentless board,
+  so the breadcrumb goes back to its parent.
+
 ## 1.10.0 — video parity
 
 Everything the launch video shows now works for real, with real Hermes, from one chat
