@@ -74,3 +74,43 @@ test("snap guides span both aligned rects", () => {
   assert.equal(g.from, 0);
   assert.equal(g.to, 362); // the dragged rect settled on the grid at y=312
 });
+
+import { pointAtT } from "../src/board/geometry.ts";
+import { applyOps, approxRect, remapIds } from "../src/board/model.ts";
+
+test("pointAtT walks a polyline by length", () => {
+  const pts = [[0, 0], [100, 0], [100, 100]];
+  assert.deepEqual(pointAtT(pts, 0), [0, 0]);
+  assert.deepEqual(pointAtT(pts, 0.5), [100, 0]);
+  assert.deepEqual(pointAtT(pts, 0.75), [100, 50]);
+  assert.deepEqual(pointAtT(pts, 1), [100, 100]);
+  assert.deepEqual(pointAtT(pts, 9), [100, 100]);
+});
+
+test("an optimistic insert batch splits the connector and survives id remapping", () => {
+  const doc = {
+    v: 1, id: "k3x9p2qa", name: "f", parent: null, seq: 0, n: 3, session: null, seen: 0, created: 0, updated: 0,
+    items: {
+      a: { k: "box", x: 0, y: 0 }, b: { k: "box", x: 400, y: 0 }, l: { k: "line", a: "a", b: "b", label: "yes" },
+    },
+  };
+  const ops = [
+    { op: "add", ref: "$n", item: { k: "shape", sh: "diamond", x: 150, y: 0 } },
+    { op: "set", id: "l", p: { b: "$n" } },
+    { op: "add", ref: "$l2", item: { k: "line", a: "$n", b: "b" } },
+  ];
+  const next = applyOps(doc, ops);
+  assert.equal(next.items.l.b, "$n");
+  assert.equal(next.items.l.label, "yes");
+  assert.equal(next.items.$l2.a, "$n");
+  assert.equal(next.items.$l2.b, "b");
+  const remapped = remapIds(ops, { $n: "4", $l2: "5" });
+  assert.equal(remapped[1].p.b, "4");
+  assert.equal(remapped[2].item.a, "4");
+});
+
+test("shapes have their own default sizes", () => {
+  assert.deepEqual(approxRect({ k: "shape", sh: "diamond", x: 0, y: 0 }), { x: 0, y: 0, w: 150, h: 100 });
+  assert.deepEqual(approxRect({ k: "shape", sh: "circle", x: 5, y: 6, w: 90 }), { x: 5, y: 6, w: 90, h: 72 });
+  assert.deepEqual(approxRect({ k: "shape", x: 0, y: 0 }), { x: 0, y: 0, w: 160, h: 56 });
+});
