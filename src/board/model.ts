@@ -74,7 +74,7 @@ export type Op =
   | { op: "del"; id: string }
   | { op: "board"; p: { name?: string } }
   | { op: "tour"; tour: Tour | null }
-  | { op: "add"; ref?: string; item: Item; at?: number };
+  | { op: "add"; ref?: string; item: Item; at?: number; exact?: boolean };
 
 export interface Entry {
   s: number; t: number; by: "u" | "h" | "s"; ops: Op[];

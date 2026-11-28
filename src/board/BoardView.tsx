@@ -36,6 +36,7 @@ import { HERMES_ACTIVE_S, useBoard } from "./useBoard";
 import { Wires, type WiresHandle } from "./Wires";
 import { dblAction, EDITABLE, isTap, mapCaret, nextTap, pointerKind, typeToEditChar, type EditHint, type TapPoint } from "./gesture";
 import { downstream, insertPlan, snapMove, tidyPlan, type Block, type Guide } from "./layout";
+import { estimateSize, freePlace, MOVABLE, overlaps, pushPlan, resolvePlan, type Entry as PlaceEntry } from "./place";
 import { EdgePicker, type PickSpec } from "./EdgePicker";
 import { CompGallery } from "./CompGallery";
 import { SyncTransport } from "./SyncTransport";
@@ -65,6 +66,8 @@ const readLocal = (k: string): string | null => { try { return localStorage.getI
 const writeLocal = (k: string, v: string) => { try { localStorage.setItem(k, v); } catch { /* private mode */ } };
 const KEY_TOOL: Record<string, Tool> = Object.fromEntries(TOOLS.flat().map((x) => [x.key.toLowerCase(), x.tool]));
 const PLACE: Tool[] = ["note", "todo", "col", "link", "board", "embed", "image"];
+/** a card has to grow this much (px) to push its neighbours; the wait lets it settle first */
+const GROW_MIN = 6, PUSH_WAIT = 320;
 const SNAP_KEY = "hb.snap";
 /** Screen px within which a neighbour's edge or centre pulls a dragged card in. */
 const SNAP_PX = 6;
@@ -625,12 +628,74 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
     return () => window.clearTimeout(h);
   }, [layoutV, fit]);
 
-  // re-measure connectors when items change size
+  // ── a card grew: make room ───────────────────────────────────────────
+  const seenSize = useRef(new Map<string, { w: number; h: number }>());
+  const grown = useRef(new Map<string, { w: number; h: number }>()); // id -> its size before growing
+  const pushT = useRef(0);
+  const editingNow = useRef<string | null>(null);
+  editingNow.current = editing;
+  const pushNow = useRef<() => void>(() => undefined);
+  const schedulePush = useRef<() => void>(() => undefined);
+  schedulePush.current = () => { window.clearTimeout(pushT.current); pushT.current = window.setTimeout(() => pushNow.current(), PUSH_WAIT); };
+  pushNow.current = () => {
+    const d = docRef.current;
+    if (!d) return;
+    // not while a hand is on the board, and a card being typed into waits until the edit ends
+    if (drag.current || cam.current?.moving) { schedulePush.current(); return; }
+    const ids = [...grown.current.keys()].filter((id) => id !== editingNow.current);
+    if (!ids.length) { if (grown.current.size) schedulePush.current(); return; }
+    const wired = wiredIds(d);
+    const rects = contentRects();
+    const moves = new Map<string, { x: number; y: number }>();
+    for (const g of ids) {
+      const before = grown.current.get(g)!;
+      grown.current.delete(g);
+      const it = d.items[g], r = rects.get(g);
+      if (!it || !r) continue;
+      // what it covered already, before growing, is an old overlap (Resolve overlaps is for those)
+      const was = { x: r.x, y: r.y, w: before.w, h: before.h };
+      const entries: PlaceEntry[] = [...rects].map(([id, rect]) => ({
+        id, rect, anchored: id !== g && (wired.has(id) || !MOVABLE.has(d.items[id].k) || id.startsWith("$") || overlaps(was, rect)),
+      }));
+      const plan = pushPlan(entries, g);
+      for (const m of plan.moves) { const o = rects.get(m.id)!; rects.set(m.id, { ...o, x: m.x, y: m.y }); moves.set(m.id, m); }
+    }
+    if (!moves.size) return;
+    const ops: Op[] = [];
+    const from = new Map<string, Rect>();
+    for (const [id, m] of moves) {
+      const it = d.items[id], r = getRect(id);
+      if (!it || !r) continue;
+      ops.push({ op: "set", id, p: { x: Math.round((it.x ?? r.x) + m.x - r.x), y: Math.round((it.y ?? r.y) + m.y - r.y) } });
+      from.set(id, r);
+    }
+    if (!ops.length) return;
+    flipFrom(from, [...from.keys()]);
+    commit(ops, t("board.push"));
+  };
+  useEffect(() => () => window.clearTimeout(pushT.current), []);
+  useEffect(() => { seenSize.current.clear(); grown.current.clear(); }, [bid]);
+  useEffect(() => { if (!editing && grown.current.size) schedulePush.current(); }, [editing]);
+
+  // re-measure connectors when items change size; a card that grows (its picture arrived, it
+  // was edited, Hermes filled it in) and now covers a neighbour pushes it away
   useEffect(() => {
     const RO = (globalThis as { ResizeObserver?: typeof ResizeObserver }).ResizeObserver;
     if (!RO || !worldRef.current) return;
     let raf = 0;
-    const ro = new RO(() => { cancelAnimationFrame(raf); raf = requestAnimationFrame(() => setLayoutV((v) => v + 1)); });
+    const ro = new RO((entries) => {
+      for (const en of entries) {
+        const el = en.target as HTMLElement, id = el.dataset.iid;
+        if (!id) continue;
+        const w = el.offsetWidth, h = el.offsetHeight;
+        if (!w && !h) continue;
+        const prev = seenSize.current.get(id);
+        seenSize.current.set(id, { w, h });
+        if (prev && (h > prev.h + GROW_MIN || w > prev.w + GROW_MIN) && !grown.current.has(id)) grown.current.set(id, prev);
+      }
+      if (grown.current.size) schedulePush.current();
+      cancelAnimationFrame(raf); raf = requestAnimationFrame(() => setLayoutV((v) => v + 1));
+    });
     els.current.forEach((el) => ro.observe(el));
     return () => { ro.disconnect(); cancelAnimationFrame(raf); };
   }, [doc]);
@@ -666,6 +731,61 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
     return { x: (vp.clientWidth / 2 - v.x) / v.z, y: (vp.clientHeight / 2 - v.y) / v.z };
   }, []);
 
+  // ── placement: every add lands clear of what is there (place.ts) ─────────
+  // Spots handed out in the last few seconds count as taken, so a burst of adds (six pasted
+  // photos, an upload of many files) never lands on itself before the board has re-rendered.
+  const reserved = useRef<{ rect: Rect; t: number }[]>([]);
+  const contentRects = useCallback((skip?: Set<string>): Map<string, Rect> => {
+    const d = docRef.current;
+    const out = new Map<string, Rect>();
+    if (!d) return out;
+    for (const [id, it] of Object.entries(d.items)) {
+      if (it.in || it.k === "line" || it.k === "draw" || it.k === "frame" || skip?.has(id)) continue;
+      const r = getRectLive(id);
+      if (r) out.set(id, r);
+    }
+    return out;
+  }, [getRectLive]);
+  const frameAround = useCallback((p: { x: number; y: number }): Rect | undefined => {
+    const d = docRef.current;
+    let best: Rect | undefined;
+    for (const [id, it] of Object.entries(d?.items ?? {})) {
+      if (it.k !== "frame") continue;
+      const r = getRect(id);
+      if (r && p.x >= r.x && p.y >= r.y && p.x <= r.x + r.w && p.y <= r.y + r.h && (!best || r.w * r.h < best.w * best.h)) best = r;
+    }
+    return best;
+  }, [getRect]);
+  const spotFor = useCallback((item: Item, want: { x: number; y: number }): { x: number; y: number } => {
+    const now = performance.now();
+    reserved.current = reserved.current.filter((x) => now - x.t < 4000);
+    const size = estimateSize(item);
+    const obstacles = [...contentRects().values(), ...reserved.current.map((x) => x.rect)];
+    const p = freePlace(want, size, obstacles, { within: frameAround(want) });
+    reserved.current.push({ rect: { ...p, ...size }, t: now });
+    return p;
+  }, [contentRects, frameAround]);
+  const wiredIds = useCallback((d: BoardDoc): Set<string> => {
+    const topOf = (id: string) => d.items[id]?.in ?? id;
+    const out = new Set<string>();
+    for (const it of Object.values(d.items)) {
+      if (it.k === "line") for (const e of [it.a, it.b]) if (typeof e === "string" && d.items[e]) out.add(topOf(e));
+    }
+    return out;
+  }, []);
+
+  /** `changed` (id -> rect it will have) stays; loose cards it covers step to the nearest free
+   *  spot. Wired items, frames, text and diagram pieces never move. Returns rect top-lefts. */
+  const clearAround = useCallback((d: BoardDoc, changed: Map<string, Rect>): { id: string; x: number; y: number }[] => {
+    const wired = wiredIds(d);
+    const rects = contentRects();
+    for (const [id, r] of changed) rects.set(id, r);
+    const hit = new Set([...rects].filter(([id, r]) => !changed.has(id) && !wired.has(id) && MOVABLE.has(d.items[id]?.k ?? "")
+      && !id.startsWith("$") && [...changed.values()].some((c) => overlaps(r, c))).map(([id]) => id));
+    if (!hit.size) return [];
+    return resolvePlan([...rects].map(([id, rect]) => ({ id, rect, anchored: !hit.has(id) })));
+  }, [contentRects, wiredIds]);
+
   const insertRef = useRef<(edge: string, item: Item) => string | null>(() => null);
   const add = useCallback((item: Item, at?: { x: number; y: number }, edit = false): string => {
     if (pendingEdge.current) {
@@ -676,12 +796,15 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
     }
     const ref = newRef();
     const p = at ?? lastPoint.current ?? center();
-    const placed: Item = item.in ? item : { ...item, x: Math.round(p.x), y: Math.round(p.y) };
-    commit([{ op: "add", ref, item: placed }]);
+    // nothing lands on anything: the nearest free spot to where it was asked (place.ts). The UI
+    // measured the board, so the server keeps this spot as is (`exact`).
+    const q = item.in ? null : MOVABLE.has(item.k) ? spotFor(item, p) : { x: Math.round(p.x), y: Math.round(p.y) };
+    const placed: Item = q ? { ...item, x: q.x, y: q.y } : item;
+    commit([{ op: "add", ref, item: placed, exact: true }]);
     setSelected(new Set([ref]));
     if (edit) setEditing(ref);
     return ref;
-  }, [center, commit]);
+  }, [center, commit, spotFor]);
 
   /** Caret for a double click: the character offset under the pointer inside the field's source text. */
   const editHintAt = (target: HTMLElement, x: number, y: number, it: Item): Omit<EditHint, "id"> | undefined => {
@@ -809,6 +932,35 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
     commit(ops);
   }, [commit, flash, flipFrom, getRect, selected, t]);
 
+  /** Cards that cover each other step apart: the selection (2+) or the whole board. Connected
+   *  flows, frames, text and diagram pieces stay; each card stays in its frame when there is
+   *  room. One batch, one undo, animated. */
+  const resolveOverlaps = useCallback(() => {
+    const d = docRef.current;
+    if (!d) return;
+    const sel = selected.size > 1 ? new Set([...selected].map((id) => d.items[id]?.in ?? id)) : null;
+    const wired = wiredIds(d);
+    const frames = Object.entries(d.items).filter(([, it]) => it.k === "frame").map(([id]) => getRect(id)).filter(Boolean) as Rect[];
+    const entries: PlaceEntry[] = [];
+    for (const [id, rect] of contentRects()) {
+      const k = d.items[id].k;
+      const cx = rect.x + rect.w / 2, cy = rect.y + rect.h / 2;
+      const inside = frames.filter((f) => cx >= f.x && cx <= f.x + f.w && cy >= f.y && cy <= f.y + f.h).sort((a, b) => a.w * a.h - b.w * b.h);
+      entries.push({ id, rect, anchored: wired.has(id) || !MOVABLE.has(k) || id.startsWith("$") || (sel !== null && !sel.has(id)), within: inside[0] });
+    }
+    const plan = resolvePlan(entries);
+    if (!plan.length) { flash(t("board.resolve.none")); return; }
+    const ops: Op[] = [];
+    const from = new Map<string, Rect>();
+    for (const m of plan) {
+      const it = d.items[m.id], r = entries.find((e) => e.id === m.id)!.rect;
+      ops.push({ op: "set", id: m.id, p: { x: Math.round((it.x ?? r.x) + m.x - r.x), y: Math.round((it.y ?? r.y) + m.y - r.y) } });
+      from.set(m.id, r);
+    }
+    flipFrom(from, [...from.keys()]);
+    commit(ops, t("board.resolve"));
+  }, [commit, contentRects, flash, flipFrom, getRect, selected, t, wiredIds]);
+
   /** Splits connector `edgeId` and puts `item` in the middle: A → new → B, as one batch (one undo). */
   const insertOnEdge = useCallback((edgeId: string, item: Item): string | null => {
     const d = docRef.current;
@@ -823,7 +975,7 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
     const plan = insertPlan(ra, rb, { w: item.w ?? dw, h: item.h ?? dh }, { shiftB: !!bTop });
     const ref = newRef();
     const ops: Op[] = [
-      { op: "add", ref, item: { ...item, x: plan.x, y: plan.y } },
+      { op: "add", ref, item: { ...item, x: plan.x, y: plan.y }, exact: true },
       { op: "set", id: edgeId, p: { b: ref } },
       { op: "add", ref: newRef(), item: { k: "line", a: ref, b: line.b } },
     ];
@@ -842,12 +994,26 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
         if (r) { from.set(id, r); moved.push(id); }
       }
     }
+    // loose cards the new step (or the shifted flow) now covers make room; the flow stays put
+    const est = estimateSize({ ...item, w: item.w ?? dw });
+    const changed = new Map<string, Rect>([[ref, { x: plan.x, y: plan.y, w: est.w, h: Math.max(est.h, item.h ?? dh) }]]);
+    for (const o of ops) {
+      if (o.op !== "set" || o.id === edgeId || typeof o.p.x !== "number") continue;
+      const r = getRect(o.id);
+      if (r) changed.set(o.id, { ...r, x: r.x + plan.shift.dx, y: r.y + plan.shift.dy });
+    }
+    for (const m of clearAround(d, changed)) {
+      const it = d.items[m.id], r = getRect(m.id);
+      if (!it || !r) continue;
+      ops.push({ op: "set", id: m.id, p: { x: Math.round((it.x ?? r.x) + m.x - r.x), y: Math.round((it.y ?? r.y) + m.y - r.y) } });
+      from.set(m.id, r); moved.push(m.id);
+    }
     if (moved.length) flipFrom(from, moved);
     commit(ops);
     if (EDITABLE.has(item.k) && item.k !== "image" && item.k !== "link" && item.k !== "video") startEdit(ref);
     else setSelected(new Set([ref]));
     return ref;
-  }, [commit, flipFrom, getRect, startEdit]);
+  }, [clearAround, commit, flipFrom, getRect, startEdit]);
   insertRef.current = insertOnEdge;
 
   const pickForEdge = (spec: PickSpec) => {
@@ -865,7 +1031,8 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
   };
 
   const addImageFiles = useCallback(async (files: File[], at?: { x: number; y: number }) => {
-    let p = at ?? center();
+    // every file aims at the same point; add() hands each the nearest spot still free
+    const p = at ?? center();
     for (const f of files.slice(0, 8)) {
       if (VIDEO_TYPES.test(f.type)) {
         try {
@@ -877,7 +1044,6 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
           if (res.dur) item.dur = res.dur;
           if (res.iw && res.ih) { item.iw = res.iw; item.ih = res.ih; }
           add(item, p);
-          p = { x: p.x + 24, y: p.y + 24 };
           setToast(null);
         } catch (e) {
           flash(t("board.toast.videoFailed", { error: String((e as Error)?.message ?? e) }));
@@ -891,7 +1057,6 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
         const res = await boardsApi.uploadImage(img.data);
         const w = Math.min(372, Math.max(160, img.w));
         add({ k: "image", asset: res.asset, iw: res.iw ?? img.w, ih: res.ih ?? img.h, w }, p);
-        p = { x: p.x + 24, y: p.y + 24 };
         setToast(null);
       } catch (e) {
         flash(t("board.toast.imageFailed", { error: String((e as Error)?.message ?? e) }));
@@ -920,6 +1085,7 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
     const ops: Op[] = [];
     const next = new Set<string>();
     const regroup = new Map<string, string>(); // copies of a group form a new group
+    const copied: Rect[] = [];
     for (const id of selected) {
       const it = d.items[id];
       if (!it || it.k === "line" || it.k === "col") continue;
@@ -931,10 +1097,22 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
       const ref = newRef();
       next.add(ref);
       const r = getRect(id);
-      ops.push({ op: "add", ref, item: inCol ? { ...rest, in: inCol } : { ...rest, x: (it.x ?? r?.x ?? 0) + 24, y: (it.y ?? r?.y ?? 0) + 24 } });
+      ops.push({ op: "add", ref, item: inCol ? { ...rest, in: inCol } : { ...rest, x: (it.x ?? r?.x ?? 0) + 24, y: (it.y ?? r?.y ?? 0) + 24 }, exact: true });
+      if (!inCol && r) copied.push(r);
+    }
+    // the copies move as one block to the nearest free spot past the originals
+    const box = copied.length ? boundsOf(copied) : null;
+    if (box && ops.some((o) => o.op === "add" && !o.item.in && MOVABLE.has(o.item.k))) {
+      const now = performance.now();
+      reserved.current = reserved.current.filter((x) => now - x.t < 4000);
+      const want = { x: box.x + 24, y: box.y + 24 };
+      const spot = freePlace(want, { w: box.w, h: box.h }, [...contentRects().values(), ...reserved.current.map((x) => x.rect)]);
+      const dx = spot.x - want.x, dy = spot.y - want.y;
+      for (const o of ops) if (o.op === "add" && !o.item.in) o.item = { ...o.item, x: Math.round((o.item.x ?? 0) + dx), y: Math.round((o.item.y ?? 0) + dy) };
+      reserved.current.push({ rect: { x: spot.x, y: spot.y, w: box.w, h: box.h }, t: now });
     }
     if (ops.length) { commit(ops); setSelected(next); }
-  }, [commit, getRect, selected]);
+  }, [commit, contentRects, getRect, selected]);
 
   /** Groups the selected strokes (one shared `g`), or ungroups them when they already share one. */
   const toggleGroup = useCallback(() => {
@@ -1880,6 +2058,7 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
       if (canConnect) out.push({ id: "connect", label: t("board.ctx.connect"), icon: "connect", run: startConnect });
       if (canDuplicate) out.push({ id: "dup", label: t("board.ctx.duplicate"), icon: "duplicate", kbd: `${mod}D`, run: duplicate });
       if (selIds.length > 1) out.push({ id: "tidy", label: t("board.tidy.selection"), icon: "tidy", kbd: `${mod}⇧O`, run: tidy });
+      if (selIds.length > 1) out.push({ id: "unoverlap", label: t("board.resolve.selection"), icon: "unoverlap", run: resolveOverlaps });
       if (canGroup) out.push({ id: "grp", label: t(isGrouped ? "board.ctx.ungroup" : "board.ctx.group"), icon: isGrouped ? "ungroup" : "group", kbd: `${mod}G`, run: toggleGroup });
       out.push({ sep: true });
       out.push({ id: "del", label: t("board.ctx.delete"), icon: "delete", kbd: "Del", danger: true, run: deleteSelection });
@@ -1901,6 +2080,7 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
     out.push({ id: "comps", label: t("board.comp.gallery"), icon: "components", run: () => setGalleryOpen(true) });
     out.push({ id: "all", label: t("board.menu.selectAll"), icon: "selectAll", kbd: `${mod}A`, run: () => setSelected(new Set(Object.keys(docRef.current?.items ?? {}).filter((k) => !docRef.current!.items[k].in))) });
     out.push({ id: "tidy", label: t("board.tidy.all"), icon: "tidy", kbd: `${mod}⇧O`, run: tidy });
+    out.push({ id: "unoverlap", label: t("board.resolve"), icon: "unoverlap", run: resolveOverlaps });
     out.push({ id: "fit", label: t("board.fit"), icon: "fit", kbd: "F", run: () => fit() });
     out.push({ sep: true });
     out.push({ id: "present", label: t("board.present.start"), icon: "present", kbd: "P", run: startPresenting });
@@ -2118,6 +2298,8 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
         <div className="seg">
           <button className="tool" aria-label={selIds.length > 1 ? t("board.tidy.selection") : t("board.tidy.all")}
             data-tip={selIds.length > 1 ? t("board.tidy.selection") : t("board.tidy.all")} data-kbd={`${mod}⇧O`} onClick={tidy}><Icon name="tidy" size={15} /></button>
+          <button className="tool" aria-label={selIds.length > 1 ? t("board.resolve.selection") : t("board.resolve")}
+            data-tip={selIds.length > 1 ? t("board.resolve.selection") : t("board.resolve")} onClick={resolveOverlaps}><Icon name="unoverlap" size={15} /></button>
           <button className={`tool${snapOn ? " on" : ""}`} aria-pressed={snapOn} aria-label={t("board.snap")}
             data-tip={`${t("board.snap")} · ${t("board.snap.hold", { mod })}`}
             onClick={() => { setSnapOn(!snapOn); writeLocal(SNAP_KEY, snapOn ? "0" : "1"); }}><Icon name="snap" size={15} /></button>

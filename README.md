@@ -322,6 +322,12 @@ made; your work stays solid.
   text, note, to-do or any other card in the middle: the connector splits in two,
   the next steps make room, and you are already typing in the new shape. Hermes
   does the same with `{op:'insert_on_edge'}`, and arranges with `{op:'tidy'}`.
+- **Nothing lands on anything.** A paste, drop, upload, menu add, duplicate,
+  Hermes add or project import goes to the nearest free spot; photos, videos and
+  link previews take their own shape before they load. When a card grows (its
+  picture arrives, you or Hermes add text) the cards it now covers glide away, as
+  one undo step; connected flows stay put. **Resolve overlaps** (toolbar or right
+  click) separates whatever already overlaps; Hermes has `{op:'resolve_overlaps'}`.
 - **Camera and transitions.** Every move (fit `F`, zoom to selection `Z`, step
   zoom with `+` / `-` or a `Ctrl`+wheel notch) is eased and interruptible: touch
   the board and it stops where you are. Opening a sub-board flies into its card

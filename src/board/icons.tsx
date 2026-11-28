@@ -8,7 +8,7 @@ import {
   Maximize2, MessageSquareText, MousePointer2, MoveUpRight, PanelRightClose, Pause, Pen, Pencil, PencilLine, Play,
   Plus, Power, Redo2, RotateCcw, RefreshCw, Rocket, RotateCw, Route, Scan, Server, Slash, Spline, Split, Square, SquareArrowOutUpRight, SquareDashed,
   SquareDashedMousePointer, SquareTerminal, StickyNote, TextQuote, Timer, Trash2, Undo2, Ungroup, Upload, Video,
-  Workflow, X, Zap, ZoomIn, ZoomOut, Box, Clock, Blocks, Link2, CircleArrowUp, History, SkipBack,
+  Workflow, X, Zap, ZoomIn, ZoomOut, Box, Clock, Blocks, Link2, CircleArrowUp, History, SkipBack, SquaresExclude,
   type IconNode,
 } from "lucide";
 
@@ -87,6 +87,7 @@ export const ICONS = {
   ungroup: Ungroup,
   // layout
   tidy: LayoutGrid,
+  unoverlap: SquaresExclude,
   snap: Magnet,
   more: Ellipsis,
   text: Type,

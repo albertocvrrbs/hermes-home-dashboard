@@ -27,6 +27,10 @@ export const SHAPES: Record<string, [number, number]> = { rect: [160, 56], diamo
 /** Clear space kept between a placed card and everything around it. */
 export const PLACE_GAP = 24;
 
+/** Content kinds that step aside to a free spot. Frames, text, ink and diagram pieces (box,
+ *  shape, line) are layout: they go exactly where they are put. Same list as engine.MOVABLE. */
+export const MOVABLE = new Set(["card", "todo", "col", "link", "image", "embed", "video", "board", "live", "comp"]);
+
 const round = (n: number) => Math.round(n) + 0; // + 0: no -0
 
 // ── intrinsic shape of media ─────────────────────────────────────────────
