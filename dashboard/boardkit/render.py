@@ -4,7 +4,7 @@ from __future__ import annotations
 import io
 import math
 from pathlib import Path
-from typing import Any, Dict, Iterable, Optional, Tuple
+from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple
 
 from . import assets as assets_mod
 from . import bulk
@@ -120,6 +120,26 @@ def _fit(draw: Any, text: str, font: Any, width: float) -> str:
         return text[: max(1, int(width / 7))]
 
 
+def _wrap(draw: Any, text: str, font: Any, width: float) -> List[str]:
+    """Greedy word wrap to ``width`` pixels, keeping the author's line breaks."""
+    out: List[str] = []
+    for para in str(text).split("\n"):
+        line = ""
+        for word in para.split():
+            cand = f"{line} {word}".strip()
+            try:
+                too_long = bool(line) and draw.textlength(cand, font=font) > width
+            except AttributeError:
+                too_long = bool(line) and len(cand) * 7 > width
+            if too_long:
+                out.append(line)
+                line = word
+            else:
+                line = cand
+        out.append(line)
+    return out
+
+
 def _points(it: Dict[str, Any]):
     out = []
     for pair in (it.get("d") or "").split():
@@ -132,7 +152,8 @@ def _points(it: Dict[str, Any]):
 
 
 def render_png(doc: Dict[str, Any], store: assets_mod.AssetStore, out_path: Path,
-               only: Optional[Iterable[str]] = None, region: Optional[Dict[str, int]] = None) -> Dict[str, Any]:
+               only: Optional[Iterable[str]] = None, region: Optional[Dict[str, int]] = None,
+               board_name: Optional[Callable[[str], Optional[str]]] = None) -> Dict[str, Any]:
     try:
         from PIL import Image, ImageDraw, ImageFont
     except ImportError:
@@ -168,7 +189,11 @@ def render_png(doc: Dict[str, Any], store: assets_mod.AssetStore, out_path: Path
             _ink(draw, it, tx, scale)
             continue
         if it["k"] == "text":
-            draw.text(a, str(it.get("text", ""))[:120], fill=ACCENT if it.get("size") == "h" else INK, font=font)
+            big = it.get("size") == "h"
+            tfont = _font(ImageFont, max(10, int((24 if big else 15) * scale))) if big else font
+            step = (31 if big else 20) * max(scale, .55)
+            for n, line in enumerate(_wrap(draw, str(it.get("text", "")), tfont, max(40, b[0] - a[0]))[:40]):
+                draw.text((a[0], a[1] + n * step), line, fill=ACCENT if big else INK, font=tfont)
             continue
         outline = ACCENT if it.get("by") == "h" else RULE
         if it["k"] != "frame":
@@ -194,13 +219,21 @@ def render_png(doc: Dict[str, Any], store: assets_mod.AssetStore, out_path: Path
         label = it.get("title") or it.get("text") or it.get("cap") or it.get("url") or it["k"]
         if it["k"] == "comp":
             label = f"{it.get('title') or ''} [component {it.get('comp', '?')}]".strip()
+        if it["k"] == "board":
+            ref = board_name(it["ref"]) if board_name and it.get("ref") else None
+            label = f"{it.get('title') or ref or 'board'} [sub-board{': ' + ref if ref and ref != it.get('title') else ''}]"
         num = f"{it['num']} " if it.get("num") else ""
         draw.text((a[0] + 6, a[1] + 5), _fit(draw, (num + " ".join(str(label).split()))[:60], font, b[0] - a[0] - 12), fill=INK, font=font)
         # second line: a box's subtitle, a card's body (when it has a title), a frame's note
         second = it.get("sub") or (it.get("text") if it.get("title") else None) or (it.get("note") if it["k"] == "frame" else None)
         if second and (b[1] - a[1]) > 34 * scale:
-            draw.text((a[0] + 6, a[1] + 5 + 19 * max(scale, .6)), _fit(draw, " ".join(str(second).split()), font, b[0] - a[0] - 12),
-                      fill=(170, 170, 160), font=font)
+            step = 19 * max(scale, .6)
+            room = 1 if it["k"] == "frame" else max(1, int((b[1] - a[1] - 5 - step - 16 * max(scale, .6)) // step))
+            lines = _wrap(draw, str(second), font, b[0] - a[0] - 12)
+            if len(lines) > room:
+                lines = lines[:room - 1] + [_fit(draw, " ".join(lines[room - 1:]), font, b[0] - a[0] - 12)]
+            for n, line in enumerate(lines):
+                draw.text((a[0] + 6, a[1] + 5 + step * (n + 1)), line, fill=(170, 170, 160), font=font)
         if it["k"] in ("live", "comp"):
             bag = it.get("data") if it["k"] == "live" else it.get("cdata")
             rows = [f"{k2}: {v}" for k2, v in (bag or {}).items() if isinstance(v, (str, int, float)) and not isinstance(v, bool)]

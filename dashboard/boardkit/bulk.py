@@ -64,7 +64,17 @@ def est_size(batch: Any, iid: str) -> Tuple[int, int]:
         h = _media_h(it["k"], it.get("w") or w, it["iw"], it["ih"])
     elif it.get("h") is None and it["k"] == "card":
         h = _card_h(it, w)
+    elif it.get("h") is None and it["k"] == "text":
+        h = _text_h(it, w)
     return max(1, w), max(1, h)
+
+
+def _text_h(it: Dict[str, Any], w: float) -> int:
+    """Free text grows with its lines on the board; a 40 px guess let notes run into what was below."""
+    big = it.get("size") == "h"
+    chars = max(8, int(w / (13.5 if big else 7.6)))
+    lines = sum(max(1, math.ceil(len(ln) / chars)) for ln in str(it.get("text") or "").split("\n"))
+    return max(40, min(1600, lines * (34 if big else 22) + 8))
 
 
 def _media_h(kind: str, w: float, iw: float, ih: float) -> int:
@@ -440,7 +450,7 @@ def _claim(batch: Any, spec: Dict[str, Any], taken: set) -> List[str]:
     out = []
     for i in got:
         it = batch.items[i]
-        if i in taken or it["k"] in ("line", "frame", "draw"):
+        if i in taken or it["k"] == "line":
             continue
         if it.get("in") and not explicit:
             continue
@@ -457,6 +467,94 @@ def _claim(batch: Any, spec: Dict[str, Any], taken: set) -> List[str]:
     else:
         top = reading_order(batch, top)
     return top + kids
+
+
+def _center_in(r: Dict[str, float], f: Dict[str, float]) -> bool:
+    cx, cy = r["x"] + r["w"] / 2, r["y"] + r["h"] / 2
+    return f["x"] <= cx <= f["x"] + f["w"] and f["y"] <= cy <= f["y"] + f["h"]
+
+
+def frame_members(batch: Any, fid: str, skip: Iterable[str] = ()) -> List[str]:
+    """Everything that sits in a frame (by centre), nested frames and strokes included, plus connectors
+    whose free ends ([x, y]) are inside it: what has to move with the frame to keep it intact."""
+    f = batch.rect_of(fid)
+    skip = set(skip)
+    out: List[str] = []
+    if not f:
+        return out
+    for i, it in batch.items.items():
+        if i == fid or i in skip or it.get("in"):
+            continue
+        if it["k"] == "line":
+            pts = [e for e in (it.get("a"), it.get("b")) if isinstance(e, list)]
+            if pts and all(f["x"] <= p[0] <= f["x"] + f["w"] and f["y"] <= p[1] <= f["y"] + f["h"] for p in pts):
+                out.append(i)
+            continue
+        r = batch.rect_of(i)
+        if r and _center_in(r, f):
+            out.append(i)
+    return out
+
+
+def units_of(batch: Any, ids_: List[str], skip: Iterable[str] = ()) -> List[Dict[str, Any]]:
+    """Group picked items into rigid units, in the order picked: a frame travels with what is inside it (a
+    diagram stays a diagram), all picked strokes travel together as one sketch, anything else alone.
+    ``rect`` is the unit's box; ``ids`` everything that moves; ``lead`` the id whose order counts."""
+    skip = set(skip)
+    picked = [i for i in ids_ if i not in skip]
+    frames = sorted([i for i in picked if batch.items[i]["k"] == "frame"],
+                    key=lambda i: -((batch.rect_of(i) or {"w": 0})["w"] * (batch.rect_of(i) or {"h": 0})["h"]))
+    owner: Dict[str, Dict[str, Any]] = {}
+    swallowed: set = set()
+    for fid in frames:
+        if fid in swallowed:
+            continue
+        mem = frame_members(batch, fid, skip)
+        rs = [r for r in (batch.rect_of(i) for i in [fid] + mem) if r]  # what pokes out of the frame counts too
+        x0, y0 = min(r["x"] for r in rs), min(r["y"] for r in rs)
+        box = {"x": x0, "y": y0, "w": max(r["x"] + r["w"] for r in rs) - x0, "h": max(r["y"] + r["h"] for r in rs) - y0}
+        unit = {"lead": fid, "ids": [fid] + mem, "rect": box}
+        owner[fid] = unit
+        swallowed.update(mem)
+    strokes = [i for i in picked if batch.items[i]["k"] == "draw" and i not in swallowed]
+    if strokes:
+        rs = [batch.rect_of(i) for i in strokes]
+        x0, y0 = min(r["x"] for r in rs), min(r["y"] for r in rs)
+        x1, y1 = max(r["x"] + r["w"] for r in rs), max(r["y"] + r["h"] for r in rs)
+        owner[strokes[0]] = {"lead": strokes[0], "ids": strokes, "rect": {"x": x0, "y": y0, "w": x1 - x0, "h": y1 - y0}}
+        swallowed.update(strokes[1:])
+    out: List[Dict[str, Any]] = []
+    for i in picked:
+        if i in owner:
+            out.append(owner[i])
+        elif i not in swallowed and batch.items[i]["k"] not in ("frame", "draw"):
+            out.append({"lead": i, "ids": [i], "rect": None})
+    return out
+
+
+def unit_size(batch: Any, u: Dict[str, Any]) -> Tuple[int, int]:
+    if u["rect"] is None:
+        return est_size(batch, u["lead"])
+    return max(1, int(math.ceil(u["rect"]["w"]))), max(1, int(math.ceil(u["rect"]["h"])))
+
+
+def unit_moves(batch: Any, u: Dict[str, Any], x: int, y: int, ops: List[Dict[str, Any]]) -> None:
+    """Ops that put unit ``u``'s box at (x, y)."""
+    if u["rect"] is None:
+        _hoist(batch, u["lead"], ops)
+        ops.append({"op": "set", "id": u["lead"], "p": {"x": x, "y": y}})
+        return
+    dx, dy = round(x - u["rect"]["x"]), round(y - u["rect"]["y"])
+    if not dx and not dy:
+        return
+    for i in u["ids"]:
+        it = batch.items[i]
+        if it["k"] == "line":
+            p = {e: [it[e][0] + dx, it[e][1] + dy] for e in ("a", "b") if isinstance(it.get(e), list)}
+            if p:
+                ops.append({"op": "set", "id": i, "p": p})
+        elif "x" in it and "y" in it:
+            ops.append({"op": "set", "id": i, "p": {"x": it["x"] + dx, "y": it["y"] + dy}})
 
 
 def _as_int(v: Any) -> Optional[int]:
@@ -494,29 +592,29 @@ def expand_zones(batch: Any, op: Dict[str, Any]) -> List[Dict[str, Any]]:
         if existing is not None and z.get("where") is None and z.get("ids") is None:
             z = {**z, "where": {"frame": existing}}
         moved = _claim(batch, z, taken)
-        taken.update(moved)
-        plans.append({"z": z, "frame": existing, "ids": moved})
+        units = units_of(batch, moved, skip=taken | ({existing} if existing else set()))
+        for u in units:
+            taken.update(u["ids"])
+        plans.append({"z": z, "frame": existing, "units": units})
     moving = taken
     prims: List[Dict[str, Any]] = []
 
-    # sizes per item
-    def sizes_of(ids_: List[str]) -> List[Tuple[int, int]]:
-        return [est_size(batch, i) for i in ids_]
+    # sizes per unit (an item, a frame with its contents, a sketch)
+    def sizes_of(units: List[Dict[str, Any]]) -> List[Tuple[int, int]]:
+        return [unit_size(batch, u) for u in units]
 
     # 1) existing frames: grid inside, grow to fit
     for p in plans:
         if p["frame"] is None:
             continue
         f = batch.rect_of(p["frame"])
-        ids_ = p["ids"]
-        sz = sizes_of(ids_)
+        units = p["units"]
+        sz = sizes_of(units)
         cols = int(p["z"]["cols"]) if p["z"].get("cols") else auto_cols(sz, igap, 1.5, maxcols, avail=f["w"] - 2 * SIDE_PAD)
         offs, W, H = pack(sz, cols, igap)
         x0, y0 = snap(f["x"] + SIDE_PAD), snap(f["y"] + TOP_PAD)
-        for i in ids_:
-            _hoist(batch, i, prims)
-        for i, (dx, dy) in zip(ids_, offs):
-            prims.append({"op": "set", "id": i, "p": {"x": x0 + dx, "y": y0 + dy}})
+        for u, (dx, dy) in zip(units, offs):
+            unit_moves(batch, u, x0 + dx, y0 + dy, prims)
         grow = {}
         if up(W + 2 * SIDE_PAD) > f["w"]:
             grow["w"] = up(W + 2 * SIDE_PAD)
@@ -533,8 +631,8 @@ def expand_zones(batch: Any, op: Dict[str, Any]) -> List[Dict[str, Any]]:
     # 2) new zones: size each from its content, then lay the zones out
     new = [p for p in plans if p["frame"] is None]
     for p in new:
-        ids_, z = p["ids"], p["z"]
-        sz = sizes_of(ids_)
+        z = p["z"]
+        sz = sizes_of(p["units"])
         want_w = int(z["w"]) if z.get("w") else None
         if z.get("cols"):
             cols = int(max(1, min(12, round(float(z["cols"])))))
@@ -618,10 +716,8 @@ def expand_zones(batch: Any, op: Dict[str, Any]) -> List[Dict[str, Any]]:
             prims.append({"op": "add", "ref": ref, "item": frame})
         for p in new:
             x0, y0 = ox + p["fx"] + SIDE_PAD, oy + p["fy"] + TOP_PAD
-            for i in p["ids"]:
-                _hoist(batch, i, prims)
-            for i, (dx, dy) in zip(p["ids"], p["offs"]):
-                prims.append({"op": "set", "id": i, "p": {"x": x0 + dx, "y": y0 + dy}})
+            for u, (dx, dy) in zip(p["units"], p["offs"]):
+                unit_moves(batch, u, x0 + dx, y0 + dy, prims)
     return prims
 
 
@@ -638,15 +734,19 @@ def expand_arrange(batch: Any, op: Dict[str, Any]) -> List[Dict[str, Any]]:
         raise _err("arrange needs frame, ids or where")
     if op.get("frame") is not None:
         where = {**where, "frame": op["frame"]}
-    ids_ = [i for i in select(batch, where) if batch.items[i]["k"] not in ("line", "frame", "draw") and not batch.items[i].get("in")]
+    ids_ = [i for i in select(batch, where) if batch.items[i]["k"] != "line" and not batch.items[i].get("in")]
     if not ids_:
         raise _err(f"arrange matched nothing ({describe(where)})")
     ids_ = ids_ if op.get("ids") is not None else reading_order(batch, ids_)
-    sz = [est_size(batch, i) for i in ids_]
-    rs = [batch.rect_of(i) for i in ids_]
+    units = units_of(batch, ids_)  # frames bring their contents, strokes stay one sketch
+    sz = [unit_size(batch, u) for u in units]
+    rs = [u["rect"] or batch.rect_of(u["lead"]) for u in units]
     x0, y0 = snap(min(r["x"] for r in rs)), snap(min(r["y"] for r in rs))
     span = max(r["x"] + r["w"] for r in rs) - min(r["x"] for r in rs)
     cols = int(max(1, min(12, round(float(op["cols"]))))) if op.get("cols") else auto_cols(
-        sz, gap, 1.6, 12, avail=min(2400, max(640, span)))
+        sz, gap, 1.6, 12, avail=min(2400 if all(u["rect"] is None for u in units) else 100000, max(640, span)))
     offs, _, _ = pack(sz, cols, gap)
-    return [{"op": "set", "id": i, "p": {"x": x0 + dx, "y": y0 + dy}} for i, (dx, dy) in zip(ids_, offs)]
+    out: List[Dict[str, Any]] = []
+    for u, (dx, dy) in zip(units, offs):
+        unit_moves(batch, u, x0 + dx, y0 + dy, out)
+    return out

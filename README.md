@@ -442,6 +442,14 @@ stage". He does it in a **single `board_apply` call**, so it is one atomic commi
   spacing (numbered items go in number order), sizes the frames to fit, and keeps the group clear of everything else.
   `frame:<id>` reuses an existing frame instead of creating one.
 - **`arrange`**: `{op:'arrange', frame?|ids?|where?, cols?, gap?}` grid-packs items (in a frame it also grows the frame).
+- **Frames move with what is inside them.** In `zones` and `arrange`, a picked frame is one rigid block with its
+  contents (boxes, connectors, images, nested frames), and picked freehand strokes move together as one sketch. So
+  "order everything by zones" on a finished board is one `zones` call over its existing frames, and
+  `{op:'arrange', ids:[<zone frames>], cols:3}` lays whole zones out to fit a screen.
+- **Frames move with what is inside them.** In `zones` and `arrange`, a picked frame is one rigid block with its
+  contents (boxes, connectors, images, nested frames), and picked freehand strokes move together as one sketch. So
+  "order everything by zones" on a finished board is one `zones` call over its existing frames, and
+  `{op:'arrange', ids:[<zone frames>], cols:3}` lays whole zones out to fit a screen.
 - **`place`**: `{op:'place', items:[{ref?, item:{k,...}, size?:[w,h]}], layout?, cols?, at?, into?, gap?}` adds many items on a grid
   (what `import` produces).
 

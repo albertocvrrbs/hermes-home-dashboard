@@ -493,11 +493,33 @@ class BoardAgent:
             region = region if isinstance(region, dict) else None
             if only:
                 only = _with_contents(doc, [str(i) for i in only])
-            info = render_png(doc, self.svc.assets, self.svc.root / "renders" / f"{doc['id']}.png", only, region)
-            info["hint"] = "Look at it with vision_analyze; world = region.x + px/scale."
+            info = render_png(doc, self.svc.assets, self._render_path(doc["id"]), only, region, self._board_name)
+            info["hint"] = ("Look at it with vision_analyze (a new file each call); world = region.x + px/scale. "
+                            "Components show as a labelled box: the preview cannot run their HTML.")
             return _dump(info)
         except (NotFound, engine.OpError, RuntimeError, ValueError) as e:
             return _dump({"error": str(e)})
+
+    def _render_path(self, bid: str):
+        """A fresh file per render (vision tools refuse to reload the same path), keeping the last 6."""
+        import time as _time
+        folder = self.svc.root / "renders"
+        folder.mkdir(parents=True, exist_ok=True)
+        old = sorted(folder.glob(f"{bid}-*.png"), key=lambda p: p.stat().st_mtime)
+        for p in old[:-5]:
+            try:
+                p.unlink()
+            except OSError:
+                pass
+        return folder / f"{bid}-{int(_time.time() * 1000) % 100_000_000:08d}.png"
+
+    def _board_name(self, bid: str) -> Optional[str]:
+        try:
+            d = self.svc.store.load(bid)
+            n = sum(1 for v in (d.get("items") or {}).values() if v.get("k") != "line")
+            return f"{d.get('name') or bid} · {n} items"
+        except Exception:
+            return None
 
     # ── hook ─────────────────────────────────────────────────────────────
     def pre_llm_call(self, session_id: Optional[str] = None, user_message: Any = None,

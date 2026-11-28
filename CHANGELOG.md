@@ -54,6 +54,28 @@ Found while building the launch board with real Hermes, by chat only.
   {create:true, parent}` makes a sub-board, and a board card Hermes adds adopts a parentless board,
   so the breadcrumb goes back to its parent.
 
+- **`zones` and `arrange` move frames as blocks.** A picked frame brings everything inside it
+  (diagrams keep their shape, free connector ends follow) and picked strokes move as one sketch, so
+  "order everything by zones" on a finished board is one call. Before, frames and strokes were
+  skipped and diagram boxes were grid-packed one by one, so Hermes reordered the board by hand in
+  dozens of `set` ops.
+- **`board_render` reads like the board:** text wraps (it was cut at 120 characters, and Hermes was
+  splitting notes into several items), card bodies and box subtitles wrap to their height, a board
+  card names its sub-board, and every render is a new file (vision tools refuse to reload a path
+  they have seen three times, so Hermes was copying the PNG around). Free text gets a height
+  estimate from its lines for layout.
+
+- **`zones` and `arrange` move frames as blocks.** A picked frame brings everything inside it
+  (diagrams keep their shape, free connector ends follow) and picked strokes move as one sketch, so
+  "order everything by zones" on a finished board is one call. Before, frames and strokes were
+  skipped and diagram boxes were grid-packed one by one, so Hermes reordered the board by hand in
+  dozens of `set` ops.
+- **`board_render` reads like the board:** text wraps (it was cut at 120 characters, and Hermes was
+  splitting notes into several items), card bodies and box subtitles wrap to their height, a board
+  card names its sub-board, and every render is a new file (vision tools refuse to reload a path
+  they have seen three times, so Hermes was copying the PNG around). Free text gets a height
+  estimate from its lines for layout.
+
 ## 1.10.0 — video parity
 
 Everything the launch video shows now works for real, with real Hermes, from one chat
