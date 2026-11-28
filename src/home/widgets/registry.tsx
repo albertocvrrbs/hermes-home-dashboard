@@ -109,7 +109,10 @@ export const WIDGET_REGISTRY: Record<string, WidgetDef> = {
       />
     ),
     defaultSize: { gw: 5, gh: 4 }, minSize: { gw: 3, gh: 3 },
-    navigateTo: null, dataSource: "analytics",
+    // Not gated on the shared 1-day poll: the widget fetches its own range (with retries) and shows
+    // its own loading/unavailable state. Gating it hid the widget behind "loading…" for as long as
+    // the shared analytics call was slow or failing, even when its own data was already in.
+    navigateTo: null, dataSource: null,
   },
   host: {
     titleKey: "widget.host",
