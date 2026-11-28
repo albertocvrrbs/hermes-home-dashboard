@@ -16,6 +16,7 @@ import { LiveView } from "./LiveCard";
 import { CompView } from "./CompCard";
 import type { SyncHub } from "./syncClock";
 import { VideoStage } from "./video";
+import { wallPlayable } from "./playAll";
 import { aspectOf, stageAspect, thumbAspect } from "./place";
 import { embedDocument, type EmbedTheme } from "./embedBridge";
 import { readTheme, useEmbedBridge } from "./useEmbedBridge";
@@ -33,6 +34,8 @@ export interface ItemCtx {
   commit: (ops: Op[]) => void;
   playing: string | null;
   setPlaying: (id: string | null) => void;
+  /** "Play all videos" is on: every uploaded/direct video plays muted and looping (playAll.ts). */
+  playAll?: boolean;
   Frame?: SandboxedFrameComponent;
   openBoard: (id: string) => void;
   renderKid: (id: string) => ReactNode;
@@ -283,7 +286,7 @@ export function VideoView({ id, item, c }: { id: string; item: Item; c: ItemCtx 
           {!playing && <button className="play" data-nodrag="" onClick={() => c.setPlaying(id)}>{PLAY}{c.t("board.video.play")}</button>}
         </div>
       ) : (
-        <VideoStage playId={id} c={c} src={direct} asset={asset} posterAsset={item.img} dur={item.dur} title={title} syncGroup={item.sync} style={stageStyle} />
+        <VideoStage playId={id} c={c} src={direct} asset={asset} posterAsset={item.img} dur={item.dur} title={title} syncGroup={item.sync} wall={!!c.playAll && wallPlayable(item)} style={stageStyle} />
       )}
       <div className="hb-link"><div className="body">
         <div className="dom"><span>{site}</span></div>

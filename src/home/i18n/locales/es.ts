@@ -526,6 +526,8 @@ const es: Messages = {
   "board.video.uploaded": "video subido",
   "board.video.noPoster": "sin vista previa aún",
   "board.video.loading": "Cargando…",
+  "board.video.playAll": "Reproducir todos los videos",
+  "board.video.stopAll": "Detener todos los videos",
   "board.toast.uploadingVideo": "subiendo video… {pct} %",
   "board.toast.rejected": "no se guardó el cambio, se deshizo: {error}",
   "board.toast.videoFailed": "no se agregó el video: {error}",

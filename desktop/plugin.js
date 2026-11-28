@@ -790,6 +790,8 @@ const en = {
   "board.video.uploaded": "uploaded video",
   "board.video.noPoster": "no preview yet",
   "board.video.loading": "Loading…",
+  "board.video.playAll": "Play all videos",
+  "board.video.stopAll": "Stop all videos",
   "board.toast.uploadingVideo": "uploading video… {pct} %",
   "board.toast.rejected": "change not saved, undone: {error}",
   "board.toast.videoFailed": "video not added: {error}",
@@ -1345,6 +1347,8 @@ const es = {
   "board.video.uploaded": "video subido",
   "board.video.noPoster": "sin vista previa aún",
   "board.video.loading": "Cargando…",
+  "board.video.playAll": "Reproducir todos los videos",
+  "board.video.stopAll": "Detener todos los videos",
   "board.toast.uploadingVideo": "subiendo video… {pct} %",
   "board.toast.rejected": "no se guardó el cambio, se deshizo: {error}",
   "board.toast.videoFailed": "no se agregó el video: {error}",
@@ -8365,6 +8369,23 @@ function hostOf(url) {
     return url;
   }
 }
+function wallPlayable(it) {
+  if (!it || it.k !== "video") return false;
+  if (it.sync) return false;
+  return !!(it.asset || it.src);
+}
+function wallVideos(items) {
+  return Object.keys(items).filter((id) => wallPlayable(items[id]));
+}
+function offersPlayAll(items) {
+  return wallVideos(items).length > 1;
+}
+function stageMode(o) {
+  if (o.synced) return "synced";
+  if (o.clicked) return "single";
+  if (o.wall) return "wall";
+  return "none";
+}
 const PLAY$1 = /* @__PURE__ */ jsx("svg", { viewBox: "0 0 10 12", "aria-hidden": "true", children: /* @__PURE__ */ jsx("path", { d: "M0 0 10 6 0 12z" }) });
 function clockDuration(s) {
   if (!s || !Number.isFinite(s) || s <= 0) return "";
@@ -8417,10 +8438,12 @@ function useVideoPoster(src, asset, posterAsset, posterUrl, knownDur) {
   }, [src, asset, posterAsset, posterUrl, knownDur]);
   return { ...st, setDur: (d) => setSt((s) => s.dur ? s : { ...s, dur: d }) };
 }
-function VideoStage({ playId, c, src, asset, posterAsset, posterUrl, dur, title, vert, syncGroup, style }) {
+function VideoStage({ playId, c, src, asset, posterAsset, posterUrl, dur, title, vert, syncGroup, wall, style }) {
   const poster = useVideoPoster(src, asset, posterAsset, posterUrl, dur);
   const synced = !!syncGroup && !!(src || asset);
-  const playing = c.playing === playId || synced;
+  const mode = stageMode({ clicked: c.playing === playId, synced, wall: !!wall && !!(src || asset) });
+  const playing = mode !== "none";
+  const onWall = mode === "wall";
   const [vel, setVel] = useState(null);
   const clock2 = syncGroup ? c.sync.clock(syncGroup) : null;
   useEffect(() => vel && clock2 ? clock2.attachVideo(vel) : void 0, [vel, clock2]);
@@ -8444,7 +8467,7 @@ function VideoStage({ playId, c, src, asset, posterAsset, posterUrl, dur, title,
   const length = clockDuration(poster.dur);
   const url = asset ? blob : src;
   return /* @__PURE__ */ jsxs("div", { className: `stage${vert ? " vert" : ""}`, style, children: [
-    playing && url && /* @__PURE__ */ jsx("video", { ref: setVel, src: url, controls: true, autoPlay: !synced, preload: "metadata", "data-nodrag": "", title, poster: synced ? poster.url ?? void 0 : void 0 }),
+    playing && url && (onWall ? /* @__PURE__ */ jsx("video", { className: "wall", src: url, autoPlay: true, muted: true, loop: true, playsInline: true, preload: "auto", title, poster: poster.url ?? void 0 }) : /* @__PURE__ */ jsx("video", { ref: setVel, src: url, controls: true, autoPlay: !synced, preload: "metadata", "data-nodrag": "", title, poster: synced ? poster.url ?? void 0 : void 0 })),
     synced && /* @__PURE__ */ jsxs("span", { className: "sync-chip over", "data-tip": c.t("board.comp.syncTip", { group: syncGroup }), children: [
       /* @__PURE__ */ jsx(Icon, { name: "sync", size: 12 }),
       syncGroup
@@ -9957,7 +9980,7 @@ function VideoView({ id, item, c }) {
         PLAY,
         c.t("board.video.play")
       ] })
-    ] }) : /* @__PURE__ */ jsx(VideoStage, { playId: id, c, src: direct, asset, posterAsset: item.img, dur: item.dur, title, syncGroup: item.sync, style: stageStyle }),
+    ] }) : /* @__PURE__ */ jsx(VideoStage, { playId: id, c, src: direct, asset, posterAsset: item.img, dur: item.dur, title, syncGroup: item.sync, wall: !!c.playAll && wallPlayable(item), style: stageStyle }),
     /* @__PURE__ */ jsx("div", { className: "hb-link", children: /* @__PURE__ */ jsxs("div", { className: "body", children: [
       /* @__PURE__ */ jsx("div", { className: "dom", children: /* @__PURE__ */ jsx("span", { children: site }) }),
       c.editing === id ? /* @__PURE__ */ jsx("h4", { children: /* @__PURE__ */ jsx(
@@ -12290,6 +12313,7 @@ function BoardView({ bid, onOpenBoard, onHome }) {
   const selectedRef = useRef(selected);
   selectedRef.current = selected;
   const [playing, setPlaying] = useState(null);
+  const [playAll, setPlayAll] = useState(false);
   const [delta, setDelta] = useState(null);
   const [resize, setResize] = useState(null);
   const [marquee, setMarquee] = useState(null);
@@ -12751,6 +12775,7 @@ function BoardView({ bid, onOpenBoard, onHome }) {
     setSelected(/* @__PURE__ */ new Set());
     setEditing(null);
     setPlaying(null);
+    setPlayAll(false);
   }, [bid]);
   useEffect(() => {
     applyView();
@@ -14296,6 +14321,7 @@ function BoardView({ bid, onOpenBoard, onHome }) {
     commit,
     playing,
     setPlaying,
+    playAll,
     Frame,
     liveActions,
     liveActionsDown,
@@ -14318,7 +14344,7 @@ function BoardView({ bid, onOpenBoard, onHome }) {
       const cls = `hb-kid${selected.has(id) ? " sel" : ""}${kidDrag?.id === id ? " ghost" : ""}${hidden.has(id) ? " reveal-wait" : ""}`;
       return /* @__PURE__ */ jsx("div", { className: cls, "data-kid": id, ref: regEl(id), children: /* @__PURE__ */ jsx(ItemBody, { id, item: it, c: ctxRef.current, dropIndex: null, selected: selected.has(id) }) }, keyOf(id));
     }
-  } : null, [Frame, bid, commit, doc, editing, editHint, erasing, hidden, kidDrag, liveActions, liveActionsDown, keyOf, onOpenBoard, playing, regEl, runCompAction, runLiveAction, selected, setEditing, syncHub, t2, update]);
+  } : null, [Frame, bid, commit, doc, editing, editHint, erasing, hidden, kidDrag, liveActions, liveActionsDown, keyOf, onOpenBoard, playAll, playing, regEl, runCompAction, runLiveAction, selected, setEditing, syncHub, t2, update]);
   const ctxRef = useRef(ctx);
   ctxRef.current = ctx;
   const selBounds = useMemo(() => {
@@ -14685,6 +14711,17 @@ function BoardView({ bid, onOpenBoard, onHome }) {
         /* @__PURE__ */ jsx("span", { children: t2("board.state.saved", { time: clock$1(savedTs) }) }),
         /* @__PURE__ */ jsx("span", { className: "sess", "data-tip": doc.session?.id && !demoOn() ? t2("board.chat.sessionTip", { id: doc.session.id }) : void 0, children: sessionShort ? t2("board.state.session") : t2("board.state.noSession") })
       ] }),
+      offersPlayAll(doc.items) && /* @__PURE__ */ jsx(
+        "button",
+        {
+          className: `ib lg hb-playall${playAll ? " on" : ""}`,
+          "aria-pressed": playAll,
+          "aria-label": t2(playAll ? "board.video.stopAll" : "board.video.playAll"),
+          "data-tip": t2(playAll ? "board.video.stopAll" : "board.video.playAll"),
+          onClick: () => setPlayAll((v) => !v),
+          children: /* @__PURE__ */ jsx(Icon, { name: playAll ? "pause" : "play", size: 15 })
+        }
+      ),
       /* @__PURE__ */ jsx(
         "button",
         {
@@ -16443,6 +16480,9 @@ const boardCss = `/* Board — "Mesa de despacho" (hd-canvas-plan/mockup-v2). Ev
 /* a clip with a known size has a stage of its own shape: show all of it */
 .hb-video .stage[style*="aspect-ratio"] img, .hb-video .stage[style*="aspect-ratio"] video.still { object-fit: contain; }
 .hb-video .stage iframe, .hb-video .stage video { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; display: block; background: #000; }
+/* "Play all videos": wall players have no controls and let the card be dragged/selected through them */
+.hb .hb-video .stage video.wall { pointer-events: none; object-fit: cover; }
+.hb .hb-video .stage[style*="aspect-ratio"] video.wall { object-fit: contain; }
 .hb-video .play { position: absolute; left: 14px; bottom: 14px; display: inline-flex; align-items: center; gap: 8px; height: 30px; padding: 0 12px 0 10px; border-radius: var(--r-ctl); background: var(--accent); color: var(--on-accent) !important; font: 600 13px/1 var(--sans) !important; }
 .hb-video .play svg { width: 10px; height: 12px; fill: currentColor; }
 .hb-video .play:hover { background: color-mix(in srgb, var(--accent) 85%, #fff) !important; }

@@ -20,6 +20,14 @@ clone, they never build).
 
 ---
 
+## Unreleased — play all videos
+
+- **Play all videos.** A board with two or more uploaded or direct videos gets a play button in its
+  top bar: every video plays at once, muted and looping, without controls (a wall of runs, like a
+  Training Room of 37 stations). Press it again (or leave the board) to stop. A video you click keeps
+  its controls and sound; videos in a sync group keep following their group's clock; YouTube/Vimeo
+  players are left alone. (`src/board/playAll.ts`, `test/board-play-all.test.mjs`)
+
 ## 1.10.2 — fixes from the acceptance rehearsal
 
 Found while building the launch board with real Hermes, by chat only.

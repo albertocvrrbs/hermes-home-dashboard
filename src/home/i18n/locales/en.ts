@@ -525,6 +525,8 @@ const en = {
   "board.video.uploaded": "uploaded video",
   "board.video.noPoster": "no preview yet",
   "board.video.loading": "Loading…",
+  "board.video.playAll": "Play all videos",
+  "board.video.stopAll": "Stop all videos",
   "board.toast.uploadingVideo": "uploading video… {pct} %",
   "board.toast.rejected": "change not saved, undone: {error}",
   "board.toast.videoFailed": "video not added: {error}",

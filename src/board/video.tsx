@@ -7,6 +7,7 @@ import { useEffect, useState, type CSSProperties } from "react";
 import { assetUrl, boardsApi, grabFrame, mediaUrl, rememberPoster, videoPoster, type VideoPoster } from "./api";
 import { Icon } from "./icons";
 import type { ItemCtx } from "./items";
+import { stageMode } from "./playAll";
 
 const PLAY = <svg viewBox="0 0 10 12" aria-hidden="true"><path d="M0 0 10 6 0 12z" /></svg>;
 
@@ -55,14 +56,18 @@ export function useVideoPoster(src?: string, asset?: string, posterAsset?: strin
   return { ...st, setDur: (d: number) => setSt((s) => (s.dur ? s : { ...s, dur: d })) };
 }
 
-export function VideoStage({ playId, c, src, asset, posterAsset, posterUrl, dur, title, vert, syncGroup, style }: {
+export function VideoStage({ playId, c, src, asset, posterAsset, posterUrl, dur, title, vert, syncGroup, wall, style }: {
   playId: string; c: ItemCtx; src?: string; asset?: string; posterAsset?: string; posterUrl?: string;
   dur?: number; title?: string; vert?: boolean; syncGroup?: string; style?: CSSProperties;
+  /** "Play all videos" is on and this video takes part (muted, looping, no controls). */
+  wall?: boolean;
 }) {
   const poster = useVideoPoster(src, asset, posterAsset, posterUrl, dur);
   // a video in a sync group is mounted from the start: it is the playhead the other cards follow
   const synced = !!syncGroup && !!(src || asset);
-  const playing = c.playing === playId || synced;
+  const mode = stageMode({ clicked: c.playing === playId, synced, wall: !!wall && !!(src || asset) });
+  const playing = mode !== "none";
+  const onWall = mode === "wall";
   const [vel, setVel] = useState<HTMLVideoElement | null>(null);
   const clock = syncGroup ? c.sync.clock(syncGroup) : null;
   useEffect(() => (vel && clock ? clock.attachVideo(vel) : undefined), [vel, clock]);
@@ -80,7 +85,9 @@ export function VideoStage({ playId, c, src, asset, posterAsset, posterUrl, dur,
   const url = asset ? blob : src;
   return (
     <div className={`stage${vert ? " vert" : ""}`} style={style}>
-      {playing && url && <video ref={setVel} src={url} controls autoPlay={!synced} preload="metadata" data-nodrag="" title={title} poster={synced ? poster.url ?? undefined : undefined} />}
+      {playing && url && (onWall
+        ? <video className="wall" src={url} autoPlay muted loop playsInline preload="auto" title={title} poster={poster.url ?? undefined} />
+        : <video ref={setVel} src={url} controls autoPlay={!synced} preload="metadata" data-nodrag="" title={title} poster={synced ? poster.url ?? undefined : undefined} />)}
       {synced && <span className="sync-chip over" data-tip={c.t("board.comp.syncTip", { group: syncGroup! })}><Icon name="sync" size={12} />{syncGroup}</span>}
       {!(playing && url) && (poster.url
         ? <img src={poster.url} alt="" draggable={false} />

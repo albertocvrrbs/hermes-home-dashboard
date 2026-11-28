@@ -40,6 +40,7 @@ import { estimateSize, freePlace, MOVABLE, overlaps, pushPlan, resolvePlan, type
 import { EdgePicker, type PickSpec } from "./EdgePicker";
 import { CompGallery } from "./CompGallery";
 import { SyncTransport } from "./SyncTransport";
+import { offersPlayAll } from "./playAll";
 import { groupsOf, installSyncApi, makeSyncApi, SyncHub } from "./syncClock";
 
 type Tool = "select" | "pan" | "note" | "todo" | "link" | "image" | "col" | "board" | "embed" | "arrow" | "draw";
@@ -191,6 +192,8 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
   const selectedRef = useRef(selected);
   selectedRef.current = selected;
   const [playing, setPlaying] = useState<string | null>(null);
+  // "Play all videos": every uploaded/direct video on the board plays muted and looping (playAll.ts)
+  const [playAll, setPlayAll] = useState(false);
   const [delta, setDelta] = useState<{ dx: number; dy: number } | null>(null);
   const [resize, setResize] = useState<{ id: string; w: number; h: number } | null>(null);
   const [marquee, setMarquee] = useState<Rect | null>(null);
@@ -612,7 +615,7 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [doc, bid, applyView, fit]);
 
-  useEffect(() => { fitted.current = false; setSelected(new Set()); setEditing(null); setPlaying(null); }, [bid]);
+  useEffect(() => { fitted.current = false; setSelected(new Set()); setEditing(null); setPlaying(null); setPlayAll(false); }, [bid]);
   useEffect(() => { applyView(); }, [applyView, doc, layoutV]);
   // the minimap's static layer follows the document (not the camera)
   useEffect(() => {
@@ -1928,7 +1931,7 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
   }, []);
 
   const ctx: ItemCtx | null = useMemo(() => (doc ? {
-    doc, t, editing, setEditing, hint: editHint, update, commit, playing, setPlaying, Frame, liveActions, liveActionsDown, runLiveAction, erasing,
+    doc, t, editing, setEditing, hint: editHint, update, commit, playing, setPlaying, playAll, Frame, liveActions, liveActionsDown, runLiveAction, erasing,
     bid, sync: syncHub, runCompAction,
     keyOf,
     openBoard: (id) => openChild(id),
@@ -1948,7 +1951,7 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
         </div>
       );
     },
-  } : null), [Frame, bid, commit, doc, editing, editHint, erasing, hidden, kidDrag, liveActions, liveActionsDown, keyOf, onOpenBoard, playing, regEl, runCompAction, runLiveAction, selected, setEditing, syncHub, t, update]);
+  } : null), [Frame, bid, commit, doc, editing, editHint, erasing, hidden, kidDrag, liveActions, liveActionsDown, keyOf, onOpenBoard, playAll, playing, regEl, runCompAction, runLiveAction, selected, setEditing, syncHub, t, update]);
   const ctxRef = useRef(ctx);
   ctxRef.current = ctx;
 
@@ -2254,6 +2257,14 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
           <span>{t("board.state.saved", { time: clock(savedTs) })}</span>
           <span className="sess" data-tip={doc.session?.id && !demoOn() ? t("board.chat.sessionTip", { id: doc.session.id }) : undefined}>{sessionShort ? t("board.state.session") : t("board.state.noSession")}</span>
         </span>
+        {offersPlayAll(doc.items) && (
+          <button className={`ib lg hb-playall${playAll ? " on" : ""}`} aria-pressed={playAll}
+            aria-label={t(playAll ? "board.video.stopAll" : "board.video.playAll")}
+            data-tip={t(playAll ? "board.video.stopAll" : "board.video.playAll")}
+            onClick={() => setPlayAll((v) => !v)}>
+            <Icon name={playAll ? "pause" : "play"} size={15} />
+          </button>
+        )}
         <button className={`ib lg${doc.tour?.stops.length ? " has-tour" : ""}`} aria-label={t("board.present.start")}
           data-tip={t("board.present.start")} data-kbd="P" onClick={startPresenting}>
           <Icon name="present" size={15} />
