@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 import re
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 from . import compguide, components as comp_mod, embedlint, engine, summary
 from .render import render_png
@@ -163,11 +163,37 @@ SCHEMAS: Dict[str, Dict[str, Any]] = {
             "user's freehand sketches with your vision tool before redrawing them as clean boxes and lines."),
         "parameters": {"type": "object", "properties": {
             "board": {"type": "string"},
-            "ids": {"type": "array", "items": {"type": "string"}, "description": "Only these items."},
-            "region": {"type": "object", "description": "{x, y, w, h} in world px."},
+            "ids": {"type": "array", "items": {"type": "string"}, "description": "Only these items (a frame brings "
+                    "everything inside it)."},
+            "region": {"type": "object", "description": "{x, y, w, h} in world px (also accepted as `rect`)."},
         }},
     },
 }
+
+
+def _with_contents(doc: Dict[str, Any], ids: List[str]) -> List[str]:
+    """Render ids plus what they hold: a frame brings the items inside it, a column its cards, and
+    connectors come along when both of their ends are shown."""
+    from .render import _rect
+    items = doc.get("items") or {}
+    out = [i for i in ids if i in items]
+    seen = set(out)
+    for fid in [i for i in out if items[i].get("k") == "frame"]:
+        fr = _rect(items[fid], items)
+        if not fr:
+            continue
+        for k, it in items.items():
+            r = None if k in seen else _rect(it, items)
+            if r and fr[0] <= r[0] + r[2] / 2 <= fr[0] + fr[2] and fr[1] <= r[1] + r[3] / 2 <= fr[1] + fr[3]:
+                out.append(k)
+                seen.add(k)
+    for k, it in items.items():
+        if it.get("k") == "line" and k not in seen:
+            ends = [it.get("a"), it.get("b")]
+            if all(isinstance(e, str) and e in seen for e in ends):
+                out.append(k)
+                seen.add(k)
+    return out
 
 
 def _dump(data: Dict[str, Any]) -> str:
@@ -417,7 +443,10 @@ class BoardAgent:
             if doc is None:
                 return self._missing(args)
             only = args.get("ids") if isinstance(args.get("ids"), list) else None
-            region = args.get("region") if isinstance(args.get("region"), dict) else None
+            region = args.get("region") or args.get("rect")  # `rect` is what agents reach for first
+            region = region if isinstance(region, dict) else None
+            if only:
+                only = _with_contents(doc, [str(i) for i in only])
             info = render_png(doc, self.svc.assets, self.svc.root / "renders" / f"{doc['id']}.png", only, region)
             info["hint"] = "Look at it with vision_analyze; world = region.x + px/scale."
             return _dump(info)

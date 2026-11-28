@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any, Dict, Iterable, Optional, Tuple
 
 from . import assets as assets_mod
+from . import bulk
 from .engine import DEFAULT_SIZE
 
 MAX_SIDE = 1600
@@ -16,6 +17,26 @@ ACCENT = (255, 227, 196)
 RULE = (60, 70, 66)
 MARKS = {"ok": ((120, 190, 130), "ok"), "fail": ((220, 110, 100), "fail"), "wait": ((210, 180, 100), "wait")}
 PEN = {"accent": ACCENT, "sage": (127, 162, 135), "clay": (196, 126, 98), "slate": (124, 147, 180), "sand": (191, 160, 96)}
+
+
+# a system font with accents and Ñ (Pillow's built-in one draws boxes for anything outside ASCII)
+FONT_FILES = ("DejaVuSans.ttf", "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+              "/usr/share/fonts/dejavu/DejaVuSans.ttf", "/usr/share/fonts/TTF/DejaVuSans.ttf",
+              "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
+              "/usr/share/fonts/noto/NotoSans-Regular.ttf", "/System/Library/Fonts/Supplemental/Arial.ttf",
+              "/Library/Fonts/Arial.ttf", "C:/Windows/Fonts/arial.ttf")
+
+
+def _font(ImageFont: Any, size: int) -> Any:
+    for f in FONT_FILES:
+        try:
+            return ImageFont.truetype(f, size)
+        except OSError:
+            continue
+    try:
+        return ImageFont.load_default(size=size)
+    except TypeError:  # Pillow < 10.1
+        return ImageFont.load_default()
 
 
 def _layer(it: Dict[str, Any]) -> int:
@@ -68,7 +89,12 @@ def _rect(it: Dict[str, Any], items: Dict[str, Dict[str, Any]]) -> Optional[Tupl
             return it["x"] + min(xs), it["y"] + min(ys), max(xs) - min(xs) + 1, max(ys) - min(ys) + 1
     if it["k"] == "col":
         dh = 60 + 90 * len(it.get("kids") or [])
-    return it["x"], it["y"], it.get("w") or dw, it.get("h") or dh
+    w = it.get("w") or dw
+    if it.get("h") is None and it["k"] in ("image", "video") and it.get("iw") and it.get("ih"):
+        return it["x"], it["y"], w, bulk._media_h(it["k"], w, it["iw"], it["ih"])  # same height the board gives it
+    if it.get("h") is None and it["k"] == "card":
+        return it["x"], it["y"], w, bulk._card_h(it, w)
+    return it["x"], it["y"], w, it.get("h") or dh
 
 
 def _edge(rect: Tuple[int, int, int, int], toward: Tuple[float, float]) -> Tuple[float, float]:
@@ -128,10 +154,7 @@ def render_png(doc: Dict[str, Any], store: assets_mod.AssetStore, out_path: Path
     W, H = max(1, int((x1 - x0) * scale)), max(1, int((y1 - y0) * scale))
     img = Image.new("RGB", (W, H), BG)
     draw = ImageDraw.Draw(img)
-    try:
-        font = ImageFont.load_default(size=max(10, int(15 * scale)))
-    except TypeError:  # Pillow < 10.1
-        font = ImageFont.load_default()
+    font = _font(ImageFont, max(10, int(15 * scale)))
 
     def tx(x: float, y: float) -> Tuple[float, float]:
         return (x - x0) * scale, (y - y0) * scale
@@ -178,6 +201,14 @@ def render_png(doc: Dict[str, Any], store: assets_mod.AssetStore, out_path: Path
         if second and (b[1] - a[1]) > 34 * scale:
             draw.text((a[0] + 6, a[1] + 5 + 19 * max(scale, .6)), _fit(draw, " ".join(str(second).split()), font, b[0] - a[0] - 12),
                       fill=(170, 170, 160), font=font)
+        if it["k"] in ("live", "comp"):
+            bag = it.get("data") if it["k"] == "live" else it.get("cdata")
+            rows = [f"{k2}: {v}" for k2, v in (bag or {}).items() if isinstance(v, (str, int, float)) and not isinstance(v, bool)]
+            for n, row in enumerate(rows[:8]):
+                y = a[1] + 5 + (19 * (n + 2)) * max(scale, .6)
+                if y > b[1] - 36 * max(scale, .6):
+                    break
+                draw.text((a[0] + 6, y), _fit(draw, row, font, b[0] - a[0] - 12), fill=(170, 170, 160), font=font)
         if it.get("sync"):
             draw.text((b[0] - 70 * max(scale, .6), b[1] - 18 * max(scale, .6)), f"sync:{it['sync']}"[:14], fill=ACCENT, font=font)
         if it.get("mark") in MARKS:

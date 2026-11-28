@@ -120,6 +120,26 @@ class AgentToolsTest(unittest.TestCase):
         out = self.call("board_render", {"board": bid})
         self.assertTrue(Path(out["path"]).exists())
 
+    def test_render_frame_brings_its_contents_and_rect_is_region(self):
+        try:
+            import PIL  # noqa: F401
+        except ImportError:
+            self.skipTest("Pillow not installed")
+        bid = self.call("board_read", {"board": "B", "create": True})["board"]
+        self.call("board_apply", {"board": bid, "ops": [
+            {"op": "add", "ref": "$f", "item": {"k": "frame", "x": 0, "y": 0, "w": 800, "h": 400, "title": "Brain"}},
+            {"op": "add", "ref": "$a", "item": {"k": "box", "x": 40, "y": 80, "title": "Sim"}},
+            {"op": "add", "ref": "$b", "item": {"k": "box", "x": 400, "y": 80, "title": "Net"}},
+            {"op": "add", "item": {"k": "line", "a": "$a", "b": "$b", "label": "obs"}},
+            {"op": "add", "item": {"k": "card", "x": 2000, "y": 2000, "text": "far away"}},
+        ]})
+        doc = self.svc.store.load(bid)
+        self.assertEqual(sorted(agent_mod._with_contents(doc, ["0"])), ["0", "1", "2", "3"])
+        out = self.call("board_render", {"board": bid, "ids": ["0"]})
+        self.assertLess(out["region"]["w"], 1000)  # the far card is not in it
+        out = self.call("board_render", {"board": bid, "rect": {"x": 0, "y": 0, "w": 500, "h": 300}})
+        self.assertEqual(out["region"], {"x": 0, "y": 0, "w": 500, "h": 300})
+
 
 class HookTest(unittest.TestCase):
     def setUp(self):

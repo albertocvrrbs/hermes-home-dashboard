@@ -29,7 +29,11 @@ Found while building the launch board with real Hermes, by chat only.
   and was left out when integrating).
 - **`board_render` shows what the board shows:** box subtitles, card bodies and frame notes,
   connector labels, status marks, sync chips and video posters; connectors stop at the items'
-  edges. Hermes checks his layout with it and could not see any of those.
+  edges, images and videos get the height the board gives them (from their aspect), live and
+  component cards list their data, and text uses a system font with accents. `ids:[frame]` brings
+  everything inside the frame and `rect` is accepted for `region` (Hermes used both and got the
+  whole board, or only an empty frame). Hermes checks his layout with it and was shrinking
+  frames that were right.
 
 ## 1.10.0 — video parity
 
