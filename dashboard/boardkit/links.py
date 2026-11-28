@@ -11,7 +11,7 @@ import re
 import time
 from html.parser import HTMLParser
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Tuple
 from urllib.parse import urljoin, urlsplit
 
 from . import assets as assets_mod
@@ -179,13 +179,18 @@ def _cache_put(cache_dir: Path, url: str, data: Dict[str, Any], now: float) -> N
 
 
 def _store_image(fetcher: Fetcher, store: assets_mod.AssetStore, url: Optional[str]) -> Optional[str]:
+    return _store_sized(fetcher, store, url)[0]
+
+
+def _store_sized(fetcher: Fetcher, store: assets_mod.AssetStore, url: Optional[str]) -> Tuple[Optional[str], Optional[Tuple[int, int]]]:
+    """Fetch and store a picture: ``(asset id, (width, height))``; either may be None."""
     if not url:
-        return None
+        return None, None
     try:
         res = fetcher.get(url, "image")
-        return store.put_bytes(res.body)
+        return store.put_bytes(res.body), assets_mod.image_size(res.body)
     except (FetchError, assets_mod.AssetError):
-        return None
+        return None, None
 
 
 def preview(url: str, fetcher: Fetcher, store: assets_mod.AssetStore, cache_dir: Path,
@@ -234,9 +239,11 @@ def preview(url: str, fetcher: Fetcher, store: assets_mod.AssetStore, cache_dir:
             if meta.get("author"):
                 out["desc"] = meta["author"]
             out["site"] = {"youtube": "YouTube", "vimeo": "Vimeo", "loom": "Loom", "x": "X"}[cls["p"]]
-            img = _store_image(fetcher, store, meta.get("image"))
+            img, size = _store_sized(fetcher, store, meta.get("image"))
             if img:
                 out["img"] = img
+                if size:
+                    out["iw"], out["ih"] = size
             out["st"] = "ok" if (title or img) else "fail"
         else:
             res = fetcher.get(url, "html")
@@ -252,9 +259,11 @@ def preview(url: str, fetcher: Fetcher, store: assets_mod.AssetStore, cache_dir:
             for key in ("title", "desc", "site"):
                 if meta.get(key):
                     out[key] = meta[key]
-            img = _store_image(fetcher, store, meta.get("image"))
+            img, size = _store_sized(fetcher, store, meta.get("image"))
             if img:
                 out["img"] = img
+                if size:
+                    out["iw"], out["ih"] = size
             icon = _store_image(fetcher, store, meta.get("icon") or urljoin(res.url, "/favicon.ico"))
             if icon:
                 out["icon"] = icon

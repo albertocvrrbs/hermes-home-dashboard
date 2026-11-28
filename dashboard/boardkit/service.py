@@ -121,12 +121,40 @@ class BoardService:
                             ref = op.get("ref") or f"$p{i}"
                             op["ref"] = ref
                             todo.append((ref, url))
+                self.fill_dims(item, replace=op.get("op") == "set")
                 if op.get("op") == "add":
                     op["item"] = item
                 else:
                     op["p"] = item
             out.append(op)
         return out, todo
+
+    def fill_dims(self, item: Dict[str, Any], replace: bool = False) -> None:
+        """Stamp the intrinsic ``iw``/``ih`` of the item's main picture (image asset, video
+        poster, link thumbnail) so the card gets its final shape on first paint. ``replace``:
+        a patch that swaps the picture, whose old dims no longer apply."""
+        if item.get("iw") and item.get("ih"):
+            return
+        kind = item.get("k")
+        if replace and not ("asset" in item or "img" in item):
+            return
+        if not replace and kind not in ("image", "video", "link"):
+            return
+        size = None
+        try:
+            asset = item.get("asset")
+            if isinstance(asset, str) and asset.rsplit(".", 1)[-1] in assets_mod.VIDEO_EXT:
+                rec = self.posters.get(asset=asset)
+                if rec.get("iw") and rec.get("ih"):
+                    size = (rec["iw"], rec["ih"])
+            elif isinstance(asset, str) and not asset.endswith(".html"):
+                size = assets_mod.image_size(self.assets.get(asset)[1])
+            if size is None and isinstance(item.get("img"), str):
+                size = assets_mod.image_size(self.assets.get(item["img"])[1])
+        except (assets_mod.AssetError, OSError, ValueError, KeyError):
+            size = None
+        if size:
+            item["iw"], item["ih"] = int(size[0]), int(size[1])
 
     def commit(self, bid: str, ops: Any, by: str = "u", note: Optional[str] = None,
                previews: str = "background") -> Tuple[Dict[str, Any], Dict[str, Any]]:
@@ -176,7 +204,7 @@ class BoardService:
                 if res.get("kind") != "image" or not p:
                     continue
             elif item["k"] == "link":
-                p = {k: res[k] for k in ("title", "desc", "site", "icon", "img", "video") if k in res}
+                p = {k: res[k] for k in ("title", "desc", "site", "icon", "img", "video", "iw", "ih") if k in res}
                 p["st"] = res.get("st", "fail")
             else:
                 continue

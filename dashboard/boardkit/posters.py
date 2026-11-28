@@ -23,7 +23,7 @@ import tempfile
 import threading
 import time
 from pathlib import Path
-from typing import Any, Callable, Dict, Optional
+from typing import Any, Callable, Dict, Optional, Tuple
 
 from . import assets as assets_mod
 from . import ids
@@ -41,6 +41,31 @@ def pick_time(duration: Optional[float]) -> float:
     if duration < 10:
         return round(max(0.0, duration * 0.1), 3)
     return 1.0
+
+
+def displayed_size(info: Dict[str, Any]) -> Optional[Tuple[int, int]]:
+    """Width and height of the first video stream as a player shows it: a quarter-turn
+    rotation (phone footage: ``tags.rotate`` or a display-matrix side data) swaps them."""
+    streams = info.get("streams") or []
+    if not streams or not isinstance(streams[0], dict):
+        return None
+    st = streams[0]
+    w, h = st.get("width"), st.get("height")
+    if not (isinstance(w, int) and isinstance(h, int) and w > 0 and h > 0):
+        return None
+    turns = []
+    try:
+        turns.append(float((st.get("tags") or {}).get("rotate")))
+    except (TypeError, ValueError):
+        pass
+    for side in st.get("side_data_list") or []:
+        try:
+            turns.append(float(side.get("rotation")))
+        except (AttributeError, TypeError, ValueError):
+            pass
+    if any(round(abs(t)) % 180 == 90 for t in turns):
+        return h, w
+    return w, h
 
 
 class Posters:
@@ -144,7 +169,7 @@ class Posters:
             return {}
         try:
             p = subprocess.run([self.ffprobe, "-v", "error", "-select_streams", "v:0",
-                                "-show_entries", "stream=width,height:format=duration", "-of", "json", path],
+                                "-show_entries", "stream=width,height:stream_tags=rotate:stream_side_data=rotation:format=duration", "-of", "json", path],
                                stdin=subprocess.DEVNULL, capture_output=True, timeout=20)
             info = json.loads(p.stdout or b"{}")
         except (OSError, ValueError, subprocess.TimeoutExpired):
@@ -156,11 +181,9 @@ class Posters:
                 out["dur"] = round(d, 2)
         except (TypeError, ValueError):
             pass
-        streams = info.get("streams") or []
-        if streams and isinstance(streams[0], dict):
-            w, h = streams[0].get("width"), streams[0].get("height")
-            if isinstance(w, int) and isinstance(h, int) and w > 0 and h > 0:
-                out["iw"], out["ih"] = w, h
+        size = displayed_size(info)
+        if size:
+            out["iw"], out["ih"] = size
         return out
 
     def frame(self, path: str) -> Dict[str, Any]:

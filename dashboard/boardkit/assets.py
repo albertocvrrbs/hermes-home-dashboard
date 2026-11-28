@@ -52,8 +52,36 @@ def sniff(data: bytes) -> Optional[str]:
     return None
 
 
+def jpeg_orientation(data: bytes) -> int:
+    """EXIF orientation (1-8) of a JPEG, 1 when absent. 5-8 mean the picture is shown rotated by
+    a quarter turn, so its displayed width and height are the stored ones swapped."""
+    try:
+        i = 2
+        while i + 4 < len(data) and data[i] == 0xFF:
+            marker = data[i + 1]
+            if marker == 0xDA:
+                break
+            size = struct.unpack(">H", data[i + 2:i + 4])[0]
+            if marker == 0xE1 and data[i + 4:i + 10] == b"Exif\x00\x00":
+                tiff = data[i + 10:i + 2 + size]
+                end = "<" if tiff[:2] == b"II" else ">"
+                ifd = struct.unpack(end + "I", tiff[4:8])[0]
+                count = struct.unpack(end + "H", tiff[ifd:ifd + 2])[0]
+                for n in range(count):
+                    at = ifd + 2 + 12 * n
+                    tag, _typ, _cnt = struct.unpack(end + "HHI", tiff[at:at + 8])
+                    if tag == 0x0112:
+                        value = struct.unpack(end + "H", tiff[at + 8:at + 10])[0]
+                        return value if 1 <= value <= 8 else 1
+                return 1
+            i += 2 + size
+    except (struct.error, IndexError):
+        return 1
+    return 1
+
+
 def image_size(data: bytes) -> Optional[Tuple[int, int]]:
-    """Intrinsic pixel size from the header, without decoding."""
+    """Displayed pixel size from the header, without decoding (EXIF rotation applied)."""
     try:
         kind = sniff(data)
         if kind == "png":
@@ -83,7 +111,7 @@ def image_size(data: bytes) -> Optional[Tuple[int, int]]:
                 marker = data[i + 1]
                 if marker in (0xC0, 0xC1, 0xC2, 0xC3, 0xC5, 0xC6, 0xC7, 0xC9, 0xCA, 0xCB, 0xCD, 0xCE, 0xCF):
                     h, w = struct.unpack(">HH", data[i + 5:i + 9])
-                    return w, h
+                    return (h, w) if jpeg_orientation(data) >= 5 else (w, h)
                 if marker in (0xD8, 0x01) or 0xD0 <= marker <= 0xD7:
                     i += 2
                     continue
