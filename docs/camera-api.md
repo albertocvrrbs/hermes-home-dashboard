@@ -49,3 +49,9 @@ be stepped the same way: freeze the clock, click, `advance`.
 steps, `M` shows or hides the minimap (`cam.minimap(false)` does the same). All of them are
 eased and are cut short by any wheel, drag or key. Under `prefers-reduced-motion` every move
 is a jump and the zoom transitions are plain navigations.
+
+## Shared media clock
+
+`window.__hbSync` steps the board's media (video cards and components in a `sync` group) the
+same way: `manual(true)`, `seek(t)`, `step(frames, fps)`, `advance(ms)`. See
+[components.md](components.md#frame-by-frame-capture-window__hbsync).
