@@ -57,6 +57,7 @@ export function Wires({ doc, getRect, version, hidden, fresh, selected, draft, o
   }, [doc, version, hidden, fresh, getRect]);
 
   return (
+    <>
     <svg className="hb-wires" width="1" height="1" aria-hidden="true">
       {wires.map((w) => {
         const ink = w.hermes ? "var(--accent)" : "color-mix(in srgb, var(--ink) 55%, transparent)";
@@ -76,12 +77,6 @@ export function Wires({ doc, getRect, version, hidden, fresh, selected, draft, o
             <rect x={w.port[0] - 2.5} y={w.port[1] - 2.5} width={5} height={5} fill={ink} />
             <path d={w.head} fill={w.hermes ? "var(--accent)" : "color-mix(in srgb, var(--ink) 72%, transparent)"}
               style={w.fresh && w.dots ? { animation: "hb-dot-in .2s both", animationDelay: `${w.dots.length * 14}ms` } : undefined} />
-            {w.label && (
-              <g>
-                <rect className="lbl-bg" x={w.mid[0] - w.label.length * 3.3 - 6} y={w.mid[1] - 8} width={w.label.length * 6.6 + 12} height={16} />
-                <text className="lbl" x={w.mid[0]} y={w.mid[1] + 3.5} textAnchor="middle">{w.label}</text>
-              </g>
-            )}
           </g>
         );
       })}
@@ -90,5 +85,14 @@ export function Wires({ doc, getRect, version, hidden, fresh, selected, draft, o
         return <path className="draft" d={elbowPath(r.points, 7)} />;
       })()}
     </svg>
+    {/* Labels live in their own layer above the items: in a narrow gap between two boxes the
+        text used to sit under the cards. The halo is the text's own stroke, so it needs no
+        measured background box. */}
+    <svg className="hb-wires hb-wire-labels" width="1" height="1" aria-hidden="true">
+      {wires.filter((w) => w.label).map((w) => (
+        <text key={w.id} className="lbl" x={w.mid[0]} y={w.mid[1] + 3.5} textAnchor="middle">{w.label}</text>
+      ))}
+    </svg>
+    </>
   );
 }

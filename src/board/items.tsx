@@ -344,6 +344,7 @@ export function EmbedView({ id, item, c }: { id: string; item: Item; c: ItemCtx 
 // ── nested board ─────────────────────────────────────────────────────────
 
 const childCache = new Map<string, Promise<BoardDoc | null>>();
+export const CHILD_POLL_MS = 5000;
 
 export function loadBoardDoc(bid: string, fresh = false): Promise<BoardDoc | null> {
   let p = fresh ? undefined : childCache.get(bid);
@@ -371,10 +372,32 @@ export function BoardPreview({ doc, className }: { doc: BoardDoc | null; classNa
 
 export function BoardRefView({ item, c }: { item: Item; c: ItemCtx }) {
   const [child, setChild] = useState<BoardDoc | null>(null);
+  // The preview follows the child: it used to load once on mount, so a card kept saying "0 cards"
+  // while the sub-board grew. Poll the cheap `since` call and refetch only when something changed.
   useEffect(() => {
+    if (!item.ref) return;
+    const ref = item.ref;
     let live = true;
-    if (item.ref) loadBoardDoc(item.ref, true).then((d) => live && setChild(d));
-    return () => { live = false; };
+    let seq = -1;
+    const load = () => loadBoardDoc(ref, true).then((d) => { if (live) { seq = d?.seq ?? -1; setChild(d); } });
+    void load();
+    const check = async () => {
+      if (document.hidden || seq < 0) return;
+      try {
+        const r = await boardsApi.since(ref, seq);
+        if (live && (r.entries?.length || r.doc)) await load();
+      } catch { /* keep the last preview */ }
+    };
+    const i = window.setInterval(check, CHILD_POLL_MS);
+    const onVis = () => { void check(); };
+    document.addEventListener("visibilitychange", onVis);
+    window.addEventListener("focus", onVis);
+    return () => {
+      live = false;
+      window.clearInterval(i);
+      document.removeEventListener("visibilitychange", onVis);
+      window.removeEventListener("focus", onVis);
+    };
   }, [item.ref]);
   const count = child ? Object.values(child.items).filter((x) => x.k !== "line").length : 0;
   return (
@@ -382,7 +405,7 @@ export function BoardRefView({ item, c }: { item: Item; c: ItemCtx }) {
       onDoubleClick={(e) => { e.stopPropagation(); if (item.ref) c.openBoard(item.ref); }}>
       <div className="pv"><BoardPreview doc={child} /></div>
       <div className="ttl">
-        <b>{child?.name ?? item.title ?? c.t("board.ref.missing")}</b>
+        <b data-tip={child?.name ?? item.title ?? undefined}>{child?.name ?? item.title ?? c.t("board.ref.missing")}</b>
         <span><button data-nodrag="" data-tip={c.t("board.index.open")} aria-label={c.t("board.index.open")} onClick={() => item.ref && c.openBoard(item.ref)}><Icon name="openBoard" size={13} /></button></span>
       </div>
       <div className="meta"><span>{c.t("board.ref.meta", { n: count, when: ago(c.t, child?.updated) })}</span></div>

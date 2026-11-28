@@ -1420,7 +1420,7 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
         <span className="spacer" />
         <span className="hb-state">
           <span>{t("board.state.saved", { time: clock(savedTs) })}</span>
-          <span className="sess">{sessionShort ? <>{t("board.state.session")} <b>#{sessionShort}</b></> : t("board.state.noSession")}</span>
+          <span className="sess" data-tip={doc.session?.id ? t("board.chat.sessionTip", { id: doc.session.id }) : undefined}>{sessionShort ? t("board.state.session") : t("board.state.noSession")}</span>
         </span>
         <button className={`ib lg${chatOpen ? " on" : ""}`} aria-pressed={chatOpen} aria-label={chatOpen ? t("board.chat.close") : t("board.chat.open")}
           data-tip={chatOpen ? t("board.chat.close") : t("board.chat.open")} data-kbd="/"

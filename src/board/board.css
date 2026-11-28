@@ -217,7 +217,7 @@
 .hb-boardref .pv i.c { background: color-mix(in srgb, var(--accent) 24%, transparent); }
 .hb-boardref .pv i.h { background: none; outline: 1px dotted color-mix(in srgb, var(--accent) 60%, transparent); outline-offset: -1px; }
 .hb-boardref .ttl { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; padding: 10px 4px 3px; }
-.hb-boardref .ttl b { font: 600 14px/1.2 var(--sans); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hb-boardref .ttl b { font: 600 14px/1.25 var(--sans); min-width: 0; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow-wrap: anywhere; }
 .hb-boardref .ttl span { display: grid; place-items: center; color: var(--accent); opacity: 0; transition: opacity .16s var(--out); white-space: nowrap; }
 .hb-boardref .ttl button { display: grid; place-items: center; width: 22px; height: 22px; border-radius: var(--r-ctl); }
 .hb-boardref .ttl button:hover { background: var(--hover); }
@@ -438,8 +438,9 @@
 .hb-chat .ch-asst b { font-weight: 650; }
 .hb-chat .ch-asst code { font: 400 12px/1 var(--mono); padding: 1px 4px; border-radius: 3px; background: var(--hover); }
 .hb-chat .ch-asst pre { margin: 0 0 8px; padding: 8px 10px; border-radius: 6px; background: var(--well); border: 1px solid var(--rule); font: 400 11.5px/1.5 var(--mono); white-space: pre-wrap; overflow-wrap: anywhere; }
-.hb-chat .ch-tool { display: flex; align-items: center; gap: 8px; font: 400 10.5px/1.3 var(--mono); color: var(--ink-3); }
-.hb-chat .ch-tool .dot { width: 4px; height: 4px; background: var(--rule-3); flex: none; }
+.hb-chat .ch-tool { display: flex; align-items: center; gap: 8px; font: 400 10.5px/1.3 var(--mono); color: var(--ink-3); min-width: 0; }
+.hb-chat .ch-tool svg { flex: none; color: var(--ink-3); }
+.hb-chat .ch-tool .txt { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .hb-chat .ch-working { display: flex; align-items: center; gap: 7px; font: 400 11px/1 var(--mono); color: var(--ink-3); }
 .hb-chat .ch-working svg { width: 8px; height: 10px; color: var(--accent); }
 .hb-chat .ch-working .caret { display: inline-block; width: 6px; height: 11px; background: var(--accent); animation: hb-caret 1.06s steps(1) infinite; }
@@ -722,7 +723,7 @@
 @keyframes hb-dot-in { from { opacity: 0; } }
 .hb-wires .fresh rect.d { animation: hb-dot-in .2s both; }
 .hb-item.reveal-wait { visibility: hidden; }
-.hb-wires .lbl-bg { fill: var(--bg); }
-.hb-wires .lbl { font: 400 10.5px var(--mono); fill: var(--ink-3); }
+.hb-wire-labels { z-index: 4; }
+.hb-wires .lbl { font: 400 10.5px var(--mono); fill: var(--ink-2); paint-order: stroke; stroke: var(--bg); stroke-width: 7px; stroke-linejoin: round; }
 .hb-wires .line-sel { stroke: var(--accent); stroke-width: 1.5; fill: none; stroke-dasharray: 3 3; }
 .hb-ghost { position: absolute; pointer-events: none; z-index: 50; opacity: .92; box-shadow: var(--lift); }

@@ -2,11 +2,11 @@
 // icons named here end up in the bundles: `lucide` is side-effect free, so the rest shakes out.
 // Rendered like Desktop's sidebar: 24-unit viewBox, 2px round stroke, currentColor.
 import {
-  Activity, ArrowUp, ArrowUpRight, Bell, Bot, Brain, BrushCleaning, CalendarArrowDown, ChartLine, Check,
+  Activity, BookOpen, Eye, FilePen, FileText, Globe, Search, Wrench, ArrowUp, ArrowUpRight, Bell, Bot, Brain, BrushCleaning, CalendarArrowDown, ChartLine, Check,
   ChevronLeft, ChevronRight, Circle, CircleAlert, CircleCheck, CodeXml, Columns3, Copy, Cpu, Database, Download, Eraser,
   FlaskConical, Gauge, GitBranch, Group, Hand, HardDrive, Highlighter, Image, LassoSelect, LayoutDashboard, Link, ListPlus, ListTodo,
   Maximize2, MessageSquareText, MousePointer2, MoveUpRight, PanelRightClose, Pause, Pen, Pencil, PencilLine, Play,
-  Plus, Power, Redo2, RefreshCw, Rocket, RotateCw, Route, Scan, Server, Slash, Spline, Split, Square, SquareArrowOutUpRight, SquareDashed,
+  Plus, Power, Redo2, RotateCcw, RefreshCw, Rocket, RotateCw, Route, Scan, Server, Slash, Spline, Split, Square, SquareArrowOutUpRight, SquareDashed,
   SquareDashedMousePointer, SquareTerminal, StickyNote, TextQuote, Timer, Trash2, Undo2, Ungroup, Upload, Video,
   Workflow, X, Zap, ZoomIn, ZoomOut,
   type IconNode,
@@ -35,7 +35,11 @@ export const ICONS = {
   connect: MoveUpRight,
   open: SquareArrowOutUpRight,
   openBoard: ArrowUpRight,
+  reset: RotateCcw,
   chat: MessageSquareText,
+  toolReadBoard: Eye, toolEditBoard: PencilLine, toolViewBoard: Eye, toolSkill: BookOpen, toolCommand: SquareTerminal,
+  toolReadFile: FileText, toolEditFile: FilePen, toolSearch: Search, toolWeb: Globe, toolImage: Image,
+  toolPlan: ListTodo, toolMemory: Brain, toolDelegate: Bot, toolOther: Wrench,
   closePanel: PanelRightClose,
   send: ArrowUp,
   close: X,

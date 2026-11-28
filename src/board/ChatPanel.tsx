@@ -2,13 +2,14 @@
 // Hermes Desktop's own cues (your turns in the user bubble, Hermes' replies as plain text, tool
 // calls folded into one quiet line), and a composer that sends into that session.
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
-import type { Translate } from "../home/i18n";
+import type { MessageKey, Translate } from "../home/i18n";
 import { hostModelMenu, onGatewayEvent } from "../sdk";
 import { Cad, clock } from "./bits";
 import { boardPrompt, chatMode, readChat, sendToSession, type ChatRow } from "./chat";
 import { modKey } from "./float";
-import { Icon } from "./icons";
+import { Icon, type IconName } from "./icons";
 import type { BoardDoc } from "./model";
+import type { ToolAct } from "./chatRows";
 import { modelDisplayName, sessionModelLabel } from "./sessionModel";
 import { useSessionModel } from "./useSessionModel";
 
@@ -32,6 +33,23 @@ function SessionModelPill({ doc, t, refreshKey }: { doc: BoardDoc; t: Translate;
   return <span className="hb-model ro" data-tip={`${title} — ${t("board.chat.model.readonly")}`} aria-label={title}>{label}</span>;
 }
 export const CHAT_MAX_W = 640;
+
+/** One quiet line for a run of tool steps: an icon and what the work was, never the tool's id. The raw
+ *  names stay in the tooltip for anyone debugging. */
+function ToolLine({ acts, names, t }: { acts: ToolAct[]; names: string[]; t: Translate }) {
+  if (!acts.length) return null;
+  const label = (a: ToolAct) => (a.kind === "editBoard" && a.n ? t("board.chat.tool.editBoardN", { n: a.n }) : t(`board.chat.tool.${a.kind}` as MessageKey));
+  // the board edit is the point of the run: lead with it
+  const ordered = [...acts].sort((a, b) => Number(b.kind === "editBoard") - Number(a.kind === "editBoard"));
+  const shown = ordered.slice(0, 2);
+  const rest = ordered.length - shown.length;
+  return (
+    <div className="ch-tool" data-tip={names.join(" · ")}>
+      <Icon name={`tool${ordered[0].kind[0].toUpperCase()}${ordered[0].kind.slice(1)}` as IconName} size={12} />
+      <span className="txt">{shown.map(label).join(" · ")}{rest > 0 ? ` ${t("board.chat.more", { n: rest })}` : ""}</span>
+    </div>
+  );
+}
 
 /** Inline `**bold**` and `code`, as React text (never HTML). */
 function inline(text: string): ReactNode[] {
@@ -188,7 +206,7 @@ export function ChatPanel({ doc, t, width, selected, sentAt, onWidth, onClose, o
       <div className="grip" role="separator" aria-orientation="vertical" aria-label={t("board.chat.resize")} onPointerDown={startResize}
         onDoubleClick={() => onWidth(360)} />
       <header className="ch-top">
-        <span className="hd"><span className="who"><Cad />hermes</span>{sessionId && <span className="n">#{sessionId.slice(-4)}</span>}</span>
+        <span className="hd" data-tip={sessionId ? t("board.chat.sessionTip", { id: sessionId }) : undefined}><span className="who"><Cad />hermes</span></span>
         {sessionId && <SessionModelPill doc={doc} t={t} refreshKey={mode === "live" ? 0 : sentAt} />}
         <button className="ib" data-tip={t("board.continue")} data-kbd={`${modKey()}↵`} aria-label={t("board.continue")} onClick={onContinue}>
           <Icon name="open" />
@@ -208,7 +226,7 @@ export function ChatPanel({ doc, t, width, selected, sentAt, onWidth, onClose, o
           </div>
         )}
         {shown.map((r) => r.role === "tool" ? (
-          <div key={r.key} className="ch-tool"><span className="dot" />{r.tools!.slice(0, 4).join(" · ")}{r.tools!.length > 4 ? ` +${r.tools!.length - 4}` : ""}</div>
+          <ToolLine key={r.key} acts={r.acts ?? []} names={r.tools ?? []} t={t} />
         ) : r.role === "user" ? (
           <div key={r.key} className="ch-user"><div className="bubble">{r.text}</div>{r.t ? <time>{clock(r.t)}</time> : null}</div>
         ) : (
