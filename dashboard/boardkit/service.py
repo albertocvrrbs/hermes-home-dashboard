@@ -8,7 +8,7 @@ from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 from . import actions as actions_mod
 from . import assets as assets_mod
-from . import engine, ids, links, live as live_mod, posters as posters_mod, store as store_mod, urls
+from . import components as comp_mod, engine, ids, links, live as live_mod, posters as posters_mod, store as store_mod, urls
 from .fetch import Fetcher
 
 PREVIEW_BUDGET_S = 9.0
@@ -24,6 +24,84 @@ class BoardService:
         self.posters = posters_mod.Posters(self.root, self.assets)
         # the allowlist sits beside the boards folder, in the plugin data dir
         self.actions = actions_mod.Registry(self.root.parent)
+        # the user's component library (HTML/JS components Hermes writes), beside the boards folder
+        self.components = comp_mod.Library(self.root.parent / "components")
+
+    # ── custom components ────────────────────────────────────────────────
+    def comp_update(self, bid: str, iid: str, data: Any = None, push: Any = None, keep: Any = None,
+                    replace: bool = False, by: str = "s") -> Tuple[Dict[str, Any], Dict[str, Any]]:
+        """Patch a component card's data bag (scripts, cron jobs). Same contract as live_update."""
+        op: Dict[str, Any] = {"op": "comp", "id": iid}
+        for key, val in (("data", data), ("push", push), ("keep", keep)):
+            if val is not None:
+                op[key] = val
+        if replace:
+            op["replace"] = True
+        return self.store.commit(bid, [op], by=by)
+
+    def _comp_item(self, bid: str, iid: str) -> Tuple[Dict[str, Any], Dict[str, Any]]:
+        doc = self.store.load(bid)
+        item = doc["items"].get(iid) if ids.valid_item_id(iid) else None
+        if not item or item.get("k") != "comp":
+            raise store_mod.NotFound("no such component card")
+        return doc, item
+
+    def comp_attach(self, bid: str, iid: str, name: str, data: bytes, by: str = "s") -> Dict[str, Any]:
+        """Attach (or replace) a data file on a component card; the card reads it with hb.asset(name)."""
+        _, item = self._comp_item(bid, iid)
+        try:
+            n = self.components.put_data_file(bid, iid, name, data)
+        except comp_mod.CompError as e:
+            raise engine.OpError(str(e)) from None
+        files = dict(item.get("files") or {})
+        files[name] = {"n": n, "r": int(files.get(name, {}).get("r", 0)) + 1}
+        self.store.commit(bid, [{"op": "set", "id": iid, "p": {"files": files}}], by=by)
+        return {"name": name, "bytes": n, "rev": files[name]["r"]}
+
+    def comp_file(self, bid: str, iid: str, name: str, off: int = 0, n: int = 4 * 1024 * 1024) -> Tuple[int, bytes]:
+        self._comp_item(bid, iid)
+        try:
+            return self.components.read_data_file(bid, iid, name, off, n)
+        except comp_mod.CompNotFound:
+            raise store_mod.NotFound("no such data file") from None
+
+    def comp_action(self, bid: str, iid: str, action: str, args: Optional[Dict[str, Any]] = None,
+                    confirm: bool = False, who: str = "dashboard") -> Dict[str, Any]:
+        """A component pressed an action. Only ids the card lists (and the owner registered) run; the
+        registry validates the args against the action's own schema."""
+        _, item = self._comp_item(bid, iid)
+        if not isinstance(action, str) or action not in (item.get("actions") or []):
+            raise actions_mod.ActionError("not_on_card", f"this card is not allowed to run {str(action)[:64]!r}")
+        title = (item.get("title") or item.get("comp") or "")[:60]
+        return self.actions.invoke(action, args if isinstance(args, dict) else {}, confirm=confirm, who=who,
+                                   board=bid, card=f"{iid} {title}".strip())
+
+    def comp_touch(self, name: str) -> int:
+        """The library changed: stamp unpinned instances so open boards reload them."""
+        n = 0
+        for row in self.store.list():
+            try:
+                doc = self.store.load(row["id"])
+            except store_mod.NotFound:
+                continue
+            ops = [{"op": "set", "id": i, "p": {"at": max(int(__import__("time").time()), int(it.get("at") or 0) + 1)}}
+                   for i, it in doc["items"].items() if it.get("k") == "comp" and it.get("comp") == name and not it.get("ver")]
+            if ops:
+                try:
+                    self.store.commit(row["id"], ops, by="s")
+                    n += len(ops)
+                except (engine.OpError, store_mod.NotFound):
+                    pass
+        return n
+
+    def comp_save(self, name: str, by: str = "h", **kw: Any) -> Dict[str, Any]:
+        try:
+            res = self.components.save(name, by=by, **kw)
+        except comp_mod.CompError as e:
+            raise engine.OpError(str(e)) from None
+        if not res.get("noop"):
+            self.comp_touch(name)
+        return res
 
     # ── live cards ───────────────────────────────────────────────────────
     def live_update(self, bid: str, iid: str, data: Any = None, push: Any = None, keep: Any = None,

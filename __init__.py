@@ -3,7 +3,7 @@
 The dashboard API (``dashboard/plugin_api.py``) and the Desktop UI (``desktop/plugin.js``)
 are mounted separately by their hosts. This root registers the agent side of Boards:
 
-- tools ``board_read``, ``board_apply``, ``board_render`` (toolset ``board``) so Hermes can
+- tools ``board_read``, ``board_apply``, ``board_render``, ``board_component`` (toolset ``board``) so Hermes can
   read and write the boards the user sees in the Home dashboard;
 - a ``pre_llm_call`` hook that, for sessions linked to a board only, tells the model in a few
   lines what the user changed on the board since its last turn.
@@ -37,7 +37,7 @@ def register(ctx: Any) -> None:
         profile = "default"
     root = _hermes_home() / "plugin-data" / "home-dashboard" / "boards"
     agent = BoardAgent(BoardService(root), profile=profile)
-    for name in ("board_read", "board_apply", "board_render"):
+    for name in ("board_read", "board_apply", "board_render", "board_component"):
         ctx.register_tool(
             name=name,
             toolset="board",
