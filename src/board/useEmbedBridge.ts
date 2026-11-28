@@ -48,7 +48,8 @@ export function readTheme(at: HTMLElement): EmbedTheme {
 /** `box` wraps the iframe. Themed embeds get the theme pushed on ready and whenever the page's
  *  look changes; every embed (themed or not) gets `hermes:size` on load, on card resize, and once
  *  the board's zoom has settled. */
-export function useEmbedBridge(box: RefObject<HTMLElement | null>, active: boolean, themed: boolean, key: string) {
+export function useEmbedBridge(box: RefObject<HTMLElement | null>, active: boolean, themed: boolean, key: string,
+  onTheme?: (t: EmbedTheme) => void) {
   const theme = useRef<EmbedTheme | null>(null);
   useEffect(() => {
     const el = box.current;
@@ -68,6 +69,7 @@ export function useEmbedBridge(box: RefObject<HTMLElement | null>, active: boole
       const t = readTheme(el);
       if (JSON.stringify(t) === JSON.stringify(theme.current)) return;
       theme.current = t;
+      onTheme?.(t);
       post({ type: THEME_MSG, theme: t });
     };
     const onMessage = (e: MessageEvent) => {
@@ -105,6 +107,7 @@ export function useEmbedBridge(box: RefObject<HTMLElement | null>, active: boole
       ro?.disconnect(); mo?.disconnect();
       window.clearInterval(tick); window.clearTimeout(first);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [box, active, themed, key]);
 }
 

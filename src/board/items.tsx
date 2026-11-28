@@ -141,7 +141,7 @@ export function TodoView({ id, item, c }: { id: string; item: Item; c: ItemCtx }
     <div className={`hb-card hb-todo${item.by === "h" ? " dm" : ""}`} style={{ width: item.w ?? 304 }}>
       {c.editing === id
         ? <div className="hd"><EditText single value={item.title ?? ""} onDone={(v) => { c.setEditing(null); c.update(id, { title: v.trim() || null }); }} /></div>
-        : <div className="hd">{item.title || c.t("board.todo.title")}<span className="n">{done}/{items.length}</span></div>}
+        : <div className="hd"><span className="t">{item.title || c.t("board.todo.title")}</span><span className="n">{done}/{items.length}</span></div>}
       {items.length > 0 && items.length <= 40 && (
         <div className="cells">{items.map((x, i) => <i key={i} className={x.done ? "on" : undefined} />)}</div>
       )}
@@ -191,7 +191,7 @@ export function ColumnView({ id, item, c, dropIndex }: { id: string; item: Item;
     <div className="hb-col" style={item.w ? { width: item.w } : undefined}>
       {c.editing === id
         ? <div className="hd"><EditText single value={item.title ?? ""} onDone={(v) => { c.setEditing(null); c.update(id, { title: v.trim() || null }); }} /></div>
-        : <div className="hd">{item.title || c.t("board.col.title")}<span className="n">{kids.length}</span>{item.by === "h" && <span className="n sig"><Cad /></span>}</div>}
+        : <div className="hd"><span className="t">{item.title || c.t("board.col.title")}</span><span className="n">{kids.length}</span>{item.by === "h" && <span className="n sig"><Cad /></span>}</div>}
       <div className={`track${dropIndex != null ? " drop" : ""}`} data-col={id}>
         {kids.map((k, i) => (
           <div key={k} style={{ display: "contents" }}>
@@ -322,10 +322,14 @@ export function EmbedView({ id, item, c }: { id: string; item: Item; c: ItemCtx 
   // change; later changes reach the page through the bridge.
   useLayoutEffect(() => { if (themed && !base && box.current) setBase(readTheme(box.current)); }, [themed, base]);
   const doc = useMemo(() => (html == null ? null : embedDocument(html, themed, base)), [html, themed, base]);
-  useEmbedBridge(box, doc != null, themed, `${nonce}`);
+  // An iframe whose page declares a colour scheme the embedder lacks gets an opaque canvas; matching
+  // it on the element keeps the card showing through.
+  const [scheme, setScheme] = useState<string | undefined>(undefined);
+  useEmbedBridge(box, doc != null, themed, `${nonce}`, (t) => setScheme(t.scheme));
   const Frame = c.Frame;
   const active = c.playing === id;
   const height = tall ? 520 : (item.h ? Math.max(120, item.h - 80) : 240);
+  const frameStyle = { height, ...(themed ? { colorScheme: scheme ?? base?.scheme } : {}) };
   const waiting = doc == null || (themed && !base);
   return (
     <div className={`hb-card hb-embed${item.by === "h" ? " dm" : ""}`} style={{ width: item.w ?? 452 }}>
@@ -345,8 +349,8 @@ export function EmbedView({ id, item, c }: { id: string; item: Item; c: ItemCtx 
         {!active && <button className="shield" aria-label={c.t("board.embed.activate")} onClick={() => c.setPlaying(id)}>
           <span>{c.t("board.embed.activate")}</span></button>}
         {waiting ? <div className="frame" style={{ height }} /> : Frame
-          ? <Frame key={`${nonce}${themed}`} src={toDataUrl(doc)} title={item.title || "embed"} className="frame" style={{ height }} />
-          : <iframe key={`${nonce}${themed}`} className="frame" style={{ height }} sandbox="allow-scripts" srcDoc={doc}
+          ? <Frame key={`${nonce}${themed}`} src={toDataUrl(doc)} title={item.title || "embed"} className={themed ? "frame themed" : "frame"} style={frameStyle} />
+          : <iframe key={`${nonce}${themed}`} className={themed ? "frame themed" : "frame"} style={frameStyle} sandbox="allow-scripts" srcDoc={doc}
               title={item.title || "embed"} referrerPolicy="no-referrer" />}
       </div>
       <div className="foot meta"><span>{c.t("board.embed.live")}</span><span className="sp" />{item.by === "h" && <Sig />}</div>
@@ -434,9 +438,9 @@ export function FrameView({ id, item, c }: { id: string; item: Item; c: ItemCtx 
       {item.by !== "h" && <><i /><i /><i /><i /></>}
       <span className="lbl">
         {item.by === "h" && <Cad />}
-        {c.editing === id
+        <span className="t">{c.editing === id
           ? <EditText single value={item.title ?? ""} onDone={(v) => { c.setEditing(null); c.update(id, { title: v.trim() || null }); }} />
-          : (item.title || c.t("board.frame.title"))}
+          : (item.title || c.t("board.frame.title"))}</span>
         {item.note && <em>{item.note}</em>}
       </span>
     </div>

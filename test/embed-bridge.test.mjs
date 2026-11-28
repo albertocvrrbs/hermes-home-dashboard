@@ -165,3 +165,17 @@ test("ECharts gets a 'hermes' theme and uses it by default", () => {
   b.ctx.window.echarts.init({}); b.ctx.window.echarts.init({}, "dark");
   assert.deepEqual(plain(inits), ["hermes", "dark"]);
 });
+
+test("both modes are wired in the card: off by default, toggle writes/clears the flag", async () => {
+  const { readFileSync } = await import("node:fs");
+  const src = readFileSync(new URL("../src/board/items.tsx", import.meta.url), "utf8");
+  assert.match(src, /const themed = item\.theme === true/);
+  assert.match(src, /update\(id, \{ theme: themed \? null : true \}\)/);
+  const menu = readFileSync(new URL("../src/board/BoardView.tsx", import.meta.url), "utf8");
+  assert.match(menu, /single\?\.k === "embed"/);
+  for (const loc of ["en", "es"]) {
+    const l = readFileSync(new URL(`../src/home/i18n/locales/${loc}.ts`, import.meta.url), "utf8");
+    assert.match(l, /"board\.embed\.themeOn"/);
+    assert.match(l, /"board\.embed\.themeOff"/);
+  }
+});
