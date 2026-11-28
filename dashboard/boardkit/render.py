@@ -14,6 +14,7 @@ BG = (3, 25, 25)
 INK = (243, 236, 227)
 ACCENT = (255, 227, 196)
 RULE = (60, 70, 66)
+MARKS = {"ok": ((120, 190, 130), "ok"), "fail": ((220, 110, 100), "fail"), "wait": ((210, 180, 100), "wait")}
 PEN = {"accent": ACCENT, "sage": (127, 162, 135), "clay": (196, 126, 98), "slate": (124, 147, 180), "sand": (191, 160, 96)}
 
 
@@ -68,6 +69,29 @@ def _rect(it: Dict[str, Any], items: Dict[str, Dict[str, Any]]) -> Optional[Tupl
     if it["k"] == "col":
         dh = 60 + 90 * len(it.get("kids") or [])
     return it["x"], it["y"], it.get("w") or dw, it.get("h") or dh
+
+
+def _edge(rect: Tuple[int, int, int, int], toward: Tuple[float, float]) -> Tuple[float, float]:
+    """Where the segment from the rect's centre to ``toward`` leaves the rect."""
+    x, y, w, h = rect
+    cx, cy = x + w / 2, y + h / 2
+    dx, dy = toward[0] - cx, toward[1] - cy
+    if not dx and not dy:
+        return cx, cy
+    t = min(w / 2 / abs(dx) if dx else math.inf, h / 2 / abs(dy) if dy else math.inf)
+    return cx + dx * t, cy + dy * t
+
+
+def _fit(draw: Any, text: str, font: Any, width: float) -> str:
+    """Cut ``text`` with an ellipsis so it fits ``width`` pixels."""
+    try:
+        if draw.textlength(text, font=font) <= width:
+            return text
+        while text and draw.textlength(text + "…", font=font) > width:
+            text = text[:-1]
+        return text + "…" if text else ""
+    except AttributeError:  # Pillow without textlength
+        return text[: max(1, int(width / 7))]
 
 
 def _points(it: Dict[str, Any]):
@@ -128,12 +152,14 @@ def render_png(doc: Dict[str, Any], store: assets_mod.AssetStore, out_path: Path
             draw.rectangle([a, b], outline=outline, width=1, fill=(10, 37, 36))
         else:
             draw.rectangle([a, b], outline=outline, width=1)
-        if it["k"] == "image" and it.get("asset"):
+        # pictures: an image's asset, a video's poster frame (``img``)
+        pic_id = it.get("asset") if it["k"] == "image" else it.get("img") if it["k"] in ("video", "link") else None
+        if pic_id:
             try:
-                _, data = store.get(it["asset"])
+                _, data = store.get(pic_id)
                 pic = Image.open(io.BytesIO(data)).convert("RGB")
                 pic.thumbnail((max(1, int(b[0] - a[0])), max(1, int(b[1] - a[1]))))
-                img.paste(pic, (int(a[0]), int(a[1])))
+                img.paste(pic, (int(a[0] + (b[0] - a[0] - pic.width) / 2), int(a[1] + (b[1] - a[1] - pic.height) / 2)))
             except Exception:
                 pass
         if it["k"] == "col":
@@ -143,8 +169,22 @@ def render_png(doc: Dict[str, Any], store: assets_mod.AssetStore, out_path: Path
                 draw.text((a[0] + 12, a[1] + (30 + 22 * n) * scale), "· " + " ".join(str(line).split())[:40],
                           fill=INK, font=font)
         label = it.get("title") or it.get("text") or it.get("cap") or it.get("url") or it["k"]
+        if it["k"] == "comp":
+            label = f"{it.get('title') or ''} [component {it.get('comp', '?')}]".strip()
         num = f"{it['num']} " if it.get("num") else ""
-        draw.text((a[0] + 6, a[1] + 5), (num + " ".join(str(label).split()))[:60], fill=INK, font=font)
+        draw.text((a[0] + 6, a[1] + 5), _fit(draw, (num + " ".join(str(label).split()))[:60], font, b[0] - a[0] - 12), fill=INK, font=font)
+        # second line: a box's subtitle, a card's body (when it has a title), a frame's note
+        second = it.get("sub") or (it.get("text") if it.get("title") else None) or (it.get("note") if it["k"] == "frame" else None)
+        if second and (b[1] - a[1]) > 34 * scale:
+            draw.text((a[0] + 6, a[1] + 5 + 19 * max(scale, .6)), _fit(draw, " ".join(str(second).split()), font, b[0] - a[0] - 12),
+                      fill=(170, 170, 160), font=font)
+        if it.get("sync"):
+            draw.text((b[0] - 70 * max(scale, .6), b[1] - 18 * max(scale, .6)), f"sync:{it['sync']}"[:14], fill=ACCENT, font=font)
+        if it.get("mark") in MARKS:
+            color, word = MARKS[it["mark"]]
+            r = max(7, int(11 * scale))
+            draw.ellipse([b[0] - 2 * r - 4, a[1] + 4, b[0] - 4, a[1] + 4 + 2 * r], fill=color)
+            draw.text((b[0] - 2 * r - 4 - 40 * max(scale, .6), a[1] + 4), word, fill=color, font=font)
         draw.text((a[0] + 6, b[1] - 18 * max(scale, .6)), k, fill=(150, 150, 140), font=font)
     for k in keys:
         it = items[k]
@@ -156,9 +196,24 @@ def render_png(doc: Dict[str, Any], store: assets_mod.AssetStore, out_path: Path
             ends.append(tuple(v) if isinstance(v, list) else centers.get(v))
         if None in ends:
             continue
+        # clip centre-to-centre to the two items' edges, like the board draws them
+        for i in (0, 1):
+            v = it.get("ab"[i])
+            if isinstance(v, str) and v in rects:
+                ends[i] = _edge(rects[v], ends[1 - i])
         p, q = tx(*ends[0]), tx(*ends[1])
         draw.line([p, q], fill=ACCENT if it.get("by") == "h" else INK, width=2)
         draw.ellipse([q[0] - 4, q[1] - 4, q[0] + 4, q[1] + 4], fill=ACCENT)
+        if it.get("label"):
+            text = " ".join(str(it["label"]).split())[:40]
+            mx, my = (p[0] + q[0]) / 2, (p[1] + q[1]) / 2
+            try:
+                l, t, r, bt = draw.textbbox((0, 0), text, font=font)
+            except AttributeError:  # very old Pillow
+                l, t, r, bt = 0, 0, 7 * len(text), 12
+            tw, th = r - l, bt - t
+            draw.rectangle([mx - tw / 2 - 3, my - th / 2 - 2, mx + tw / 2 + 3, my + th / 2 + 2], fill=BG)
+            draw.text((mx - tw / 2, my - th / 2 - t), text, fill=ACCENT, font=font)
     out_path.parent.mkdir(parents=True, exist_ok=True)
     img.save(out_path, "PNG")
     return {"path": str(out_path), "width": W, "height": H,
