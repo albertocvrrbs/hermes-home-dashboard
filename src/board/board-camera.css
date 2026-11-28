@@ -1,7 +1,6 @@
-/* Board camera, zoom level of detail, minimap view frame, miniature boards, page transitions.
+/* Board camera, minimap view frame, miniature boards, page transitions.
  * Kept apart from board.css (imported at its top); every selector is specific enough to win
- * wherever it sits. LOD variables (--iz, --ls-*) and data-lod are set on a world element by
- * lod.ts; the numbers in the comments are CSS px at 100 % zoom. */
+ * wherever it sits. --iz (1 / zoom) is set on the world by BoardView so overlays can keep their size. */
 
 /* ── camera ─────────────────────────────────────────────────────────────── */
 
@@ -16,97 +15,6 @@
   right: calc(var(--gp, 0px) * -1); bottom: calc(var(--gp, 0px) * -1);
   background-position: 0 0, 0 0;
 }
-
-/* ── zoom level of detail ───────────────────────────────────────────────── */
-
-/* titles keep a legible on-screen size: scaled by --ls-*, never shrinking with the board */
-.hb-world[data-lod] .hb-frame .lbl { transform: scale(var(--ls-f, 1)); transform-origin: 0 50%; }
-.hb-world[data-lod] .hb-text.h { transform: scale(var(--ls-h, 1)); transform-origin: 0 50%; }
-.hb-world[data-lod] .hb-col > .hd, .hb-world[data-lod] .hb-todo > .hd {
-  width: calc(100% / var(--ls-f, 1)); transform: scale(var(--ls-f, 1)); transform-origin: 0 0; overflow: hidden; }
-.hb-world[data-lod] .hb-col > .hd::before, .hb-world[data-lod] .hb-col > .hd::after,
-.hb-world[data-lod] .hb-todo > .hd::before, .hb-world[data-lod] .hb-todo > .hd::after { display: none; }
-.hb-world[data-lod] .hb-col .track { transform: translateY(calc(11px * (var(--ls-f, 1) - 1))); }
-.hb-world[data-lod] .hb-wires g > path:not(.hit):not(.line-sel)[fill]:not([fill="none"]),
-.hb-world[data-lod] .hb-wires g > rect:not(.lbl-bg), .hb-world[data-lod] .hb-wires .lbl-bg {
-  transform-box: fill-box; transform-origin: center; transform: scale(var(--ls-w, 1)); }
-.hb-world[data-lod] .hb-wires .lbl-bg { transform: scale(var(--ls-f, 1)); }
-.hb-world[data-lod] .hb-wires .lbl { font-size: calc(10.5px * var(--ls-f, 1)); }
-.hb-world[data-lod="1"] .hb-wires g > path:not(.hit):not(.line-sel):not([fill]),
-.hb-world[data-lod="2"] .hb-wires g > path:not(.hit):not(.line-sel):not([fill]) { stroke-width: calc(1.3px * var(--ls-w, 1)); }
-
-/* map view (below 50 %): small text becomes skeleton lines, pictures become thumbnails */
-.hb-world[data-lod="1"] .hb-card, .hb-world[data-lod="2"] .hb-card {
-  background: color-mix(in oklab, var(--bg) 87%, var(--ink)); box-shadow: 0 0 0 calc(1px * var(--ls-w, 1)) var(--rule-2); }
-.hb-world[data-lod="1"] .hb-card::after, .hb-world[data-lod="2"] .hb-card::after { display: none; }
-.hb-world[data-lod="1"] .hb-note, .hb-world[data-lod="2"] .hb-note { overflow: clip; }
-
-.hb-world[data-lod="1"] .hb-note h4, .hb-world[data-lod="2"] .hb-note h4,
-.hb-world[data-lod="1"] .hb-link h4, .hb-world[data-lod="2"] .hb-link h4,
-.hb-world[data-lod="1"] .hb-boardref .ttl b, .hb-world[data-lod="2"] .hb-boardref .ttl b {
-  width: calc(100% / var(--ls-c, 1)); padding-right: 0; transform: scale(var(--ls-c, 1)); transform-origin: 0 0;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }
-.hb-world[data-lod="1"] .hb-link h4 a, .hb-world[data-lod="2"] .hb-link h4 a { pointer-events: none; }
-.hb-world[data-lod="1"] .hb-note .body, .hb-world[data-lod="2"] .hb-note .body,
-.hb-world[data-lod="1"] .hb-link p, .hb-world[data-lod="2"] .hb-link p,
-.hb-world[data-lod="1"] .hb-link .url, .hb-world[data-lod="2"] .hb-link .url,
-.hb-world[data-lod="1"] .hb-todo li .l, .hb-world[data-lod="2"] .hb-todo li .l {
-  -webkit-text-fill-color: transparent; color: transparent; text-decoration: none;
-  background: repeating-linear-gradient(to bottom, color-mix(in srgb, var(--ink) 15%, transparent) 0 5px, transparent 5px 18px);
-  user-select: none; }
-.hb-world[data-lod="1"] .hb-note .body, .hb-world[data-lod="2"] .hb-note .body {
-  transform: translateY(calc(18.5px * (var(--ls-c, 1) - 1))); }
-.hb-world[data-lod="1"] .hb-note.quote .body, .hb-world[data-lod="2"] .hb-note.quote .body {
-  -webkit-text-fill-color: currentColor; color: var(--ink); background: none; transform: scale(var(--ls-c, 1)); transform-origin: 0 0;
-  width: calc(100% / var(--ls-c, 1)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-right: 0; }
-.hb-world[data-lod="1"] .hb-note .meta, .hb-world[data-lod="2"] .hb-note .meta,
-.hb-world[data-lod="1"] .hb-link .dom, .hb-world[data-lod="2"] .hb-link .dom,
-.hb-world[data-lod="1"] .hb-todo .addrow, .hb-world[data-lod="2"] .hb-todo .addrow,
-.hb-world[data-lod="1"] .hb-todo li .rm, .hb-world[data-lod="2"] .hb-todo li .rm,
-.hb-world[data-lod="1"] .hb-todo li .side, .hb-world[data-lod="2"] .hb-todo li .side,
-.hb-world[data-lod="1"] .hb-boardref .meta, .hb-world[data-lod="2"] .hb-boardref .meta { opacity: 0; }
-
-/* free text, embeds, live cards */
-.hb-world[data-lod="1"] .hb-text.p, .hb-world[data-lod="2"] .hb-text.p {
-  -webkit-text-fill-color: transparent; color: transparent; user-select: none;
-  background: repeating-linear-gradient(to bottom, color-mix(in srgb, var(--ink) 15%, transparent) 0 4px, transparent 4px 17.5px); }
-.hb-world[data-lod="1"] .hb-text.s, .hb-world[data-lod="2"] .hb-text.s { transform: scale(var(--ls-c, 1)); transform-origin: 0 0; }
-.hb-world[data-lod="1"] .hb-embed .file, .hb-world[data-lod="2"] .hb-embed .file {
-  display: block; max-width: calc(100% / var(--ls-c, 1)); transform: scale(var(--ls-c, 1)); transform-origin: 0 50%; }
-.hb-world[data-lod="1"] .hb-embed .sb, .hb-world[data-lod="2"] .hb-embed .sb,
-.hb-world[data-lod="1"] .hb-embed .tools, .hb-world[data-lod="2"] .hb-embed .tools,
-.hb-world[data-lod="1"] .hb-embed .foot, .hb-world[data-lod="2"] .hb-embed .foot { opacity: 0; }
-.hb-world[data-lod="1"] .hb-live .lv-head b, .hb-world[data-lod="2"] .hb-live .lv-head b {
-  width: calc(100% / var(--ls-c, 1)); transform: scale(var(--ls-c, 1)); transform-origin: 0 0; }
-.hb-world[data-lod="1"] .hb-live .lv-head small, .hb-world[data-lod="2"] .hb-live .lv-head small,
-.hb-world[data-lod="1"] .hb-live .lv-metrics .k, .hb-world[data-lod="2"] .hb-live .lv-metrics .k,
-.hb-world[data-lod="1"] .hb-live .lv-metrics .d, .hb-world[data-lod="2"] .hb-live .lv-metrics .d,
-.hb-world[data-lod="1"] .hb-live .lv-prog .lb, .hb-world[data-lod="2"] .hb-live .lv-prog .lb,
-.hb-world[data-lod="1"] .hb-live .lv-prog .eta, .hb-world[data-lod="2"] .hb-live .lv-prog .eta { opacity: 0; }
-
-/* diagram boxes: number and title scale up, the subtitle drops out */
-.hb-world[data-lod="1"] .hb-box, .hb-world[data-lod="2"] .hb-box {
-  background: color-mix(in oklab, var(--bg) 84%, var(--ink)); box-shadow: 0 0 0 calc(1px * var(--ls-w, 1)) var(--rule-3); }
-.hb-world[data-lod="1"] .hb-box .num, .hb-world[data-lod="2"] .hb-box .num {
-  position: absolute; left: 14px; top: 11px; transform: scale(var(--ls-b, 1)); transform-origin: 0 0; }
-.hb-world[data-lod="1"] .hb-box > span:not(.num), .hb-world[data-lod="2"] .hb-box > span:not(.num) { padding-left: calc(14px * var(--ls-b, 1)); width: 100%; }
-.hb-world[data-lod="1"] .hb-box b, .hb-world[data-lod="2"] .hb-box b {
-  width: calc(100% / var(--ls-b, 1)); transform: scale(var(--ls-b, 1)); transform-origin: 0 0; }
-.hb-world[data-lod="1"] .hb-box small, .hb-world[data-lod="2"] .hb-box small { opacity: 0; }
-
-/* frame corner marks keep a visible weight */
-.hb-world[data-lod] .hb-frame > i { width: calc(16px * var(--ls-w, 1)); height: calc(16px * var(--ls-w, 1)); }
-.hb-world[data-lod] .hb-frame > i:nth-of-type(1) { border-width: calc(1px * var(--ls-w, 1)) 0 0 calc(1px * var(--ls-w, 1)); }
-.hb-world[data-lod] .hb-frame > i:nth-of-type(2) { border-width: calc(1px * var(--ls-w, 1)) calc(1px * var(--ls-w, 1)) 0 0; }
-.hb-world[data-lod] .hb-frame > i:nth-of-type(3) { border-width: 0 0 calc(1px * var(--ls-w, 1)) calc(1px * var(--ls-w, 1)); }
-.hb-world[data-lod] .hb-frame > i:nth-of-type(4) { border-width: 0 calc(1px * var(--ls-w, 1)) calc(1px * var(--ls-w, 1)) 0; }
-
-/* pictures: a thumbnail stands in below 50 % (decoding a full-size photo to paint 80 px is waste) */
-.hb .hb-world img.lo { display: none; }  /* specific enough to beat `.hb-image .art img { display: block }` */
-.hb-world[data-lod="1"] img.lo, .hb-world[data-lod="2"] img.lo { display: block; }
-.hb-world[data-lod="1"] img.full, .hb-world[data-lod="2"] img.full { display: none; }
-.hb-world[data-lod="1"] .hb-embed .frame, .hb-world[data-lod="2"] .hb-embed .frame { visibility: hidden; }
-.hb-world[data-lod="1"] .hb-video .play, .hb-world[data-lod="2"] .hb-video .play { display: none; }
 
 /* ── minimap: a static layer, and a frame that only moves ───────────────── */
 

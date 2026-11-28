@@ -7457,53 +7457,6 @@ function installCameraApi(api2, win = window) {
     win.removeEventListener?.("hb:camera", onReq);
   };
 }
-const LOD1_Z = 0.5;
-const LOD2_Z = 0.24;
-const GAP$1 = 0.04;
-function lodFor(z, prev = 0) {
-  const down1 = prev >= 1 ? LOD1_Z + GAP$1 : LOD1_Z;
-  const down2 = prev >= 2 ? LOD2_Z + GAP$1 * 0.5 : LOD2_Z;
-  if (z < down2) return 2;
-  if (z < down1) return 1;
-  return 0;
-}
-const LABELS$1 = {
-  /** frame labels, column and to-do headers */
-  f: { base: 10, floor: 11.5, cap: 4.5 },
-  /** section headings (text items, size h): capped lower, they are wide and sit side by side */
-  h: { base: 15, floor: 16, cap: 3.2 },
-  /** card and link titles */
-  c: { base: 14, floor: 11, cap: 3 },
-  /** diagram box titles */
-  b: { base: 14, floor: 11.5, cap: 3.2 },
-  /** connector and frame-corner strokes */
-  w: { base: 1.3, floor: 1.7, cap: 4.5 }
-};
-const Z_START = 0.62;
-const Z_END = 0.3;
-const smooth$1 = (t2) => t2 * t2 * (3 - 2 * t2);
-function labelScale(z, base, floor, cap = 4.5) {
-  if (z >= Z_START) return 1;
-  const t2 = Math.min(1, (Z_START - z) / (Z_START - Z_END));
-  const eff = base * Z_START + (floor - base * Z_START) * smooth$1(t2);
-  return Math.max(1, Math.min(cap, eff / (base * z)));
-}
-const r3 = (n) => Math.round(n * 1e3) / 1e3;
-function lodVars(z) {
-  const out = { "--iz": String(r3(1 / z)) };
-  for (const k of Object.keys(LABELS$1)) out[`--ls-${k}`] = String(r3(labelScale(z, LABELS$1[k].base, LABELS$1[k].floor, LABELS$1[k].cap)));
-  return out;
-}
-function applyLod(el, z) {
-  const prev = Number(el.dataset.lod) || 0;
-  const lod = lodFor(z, prev);
-  const key = String(r3(z));
-  if (el.__lodZ === key) return lod;
-  el.__lodZ = key;
-  for (const [k, v] of Object.entries(lodVars(z))) el.style.setProperty(k, v);
-  if (el.dataset.lod !== String(lod)) el.dataset.lod = String(lod);
-  return lod;
-}
 const IDLE_MS = 2600;
 function PresenterHud({ p, t: t2, board }) {
   const [idle, setIdle] = useState(false);
@@ -8302,41 +8255,6 @@ function accentOf(el, fallback = "#ffe3c4") {
   const c = getComputedStyle(probe).color || fallback;
   probe.remove();
   return c;
-}
-const cache = /* @__PURE__ */ new Map();
-const THUMB_W$1 = 240;
-function thumbUrl(src, width = THUMB_W$1) {
-  let p = cache.get(src);
-  if (!p) {
-    p = (async () => {
-      try {
-        const blob = await (await fetch(src)).blob();
-        const bmp = await createImageBitmap(blob);
-        if (bmp.width <= width) {
-          bmp.close();
-          return null;
-        }
-        const h = Math.max(1, Math.round(bmp.height * width / bmp.width));
-        const canvas = document.createElement("canvas");
-        canvas.width = width;
-        canvas.height = h;
-        const ctx = canvas.getContext("2d");
-        if (!ctx) {
-          bmp.close();
-          return null;
-        }
-        ctx.imageSmoothingQuality = "high";
-        ctx.drawImage(bmp, 0, 0, width, h);
-        bmp.close();
-        const out = await new Promise((res) => canvas.toBlob(res, "image/webp", 0.72));
-        return out ? URL.createObjectURL(out) : null;
-      } catch {
-        return null;
-      }
-    })();
-    cache.set(src, p);
-  }
-  return p;
 }
 const YT_ID = /^[A-Za-z0-9_-]{11}$/;
 const YT_HOSTS = /* @__PURE__ */ new Set([
@@ -9553,21 +9471,7 @@ function fieldHint(c, id, field, dflt = false) {
   return { caret: mine ? h?.caret : void 0, seed: mine ? h?.seed : void 0, focus: mine };
 }
 function Pic({ src, alt = "" }) {
-  const [lo, setLo] = useState(null);
-  useEffect(() => {
-    let live = true;
-    setLo(null);
-    void thumbUrl(src).then((u) => {
-      if (live) setLo(u);
-    });
-    return () => {
-      live = false;
-    };
-  }, [src]);
-  return /* @__PURE__ */ jsxs(Fragment, { children: [
-    /* @__PURE__ */ jsx("img", { className: lo ? "full" : void 0, src, alt, draggable: false }),
-    lo && /* @__PURE__ */ jsx("img", { className: "lo", src: lo, alt: "", draggable: false })
-  ] });
+  return /* @__PURE__ */ jsx("img", { src, alt, draggable: false });
 }
 function EditText({ value, onDone, placeholder, className, single, caret, seed, focus = true, onEnter }) {
   const ref = useRef(null);
@@ -10488,7 +10392,7 @@ const Wires = forwardRef(function Wires2(props, ref) {
   const { doc, getRect, version, hidden, fresh, selected, draft, editLabel, insertLabel } = props;
   const [wires, setWires] = useState([]);
   const [hover, setHover] = useState(null);
-  const cache2 = useRef(/* @__PURE__ */ new Map());
+  const cache = useRef(/* @__PURE__ */ new Map());
   const live = useRef(props);
   live.current = props;
   const raf = useRef(0);
@@ -10501,7 +10405,7 @@ const Wires = forwardRef(function Wires2(props, ref) {
     for (const [id, it] of Object.entries(d.items)) {
       if (it.k !== "line" || hid.has(id)) continue;
       if ([it.a, it.b].some((e) => typeof e === "string" && hid.has(e))) continue;
-      const prev = cache2.current.get(id);
+      const prev = cache.current.get(id);
       const touched = !only || !prev || [it.a, it.b].some((e) => typeof e === "string" && only.has(e));
       const w = touched ? build(id, it, gr, fr.has(id), prev) : prev ?? null;
       if (w) {
@@ -10509,7 +10413,7 @@ const Wires = forwardRef(function Wires2(props, ref) {
         keep.set(id, w);
       }
     }
-    cache2.current = keep;
+    cache.current = keep;
     setWires((cur) => cur.length === next.length && cur.every((w, i) => w === next[i]) ? cur : next);
   }, []);
   useLayoutEffect(() => {
@@ -11082,7 +10986,6 @@ function MiniBoard({ doc, id, className }) {
     const b = { x: x0, y: y0, w: x1 - x0, h: y1 - y0 };
     const view = fitView(b, { w, h }, miniPad(w, h), 1.1);
     world.style.transform = `translate(${view.x}px, ${view.y}px) scale(${view.z})`;
-    applyLod(world, view.z);
     fits.set(root, { view, w, h, b });
   }, [doc]);
   const measure = useCallback(() => {
@@ -12459,7 +12362,7 @@ function BoardView({ bid, onOpenBoard, onHome }) {
     const v = view.current, world = worldRef.current;
     if (!world) return;
     world.style.transform = `translate(${v.x}px, ${v.y}px) scale(${v.z})`;
-    applyLod(world, v.z);
+    world.style.setProperty("--iz", String(Math.round(1e3 / v.z) / 1e3));
     const vp = vpRef.current;
     if (vp) {
       vp.classList.add("gesturing");
@@ -15823,10 +15726,9 @@ const boardCss = `/* Board — "Mesa de despacho" (hd-canvas-plan/mockup-v2). Ev
  * mono for structure (headers, counts, keys, data). No embedded fonts.
  * Radii: flush chrome 0 · cards & buttons 3 · panels 4 · floating menus 6 · checkboxes 2.
  * Motion: 120-200 ms ease-out, none under prefers-reduced-motion. */
-/* Board camera, zoom level of detail, minimap view frame, miniature boards, page transitions.
+/* Board camera, minimap view frame, miniature boards, page transitions.
  * Kept apart from board.css (imported at its top); every selector is specific enough to win
- * wherever it sits. LOD variables (--iz, --ls-*) and data-lod are set on a world element by
- * lod.ts; the numbers in the comments are CSS px at 100 % zoom. */
+ * wherever it sits. --iz (1 / zoom) is set on the world by BoardView so overlays can keep their size. */
 /* ── camera ─────────────────────────────────────────────────────────────── */
 /* compositor hints only while the camera is moving: a permanent will-change keeps the
  * layer rasterised at its first scale (soft text after a zoom) */
@@ -15838,90 +15740,6 @@ const boardCss = `/* Board — "Mesa de despacho" (hd-canvas-plan/mockup-v2). Ev
   right: calc(var(--gp, 0px) * -1); bottom: calc(var(--gp, 0px) * -1);
   background-position: 0 0, 0 0;
 }
-/* ── zoom level of detail ───────────────────────────────────────────────── */
-/* titles keep a legible on-screen size: scaled by --ls-*, never shrinking with the board */
-.hb-world[data-lod] .hb-frame .lbl { transform: scale(var(--ls-f, 1)); transform-origin: 0 50%; }
-.hb-world[data-lod] .hb-text.h { transform: scale(var(--ls-h, 1)); transform-origin: 0 50%; }
-.hb-world[data-lod] .hb-col > .hd, .hb-world[data-lod] .hb-todo > .hd {
-  width: calc(100% / var(--ls-f, 1)); transform: scale(var(--ls-f, 1)); transform-origin: 0 0; overflow: hidden; }
-.hb-world[data-lod] .hb-col > .hd::before, .hb-world[data-lod] .hb-col > .hd::after,
-.hb-world[data-lod] .hb-todo > .hd::before, .hb-world[data-lod] .hb-todo > .hd::after { display: none; }
-.hb-world[data-lod] .hb-col .track { transform: translateY(calc(11px * (var(--ls-f, 1) - 1))); }
-.hb-world[data-lod] .hb-wires g > path:not(.hit):not(.line-sel)[fill]:not([fill="none"]),
-.hb-world[data-lod] .hb-wires g > rect:not(.lbl-bg), .hb-world[data-lod] .hb-wires .lbl-bg {
-  transform-box: fill-box; transform-origin: center; transform: scale(var(--ls-w, 1)); }
-.hb-world[data-lod] .hb-wires .lbl-bg { transform: scale(var(--ls-f, 1)); }
-.hb-world[data-lod] .hb-wires .lbl { font-size: calc(10.5px * var(--ls-f, 1)); }
-.hb-world[data-lod="1"] .hb-wires g > path:not(.hit):not(.line-sel):not([fill]),
-.hb-world[data-lod="2"] .hb-wires g > path:not(.hit):not(.line-sel):not([fill]) { stroke-width: calc(1.3px * var(--ls-w, 1)); }
-/* map view (below 50 %): small text becomes skeleton lines, pictures become thumbnails */
-.hb-world[data-lod="1"] .hb-card, .hb-world[data-lod="2"] .hb-card {
-  background: color-mix(in oklab, var(--bg) 87%, var(--ink)); box-shadow: 0 0 0 calc(1px * var(--ls-w, 1)) var(--rule-2); }
-.hb-world[data-lod="1"] .hb-card::after, .hb-world[data-lod="2"] .hb-card::after { display: none; }
-.hb-world[data-lod="1"] .hb-note, .hb-world[data-lod="2"] .hb-note { overflow: clip; }
-.hb-world[data-lod="1"] .hb-note h4, .hb-world[data-lod="2"] .hb-note h4,
-.hb-world[data-lod="1"] .hb-link h4, .hb-world[data-lod="2"] .hb-link h4,
-.hb-world[data-lod="1"] .hb-boardref .ttl b, .hb-world[data-lod="2"] .hb-boardref .ttl b {
-  width: calc(100% / var(--ls-c, 1)); padding-right: 0; transform: scale(var(--ls-c, 1)); transform-origin: 0 0;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }
-.hb-world[data-lod="1"] .hb-link h4 a, .hb-world[data-lod="2"] .hb-link h4 a { pointer-events: none; }
-.hb-world[data-lod="1"] .hb-note .body, .hb-world[data-lod="2"] .hb-note .body,
-.hb-world[data-lod="1"] .hb-link p, .hb-world[data-lod="2"] .hb-link p,
-.hb-world[data-lod="1"] .hb-link .url, .hb-world[data-lod="2"] .hb-link .url,
-.hb-world[data-lod="1"] .hb-todo li .l, .hb-world[data-lod="2"] .hb-todo li .l {
-  -webkit-text-fill-color: transparent; color: transparent; text-decoration: none;
-  background: repeating-linear-gradient(to bottom, color-mix(in srgb, var(--ink) 15%, transparent) 0 5px, transparent 5px 18px);
-  user-select: none; }
-.hb-world[data-lod="1"] .hb-note .body, .hb-world[data-lod="2"] .hb-note .body {
-  transform: translateY(calc(18.5px * (var(--ls-c, 1) - 1))); }
-.hb-world[data-lod="1"] .hb-note.quote .body, .hb-world[data-lod="2"] .hb-note.quote .body {
-  -webkit-text-fill-color: currentColor; color: var(--ink); background: none; transform: scale(var(--ls-c, 1)); transform-origin: 0 0;
-  width: calc(100% / var(--ls-c, 1)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-right: 0; }
-.hb-world[data-lod="1"] .hb-note .meta, .hb-world[data-lod="2"] .hb-note .meta,
-.hb-world[data-lod="1"] .hb-link .dom, .hb-world[data-lod="2"] .hb-link .dom,
-.hb-world[data-lod="1"] .hb-todo .addrow, .hb-world[data-lod="2"] .hb-todo .addrow,
-.hb-world[data-lod="1"] .hb-todo li .rm, .hb-world[data-lod="2"] .hb-todo li .rm,
-.hb-world[data-lod="1"] .hb-todo li .side, .hb-world[data-lod="2"] .hb-todo li .side,
-.hb-world[data-lod="1"] .hb-boardref .meta, .hb-world[data-lod="2"] .hb-boardref .meta { opacity: 0; }
-/* free text, embeds, live cards */
-.hb-world[data-lod="1"] .hb-text.p, .hb-world[data-lod="2"] .hb-text.p {
-  -webkit-text-fill-color: transparent; color: transparent; user-select: none;
-  background: repeating-linear-gradient(to bottom, color-mix(in srgb, var(--ink) 15%, transparent) 0 4px, transparent 4px 17.5px); }
-.hb-world[data-lod="1"] .hb-text.s, .hb-world[data-lod="2"] .hb-text.s { transform: scale(var(--ls-c, 1)); transform-origin: 0 0; }
-.hb-world[data-lod="1"] .hb-embed .file, .hb-world[data-lod="2"] .hb-embed .file {
-  display: block; max-width: calc(100% / var(--ls-c, 1)); transform: scale(var(--ls-c, 1)); transform-origin: 0 50%; }
-.hb-world[data-lod="1"] .hb-embed .sb, .hb-world[data-lod="2"] .hb-embed .sb,
-.hb-world[data-lod="1"] .hb-embed .tools, .hb-world[data-lod="2"] .hb-embed .tools,
-.hb-world[data-lod="1"] .hb-embed .foot, .hb-world[data-lod="2"] .hb-embed .foot { opacity: 0; }
-.hb-world[data-lod="1"] .hb-live .lv-head b, .hb-world[data-lod="2"] .hb-live .lv-head b {
-  width: calc(100% / var(--ls-c, 1)); transform: scale(var(--ls-c, 1)); transform-origin: 0 0; }
-.hb-world[data-lod="1"] .hb-live .lv-head small, .hb-world[data-lod="2"] .hb-live .lv-head small,
-.hb-world[data-lod="1"] .hb-live .lv-metrics .k, .hb-world[data-lod="2"] .hb-live .lv-metrics .k,
-.hb-world[data-lod="1"] .hb-live .lv-metrics .d, .hb-world[data-lod="2"] .hb-live .lv-metrics .d,
-.hb-world[data-lod="1"] .hb-live .lv-prog .lb, .hb-world[data-lod="2"] .hb-live .lv-prog .lb,
-.hb-world[data-lod="1"] .hb-live .lv-prog .eta, .hb-world[data-lod="2"] .hb-live .lv-prog .eta { opacity: 0; }
-/* diagram boxes: number and title scale up, the subtitle drops out */
-.hb-world[data-lod="1"] .hb-box, .hb-world[data-lod="2"] .hb-box {
-  background: color-mix(in oklab, var(--bg) 84%, var(--ink)); box-shadow: 0 0 0 calc(1px * var(--ls-w, 1)) var(--rule-3); }
-.hb-world[data-lod="1"] .hb-box .num, .hb-world[data-lod="2"] .hb-box .num {
-  position: absolute; left: 14px; top: 11px; transform: scale(var(--ls-b, 1)); transform-origin: 0 0; }
-.hb-world[data-lod="1"] .hb-box > span:not(.num), .hb-world[data-lod="2"] .hb-box > span:not(.num) { padding-left: calc(14px * var(--ls-b, 1)); width: 100%; }
-.hb-world[data-lod="1"] .hb-box b, .hb-world[data-lod="2"] .hb-box b {
-  width: calc(100% / var(--ls-b, 1)); transform: scale(var(--ls-b, 1)); transform-origin: 0 0; }
-.hb-world[data-lod="1"] .hb-box small, .hb-world[data-lod="2"] .hb-box small { opacity: 0; }
-/* frame corner marks keep a visible weight */
-.hb-world[data-lod] .hb-frame > i { width: calc(16px * var(--ls-w, 1)); height: calc(16px * var(--ls-w, 1)); }
-.hb-world[data-lod] .hb-frame > i:nth-of-type(1) { border-width: calc(1px * var(--ls-w, 1)) 0 0 calc(1px * var(--ls-w, 1)); }
-.hb-world[data-lod] .hb-frame > i:nth-of-type(2) { border-width: calc(1px * var(--ls-w, 1)) calc(1px * var(--ls-w, 1)) 0 0; }
-.hb-world[data-lod] .hb-frame > i:nth-of-type(3) { border-width: 0 0 calc(1px * var(--ls-w, 1)) calc(1px * var(--ls-w, 1)); }
-.hb-world[data-lod] .hb-frame > i:nth-of-type(4) { border-width: 0 calc(1px * var(--ls-w, 1)) calc(1px * var(--ls-w, 1)) 0; }
-/* pictures: a thumbnail stands in below 50 % (decoding a full-size photo to paint 80 px is waste) */
-.hb .hb-world img.lo { display: none; }
-/* specific enough to beat \`.hb-image .art img { display: block }\` */
-.hb-world[data-lod="1"] img.lo, .hb-world[data-lod="2"] img.lo { display: block; }
-.hb-world[data-lod="1"] img.full, .hb-world[data-lod="2"] img.full { display: none; }
-.hb-world[data-lod="1"] .hb-embed .frame, .hb-world[data-lod="2"] .hb-embed .frame { visibility: hidden; }
-.hb-world[data-lod="1"] .hb-video .play, .hb-world[data-lod="2"] .hb-video .play { display: none; }
 /* ── minimap: a static layer, and a frame that only moves ───────────────── */
 .hb-map { overflow: hidden; }
 .hb-map .hb-map-view { position: absolute; left: 0; top: 0; pointer-events: none; border: 1px solid var(--accent); opacity: .75; }

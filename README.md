@@ -328,9 +328,9 @@ made; your work stays solid.
   and crossfades into the board, and the Home widget hands off into the page the
   same way. Scripts can drive it with `window.__hbCamera` (see
   [`docs/camera-api.md`](docs/camera-api.md)).
-- **Zoomed out, still legible.** Level of detail keeps titles readable at any
-  zoom, turns body text into skeleton lines and swaps images for thumbnails, so
-  large boards stay smooth. `M` toggles the minimap.
+- **Zoom out and it is still your board.** No level-of-detail switch: zoomed out, the board is
+  the same board scaled down (no skeleton text, no counter-scaled titles, no thumbnail swap). `M` toggles
+  the minimap.
 - **Themed HTML embeds.** Embeds Hermes creates can opt in to the Hermes theme:
   its colour variables, fonts, a transparent background and `window.hermes`
   (card size, zoom, theme changes, Chart.js and ECharts defaults). Toggle it

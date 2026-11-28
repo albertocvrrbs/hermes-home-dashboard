@@ -5,7 +5,6 @@ import { useCallback, useLayoutEffect, useMemo, useRef, useState, type ReactNode
 import { useT } from "../home/i18n";
 import { fitView, RESIZE_H, type Rect, type View } from "./geometry";
 import { ItemBody, type ItemCtx } from "./items";
-import { applyLod } from "./lod";
 import { approxRect, DEFAULT_SIZE, itemLabel, type BoardDoc, type Item } from "./model";
 import { Wires } from "./Wires";
 import { SyncHub } from "./syncClock";
@@ -82,7 +81,6 @@ export function MiniBoard({ doc, id, className }: { doc: BoardDoc | null; id?: s
     const b = { x: x0, y: y0, w: x1 - x0, h: y1 - y0 };
     const view = fitView(b, { w, h }, miniPad(w, h), 1.1);
     world.style.transform = `translate(${view.x}px, ${view.y}px) scale(${view.z})`;
-    applyLod(world, view.z);
     fits.set(root, { view, w, h, b });
   }, [doc]);
 

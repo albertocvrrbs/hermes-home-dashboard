@@ -20,7 +20,6 @@ import {
 import { InkBar } from "./InkBar";
 import { HermesCursor, type CursorHandle, type CursorStep } from "./HermesCursor";
 import { Camera, cameraClockApi, installCameraApi, viewForRect, type BoardCameraApi, type CameraRequest } from "./camera";
-import { applyLod } from "./lod";
 import { demoNomap, demoOn } from "../demo";
 import { PresenterHud } from "./Presenter";
 import { usePresentation } from "./usePresentation";
@@ -486,7 +485,7 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
     const v = view.current, world = worldRef.current;
     if (!world) return;
     world.style.transform = `translate(${v.x}px, ${v.y}px) scale(${v.z})`;
-    applyLod(world, v.z);
+    world.style.setProperty("--iz", String(Math.round(1000 / v.z) / 1000));
     // compositor hints only while moving
     const vp = vpRef.current;
     if (vp) {

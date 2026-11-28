@@ -20,6 +20,17 @@ clone, they never build).
 
 ---
 
+## Unreleased — fixes from the acceptance rehearsal
+
+Found while building the launch board with real Hermes, by chat only.
+
+- **No zoom level of detail.** Zoomed out, the board is the same board scaled down: no skeleton
+  text, no counter-scaled titles or connector labels, no thumbnail swap (it was meant for 1.10.0
+  and was left out when integrating).
+- **`board_render` shows what the board shows:** box subtitles, card bodies and frame notes,
+  connector labels, status marks, sync chips and video posters; connectors stop at the items'
+  edges. Hermes checks his layout with it and could not see any of those.
+
 ## 1.10.0 — video parity
 
 Everything the launch video shows now works for real, with real Hermes, from one chat
