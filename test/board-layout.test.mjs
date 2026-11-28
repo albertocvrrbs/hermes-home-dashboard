@@ -6,7 +6,7 @@ import { downstream, insertPlan, snapMove, tidyPlan } from "../src/board/layout.
 const cases = JSON.parse(readFileSync(new URL("./fixtures/layout-cases.json", import.meta.url), "utf8"));
 
 test("tidy matches the shared fixtures (the Python mirror runs the same file)", () => {
-  for (const c of cases.tidy) assert.deepEqual(tidyPlan(c.blocks), c.expect, c.name);
+  for (const c of cases.tidy) assert.deepEqual(tidyPlan(c.blocks, { fixed: c.fixed }), c.expect, c.name);
 });
 
 test("insert plans match the shared fixtures", () => {
@@ -15,6 +15,20 @@ test("insert plans match the shared fixtures", () => {
 
 test("downstream matches the shared fixtures", () => {
   for (const c of cases.downstream) assert.deepEqual(downstream(c.edges, c.start, c.stop), c.expect, c.name);
+});
+
+test("tidy with wired neighbours: no tidied block ends up on a fixed one, and a second pass is a no-op", () => {
+  const c = cases.tidy.find((x) => x.fixed);
+  const first = tidyPlan(c.blocks, { fixed: c.fixed });
+  const again = tidyPlan(c.blocks.map((b) => {
+    const p = first.find((q) => q.ids[0] === b.ids[0]);
+    return { ids: b.ids, rect: { ...b.rect, x: p.x, y: p.y } };
+  }), { fixed: c.fixed });
+  assert.deepEqual(again, first);
+  for (const p of first) {
+    const r = c.blocks.find((b) => b.ids[0] === p.ids[0]).rect;
+    for (const f of c.fixed) assert.ok(p.x >= f.x + f.w || p.x + r.w <= f.x || p.y >= f.y + f.h || p.y + r.h <= f.y);
+  }
 });
 
 test("tidy is idempotent: tidying a tidy board moves nothing", () => {

@@ -9906,6 +9906,23 @@ function tidyPlan(blocks, opts = {}) {
     }
     y += Math.max(...line2.map((b) => b.rect.h)) + gap;
   }
+  const fixed = opts.fixed ?? [];
+  if (fixed.length) {
+    const size = new Map(blocks.map((b) => [b.ids[0], b.rect]));
+    for (let pass = 0; pass < 20; pass++) {
+      let bottom = -Infinity;
+      for (const o of out) {
+        const r = size.get(o.ids[0]);
+        for (const f of fixed) {
+          if (o.x < f.x + f.w && o.x + r.w > f.x && o.y < f.y + f.h && o.y + r.h > f.y) bottom = Math.max(bottom, f.y + f.h);
+        }
+      }
+      if (bottom === -Infinity) break;
+      const top = Math.min(...out.map((o) => o.y));
+      const dy = snapTo(bottom + gap - top, grid);
+      for (const o of out) o.y = round(o.y + Math.max(dy, grid));
+    }
+  }
   return out;
 }
 const xs = (r) => [r.x, r.x + r.w / 2, r.x + r.w];
@@ -10831,7 +10848,14 @@ function BoardView({ bid, onOpenBoard, onHome }) {
     const ops = [];
     const from = /* @__PURE__ */ new Map();
     const moved = [];
-    for (const p of tidyPlan(blocks)) {
+    const moving = new Set(blocks.flatMap((b) => b.ids));
+    const fixed = [];
+    for (const [id, it] of Object.entries(d.items)) {
+      if (it.in || it.k === "line" || it.k === "draw" || moving.has(id)) continue;
+      const r = getRect(id);
+      if (r) fixed.push(r);
+    }
+    for (const p of tidyPlan(blocks, { fixed })) {
       const b = blocks.find((x) => x.ids[0] === p.ids[0]);
       const dx = p.x - b.rect.x, dy = p.y - b.rect.y;
       if (Math.abs(dx) < 0.5 && Math.abs(dy) < 0.5) continue;

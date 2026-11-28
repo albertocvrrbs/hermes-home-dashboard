@@ -616,7 +616,10 @@ class _Batch:
             blocks.append({"ids": sorted(members), "rect": {"x": x0, "y": y0, "w": x1 - x0, "h": y1 - y0}})
         by_first = {b["ids"][0]: b for b in blocks}
         out: List[Dict[str, Any]] = []
-        for placed in layout.tidy_plan(blocks, gap=gap):
+        moving = {i for b in blocks for i in b["ids"]}
+        fixed = [r for r in (self.rect_of(i) for i, v in self.items.items()
+                             if not v.get("in") and v["k"] not in ("line", "draw") and i not in moving) if r]
+        for placed in layout.tidy_plan(blocks, gap=gap, fixed=fixed):
             rect = by_first[placed["ids"][0]]["rect"]
             dx, dy = placed["x"] - _round_half_up(rect["x"]), placed["y"] - _round_half_up(rect["y"])
             if not dx and not dy:

@@ -25,7 +25,7 @@ def _snap(n: float, g: int) -> float:
 
 
 def tidy_plan(blocks: Sequence[Dict[str, Any]], gap: int = TIDY_GAP, grid: int = GRID,
-              max_w: Optional[float] = None) -> List[Dict[str, Any]]:
+              max_w: Optional[float] = None, fixed: Optional[Sequence[Rect]] = None) -> List[Dict[str, Any]]:
     """blocks: [{ids: [..], rect: {x,y,w,h}}] -> [{ids, x, y}] in reading order."""
     if not blocks:
         return []
@@ -76,6 +76,24 @@ def tidy_plan(blocks: Sequence[Dict[str, Any]], gap: int = TIDY_GAP, grid: int =
             out.append({"ids": b["ids"], "x": _round(x), "y": _round(y)})
             x += b["rect"]["w"] + gap
         y += max(b["rect"]["h"] for b in line) + gap
+    # Items that stay put (wired ones, frames) are obstacles: a block landing on one moves
+    # below it, so nothing ends up on top of anything.
+    if fixed:
+        size = {b["ids"][0]: b["rect"] for b in blocks}
+        for _ in range(20):
+            bottom = None
+            for o in out:
+                r = size[o["ids"][0]]
+                for f in fixed:
+                    if (o["x"] < f["x"] + f["w"] and o["x"] + r["w"] > f["x"]
+                            and o["y"] < f["y"] + f["h"] and o["y"] + r["h"] > f["y"]):
+                        bottom = f["y"] + f["h"] if bottom is None else max(bottom, f["y"] + f["h"])
+            if bottom is None:
+                break
+            top = min(o["y"] for o in out)
+            dy = max(_snap(bottom + gap - top, grid), grid)
+            for o in out:
+                o["y"] = _round(o["y"] + dy)
     return out
 
 

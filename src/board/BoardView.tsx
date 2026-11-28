@@ -763,7 +763,14 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
     const ops: Op[] = [];
     const from = new Map<string, Rect>();
     const moved: string[] = [];
-    for (const p of tidyPlan(blocks)) {
+    const moving = new Set(blocks.flatMap((b) => b.ids));
+    const fixed: Rect[] = [];
+    for (const [id, it] of Object.entries(d.items)) {
+      if (it.in || it.k === "line" || it.k === "draw" || moving.has(id)) continue;
+      const r = getRect(id);
+      if (r) fixed.push(r);
+    }
+    for (const p of tidyPlan(blocks, { fixed })) {
       const b = blocks.find((x) => x.ids[0] === p.ids[0])!;
       const dx = p.x - b.rect.x, dy = p.y - b.rect.y;
       if (Math.abs(dx) < 0.5 && Math.abs(dy) < 0.5) continue;

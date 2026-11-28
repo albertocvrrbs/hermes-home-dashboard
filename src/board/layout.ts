@@ -24,7 +24,7 @@ export interface Placed { ids: string[]; x: number; y: number }
  * than the original footprint (clamped to 640..2400) wraps. Ids are the tie-break so the
  * result is deterministic, and tidying a tidy board changes nothing.
  */
-export function tidyPlan(blocks: Block[], opts: { gap?: number; grid?: number; maxW?: number } = {}): Placed[] {
+export function tidyPlan(blocks: Block[], opts: { gap?: number; grid?: number; maxW?: number; fixed?: Rect[] } = {}): Placed[] {
   if (!blocks.length) return [];
   const gap = opts.gap ?? TIDY_GAP, grid = opts.grid ?? GRID;
   const x0 = Math.min(...blocks.map((b) => b.rect.x)), y0 = Math.min(...blocks.map((b) => b.rect.y));
@@ -70,6 +70,25 @@ export function tidyPlan(blocks: Block[], opts: { gap?: number; grid?: number; m
       x += b.rect.w + gap;
     }
     y += Math.max(...line.map((b) => b.rect.h)) + gap;
+  }
+  // Items that stay where they are (wired ones, frames) are obstacles: when the tidied
+  // block lands on one, the whole block moves below it, so nothing ends up on top of anything.
+  const fixed = opts.fixed ?? [];
+  if (fixed.length) {
+    const size = new Map(blocks.map((b) => [b.ids[0], b.rect] as const));
+    for (let pass = 0; pass < 20; pass++) {
+      let bottom = -Infinity;
+      for (const o of out) {
+        const r = size.get(o.ids[0])!;
+        for (const f of fixed) {
+          if (o.x < f.x + f.w && o.x + r.w > f.x && o.y < f.y + f.h && o.y + r.h > f.y) bottom = Math.max(bottom, f.y + f.h);
+        }
+      }
+      if (bottom === -Infinity) break;
+      const top = Math.min(...out.map((o) => o.y));
+      const dy = snapTo(bottom + gap - top, grid);
+      for (const o of out) o.y = round(o.y + Math.max(dy, grid));
+    }
   }
   return out;
 }

@@ -19,7 +19,7 @@ class FixtureParityTest(unittest.TestCase):
 
     def test_tidy(self):
         for c in CASES["tidy"]:
-            self.assertEqual(layout.tidy_plan(c["blocks"]), c["expect"], c["name"])
+            self.assertEqual(layout.tidy_plan(c["blocks"], fixed=c.get("fixed")), c["expect"], c["name"])
 
     def test_insert(self):
         for c in CASES["insert"]:
