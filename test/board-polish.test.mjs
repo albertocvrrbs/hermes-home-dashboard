@@ -134,3 +134,10 @@ test("zooming keeps the point under the cursor fixed and clamps to the zoom rang
   assert.equal(zoomView(v, 100, 0, 0).z, ZOOM_MAX);
   assert.equal(zoomView(v, 0.001, 0, 0).z, ZOOM_MIN);
 });
+
+test("ctrl + a mouse-wheel notch zooms by a step, a pinch stays direct", () => {
+  const notch = wheelZoomFactor({ deltaX: 0, deltaY: -100, deltaMode: 0, ctrlKey: true });
+  assert.ok(notch > 1.2 && notch < 1.4, `one notch: ${notch}`);
+  assert.ok(notch ** 3 < ZOOM_MAX / 0.79, "three notches stay inside the range from 0.79");
+  assert.ok(wheelZoomFactor({ deltaX: 0, deltaY: -4.5, deltaMode: 0, ctrlKey: true }) > 1.04, "fractional pinch deltas keep the direct rate");
+});
