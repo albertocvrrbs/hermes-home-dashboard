@@ -6,7 +6,7 @@ import type { LiveBlock } from "./live";
 
 export type Kind =
   | "card" | "todo" | "col" | "link" | "image" | "embed" | "video" | "board"
-  | "frame" | "box" | "text" | "draw" | "line" | "live";
+  | "frame" | "box" | "text" | "draw" | "line" | "live" | "shape";
 
 export type Point = [number, number];
 export type End = string | Point;
@@ -24,6 +24,8 @@ export interface Item {
   st?: "wait" | "ok" | "fail"; video?: VideoRef;
   asset?: string; cap?: string; iw?: number; ih?: number; src?: string;
   ref?: string; note?: string; sub?: string; num?: string; size?: "h" | "p" | "s";
+  /** shape: flowchart symbol (process, decision, start/end, connector) */
+  sh?: "rect" | "diamond" | "pill" | "circle";
   d?: string; sw?: number; a?: End; b?: End; label?: string;
   /** draw: tool (absent = pen), palette colour (absent = ink), dashed, smooth (tapered outline),
    *  per-point pressure digits 0-9, group id */
@@ -208,8 +210,11 @@ export function itemLabel(item: Item): string {
 export const DEFAULT_SIZE: Record<string, [number, number]> = {
   card: [256, 120], todo: [304, 240], col: [276, 320], link: [276, 250], image: [372, 260],
   embed: [452, 320], video: [400, 260], board: [212, 170], frame: [480, 320], box: [196, 62],
-  text: [420, 40], draw: [120, 80], live: [360, 300],
+  text: [420, 40], draw: [120, 80], live: [360, 300], shape: [160, 56],
 };
+
+/** Default size of a flowchart shape (engine.SHAPE_SIZE). */
+export const SHAPE_SIZE: Record<string, [number, number]> = { rect: [160, 56], diamond: [150, 100], pill: [150, 48], circle: [72, 72] };
 
 /** Rough height of a live card from its blocks (previews and auto layout only). */
 export function liveHeight(item: Item): number {
@@ -223,7 +228,7 @@ export function liveHeight(item: Item): number {
 
 export function approxRect(item: Item): { x: number; y: number; w: number; h: number } | null {
   if (item.k === "line" || item.in || item.x == null || item.y == null) return null;
-  const [dw, dh] = DEFAULT_SIZE[item.k] ?? [200, 100];
+  const [dw, dh] = (item.k === "shape" ? SHAPE_SIZE[item.sh ?? "rect"] : undefined) ?? DEFAULT_SIZE[item.k] ?? [200, 100];
   let h = item.h ?? dh;
   if (item.k === "col") h = 60 + 96 * (item.kids?.length ?? 0);
   if (item.k === "todo") h = 110 + 26 * (item.items?.length ?? 0);

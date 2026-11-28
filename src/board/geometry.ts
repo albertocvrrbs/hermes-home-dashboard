@@ -124,6 +124,23 @@ export function samplePolyline(pts: Point[], step: number): Point[] {
   return out;
 }
 
+/** The point `t` (0..1) of the way along a polyline, by length. */
+export function pointAtT(pts: Point[], t: number): Point {
+  if (pts.length < 2) return pts[0] ?? [0, 0];
+  let total = 0;
+  for (let i = 1; i < pts.length; i++) total += Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]);
+  let want = Math.max(0, Math.min(1, t)) * total;
+  for (let i = 1; i < pts.length; i++) {
+    const len = Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]);
+    if (want <= len || i === pts.length - 1) {
+      const u = len ? want / len : 0;
+      return [pts[i - 1][0] + (pts[i][0] - pts[i - 1][0]) * u, pts[i - 1][1] + (pts[i][1] - pts[i - 1][1]) * u];
+    }
+    want -= len;
+  }
+  return pts[pts.length - 1];
+}
+
 export function boundsOf(rects: Rect[]): Rect | null {
   if (!rects.length) return null;
   const x0 = Math.min(...rects.map((r) => r.x)), y0 = Math.min(...rects.map((r) => r.y));
@@ -144,11 +161,11 @@ export function intersects(a: Rect, b: Rect): boolean {
 
 /** Kinds whose height is set by hand; everything else sizes its own height
  *  (video stages keep 16:9 or 9:16 via CSS aspect-ratio, images keep theirs). */
-export const RESIZE_H = new Set(["frame", "box", "embed", "text"]);
+export const RESIZE_H = new Set(["frame", "box", "embed", "text", "shape"]);
 
 /** The patch a resize-handle drag commits: width always, height only for free-height kinds. */
 export function resizePatch(kind: string, w: number, h: number): { w: number; h?: number } {
-  const p: { w: number; h?: number } = { w: Math.round(Math.max(120, w)) };
+  const p: { w: number; h?: number } = { w: Math.round(Math.max(kind === "shape" ? 40 : 120, w)) };
   if (RESIZE_H.has(kind)) p.h = Math.round(Math.max(40, h));
   return p;
 }

@@ -22,7 +22,12 @@ export interface BoardSync {
 /** Hermes is "active" for this long after his last write or read. */
 export const HERMES_ACTIVE_S = 30;
 
-export function useBoard(bid: string, onHermesEntries?: (entries: Entry[], doc: BoardDoc) => void): BoardSync {
+export function useBoard(
+  bid: string,
+  onHermesEntries?: (entries: Entry[], doc: BoardDoc) => void,
+  /** The server gave optimistic `$ref` items their real ids (so the UI can carry selection / editing over). */
+  onRemap?: (ids: Record<string, string>) => void,
+): BoardSync {
   const [confirmed, setConfirmed] = useState<BoardDoc | null>(null);
   const [pending, setPending] = useState<Pending[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -35,6 +40,8 @@ export function useBoard(bid: string, onHermesEntries?: (entries: Entry[], doc: 
   const pulling = useRef<Promise<void> | null>(null);
   const hermesCb = useRef(onHermesEntries);
   hermesCb.current = onHermesEntries;
+  const remapCb = useRef(onRemap);
+  remapCb.current = onRemap;
   const alive = useRef(true);
 
   const setDoc = (d: BoardDoc | null) => { confirmedRef.current = d; setConfirmed(d); };
@@ -79,6 +86,7 @@ export function useBoard(bid: string, onHermesEntries?: (entries: Entry[], doc: 
       const res = await boardsApi.ops(bid, batch.ops, batch.note);
       if (!alive.current) return;
       const ids = res.entry.ids ?? {};
+      if (Object.keys(ids).length) remapCb.current?.(ids);
       const cur = confirmedRef.current;
       let q = pendingRef.current.map((p) => (p === batch || p.confirmedAt ? p : { ...p, ops: remapIds(p.ops, ids) }));
       if (res.entry.noop) {

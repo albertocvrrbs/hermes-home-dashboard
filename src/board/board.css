@@ -709,3 +709,49 @@
 .hb-wires .lbl { font: 400 10.5px var(--mono); fill: var(--ink-3); }
 .hb-wires .line-sel { stroke: var(--accent); stroke-width: 1.5; fill: none; stroke-dasharray: 3 3; }
 .hb-ghost { position: absolute; pointer-events: none; z-index: 50; opacity: .92; box-shadow: var(--lift); }
+
+/* ── direct manipulation (1.9.3) ──
+ * Cursors: the arrow over cards, a move cursor once selected, an I-beam where text is being
+ * edited. Text inside an editing card is selectable and never starts a pan or a drag. */
+.hb-item { cursor: default; }
+.hb-item.sel { cursor: move; }
+.hb-item.sel .hb-crop.br { cursor: nwse-resize; }
+.hb .edit, .hb .hb-lbl-edit { cursor: text; user-select: text; -webkit-user-select: text; }
+.hb-link h4 a, .hb-video h4 a { cursor: inherit; text-decoration: none; }
+.hb-item .hb-link h4 a:hover, .hb-item .hb-video h4 a:hover { text-decoration: underline; text-decoration-color: color-mix(in srgb, var(--accent) 55%, transparent); text-underline-offset: 3px; }
+
+/* ── snap guides: 1px at every zoom, the accent, only while dragging ── */
+.hb-guides { position: absolute; left: 0; top: 0; width: 0; height: 0; pointer-events: none; z-index: 60; }
+.hb-guide { position: absolute; background: var(--accent); opacity: .8; pointer-events: none; }
+.hb-guide.x { width: calc(1px * var(--iz, 1)); }
+.hb-guide.y { height: calc(1px * var(--iz, 1)); }
+
+/* ── flowchart shapes: the box's hairline, in any outline ── */
+.hb-shape { position: relative; width: 100%; height: 100%; display: grid; place-items: center; color: var(--ink); }
+.hb-shape .o { position: absolute; inset: 0; overflow: visible; pointer-events: none; }
+.hb-shape .o path { fill: var(--sheet-2); stroke: var(--rule-2); stroke-width: 1; transition: stroke .16s; }
+.hb-item:hover > .hb-shape .o path { stroke: var(--rule-3); }
+.hb-item.sel > .hb-shape .o path { stroke: var(--accent); }
+.hb-shape .t { position: relative; max-width: 100%; padding: 6px 12px; text-align: center; font: 600 13px/1.25 var(--sans); overflow-wrap: anywhere; }
+.hb-shape .t .edit { text-align: center; font: inherit; }
+.hb-shape.diamond .t { max-width: 66%; padding: 4px 0; }
+.hb-shape.circle .t { max-width: 80%; padding: 2px 0; font-size: 12px; }
+/* Hermes' material: the outline in dots, same 2px / 4px rhythm as his cards */
+.hb-shape.by-h .o path { stroke: var(--accent); stroke-width: 2; stroke-linecap: butt; stroke-dasharray: 2 2; fill: var(--sheet); }
+.hb-item.sel > .hb-shape.by-h .o path { stroke: var(--accent); }
+
+/* ── connector: label field and the "+" insert handle ── */
+.hb-wires .hb-lbl-edit { width: 100%; height: 22px; padding: 0 6px; text-align: center; border-radius: var(--r-ctl); background: var(--bg);
+  border: 1px solid var(--accent); font: 400 10.5px var(--mono); color: var(--ink); }
+.hb-wires .hb-eplus { cursor: pointer; pointer-events: all; animation: hb-pop .12s var(--out); }
+.hb-wires .hb-eplus .pad { fill: transparent; }
+.hb-wires .hb-eplus .dot { fill: var(--float-bg, var(--bg)); stroke: var(--accent); stroke-width: 1.25; transition: fill .14s var(--out); }
+.hb-wires .hb-eplus .pl { stroke: var(--accent); stroke-width: 1.6; stroke-linecap: round; fill: none; }
+.hb-wires .hb-eplus:hover .dot { fill: color-mix(in srgb, var(--accent) 22%, var(--bg)); }
+
+/* ── insert picker: same family as the selection bar ── */
+.hb-epick { position: absolute; z-index: 40; display: flex; flex-wrap: wrap; align-items: center; gap: 2px; max-width: 380px; padding: 3px 4px;
+  border-radius: var(--r-float); background: var(--float-bg); border: 1px solid var(--float-line); box-shadow: var(--lift); animation: hb-pop .14s var(--out); }
+.hb-epick .kind { padding: 0 8px 0 6px; font: 400 10.5px/1 var(--mono); letter-spacing: .04em; color: var(--ink-3); text-transform: lowercase; }
+.hb-epick .sep { width: 1px; height: 18px; margin: 0 4px; background: var(--float-line); flex: none; }
+.hb-epick .row2 { flex-basis: 100%; display: flex; align-items: center; gap: 2px; padding-top: 3px; margin-top: 3px; border-top: 1px solid var(--float-line); }
