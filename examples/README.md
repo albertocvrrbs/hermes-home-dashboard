@@ -49,7 +49,7 @@ Or a spec of your own. Any value can be a literal or a `"$key"` read from `data`
 | `text` | `value` (text or list of lines; the tail is shown), `lines`, `label`, `mono` |
 | `actions` | `items: [{action, label, icon, args}]` (up to 4; ids only) |
 
-`fmt` is `num`, `int`, `pct`, `usd`, `dur` (seconds) or `text`. Strings are shown as sent, so
+`fmt` is `num`, `int`, `pct` (percent points: send `77` for 77 %; only `progress` takes 0-1), `usd`, `dur` (seconds) or `text`. Strings are shown as sent, so
 a script can pre-format anything. Templates: `training`, `job`, `stat`; their data keys are
 the `$names` in [`live.py`](../dashboard/boardkit/live.py) (`TEMPLATES`).
 

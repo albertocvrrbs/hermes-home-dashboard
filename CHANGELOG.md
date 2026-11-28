@@ -35,6 +35,9 @@ Found while building the launch board with real Hermes, by chat only.
   whole board, or only an empty frame). Hermes checks his layout with it and was shrinking
   frames that were right.
 
+- **Live cards: `pct` is percent points** (77 shows 77 %), said in the tool description and the
+  examples guide; Hermes sent 0.77 (like `progress`) and the card showed 0.8 %.
+
 ## 1.10.0 — video parity
 
 Everything the launch video shows now works for real, with real Hermes, from one chat
