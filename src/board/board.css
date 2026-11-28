@@ -120,6 +120,8 @@
 .hb-note .body { margin: 4px 0 0; font: 400 12.5px/1.45 var(--sans); color: var(--ink-2); white-space: pre-wrap; overflow-wrap: anywhere; }
 .hb-note.quote .body { margin: 0; font: 500 16px/1.42 var(--sans); color: var(--ink); letter-spacing: -.003em; padding-right: 14px; }
 .hb-note .body b { color: var(--ink); font-weight: 650; }
+.hb-note .body pre.code { margin: 6px 0 0; padding: 8px 10px; border-radius: var(--r-ctl); background: var(--well); border: 1px solid var(--rule);
+  font: 400 11px/1.5 var(--mono); color: var(--ink-2); white-space: pre-wrap; overflow-wrap: anywhere; }
 .hb-note .meta { margin-top: 12px; }
 .hb-note .edit { display: block; width: 100%; min-height: 1.4em; overflow: hidden; }
 .hb-note h4 .edit { font: inherit; }

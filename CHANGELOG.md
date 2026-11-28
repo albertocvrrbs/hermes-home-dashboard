@@ -20,6 +20,20 @@ clone, they never build).
 
 ---
 
+## Unreleased (1.10.0)
+
+- **Hermes imports your project files into a board** (`import` op): images, svg, videos (poster + duration), PDFs (first-page
+  thumbnail, click to open), STL/OBJ/3MF (shaded 3D thumbnail, click to download), text and code as cards; globs and
+  folders, copied into the asset store, tidy grid, home-only and no hidden or secret files.
+- **Big orders in one instruction and one undo step**: `set_where` (set fields on every match, e.g. mark 37 stations),
+  `zones` (titled frames in order, items moved in by rule, grid inside), `arrange`, `place`. New `mark` status stamp
+  (ok / fail / wait) on cards, boxes and more.
+- Fixed: picture thumbnails stacked on top of the full picture inside image cards (the `lo` rule lost to
+  `.hb-image .art img`).
+- Gateway restart needed (Python board engine: new ops and fields).
+
+---
+
 ## 1.9.3
 
 Direct editing, arrange and insert on connectors, a real camera, and HTML embeds

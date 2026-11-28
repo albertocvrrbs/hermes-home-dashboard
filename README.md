@@ -409,6 +409,44 @@ made; your work stays solid.
 
 ![Board widget on the Home](assets/screenshot-board-widget.png)
 
+### Project files and big orders (one instruction, one undo)
+
+Ask Hermes "put my renders on the board" or "mark stations 1-30 ok, 31-37 waiting and group everything by
+stage". He does it in a **single `board_apply` call**, so it is one atomic commit and one undo step.
+
+- **`import`**: `{op:'import', paths:['~/projects/x/avances/*_hero*.png', '~/projects/x/parts/', ...], layout?:'grid'|'row'|'column', cols?, gap?, at?:{x,y}, into?:<frame or column id>, caption?:'name'|'none', limit?}`.
+  Paths can be files, globs or folders (40 files by default, 100 at most). Every file is **copied into the board's asset
+  store** (never linked, never served from its original path), placed on a tidy 24 px grid with no overlaps, and
+  reported back with its new id (`imported`) or the reason it was refused (`skipped`).
+  - images (png, jpg, webp, gif; bigger than 2560 px / 5 MB are downscaled) and svg (rasterised with ffmpeg; scripts and
+    external references refused) become image cards;
+  - mp4, webm and mov become video cards with a poster frame and the duration (ffmpeg), like uploads;
+  - **PDF** becomes a card with its first page as the thumbnail (`pdftoppm`, `pdftocairo`, `mutool`, Ghostscript,
+    `pypdfium2` or PyMuPDF, whichever is installed; without any of them a text preview of page one, or the biggest picture of
+    a scanned page, or an icon). The PDF is kept: the button on the card opens it;
+  - **STL, OBJ and 3MF** become a shaded isometric thumbnail on a transparent background (drawn by the plugin itself with
+    numpy and Pillow, no external tool). The model is kept: the button downloads it;
+  - markdown, text, code, json, csv, yaml... become text cards (code in a monospaced block, long files cut at 12 000
+    characters); `.html` becomes a sandboxed embed shown untouched (no theme).
+- **Safety.** The real path (symlinks resolved) must be inside your home folder, nothing below it may be hidden (`.ssh`,
+  `.env`, `.config`, `.hermes`...), names that look like secrets (`secrets.*`, `credentials.*`, `token.json`, `*.pem`,
+  `*.key`, `id_rsa`...) are refused, and only regular files of the types above are read. Only Hermes' tool can import;
+  the REST routes the browser uses cannot.
+- **`set_where`**: `{op:'set_where', where:{ids?, k?, tag?, text?, num?:'1-37', mark?, by?, frame?, in?}, p:{...}}`, or
+  `rules:[{where, p}, ...]` (later rules win), sets fields on every matching item. It fails if a filter matches nothing, so
+  Hermes learns when his filter is wrong. **`mark`** (`ok` / `fail` / `wait`, `null` clears) is a status stamp drawn on the
+  card, box, shape, image, video, link, embed, live card, column or sub-board, and shows in his board outline as `mark=ok`.
+- **`zones`**: `{op:'zones', zones:[{title, note?, where?|ids?, ref?, frame?, cols?, w?, h?}], layout?:'row'|'column'|'grid', gap?, spacing?, at?}`
+  creates titled frames in that order (Idea, Design, Brain, Training Room, Exam...), moves the items each rule matches into
+  them (the first zone to match wins; cards inside a column stay there unless asked for), lays them on the grid with uniform
+  spacing (numbered items go in number order), sizes the frames to fit, and keeps the group clear of everything else.
+  `frame:<id>` reuses an existing frame instead of creating one.
+- **`arrange`**: `{op:'arrange', frame?|ids?|where?, cols?, gap?}` grid-packs items (in a frame it also grows the frame).
+- **`place`**: `{op:'place', items:[{ref?, item:{k,...}, size?:[w,h]}], layout?, cols?, at?, into?, gap?}` adds many items on a grid
+  (what `import` produces).
+
+Hermes gets the short syntax in the tool description and the long one from `board_read {help:'bulk'}`.
+
 ## Live cards
 
 ![Live cards: a training run, a finished backup, a stale scraper, a failed deploy](assets/screenshot-live-cards.png)
@@ -478,10 +516,14 @@ disabled): [`examples/README.md`](examples/README.md).
   the video poster index. Deleted boards move to a trash folder there. Live
   card actions live in `../live-actions/*.json` (written by you, read by the
   plugin) and their log in `../live-actions.log.jsonl`.
+- **Files it can read (import).** The `import` op of `board_apply` reads files you point Hermes at, only inside your home
+  folder, never hidden files or folders, never names that look like secrets, and copies them into `assets/`. See
+  [Project files and big orders](#project-files-and-big-orders-one-instruction-one-undo).
 - **Commands it can run:** only the live card actions you register (see
   [Live card actions: security model](#live-card-actions-security-model)), and
   `ffmpeg`/`ffprobe` (if installed) to read a video's length and grab its
-  poster frame.
+  poster frame (and to rasterise an imported svg), plus `pdftoppm`/`pdftocairo`/`mutool`/`gs` (if installed) for the first page
+  of an imported PDF.
 - **Network:** link previews are fetched **server-side by the plugin
   backend** when you paste or add a link: the page HTML, its oEmbed JSON, its
   image and favicon. The fetch is SSRF-guarded: http(s) only, private,
