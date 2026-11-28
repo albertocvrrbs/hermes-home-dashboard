@@ -8,7 +8,7 @@ import {
   Maximize2, MessageSquareText, MousePointer2, MoveUpRight, PanelRightClose, Pause, Pen, Pencil, PencilLine, Play,
   Plus, Power, Redo2, RotateCcw, RefreshCw, Rocket, RotateCw, Route, Scan, Server, Slash, Spline, Split, Square, SquareArrowOutUpRight, SquareDashed,
   SquareDashedMousePointer, SquareTerminal, StickyNote, TextQuote, Timer, Trash2, Undo2, Ungroup, Upload, Video,
-  Workflow, X, Zap, ZoomIn, ZoomOut, Box, Clock,
+  Workflow, X, Zap, ZoomIn, ZoomOut, Box, Clock, Blocks, Link2, CircleArrowUp, History, SkipBack,
   type IconNode,
 } from "lucide";
 
@@ -89,6 +89,14 @@ export const ICONS = {
   shapeDiamond: Diamond,
   shapePill: PILL,
   shapeCircle: Circle,
+  // components + sync
+  components: Blocks,
+  sync: Link2,
+  upgrade: CircleArrowUp,
+  versions: History,
+  skipBack: SkipBack,
+  playIcon: Play,
+  pauseIcon: Pause,
 } satisfies Record<string, IconNode>;
 
 /** Icons a live card may name (header `icon`, button `icon`). Unknown names fall back. */

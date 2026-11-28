@@ -447,6 +447,40 @@ stage". He does it in a **single `board_apply` call**, so it is one atomic commi
 
 Hermes gets the short syntax in the tool description and the long one from `board_read {help:'bulk'}`.
 
+## Custom components and media sync
+
+The plugin ships no fixed "neural-network card". It ships a platform, so Hermes builds the
+component *you* need when you need it: ask for "a heatmap of my sensor readings" or "my training
+run animated next to the video" and Hermes writes it with the `board_component` tool (HTML/JS,
+versioned `v1`, `v2`, ...), saves it in your **component library** and puts it on the board. The
+library is shared by all boards; open it from the board toolbar (the blocks icon, or right-click >
+Components) to see live thumbnails and insert one.
+
+A component runs in a sandboxed iframe with no network and a small stable bridge, `window.hb`:
+`hb.data` / `hb.onData` (live data from Hermes or from a script), `hb.asset(name)` (big files, up
+to 48 MB, attached to the card), `hb.size` / `hb.onResize` (always responsive), `hb.theme` and the
+host's CSS variables and fonts, `hb.clock` (a shared playhead) and `hb.action(name, args)` (only
+actions you registered, destructive ones ask first). The card header has the version menu (pin /
+follow latest / update), reload, the theme switch and the source.
+
+```
+# Hermes pushes live data into a component card:        board_apply  [{"op":"comp","id":"4k","push":{"series":[61.2]}}]
+# or a script does:  curl -X POST .../boards/<board>/comp/<card>/data -d '{"push":{"series":[61.2]}}'
+# and attaches a big trace once:                         board_component attach id:"4k" name:"trace.json" path:"/tmp/trace.json"
+```
+
+**Media sync.** Give a video card and some components the same `sync` group (Hermes:
+`{"op":"sync","ids":[...]}`; you: select them, right-click > Link to one clock) and they share one
+playhead: a video drives it when there is one, play / pause / seek / speed work from any of them
+and from the transport at the bottom of the board, and components get `hb.clock` ticks at the
+video's frame rate. A recorder can step it frame by frame through `window.__hbSync`.
+
+Full contract, rules for Hermes, security model and a small sparkline example:
+[docs/components.md](docs/components.md). Components are stored in
+`<hermes-home>/plugin-data/home-dashboard/components/`; attached data files beside them. After
+updating the plugin, restart the gateway so the Python side (the library, the `comp` card and `sync`
+ops) is loaded.
+
 ## Live cards
 
 ![Live cards: a training run, a finished backup, a stale scraper, a failed deploy](assets/screenshot-live-cards.png)

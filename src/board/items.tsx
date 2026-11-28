@@ -14,6 +14,8 @@ import { MiniBoard } from "./miniboard";
 import { thumbUrl } from "./thumbs";
 import { classifyUrl, hostOf, playerUrl } from "./urlKind";
 import { LiveView } from "./LiveCard";
+import { CompView } from "./CompCard";
+import type { SyncHub } from "./syncClock";
 import { VideoStage } from "./video";
 import { embedDocument, type EmbedTheme } from "./embedBridge";
 import { readTheme, useEmbedBridge } from "./useEmbedBridge";
@@ -43,6 +45,11 @@ export interface ItemCtx {
   /** The action list could not be read (an older backend still serving this page). */
   liveActionsDown: boolean;
   runLiveAction: (iid: string, ref: LiveActionRef, index: number) => Promise<ActionResult | null>;
+  /** Custom components: this board's id, its sync hub (shared playheads) and the `hb.action` handler
+   *  (resolves null when the user cancels the confirm dialog). */
+  bid: string;
+  sync: SyncHub;
+  runCompAction: (iid: string, action: string, args: Record<string, unknown>) => Promise<ActionResult | null>;
   /** Draw strokes the eraser is over (hover preview) or has swept (while dragging). */
   erasing?: Set<string>;
 }
@@ -288,7 +295,7 @@ export function VideoView({ id, item, c }: { id: string; item: Item; c: ItemCtx 
           {!playing && <button className="play" data-nodrag="" onClick={() => c.setPlaying(id)}>{PLAY}{c.t("board.video.play")}</button>}
         </div>
       ) : (
-        <VideoStage playId={id} c={c} src={direct} asset={asset} posterAsset={item.img} dur={item.dur} title={title} />
+        <VideoStage playId={id} c={c} src={direct} asset={asset} posterAsset={item.img} dur={item.dur} title={title} syncGroup={item.sync} />
       )}
       <div className="hb-link"><div className="body">
         <div className="dom"><span>{site}</span></div>
@@ -637,6 +644,7 @@ function ItemKind({ id, item, c, dropIndex, selected }: {
     case "text": return <TextView id={id} item={item} c={c} />;
     case "draw": return <DrawView item={item} selected={selected} erasing={c.erasing?.has(id)} />;
     case "live": return <LiveView id={id} item={item} c={c} />;
+    case "comp": return <CompView id={id} item={item} c={c} />;
     default: return null;
   }
 }

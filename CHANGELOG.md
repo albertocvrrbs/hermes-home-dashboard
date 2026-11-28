@@ -32,6 +32,19 @@ clone, they never build).
   `.hb-image .art img`).
 - Gateway restart needed (Python board engine: new ops and fields).
 
+### Custom components and media sync (agent F)
+
+- **Components platform.** `board_component` tool: Hermes creates, updates (with `edits` patches), versions
+  (`v1`, `v2`...), diffs, rolls back and deletes components in the user component library; a `comp` card
+  runs one in a sandboxed iframe (opaque origin, CSP, no network) with the stable `window.hb` v1 bridge
+  (`data`, `asset`, `size`, `theme`, `clock`, `action`). Gallery with live thumbnails in the board
+  toolbar and right-click menu; card chrome with version menu, update, reload, theme switch, source.
+  Live data by `{op:'comp'}` or `POST .../comp/{card}/data`; big files by `PUT .../comp/{card}/files/{name}`;
+  actions only from the owner's allowlist. See `docs/components.md`.
+- **Media sync.** `sync` group on video and component cards: one shared clock per group (a video is the
+  master, frame-accurate through `requestVideoFrameCallback`), shared transport, link chips, `sync` /
+  `unsync` ops, and `window.__hbSync` for deterministic frame-by-frame capture.
+
 ---
 
 ## 1.9.3

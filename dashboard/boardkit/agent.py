@@ -6,7 +6,7 @@ import json
 import re
 from typing import Any, Dict, Optional
 
-from . import embedlint, engine, summary
+from . import compguide, components as comp_mod, embedlint, engine, summary
 from .render import render_png
 from .service import BoardService
 from .store import NotFound
@@ -81,6 +81,9 @@ _OPS_HELP = (
     "usd|dur; status running|paused|done|error|idle). Update a live card later with {op:'live', id, data:{k:v} "
     "(null deletes), push:{series:[n]}, keep?} - cheap, no layout. Buttons can only name action ids the owner "
     "registered (board_read actions:true lists them); never put commands in a card. "
+    "comp{comp:'<library name>', title, w, h, cdata:{...}, ver?, actions:[ids]} (runs a component YOU wrote with the "
+    "board_component tool; update its data with {op:'comp', id, data:{k:v}|push:{k:n}}) · {op:'sync', ids:[video/comp "
+    "cards], group?} links cards to one shared playhead (video = master), {op:'unsync', ids?|group?}. "
     "Coordinates are world px; leave ~60px gaps; columns are 276 wide. " + EMBED_RULES
 )
 
@@ -101,6 +104,35 @@ SCHEMAS: Dict[str, Dict[str, Any]] = {
             "help": {"type": "string", "enum": ["bulk"], "description": "'bulk' returns the full syntax of import, set_where, "
                      "zones, arrange and place (big orders in one board_apply)."},
         }},
+    },
+    "board_component": {
+        "name": "board_component",
+        "description": (
+            "Write, version and manage CUSTOM COMPONENTS: HTML/JS cards you create for what the user needs, saved in "
+            "their component library and reusable on any board. " + compguide.COMPONENT_RULES + " Actions: "
+            "list {} · guide {} (the full window.hb v1 contract; read it before your first component) · get {name, "
+            "version?} (source files) · create|update {name, html | files:{'index.html':...,'app.js':...}, edits?:[{file?, "
+            "find, replace}] (patch the current version), remove?:[files], replace?:true (start from empty), title?, "
+            "desc?, note?} (every save = new version v1,v2...; sample.json = preview data) · diff {name, from?, to?} · "
+            "rollback {name, to} (a new version copying the old one) · delete {name, confirm:true} · attach {board?, id, "
+            "name, path | json | text} (attach a data file to a comp card, up to 48 MB, read with hb.asset(name)) · "
+            "place {board?, name, x?, y?, w?, h?, cdata?} (shortcut for adding the card). Returns lint warnings; fix them."),
+        "parameters": {"type": "object", "properties": {
+            "action": {"type": "string", "enum": ["list", "guide", "get", "create", "update", "diff", "rollback",
+                                                  "delete", "attach", "place"]},
+            "name": {"type": "string", "description": "Component name (lowercase letters, digits, dashes) or, for "
+                     "attach, the data file name."},
+            "component": {"type": "string", "description": "attach/place: the library component name when `name` is the file."},
+            "html": {"type": "string"}, "files": {"type": "object"},
+            "edits": {"type": "array", "items": {"type": "object"}}, "remove": {"type": "array", "items": {"type": "string"}},
+            "replace": {"type": "boolean"}, "title": {"type": "string"}, "desc": {"type": "string"},
+            "note": {"type": "string"}, "version": {"type": "string"}, "from": {"type": "string"}, "to": {"type": "string"},
+            "confirm": {"type": "boolean"}, "board": {"type": "string"}, "id": {"type": "string", "description": "attach: the comp card id."},
+            "path": {"type": "string", "description": "attach: file on this machine to copy in."},
+            "json": {}, "text": {"type": "string"},
+            "x": {"type": "number"}, "y": {"type": "number"}, "w": {"type": "number"}, "h": {"type": "number"},
+            "cdata": {"type": "object"},
+        }, "required": ["action"]},
     },
     "board_apply": {
         "name": "board_apply",
@@ -204,7 +236,105 @@ class BoardAgent:
             out.extend(f"op {i}: {w}" for w in embedlint.lint_embed(body["html"]))
         return out[:12]
 
+    def _comp_warnings(self, doc: Dict[str, Any], ops: Any) -> list:
+        """A comp card that names a component the library does not have (or a sync that links nothing useful)."""
+        out: list = []
+        if not isinstance(ops, list):
+            return out
+        lib = self.svc.components
+        for i, op in enumerate(ops):
+            if not isinstance(op, dict):
+                continue
+            body = op.get("item") if op.get("op") == "add" else op.get("p") if op.get("op") == "set" else None
+            if isinstance(body, dict) and body.get("k", "comp" if op.get("op") == "set" else None) == "comp" \
+                    and isinstance(body.get("comp"), str) and not lib.exists(body["comp"]):
+                out.append(f"op {i}: component {body['comp']!r} is not in the library: create it first with "
+                           "board_component (action:'list' shows what exists)")
+        return out
+
     # ── tools ────────────────────────────────────────────────────────────
+    def board_component(self, args: Dict[str, Any], session_id: Optional[str] = None, **_: Any) -> str:
+        args = args or {}
+        act = args.get("action")
+        lib = self.svc.components
+        name = args.get("name")
+        try:
+            if act == "guide":
+                return _dump({"guide": compguide.GUIDE})
+            if act == "list":
+                return _dump({"components": lib.list(), "dir": str(lib.root),
+                              "hint": "none yet: create one with action:'create'" if not lib.list() else None})
+            if act in ("create", "update"):
+                keys = ("html", "files", "edits", "remove", "replace", "title", "desc", "note")
+                kw = {k: args[k] for k in keys if k in args}
+                if "replace" in kw:
+                    kw["replace"] = kw["replace"] is True
+                res = self.svc.comp_save(name, by="h", **kw)
+                self._presence(session_id, args, f"{'created' if res.get('created') else 'updated'} component {name}")
+                return _dump(res)
+            if act == "get":
+                ver, files = lib.files(name, args.get("version"))
+                meta = lib.meta(name)
+                return _dump({"name": name, "version": ver, "current": meta["current"], "title": meta.get("title"),
+                              "desc": meta.get("desc"), "versions": [v["v"] for v in meta["versions"]], "files": files})
+            if act == "diff":
+                return _dump(lib.diff(name, args.get("from"), args.get("to")))
+            if act == "rollback":
+                res = lib.rollback(name, args.get("to"), by="h")
+                if not res.get("noop"):
+                    self.svc.comp_touch(name)
+                return _dump(res)
+            if act == "delete":
+                if args.get("confirm") is not True:
+                    return _dump({"error": "delete removes the component and all its versions; ask the user, then "
+                                           "call again with confirm:true"})
+                gone = lib.delete(name)
+                if gone:
+                    self.svc.comp_touch(name)
+                return _dump({"deleted": gone})
+            if act == "attach":
+                doc, _, _ = self._resolve(args, session_id)
+                if doc is None:
+                    return self._missing(args)
+                if args.get("path"):
+                    from pathlib import Path
+                    p = Path(str(args["path"])).expanduser()
+                    if not p.is_file():
+                        return _dump({"error": f"no such file {str(p)[:120]}"})
+                    data = p.read_bytes()
+                elif "json" in args:
+                    data = json.dumps(args["json"], separators=(",", ":")).encode("utf-8")
+                elif isinstance(args.get("text"), str):
+                    data = args["text"].encode("utf-8")
+                else:
+                    return _dump({"error": "attach needs path, json or text"})
+                res = self.svc.comp_attach(doc["id"], str(args.get("id") or ""), str(args.get("name") or ""), data, by="h")
+                return _dump({"board": doc["id"], **res})
+            if act == "place":
+                doc, _, _ = self._resolve(args, session_id)
+                if doc is None:
+                    return self._missing(args)
+                comp = args.get("component") or name
+                item: Dict[str, Any] = {"k": "comp", "comp": comp}
+                for k in ("x", "y", "w", "h", "title", "cdata"):
+                    if k in args:
+                        item[k] = args[k]
+                new, entry = self.svc.commit(doc["id"], [{"op": "add", "item": item}], by="h", note=f"added {comp}")
+                return _dump({"board": doc["id"], "seq": new["seq"], "ids": entry.get("ids", {}),
+                              "id": next((o.get("id") for o in entry.get("ops", []) if o.get("id")), None),
+                              "warnings": self._comp_warnings(doc, [{"op": "add", "item": item}]) or None})
+            return _dump({"error": "action is one of list, guide, get, create, update, diff, rollback, delete, attach, place"})
+        except (comp_mod.CompError, comp_mod.CompNotFound, NotFound, engine.OpError) as e:
+            return _dump({"error": str(e).strip("'\"")})
+
+    def _presence(self, session_id: Optional[str], args: Dict[str, Any], act: str) -> None:
+        try:
+            doc, _, _ = self._resolve({"board": args.get("board")} if args.get("board") else {}, session_id)
+            if doc is not None:
+                self.svc.store.set_presence(doc["id"], act[:80])
+        except Exception:
+            pass
+
     def board_read(self, args: Dict[str, Any], session_id: Optional[str] = None, **_: Any) -> str:
         try:
             args = args or {}
@@ -247,7 +377,7 @@ class BoardAgent:
             if doc is None:
                 return self._missing(args)
             note = args.get("note") if isinstance(args.get("note"), str) else None
-            embed_warnings = self._embed_warnings(doc, args.get("ops"))
+            embed_warnings = self._embed_warnings(doc, args.get("ops")) + self._comp_warnings(doc, args.get("ops"))
             report: Dict[str, Any] = {}
             new, entry = self.svc.commit(doc["id"], args.get("ops"), by="h", note=note, previews="wait", report=report)
             if entry.get("noop"):

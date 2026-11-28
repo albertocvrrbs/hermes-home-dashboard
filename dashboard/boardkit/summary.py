@@ -76,6 +76,15 @@ def item_line(iid: str, it: Dict[str, Any], text_len: int = 80) -> str:
         parts.append(f"board={it.get('ref')}")
     elif k == "live":
         parts.append(_live_bits(it))
+    elif k == "comp":
+        bits = [f"component:{it.get('comp')}{'@' + it['ver'] if it.get('ver') else ''}"]
+        if it.get("cdata"):
+            bits.append("data:" + ",".join(list(it["cdata"])[:6]))
+        if it.get("files"):
+            bits.append("files:" + ",".join(list(it["files"])[:6]))
+        if it.get("actions"):
+            bits.append("actions:" + ",".join(it["actions"][:4]))
+        parts.append(" ".join(bits))
     elif k == "frame" and it.get("note"):
         parts.append(_clip(it["note"], 60))
     elif k == "draw":
@@ -89,6 +98,8 @@ def item_line(iid: str, it: Dict[str, Any], text_len: int = 80) -> str:
         if it.get("g"):
             bits.append(f"group:{it['g']}")
         parts.append(" ".join(bits))
+    if it.get("sync"):
+        parts.append(f"sync:{it['sync']}")
     if it.get("tags"):
         parts.append(" ".join(f"#{t}" for t in it["tags"]))
     if it.get("due"):

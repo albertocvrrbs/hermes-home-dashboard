@@ -16,6 +16,7 @@ from . import bulk
 from . import ids
 from . import layout
 from . import live as live_mod
+from . import components as comp_mod
 
 MAX_OPS = 200
 MAX_ITEMS = 2000
@@ -29,7 +30,7 @@ DEFAULT_SIZE: Dict[str, Tuple[int, int]] = {
     "card": (256, 120), "todo": (304, 240), "col": (276, 320), "link": (276, 250),
     "image": (372, 260), "embed": (452, 320), "video": (400, 260), "board": (212, 170),
     "frame": (480, 320), "box": (196, 62), "text": (420, 40), "draw": (120, 80),
-    "live": (400, 300), "shape": (160, 56),
+    "live": (400, 300), "shape": (160, 56), "comp": (480, 320),
 }
 # flowchart shapes: rect (process), diamond (decision), pill (start/end), circle (connector)
 SHAPES = ("rect", "diamond", "pill", "circle")
@@ -46,7 +47,7 @@ FIELDS: Dict[str, Tuple[str, ...]] = {
     "link": _COMMON + ("url", "title", "desc", "site", "icon", "img", "st", "video", "mark"),
     "image": _COMMON + ("asset", "cap", "iw", "ih", "url", "mark", "file", "fk", "pg"),
     "embed": _COMMON + ("asset", "title", "theme", "mark"),
-    "video": _COMMON + ("src", "title", "asset", "img", "dur", "iw", "ih", "mark"),
+    "video": _COMMON + ("src", "title", "asset", "img", "dur", "iw", "ih", "mark", "sync"),
     "board": _COMMON + ("ref", "title", "mark"),
     "frame": ("x", "y", "w", "h", "title", "note"),
     "box": ("x", "y", "w", "h", "title", "sub", "num", "mark"),
@@ -55,6 +56,9 @@ FIELDS: Dict[str, Tuple[str, ...]] = {
     "line": ("a", "b", "label"),
     "live": ("x", "y", "w", "h", "title", "blocks", "data", "ttl", "at", "tpl", "mark"),
     "shape": ("x", "y", "w", "h", "title", "sh", "mark"),
+    # custom component instance: library name, pinned version (absent = latest), its data bag,
+    # attached data files, allowed action ids, theme opt-out, sync group, library-touch stamp
+    "comp": ("x", "y", "w", "h", "title", "comp", "ver", "cdata", "files", "actions", "nt", "sync", "at"),
 }
 KINDS = frozenset(FIELDS)
 
@@ -232,6 +236,27 @@ def _live(fn: Callable[[Any], Any]) -> Callable[[Any], Any]:
     return conv
 
 
+def _comp(fn: Callable[[Any], Any]) -> Callable[[Any], Any]:
+    def conv(value: Any) -> Any:
+        try:
+            return fn(value)
+        except comp_mod.CompError as e:
+            raise OpError(str(e)) from None
+    return conv
+
+
+def _comp_name(value: Any) -> str:
+    if not comp_mod.valid_name(value):
+        raise OpError("component name: 1-40 chars, lowercase letters, digits and dashes")
+    return value
+
+
+def _comp_ver(value: Any) -> str:
+    if not comp_mod.valid_version(value):
+        raise OpError("version looks like v1, v2, ... (null follows the latest)")
+    return value
+
+
 def _dur(value: Any) -> float:
     return round(max(0.0, min(360_000.0, _num(value))), 2)
 
@@ -250,6 +275,8 @@ SANITIZE: Dict[str, Callable[[Any], Any]] = {
     "tags": _tags, "items": _todo_items, "d": _stroke, "video": _video, "sw": _sw,
     "tl": _enum(*INK_TOOLS), "c": _enum(*INK_COLORS), "ds": _flag, "sm": _flag, "theme": _flag, "pr": _pressure, "g": _group,
     "dur": _dur, "blocks": _live(live_mod.clean_blocks), "data": _live(live_mod.clean_data),
+    "comp": _comp_name, "ver": _comp_ver, "cdata": _comp(comp_mod.clean_cdata), "files": _comp(comp_mod.clean_files_map),
+    "actions": _comp(comp_mod.clean_actions), "nt": _flag, "sync": _group,
     "ttl": _int(5, 7 * 86400), "at": _int(0, 2**42), "tpl": _enum(*live_mod.TEMPLATES),
 }
 
@@ -351,6 +378,12 @@ class _Batch:
         item: Dict[str, Any] = {"k": kind, **self.clean_fields(kind, raw)}
         if kind == "line" and ("a" not in item or "b" not in item):
             raise OpError("line needs a and b")
+        if kind == "comp":
+            if "comp" not in item:
+                raise OpError("a comp item needs comp: the name of a component in the library (board_component list)")
+            item.pop("at", None)  # the server stamps it
+            if item.get("cdata"):
+                item["at"] = self.now
         if kind == "live":
             if "blocks" not in item:
                 try:
@@ -533,6 +566,22 @@ class _Batch:
         item["at"] = self.now
         return [inv], {"op": "set", "id": iid, "p": {"data": copy.deepcopy(data), "at": self.now}}
 
+    def comp(self, op: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """Patch a component card's data bag. Normalised to a ``set`` of the whole bag + ``at``."""
+        iid = self.resolve(op.get("id"))
+        item = self.items[iid]
+        if item["k"] != "comp":
+            raise OpError(f"{iid} is not a component card")
+        try:
+            data = comp_mod.merge_cdata(item.get("cdata"), op.get("data"), op.get("push"), op.get("keep"),
+                                        replace=op.get("replace") is True)
+        except (comp_mod.CompError, TypeError, ValueError) as e:
+            raise OpError(str(e)) from None
+        inv = {"op": "set", "id": iid, "p": {"cdata": copy.deepcopy(item.get("cdata")), "at": item.get("at")}}
+        item["cdata"] = data
+        item["at"] = self.now
+        return [inv], {"op": "set", "id": iid, "p": {"cdata": copy.deepcopy(data), "at": self.now}}
+
     def board(self, op: Dict[str, Any]) -> List[Dict[str, Any]]:
         patch = op.get("p")
         if not isinstance(patch, dict):
@@ -634,6 +683,38 @@ class _Batch:
                 out.append({"op": "set", "id": iid, "p": {"x": int(it["x"]) + dx, "y": int(it["y"]) + dy}})
         return out
 
+    def expand_sync(self, op: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """{op:'sync', ids:[...], group?} links items to one shared clock; {op:'unsync', ids? | group?}
+        unlinks. Expands to plain ``set`` ops."""
+        unlink = op.get("op") == "unsync"
+        raw_ids = op.get("ids")
+        chosen: List[str] = []
+        if raw_ids is not None:
+            if not isinstance(raw_ids, list) or not raw_ids:
+                raise OpError("ids must be a non-empty list")
+            chosen = [self.resolve(i) for i in raw_ids]
+        elif unlink and op.get("group") is not None:
+            g = _group(op["group"])
+            chosen = [i for i, v in self.items.items() if v.get("sync") == g]
+        else:
+            raise OpError("ids is required")
+        for iid in chosen:
+            if "sync" not in FIELDS[self.items[iid]["k"]]:
+                raise OpError(f"{iid} ({self.items[iid]['k']}) cannot join a sync group: use video or comp cards")
+        if unlink:
+            return [{"op": "set", "id": iid, "p": {"sync": None}} for iid in chosen if self.items[iid].get("sync")]
+        if op.get("group") is not None:
+            group = _group(op["group"])
+        else:
+            # join the group a chosen item already has, else the first free sN
+            group = next((self.items[i]["sync"] for i in chosen if self.items[i].get("sync")), None)
+            n = 1
+            while group is None:
+                if not any(v.get("sync") == f"s{n}" for v in self.items.values()):
+                    group = f"s{n}"
+                n += 1
+        return [{"op": "set", "id": iid, "p": {"sync": group}} for iid in chosen if self.items[iid].get("sync") != group]
+
     def expand_insert(self, op: Dict[str, Any]) -> List[Dict[str, Any]]:
         edge = self.resolve(op.get("edge"))
         line = self.items[edge]
@@ -691,8 +772,9 @@ class _Batch:
 
 
 _OPS = {"add": _Batch.add, "put": _Batch.put, "set": _Batch.set, "del": _Batch.delete, "board": _Batch.board,
-        "live": _Batch.live}
+        "live": _Batch.live, "comp": _Batch.comp}
 _MACROS = {"tidy": _Batch.expand_tidy, "insert_on_edge": _Batch.expand_insert,
+           "sync": _Batch.expand_sync, "unsync": _Batch.expand_sync,
            "place": lambda b, op: bulk.expand_place(b, op), "set_where": lambda b, op: bulk.expand_set_where(b, op),
            "zones": lambda b, op: bulk.expand_zones(b, op), "arrange": lambda b, op: bulk.expand_arrange(b, op)}
 
@@ -722,7 +804,7 @@ def apply_batch_ex(doc: Dict[str, Any], ops: Any, by: str = "u", now: Optional[f
     forward: List[Dict[str, Any]] = []
     for i, op in enumerate(ops):
         if not isinstance(op, dict) or op.get("op") not in _OPS and op.get("op") not in _MACROS:
-            raise OpError(f"op {i}: unknown op (use add, set, del, board, live, tidy, insert_on_edge, place, set_where, zones, arrange, import)")
+            raise OpError(f"op {i}: unknown op (use add, set, del, board, live, comp, tidy, insert_on_edge, place, set_where, zones, arrange, import, sync, unsync)")
         try:
             prims = _MACROS[op["op"]](batch, op) if op["op"] in _MACROS else [op]
             for prim in prims:

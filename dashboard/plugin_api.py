@@ -727,6 +727,37 @@ class LiveActionBody(BaseModel):
     confirm: bool = False
 
 
+class CompDataBody(BaseModel):
+    data: Optional[dict] = None
+    push: Optional[dict] = None
+    keep: Optional[int] = None
+    replace: bool = False
+
+
+class CompFileBody(BaseModel):
+    data: Optional[str] = None      # base64 bytes
+    text: Optional[str] = None      # or plain text
+    json_value: Optional[Any] = None  # or any JSON value (stored as JSON)
+
+
+class CompActionBody(BaseModel):
+    action: str
+    args: Optional[dict] = None
+    confirm: bool = False
+
+
+class CompSaveBody(BaseModel):
+    name: str
+    html: Optional[str] = None
+    files: Optional[dict] = None
+    edits: Optional[list] = None
+    remove: Optional[list] = None
+    replace: bool = False
+    title: Optional[str] = None
+    desc: Optional[str] = None
+    note: Optional[str] = None
+
+
 class VideoChunkBody(BaseModel):
     upload: str
     i: int
@@ -816,6 +847,69 @@ def list_live_actions() -> Dict[str, Any]:
 @router.get("/boards/live/history")
 def live_action_history(limit: int = 50) -> Dict[str, Any]:
     return {"history": board_service().actions.history(limit)}
+
+
+@router.get("/boards/components")
+def list_components() -> Dict[str, Any]:
+    """The user's component library (name, title, versions, size)."""
+    return {"components": _board_call(board_service().components.list)}
+
+
+@router.post("/boards/components")
+def save_component(body: "CompSaveBody") -> Dict[str, Any]:
+    """Create a component or add a version (scripts; Hermes uses the board_component tool)."""
+    kw = (body.model_dump if hasattr(body, "model_dump") else body.dict)(exclude={"name"})
+    return {"result": _board_call(board_service().comp_save, body.name, "u", **kw)}
+
+
+@router.get("/boards/components/{name}")
+def get_component(name: str, ver: Optional[str] = None) -> Dict[str, Any]:
+    """One component, assembled into a single HTML document (+ versions and sample data)."""
+    comps = _boardkit("components")
+    try:
+        return _board_call(board_service().components.assemble, name, ver)
+    except (comps.CompNotFound, comps.CompError) as e:
+        raise HTTPException(status_code=404, detail=str(e).strip("'\""))
+
+
+@router.post("/boards/{bid}/comp/{iid}/data")
+def post_comp_data(bid: str, iid: str, body: "CompDataBody") -> Dict[str, Any]:
+    """Update a component card's data (scripts, cron jobs): the card gets it live through hb.onData.
+    ``data`` sets top-level keys (null deletes), ``push`` appends to lists, ``replace`` starts empty."""
+    doc, entry = _board_call(board_service().comp_update, bid, iid, body.data, body.push, body.keep, body.replace)
+    item = doc["items"].get(iid) or {}
+    return {"seq": doc["seq"], "at": item.get("at"), "noop": bool(entry.get("noop"))}
+
+
+@router.put("/boards/{bid}/comp/{iid}/files/{name}")
+def put_comp_file(bid: str, iid: str, name: str, body: "CompFileBody") -> Dict[str, Any]:
+    """Attach a data file (weights, a trace, a big series) to a component card; read with hb.asset(name)."""
+    comps = _boardkit("components")
+    if body.data is not None:
+        raw = comps.decode_b64(body.data)
+    elif body.text is not None:
+        raw = body.text.encode("utf-8")
+    elif body.json_value is not None:
+        raw = json.dumps(body.json_value, separators=(",", ":")).encode("utf-8")
+    else:
+        raise HTTPException(status_code=400, detail="data, text or json_value required")
+    return _board_call(board_service().comp_attach, bid, iid, name, raw)
+
+
+@router.get("/boards/{bid}/comp/{iid}/files/{name}")
+def get_comp_file(bid: str, iid: str, name: str, off: int = 0, n: int = 4 * 1024 * 1024) -> Dict[str, Any]:
+    """A byte range of a data file, base64 (the hosts' fetch is JSON-only)."""
+    import base64
+    size, data = _board_call(board_service().comp_file, bid, iid, name, off, n)
+    return {"size": size, "off": off, "data": base64.b64encode(data).decode("ascii")}
+
+
+@router.post("/boards/{bid}/comp/{iid}/action")
+def post_comp_action(bid: str, iid: str, body: "CompActionBody", request: Request) -> Dict[str, Any]:
+    """A component card pressed an action (hb.action). Only ids on the card AND in the owner's allowlist run."""
+    client = getattr(request, "client", None)
+    who = f"dashboard {getattr(client, 'host', '') or ''}".strip()
+    return {"result": _board_call(board_service().comp_action, bid, iid, body.action, body.args, body.confirm, who)}
 
 
 @router.post("/boards/link-preview")

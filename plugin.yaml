@@ -20,5 +20,6 @@ provides_tools:
   - board_read
   - board_apply
   - board_render
+  - board_component
 provides_hooks:
   - pre_llm_call
