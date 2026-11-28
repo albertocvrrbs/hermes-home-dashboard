@@ -60,7 +60,7 @@ restarted, and the Webapp is served by the gateway. Restart it after updating (a
 
 - `sync` group on video and component cards: one shared clock per group (a video is the
   master, frame-accurate through `requestVideoFrameCallback`), shared transport and link
-  chips, `sync` / `unsync` ops for Hermes, "Link to a clock" for you, and `window.__hbSync`
+  chips, `sync` / `unsync` ops for Hermes, a link-to-clock entry in the card menu, and `window.__hbSync`
   for deterministic frame-by-frame capture.
 
 ### Presentation mode
