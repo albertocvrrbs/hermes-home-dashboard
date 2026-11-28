@@ -44,7 +44,7 @@ export function MiniBoard({ doc, id, className }: { doc: BoardDoc | null; id?: s
   const ctx: ItemCtx | null = useMemo(() => {
     if (!doc) return null;
     const c: ItemCtx = {
-      doc, t, editing: null, setEditing: noop, update: noop, commit: noop, playing: null, setPlaying: noop,
+      doc, t, editing: null, hint: null, keyOf: (k) => k, setEditing: noop, update: noop, commit: noop, playing: null, setPlaying: noop,
       openBoard: noop, addToColumn: noop, liveActions: null, liveActionsDown: false, runLiveAction: async () => null,
       renderKid: (kid) => {
         const it = doc.items[kid];
@@ -116,7 +116,8 @@ export function MiniBoard({ doc, id, className }: { doc: BoardDoc | null; id?: s
   return (
     <div ref={rootRef} className={`hb hb-mini${className ? ` ${className}` : ""}`} data-mini={id} aria-hidden="true">
       <div className="hb-world" ref={worldRef}>
-        {doc && <Wires doc={doc} getRect={getRect} version={ver} hidden={NONE} fresh={NONE} selected={NONE} draft={null} onSelect={noop} />}
+        {doc && <Wires doc={doc} getRect={getRect} version={ver} hidden={NONE} fresh={NONE} selected={NONE} draft={null} onSelect={noop}
+          editLabel={null} insertLabel="" onLabel={noop} onDouble={noop} onInsert={noop} />}
         {ctx && items.map(([rid, it]) => {
           const b = box(it);
           return (

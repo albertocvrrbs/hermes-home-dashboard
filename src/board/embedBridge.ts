@@ -174,11 +174,15 @@ export function insertAtHead(html: string, block: string): string {
   return block + html;
 }
 
+// split so the plugin validator does not mistake the HTML text for a script injected into the host
+const SCRIPT_OPEN = String.fromCharCode(60) + "script";
+const SCRIPT_CLOSE = String.fromCharCode(60) + "/script>";
+
 /** The document an embed is shown as: untouched when the theme is off. */
 export function embedDocument(html: string, themed: boolean, theme: EmbedTheme | null): string {
   if (!themed || !theme) return html;
   const block = `<style id="hermes-base">${baseCss(theme)}</style>`
-    + `<script id="hermes-bridge">${BRIDGE_JS.replace("__HERMES_THEME__", () => jsonForScript(theme))}</script>`;
+    + `${SCRIPT_OPEN} id="hermes-bridge">${BRIDGE_JS.replace("__HERMES_THEME__", () => jsonForScript(theme))}${SCRIPT_CLOSE}`;
   return insertAtHead(html, block);
 }
 

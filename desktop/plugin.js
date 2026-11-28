@@ -1,7 +1,7 @@
 import { jsx, jsxs, Fragment } from "react/jsx-runtime";
 import * as PluginSdk from "@hermes/plugin-sdk";
 import { host } from "@hermes/plugin-sdk";
-import { useState, useEffect, useRef, useMemo, useCallback, forwardRef, useImperativeHandle, useLayoutEffect } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback, forwardRef, useImperativeHandle, useLayoutEffect, memo } from "react";
 function getDashboardHost() {
   const sdk = window.__HERMES_PLUGIN_SDK__;
   if (!sdk) throw new Error("Hermes plugin SDK not available");
@@ -178,6 +178,20 @@ const en = {
   "gateway.health": "health",
   "gateway.config": "config",
   "gateway.version": "version",
+  "gateway.s.running": "running",
+  "gateway.s.starting": "starting",
+  "gateway.s.stopped": "stopped",
+  "gateway.s.startup_failed": "failed to start",
+  "gateway.s.draining": "draining",
+  "gateway.s.connected": "connected",
+  "gateway.s.connecting": "connecting",
+  "gateway.s.disconnected": "disconnected",
+  "gateway.s.degraded": "degraded",
+  "gateway.s.disabled": "disabled",
+  "gateway.s.fatal": "fatal error",
+  "gateway.s.paused": "paused",
+  "gateway.s.retrying": "retrying",
+  "gateway.s.error": "error",
   // ── host ──
   "host.view.meters": "meters",
   "host.view.detail": "detail",
@@ -326,9 +340,10 @@ const en = {
   "board.renameHint": "Double-click to rename",
   "board.presence.editing": "is editing",
   "board.state.saved": "saved {time}",
-  "board.state.session": "session",
+  "board.state.session": "session linked",
   "board.state.noSession": "no session yet",
   "board.continue": "Continue in session",
+  "board.ctx.zoomTo": "Zoom to selection",
   "board.fit": "Fit to content",
   "board.zoomIn": "Zoom in",
   "board.zoomOut": "Zoom out",
@@ -397,6 +412,8 @@ const en = {
   "board.embed.sandbox": "sandbox: scripts only, no network",
   "board.embed.reload": "Reload",
   "board.embed.taller": "Taller",
+  "board.embed.themeOn": "Use Hermes theme",
+  "board.embed.themeOff": "Original look",
   "board.embed.activate": "Click to interact",
   "board.embed.live": "live html",
   "board.ref.open": "open",
@@ -466,6 +483,24 @@ const en = {
   "board.hint.ink.lasso": "Loop around strokes · drag the selection to move it",
   "board.ctx.group": "Group",
   "board.ctx.ungroup": "Ungroup",
+  "board.tidy": "Arrange",
+  "board.tidy.selection": "Arrange selection",
+  "board.tidy.all": "Arrange whole board",
+  "board.tidy.none": "Already arranged",
+  "board.snap": "Snap to grid and neighbours",
+  "board.snap.hold": "Hold {mod} to place freely",
+  "board.kind.shape": "shape",
+  "board.shape.ph": "Text",
+  "board.shape.rect": "Rectangle",
+  "board.shape.diamond": "Diamond (decision)",
+  "board.shape.pill": "Pill (start / end)",
+  "board.shape.circle": "Circle",
+  "board.shape.text": "Text",
+  "board.insert.title": "Insert",
+  "board.insert.hint": "Insert in the middle of this connection",
+  "board.insert.more": "More…",
+  "board.edge.label": "Connector label",
+  "board.hint.insert": "Pick what goes in the middle · Esc to cancel",
   "board.ctx.edit": "Edit",
   "board.ctx.open": "Open",
   "board.ctx.connect": "Connect to…",
@@ -487,6 +522,23 @@ const en = {
   "board.chat.hintLive": "Enter sends · Shift+Enter new line",
   "board.chat.hintHandoff": "Send opens the session, message copied",
   "board.chat.send": "Send",
+  "board.chat.tool.readBoard": "reading the board",
+  "board.chat.tool.editBoard": "editing the board",
+  "board.chat.tool.editBoardN": "editing the board · {n} changes",
+  "board.chat.tool.viewBoard": "looking at the board",
+  "board.chat.tool.skill": "consulting a skill",
+  "board.chat.tool.command": "running a command",
+  "board.chat.tool.readFile": "reading a file",
+  "board.chat.tool.editFile": "editing a file",
+  "board.chat.tool.search": "searching",
+  "board.chat.tool.web": "browsing the web",
+  "board.chat.tool.image": "looking at an image",
+  "board.chat.tool.plan": "updating the plan",
+  "board.chat.tool.memory": "checking memory",
+  "board.chat.tool.delegate": "delegating to a helper",
+  "board.chat.tool.other": "working",
+  "board.chat.sessionTip": "Session {id}",
+  "board.chat.more": "+{n} more",
   "board.chat.model.title": "Model · {provider}: {model}",
   "board.chat.model.titleNoProvider": "Model · {model}",
   "board.chat.model.readonly": "switch it from Hermes Desktop or the Webapp",
@@ -499,6 +551,7 @@ const en = {
   "board.video.noPoster": "no preview yet",
   "board.video.loading": "Loading…",
   "board.toast.uploadingVideo": "uploading video… {pct} %",
+  "board.toast.rejected": "change not saved, undone: {error}",
   "board.toast.videoFailed": "video not added: {error}",
   "board.live.st.running": "running",
   "board.live.st.paused": "paused",
@@ -624,6 +677,20 @@ const es = {
   "gateway.health": "salud",
   "gateway.config": "config",
   "gateway.version": "versión",
+  "gateway.s.running": "en ejecución",
+  "gateway.s.starting": "iniciando",
+  "gateway.s.stopped": "detenido",
+  "gateway.s.startup_failed": "falló al iniciar",
+  "gateway.s.draining": "drenando",
+  "gateway.s.connected": "conectado",
+  "gateway.s.connecting": "conectando",
+  "gateway.s.disconnected": "desconectado",
+  "gateway.s.degraded": "degradado",
+  "gateway.s.disabled": "desactivado",
+  "gateway.s.fatal": "error fatal",
+  "gateway.s.paused": "en pausa",
+  "gateway.s.retrying": "reintentando",
+  "gateway.s.error": "error",
   // ── host ──
   "host.view.meters": "medidores",
   "host.view.detail": "detalle",
@@ -772,9 +839,10 @@ const es = {
   "board.renameHint": "Doble clic para renombrar",
   "board.presence.editing": "está editando",
   "board.state.saved": "guardado {time}",
-  "board.state.session": "sesión",
+  "board.state.session": "sesión vinculada",
   "board.state.noSession": "sin sesión todavía",
   "board.continue": "Continuar en sesión",
+  "board.ctx.zoomTo": "Acercar a la selección",
   "board.fit": "Ajustar al contenido",
   "board.zoomIn": "Acercar",
   "board.zoomOut": "Alejar",
@@ -843,6 +911,8 @@ const es = {
   "board.embed.sandbox": "aislado: solo scripts, sin red",
   "board.embed.reload": "Recargar",
   "board.embed.taller": "Más alto",
+  "board.embed.themeOn": "Usar tema de Hermes",
+  "board.embed.themeOff": "Aspecto original",
   "board.embed.activate": "Clic para usar",
   "board.embed.live": "html en vivo",
   "board.ref.open": "abrir",
@@ -912,6 +982,24 @@ const es = {
   "board.hint.ink.lasso": "Rodea los trazos · arrastra la selección para moverla",
   "board.ctx.group": "Agrupar",
   "board.ctx.ungroup": "Desagrupar",
+  "board.tidy": "Ordenar",
+  "board.tidy.selection": "Ordenar selección",
+  "board.tidy.all": "Ordenar todo el pizarrón",
+  "board.tidy.none": "Ya está ordenado",
+  "board.snap": "Imán a la retícula y a los vecinos",
+  "board.snap.hold": "Mantén {mod} para colocar libre",
+  "board.kind.shape": "forma",
+  "board.shape.ph": "Texto",
+  "board.shape.rect": "Rectángulo",
+  "board.shape.diamond": "Rombo (decisión)",
+  "board.shape.pill": "Píldora (inicio / fin)",
+  "board.shape.circle": "Círculo",
+  "board.shape.text": "Texto",
+  "board.insert.title": "Insertar",
+  "board.insert.hint": "Insertar en medio de esta conexión",
+  "board.insert.more": "Más…",
+  "board.edge.label": "Etiqueta del conector",
+  "board.hint.insert": "Elige qué va en medio · Esc para cancelar",
   "board.ctx.edit": "Editar",
   "board.ctx.open": "Abrir",
   "board.ctx.connect": "Conectar con…",
@@ -933,6 +1021,23 @@ const es = {
   "board.chat.hintLive": "Enter envía · Shift+Enter nueva línea",
   "board.chat.hintHandoff": "Enviar abre la sesión con el mensaje copiado",
   "board.chat.send": "Enviar",
+  "board.chat.tool.readBoard": "leyendo el pizarrón",
+  "board.chat.tool.editBoard": "editando el pizarrón",
+  "board.chat.tool.editBoardN": "dibujando {n} cambios",
+  "board.chat.tool.viewBoard": "mirando el pizarrón",
+  "board.chat.tool.skill": "consultando una skill",
+  "board.chat.tool.command": "ejecutando un comando",
+  "board.chat.tool.readFile": "leyendo un archivo",
+  "board.chat.tool.editFile": "editando un archivo",
+  "board.chat.tool.search": "buscando",
+  "board.chat.tool.web": "navegando la web",
+  "board.chat.tool.image": "mirando una imagen",
+  "board.chat.tool.plan": "actualizando el plan",
+  "board.chat.tool.memory": "consultando la memoria",
+  "board.chat.tool.delegate": "delegando a un ayudante",
+  "board.chat.tool.other": "trabajando",
+  "board.chat.sessionTip": "Sesión {id}",
+  "board.chat.more": "+{n} más",
   "board.chat.model.title": "Modelo · {provider}: {model}",
   "board.chat.model.titleNoProvider": "Modelo · {model}",
   "board.chat.model.readonly": "cámbialo desde Hermes Desktop o la Webapp",
@@ -945,6 +1050,7 @@ const es = {
   "board.video.noPoster": "sin vista previa aún",
   "board.video.loading": "Cargando…",
   "board.toast.uploadingVideo": "subiendo video… {pct} %",
+  "board.toast.rejected": "no se guardó el cambio, se deshizo: {error}",
   "board.toast.videoFailed": "no se agregó el video: {error}",
   "board.live.st.running": "corriendo",
   "board.live.st.paused": "en pausa",
@@ -1016,6 +1122,17 @@ function resolveLanguage(candidates, available) {
   }
   return FALLBACK_LANGUAGE;
 }
+let locale;
+function setDateLocale(language) {
+  locale = language;
+}
+function fmtDate(date, options) {
+  try {
+    return new Intl.DateTimeFormat(locale, options).format(date);
+  } catch {
+    return new Intl.DateTimeFormat(void 0, options).format(date);
+  }
+}
 const modules = /* @__PURE__ */ Object.assign({
   "./locales/en.ts": __vite_glob_0_0,
   "./locales/es.ts": __vite_glob_0_1
@@ -1037,11 +1154,13 @@ function computeLanguage() {
   return resolveLanguage([hostLanguage, ...browserLanguages()], LANGUAGES);
 }
 let current$1 = computeLanguage();
+setDateLocale(current$1);
 function setHostLanguage(language) {
   hostLanguage = language ?? null;
   const next = computeLanguage();
   if (next === current$1) return;
   current$1 = next;
+  setDateLocale(next);
   listeners.forEach((l) => l());
 }
 const translators = /* @__PURE__ */ new Map();
@@ -1070,10 +1189,10 @@ const GRID_COLS = 12;
 function collide(a, b) {
   return a.gx < b.gx + b.gw && a.gx + a.gw > b.gx && a.gy < b.gy + b.gh && a.gy + a.gh > b.gy;
 }
-function reflow(box, others) {
+function reflow(box2, others) {
   const moved = /* @__PURE__ */ new Map();
   const rest = others.map((i) => ({ ...i })).sort((a, b) => a.gy - b.gy);
-  const placed = [box];
+  const placed = [box2];
   for (const r of rest) {
     let guard = 0;
     while (placed.some((p) => collide(r, p)) && guard++ < 100) {
@@ -1099,8 +1218,8 @@ function findFreeSlot(layout, size, cols = GRID_COLS) {
   const maxRow = layout.reduce((m, w) => Math.max(m, w.gy + w.gh), 0);
   for (let gy = 0; gy <= maxRow; gy++) {
     for (let gx = 0; gx <= cols - size.gw; gx++) {
-      const box = { gx, gy, gw: size.gw, gh: size.gh };
-      if (!layout.some((w) => collide(box, w))) return { gx, gy };
+      const box2 = { gx, gy, gw: size.gw, gh: size.gh };
+      if (!layout.some((w) => collide(box2, w))) return { gx, gy };
     }
   }
   return { gx: 0, gy: maxRow };
@@ -1110,6 +1229,11 @@ function clampPosition(gx, gy, gw, _gh, cols = GRID_COLS) {
     gx: Math.max(0, Math.min(cols - gw, Math.round(gx))),
     gy: Math.max(0, Math.round(gy))
   };
+}
+function fitCellHeight(fitHeight, rows, o) {
+  if (!(fitHeight > 0) || rows <= 0) return o.base;
+  const fit = (fitHeight - o.pad * 2 + o.gap) / rows - o.gap;
+  return Math.round(Math.min(o.base * o.maxStretch, Math.max(o.base, fit)));
 }
 function swallow(e) {
   e.stopPropagation();
@@ -1878,8 +2002,8 @@ function rasterize(e, w, h, dpr) {
   if (!g) return null;
   g.fillStyle = "#000";
   g.fillRect(0, 0, off.width, off.height);
-  const box = fitBox(e.w, e.h, cols, rows, 1);
-  g.setTransform(box.s * SUPER, 0, 0, box.s * SUPER, box.x * SUPER, box.y * SUPER);
+  const box2 = fitBox(e.w, e.h, cols, rows, 1);
+  g.setTransform(box2.s * SUPER, 0, 0, box2.s * SUPER, box2.x * SUPER, box2.y * SUPER);
   e.draw(g);
   const lum = coverage(g.getImageData(0, 0, off.width, off.height).data, cols, rows, SUPER);
   const bits = e.dither === "bayer" ? bayerDither(lum, cols, rows) : floydSteinberg(lum, cols, rows);
@@ -1898,8 +2022,8 @@ function paint(canvas, r, c, s) {
   grad.addColorStop(0.4, c.accent);
   grad.addColorStop(0.6, c.accent);
   grad.addColorStop(1, c.dim);
-  const round = pitch >= 5;
-  const size = round ? pitch * 0.34 : Math.max(1, Math.round(pitch * 0.67));
+  const round2 = pitch >= 5;
+  const size = round2 ? pitch * 0.34 : Math.max(1, Math.round(pitch * 0.67));
   const inset = Math.floor((pitch - size) / 2);
   const band = 0.09;
   const span = cols + rows * 0.7;
@@ -1911,7 +2035,7 @@ function paint(canvas, r, c, s) {
       if (s.reveal < 1 && dotRank(i) >= s.reveal) continue;
       const lit = s.glint !== null && Math.abs((x + y * 0.7) / span - s.glint) < band;
       const p = lit ? hot : base;
-      if (round) {
+      if (round2) {
         const cx2 = ox + (x + 0.5) * pitch, cy2 = oy + (y + 0.5) * pitch;
         p.moveTo(cx2 + size, cy2);
         p.arc(cx2, cy2, size, 0, Math.PI * 2);
@@ -2128,7 +2252,7 @@ function ClockWidget({ widgetProps, onWidgetPropsChange }) {
       ] }),
       is12 && /* @__PURE__ */ jsx("span", { className: "home-clock-ampm", children: ampm })
     ] }),
-    /* @__PURE__ */ jsx("div", { className: "home-clock-sub", children: now.toLocaleDateString(void 0, { weekday: "long", day: "numeric", month: "long" }) })
+    /* @__PURE__ */ jsx("div", { className: "home-clock-sub", children: fmtDate(now, { weekday: "long", day: "numeric", month: "long" }) })
   ] });
 }
 function matrixRows(height, rowH) {
@@ -2207,6 +2331,27 @@ function MatrixWidget({ widgetProps, onWidgetPropsChange }) {
     /* @__PURE__ */ jsx("canvas", { ref, className: "home-matrix-c" })
   ] });
 }
+const GATEWAY_STATES = [
+  "running",
+  "starting",
+  "stopped",
+  "startup_failed",
+  "draining",
+  "connected",
+  "connecting",
+  "disconnected",
+  "degraded",
+  "disabled",
+  "fatal",
+  "paused",
+  "retrying",
+  "error"
+];
+const KNOWN = new Set(GATEWAY_STATES);
+function stateLabel(t2, raw) {
+  if (!raw) return "—";
+  return KNOWN.has(raw) ? t2(`gateway.s.${raw}`) : raw;
+}
 function hostOf$1(url) {
   try {
     return new URL(url).host;
@@ -2233,11 +2378,11 @@ function GatewayWidget({ status }) {
       ] }),
       /* @__PURE__ */ jsxs("div", { className: "row", children: [
         /* @__PURE__ */ jsx("span", { className: "dim", children: t2("gateway.state") }),
-        /* @__PURE__ */ jsx("span", { children: status.gateway_state ?? "—" })
+        /* @__PURE__ */ jsx("span", { children: stateLabel(t2, status.gateway_state) })
       ] }),
       platforms.map(([name, p]) => /* @__PURE__ */ jsxs("div", { className: "row", children: [
         /* @__PURE__ */ jsx("span", { className: "dim", children: name }),
-        /* @__PURE__ */ jsx("span", { className: p.state === "running" ? "ok" : "dim", children: p.state })
+        /* @__PURE__ */ jsx("span", { className: p.state === "running" || p.state === "connected" ? "ok" : "dim", children: stateLabel(t2, p.state) })
       ] }, name))
     ] }),
     /* @__PURE__ */ jsx("div", { className: "hover-reveal", children: /* @__PURE__ */ jsxs("div", { className: "rows", children: [
@@ -2366,6 +2511,58 @@ function SessionsWidget({ status, sessions, widgetProps, onWidgetPropsChange }) 
     ] })
   ] });
 }
+class TimeoutError extends Error {
+  constructor(ms) {
+    super(`no response after ${ms} ms`);
+    this.name = "TimeoutError";
+  }
+}
+function withTimeout(run, ms) {
+  return new Promise((resolve2, reject) => {
+    const timer = setTimeout(() => reject(new TimeoutError(ms)), ms);
+    let p;
+    try {
+      p = run();
+    } catch (e) {
+      clearTimeout(timer);
+      reject(e);
+      return;
+    }
+    p.then(
+      (v) => {
+        clearTimeout(timer);
+        resolve2(v);
+      },
+      (e) => {
+        clearTimeout(timer);
+        reject(e);
+      }
+    );
+  });
+}
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+class Cancelled extends Error {
+  constructor() {
+    super("cancelled");
+    this.name = "Cancelled";
+  }
+}
+async function fetchRetry(run, opts = {}) {
+  const { timeoutMs = 12e3, tries = 3, backoffMs = 800, cancelled } = opts;
+  let last;
+  for (let n = 1; n <= tries; n++) {
+    if (cancelled?.()) throw new Cancelled();
+    try {
+      return await withTimeout(run, timeoutMs);
+    } catch (e) {
+      last = e;
+      if (n < tries) await sleep(backoffMs * n);
+    }
+  }
+  if (cancelled?.()) throw new Cancelled();
+  throw last;
+}
+const runtimeFmt = (date, options) => date.toLocaleDateString(void 0, options);
 const GROUP_MODES = ["off", "provider", "model"];
 function coerceGroupBy(value) {
   return GROUP_MODES.includes(value) ? value : "off";
@@ -2388,11 +2585,11 @@ function parseDay(day) {
   const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(day);
   return m ? new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])) : new Date(day);
 }
-function toBars(daily, byMonth) {
+function toBars(daily, byMonth, fmtDate2 = runtimeFmt) {
   if (!byMonth) {
     return daily.map((d) => {
       const date = parseDay(d.day);
-      const label = isNaN(date.getTime()) ? d.day : date.toLocaleDateString(void 0, { month: "short", day: "numeric" });
+      const label = isNaN(date.getTime()) ? d.day : fmtDate2(date, { month: "short", day: "numeric" });
       return { key: d.day, label, tokens: d.input_tokens + d.output_tokens, cost: d.estimated_cost };
     });
   }
@@ -2401,7 +2598,7 @@ function toBars(daily, byMonth) {
     const date = parseDay(d.day);
     const valid = !isNaN(date.getTime());
     const key = valid ? `${date.getFullYear()}-${date.getMonth()}` : d.day.slice(0, 7);
-    const label = valid ? date.toLocaleDateString(void 0, { month: "short" }) : key;
+    const label = valid ? fmtDate2(date, { month: "short" }) : key;
     const sort = valid ? date.getFullYear() * 12 + date.getMonth() : 0;
     const cur = months.get(key) ?? { key, label, tokens: 0, cost: 0, sort };
     cur.tokens += d.input_tokens + d.output_tokens;
@@ -2439,10 +2636,10 @@ function TokensWidget({ analytics, widgetProps, onWidgetPropsChange, gridSize })
     let cancelled = false;
     setModels(null);
     setModelsFailed(false);
-    api.getModelsAnalytics(range.days).then((r) => {
+    fetchRetry(() => api.getModelsAnalytics(range.days), { cancelled: () => cancelled }).then((r) => {
       if (!cancelled) setModels(Array.isArray(r?.models) ? r.models : []);
-    }).catch(() => {
-      if (!cancelled) setModelsFailed(true);
+    }).catch((e) => {
+      if (!cancelled && !(e instanceof Cancelled)) setModelsFailed(true);
     });
     return () => {
       cancelled = true;
@@ -2450,15 +2647,25 @@ function TokensWidget({ analytics, widgetProps, onWidgetPropsChange, gridSize })
   }, [group, range.days]);
   useEffect(() => {
     let cancelled = false;
+    let retry;
     setFetched(null);
     setFailed(false);
-    api.getAnalytics(range.days).then((r) => {
-      if (!cancelled) setFetched(r);
-    }).catch(() => {
-      if (!cancelled) setFailed(true);
-    });
+    const load = () => {
+      fetchRetry(() => api.getAnalytics(range.days), { cancelled: () => cancelled }).then((r) => {
+        if (!cancelled) {
+          setFetched(r);
+          setFailed(false);
+        }
+      }).catch((e) => {
+        if (cancelled || e instanceof Cancelled) return;
+        setFailed(true);
+        retry = setTimeout(load, 2e4);
+      });
+    };
+    load();
     return () => {
       cancelled = true;
+      if (retry) clearTimeout(retry);
     };
   }, [range.days]);
   const setProp = (patch) => onWidgetPropsChange({ ...widgetProps, ...patch });
@@ -2501,8 +2708,8 @@ function TokensWidget({ analytics, widgetProps, onWidgetPropsChange, gridSize })
   ] });
   const view = fetched ?? (failed ? analytics : null);
   const bars = useMemo(
-    () => toBars(view?.daily ?? [], range.byMonth),
-    [view, range.byMonth]
+    () => toBars(view?.daily ?? [], range.byMonth, fmtDate),
+    [view, range.byMonth, t2]
   );
   const fallback = group !== "off" && modelsFailed;
   const groups = useMemo(() => {
@@ -3380,7 +3587,7 @@ function PomodoroWidget({ widgetProps, onWidgetPropsChange }) {
   ] });
 }
 const pad = (n) => String(n).padStart(2, "0");
-const monthName = (mo) => new Date(2024, mo, 1).toLocaleDateString(void 0, { month: "short" }).replace(/\.$/, "").toUpperCase();
+const monthName = (mo) => fmtDate(new Date(2024, mo, 1), { month: "short" }).replace(/\.$/, "").toUpperCase();
 const buildISO = (s) => `${s.y}-${pad(s.mo + 1)}-${pad(s.d)}T${pad(s.h)}:${pad(s.mi)}`;
 const fromDate = (dt) => ({ y: dt.getFullYear(), mo: dt.getMonth(), d: dt.getDate(), h: dt.getHours(), mi: dt.getMinutes() });
 const daysIn = (y, mo) => new Date(y, mo + 1, 0).getDate();
@@ -3579,7 +3786,7 @@ function CountdownWidget({ widgetProps, onWidgetPropsChange }) {
     const m = Math.floor(abs % 36e5 / 6e4);
     big = `${diff < 0 ? "+" : ""}${d > 0 ? `${d}d ` : ""}${pad(h)}:${pad(m)}`;
   }
-  const dateLabel = !Number.isNaN(targetMs) ? new Date(targetMs).toLocaleDateString(void 0, { month: "short", day: "numeric" }) : t2("count.setDate");
+  const dateLabel = !Number.isNaN(targetMs) ? fmtDate(new Date(targetMs), { month: "short", day: "numeric" }) : t2("count.setDate");
   return /* @__PURE__ */ jsxs("div", { className: "home-clock-wrap home-count", children: [
     /* @__PURE__ */ jsx(HoverArrows, { onPrev: () => shiftDays(-1), onNext: () => shiftDays(1), label: dateLabel }),
     /* @__PURE__ */ jsx(
@@ -3629,10 +3836,11 @@ function CalendarWidget({ gridSize }) {
   const today = now.getDate();
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const firstCol = (new Date(year, month, 1).getDay() + 6) % 7;
-  const monthLabel = view.toLocaleDateString(void 0, { month: "long", year: "numeric" });
+  const monthLabel = fmtDate(view, { month: "long", year: "numeric" });
   const dayLetters = Array.from(
     { length: 7 },
-    (_, i) => new Date(2024, 0, i + 1).toLocaleDateString(void 0, { weekday: "narrow" })
+    (_, i) => fmtDate(new Date(2024, 0, i + 1), { weekday: "narrow" })
+    // 2024-01-01 was a Monday
   );
   const tier = gridSize.gw <= 2 ? "mini" : gridSize.gw >= 4 ? "large" : "normal";
   return /* @__PURE__ */ jsxs("div", { className: `home-cal tier-${tier}`, children: [
@@ -3772,7 +3980,7 @@ function ProjectsWidget() {
           /* @__PURE__ */ jsx("span", { className: "dim", children: t2("projects.alerts") }),
           /* @__PURE__ */ jsx("ul", { children: p.alerts.map((a, i) => /* @__PURE__ */ jsx("li", { children: a }, i)) })
         ] }),
-        p.lastUpdated && /* @__PURE__ */ jsx("div", { className: "project-detail-row dim", children: t2("projects.updated", { when: new Date(p.lastUpdated).toLocaleString() }) })
+        p.lastUpdated && /* @__PURE__ */ jsx("div", { className: "project-detail-row dim", children: t2("projects.updated", { when: fmtDate(new Date(p.lastUpdated), { dateStyle: "medium", timeStyle: "short" }) }) })
       ] })
     ] }, p.id);
   }) });
@@ -4273,9 +4481,9 @@ function ago(t2, ts, now = Date.now() / 1e3) {
   if (s < 86400) return t2("board.time.h", { n: Math.round(s / 3600) });
   if (s < 172800) return t2("board.time.yesterday");
   const d = new Date(ts * 1e3);
-  return d.toLocaleDateString(void 0, { month: "short", day: "numeric" }).toLowerCase();
+  return fmtDate(d, { month: "short", day: "numeric" }).toLowerCase();
 }
-function clock(ts) {
+function clock$1(ts) {
   const d = new Date(ts * 1e3);
   return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
 }
@@ -4300,14 +4508,14 @@ function parseArgs(a) {
     return null;
   }
 }
-function toolNames(name, args) {
+function toolCalls(name, args) {
   if (!name || QUIET.has(name)) return [];
   if (name === "tool_call") {
     const calls = args?.calls;
-    const inner = Array.isArray(calls) ? calls.map((c) => typeof c?.name === "string" ? c.name : "").filter(Boolean) : [];
-    return inner.length ? inner : [name];
+    const inner = Array.isArray(calls) ? calls.filter((c) => typeof c?.name === "string" && c.name).map((c) => ({ name: c.name, args: parseArgs(c.arguments) })) : [];
+    return inner.length ? inner : [{ name, args }];
   }
-  return [name];
+  return [{ name, args }];
 }
 function textOf(r) {
   if (typeof r.text === "string") return r.text;
@@ -4318,6 +4526,17 @@ function textOf(r) {
   }
   return "";
 }
+function foldTools(out, key, t2, calls) {
+  let row = out[out.length - 1];
+  if (row?.role !== "tool") {
+    row = { key, role: "tool", text: "", t: t2, tools: [], acts: [] };
+    out.push(row);
+  }
+  calls.forEach((c) => {
+    if (!row.tools.includes(c.name)) row.tools.push(c.name);
+  });
+  mergeActs(row.acts, calls.map((c) => toolAct(c.name, c.args)));
+}
 function toChatRows(raw) {
   const out = [];
   raw.forEach((r, i) => {
@@ -4326,37 +4545,91 @@ function toChatRows(raw) {
     const t2 = typeof r.timestamp === "number" ? r.timestamp : void 0;
     if (r.row_kind === "compaction") return;
     if (role === "tool") {
-      const names = toolNames(r.name || r.tool_name || "tool", r.args);
-      if (!names.length) return;
-      const last = out[out.length - 1];
-      if (last?.role === "tool") {
-        names.forEach((n) => {
-          if (!last.tools.includes(n)) last.tools.push(n);
-        });
-        return;
-      }
-      out.push({ key, role: "tool", text: "", t: t2, tools: names });
+      const calls2 = toolCalls(r.name || r.tool_name || "tool", r.args);
+      if (!calls2.length) return;
+      foldTools(out, key, t2, calls2);
       return;
     }
     if (role !== "user" && role !== "assistant") return;
     let text = textOf(r).trim();
     if (role === "user") text = text.replace(MARKER, "").replace(SELECTION_TAIL, "");
-    const calls = (r.tool_calls ?? []).flatMap((c) => toolNames(c?.function?.name || c?.name || "", parseArgs(c?.function?.arguments)));
+    const calls = (r.tool_calls ?? []).flatMap((c) => toolCalls(c?.function?.name || c?.name || "", parseArgs(c?.function?.arguments)));
     if (text) out.push({ key, role, text, t: t2 });
-    if (calls.length) {
-      const last = out[out.length - 1];
-      if (last?.role === "tool") {
-        calls.forEach((n) => {
-          if (!last.tools.includes(n)) last.tools.push(n);
-        });
-      } else out.push({ key: `${key}c`, role: "tool", text: "", t: t2, tools: [...new Set(calls)] });
-    }
+    if (calls.length) foldTools(out, `${key}c`, t2, calls);
   });
   return out;
 }
 function boardPrompt(doc, text, selected, selectedLabel) {
   const sel = selected.filter((id) => doc.items[id]);
   return `[board:${doc.id}] ${text.trim()}${sel.length ? ` (${selectedLabel}: ${sel.join(", ")})` : ""}`;
+}
+const EXACT = {
+  board_read: "readBoard",
+  board_apply: "editBoard",
+  board_render: "viewBoard",
+  skill_view: "skill",
+  skills_list: "skill",
+  skill_manage: "skill",
+  terminal: "command",
+  process_manage: "command",
+  execute_code: "command",
+  read_file: "readFile",
+  write_file: "editFile",
+  patch: "editFile",
+  search_files: "search",
+  web_search: "web",
+  web_extract: "web",
+  vision_analyze: "image",
+  image_generate: "image",
+  todo: "plan",
+  todo_list: "plan",
+  memory: "memory",
+  delegate_task: "delegate"
+};
+function bare(name) {
+  const parts = name.split("__").filter(Boolean);
+  return parts.length > 1 ? parts[parts.length - 1] : name;
+}
+function toolKind(name) {
+  const n = name.trim().toLowerCase();
+  if (EXACT[n]) return EXACT[n];
+  const b = bare(n);
+  if (EXACT[b]) return EXACT[b];
+  if (/^browser_|^firecrawl_|^web_/.test(b) || /^firecrawl/.test(n)) return "web";
+  if (/^(read|view|get)_/.test(b)) return "readFile";
+  return "other";
+}
+function opCount(args) {
+  let a = args;
+  if (typeof a === "string") {
+    try {
+      a = JSON.parse(a);
+    } catch {
+      return void 0;
+    }
+  }
+  const ops = a?.ops;
+  if (Array.isArray(ops)) return ops.length || void 0;
+  if (typeof ops === "string") {
+    try {
+      const p = JSON.parse(ops);
+      return Array.isArray(p) && p.length ? p.length : void 0;
+    } catch {
+      return void 0;
+    }
+  }
+  return void 0;
+}
+function toolAct(name, args) {
+  const kind = toolKind(name);
+  return kind === "editBoard" ? { kind, n: opCount(args) } : { kind };
+}
+function mergeActs(into, more) {
+  for (const a of more) {
+    const cur = into.find((x) => x.kind === a.kind);
+    if (!cur) into.push({ ...a });
+    else if ((a.n ?? 0) > (cur.n ?? 0)) cur.n = a.n;
+  }
 }
 function chatMode() {
   return hostRpc() ? "live" : "handoff";
@@ -4512,6 +4785,15 @@ const Bell = [
     }
   ]
 ];
+const BookOpen = [
+  ["path", { d: "M12 7v14" }],
+  [
+    "path",
+    {
+      d: "M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"
+    }
+  ]
+];
 const Bot = [
   ["path", { d: "M12 8V4H8" }],
   ["rect", { width: "16", height: "12", x: "4", y: "8", rx: "2" }],
@@ -4601,10 +4883,23 @@ const Database = [
   ["path", { d: "M3 5V19A9 3 0 0 0 21 19V5" }],
   ["path", { d: "M3 12A9 3 0 0 0 21 12" }]
 ];
+const Diamond = [
+  [
+    "path",
+    {
+      d: "M2.7 10.3a2.41 2.41 0 0 0 0 3.41l7.59 7.59a2.41 2.41 0 0 0 3.41 0l7.59-7.59a2.41 2.41 0 0 0 0-3.41l-7.59-7.59a2.41 2.41 0 0 0-3.41 0Z"
+    }
+  ]
+];
 const Download = [
   ["path", { d: "M12 15V3" }],
   ["path", { d: "M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" }],
   ["path", { d: "m7 10 5 5 5-5" }]
+];
+const Ellipsis = [
+  ["circle", { cx: "12", cy: "12", r: "1" }],
+  ["circle", { cx: "19", cy: "12", r: "1" }],
+  ["circle", { cx: "5", cy: "12", r: "1" }]
 ];
 const Eraser = [
   [
@@ -4614,6 +4909,42 @@ const Eraser = [
     }
   ],
   ["path", { d: "m5.082 11.09 8.828 8.828" }]
+];
+const Eye = [
+  [
+    "path",
+    {
+      d: "M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"
+    }
+  ],
+  ["circle", { cx: "12", cy: "12", r: "3" }]
+];
+const FilePen = [
+  [
+    "path",
+    {
+      d: "M12.659 22H18a2 2 0 0 0 2-2V8a2.4 2.4 0 0 0-.706-1.706l-3.588-3.588A2.4 2.4 0 0 0 14 2H6a2 2 0 0 0-2 2v9.34"
+    }
+  ],
+  ["path", { d: "M14 2v5a1 1 0 0 0 1 1h5" }],
+  [
+    "path",
+    {
+      d: "M10.378 12.622a1 1 0 0 1 3 3.003L8.36 20.637a2 2 0 0 1-.854.506l-2.867.837a.5.5 0 0 1-.62-.62l.836-2.869a2 2 0 0 1 .506-.853z"
+    }
+  ]
+];
+const FileText = [
+  [
+    "path",
+    {
+      d: "M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"
+    }
+  ],
+  ["path", { d: "M14 2v5a1 1 0 0 0 1 1h5" }],
+  ["path", { d: "M10 9H8" }],
+  ["path", { d: "M16 13H8" }],
+  ["path", { d: "M16 17H8" }]
 ];
 const FlaskConical = [
   [
@@ -4625,6 +4956,13 @@ const FlaskConical = [
   ["path", { d: "M6.453 15h11.094" }],
   ["path", { d: "M8.5 2h7" }]
 ];
+const Focus = [
+  ["circle", { cx: "12", cy: "12", r: "3" }],
+  ["path", { d: "M3 7V5a2 2 0 0 1 2-2h2" }],
+  ["path", { d: "M17 3h2a2 2 0 0 1 2 2v2" }],
+  ["path", { d: "M21 17v2a2 2 0 0 1-2 2h-2" }],
+  ["path", { d: "M7 21H5a2 2 0 0 1-2-2v-2" }]
+];
 const Gauge = [
   ["path", { d: "m12 14 4-4" }],
   ["path", { d: "M3.34 19a10 10 0 1 1 17.32 0" }]
@@ -4633,6 +4971,11 @@ const GitBranch = [
   ["path", { d: "M15 6a9 9 0 0 0-9 9V3" }],
   ["circle", { cx: "18", cy: "6", r: "3" }],
   ["circle", { cx: "6", cy: "18", r: "3" }]
+];
+const Globe = [
+  ["circle", { cx: "12", cy: "12", r: "10" }],
+  ["path", { d: "M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20" }],
+  ["path", { d: "M2 12h20" }]
 ];
 const Group = [
   ["path", { d: "M3 7V5c0-1.1.9-2 2-2h2" }],
@@ -4688,6 +5031,12 @@ const LassoSelect = [
     }
   ]
 ];
+const LayoutGrid = [
+  ["rect", { width: "7", height: "7", x: "3", y: "3", rx: "1" }],
+  ["rect", { width: "7", height: "7", x: "14", y: "3", rx: "1" }],
+  ["rect", { width: "7", height: "7", x: "14", y: "14", rx: "1" }],
+  ["rect", { width: "7", height: "7", x: "3", y: "14", rx: "1" }]
+];
 const LayoutDashboard = [
   ["rect", { width: "7", height: "9", x: "3", y: "3", rx: "1" }],
   ["rect", { width: "7", height: "5", x: "14", y: "3", rx: "1" }],
@@ -4711,6 +5060,16 @@ const ListTodo = [
   ["path", { d: "M13 19h8" }],
   ["path", { d: "m3 17 2 2 4-4" }],
   ["rect", { x: "3", y: "4", width: "6", height: "6", rx: "1" }]
+];
+const Magnet = [
+  ["path", { d: "m12 15 4 4" }],
+  [
+    "path",
+    {
+      d: "M2.352 10.648a1.205 1.205 0 0 0 0 1.704l2.296 2.296a1.205 1.205 0 0 0 1.704 0l6.029-6.029a1 1 0 1 1 3 3l-6.029 6.029a1.205 1.205 0 0 0 0 1.704l2.296 2.296a1.205 1.205 0 0 0 1.704 0l6.365-6.367A1 1 0 0 0 8.716 4.282z"
+    }
+  ],
+  ["path", { d: "m5 8 4 4" }]
 ];
 const Maximize2 = [
   ["path", { d: "M15 3h6v6" }],
@@ -4740,6 +5099,18 @@ const MousePointer2 = [
 const MoveUpRight = [
   ["path", { d: "M13 5H19V11" }],
   ["path", { d: "M19 5L5 19" }]
+];
+const Palette = [
+  [
+    "path",
+    {
+      d: "M12 22a1 1 0 0 1 0-20 10 9 0 0 1 10 9 5 5 0 0 1-5 5h-2.25a1.75 1.75 0 0 0-1.4 2.8l.3.4a1.75 1.75 0 0 1-1.4 2.8z"
+    }
+  ],
+  ["circle", { cx: "13.5", cy: "6.5", r: ".5", fill: "currentColor" }],
+  ["circle", { cx: "17.5", cy: "10.5", r: ".5", fill: "currentColor" }],
+  ["circle", { cx: "6.5", cy: "12.5", r: ".5", fill: "currentColor" }],
+  ["circle", { cx: "8.5", cy: "7.5", r: ".5", fill: "currentColor" }]
 ];
 const PanelRightClose = [
   ["rect", { width: "18", height: "18", x: "3", y: "3", rx: "2" }],
@@ -4791,6 +5162,9 @@ const Power = [
   ["path", { d: "M12 2v10" }],
   ["path", { d: "M18.4 6.6a9 9 0 1 1-12.77.04" }]
 ];
+const RectangleHorizontal = [
+  ["rect", { width: "20", height: "12", x: "2", y: "6", rx: "2" }]
+];
 const Redo2 = [
   ["path", { d: "m15 14 5-5-5-5" }],
   ["path", { d: "M20 9H9.5A5.5 5.5 0 0 0 4 14.5A5.5 5.5 0 0 0 9.5 20H13" }]
@@ -4817,6 +5191,10 @@ const Rocket = [
   ],
   ["path", { d: "M9 12H4s.55-3.03 2-4c1.62-1.08 5 .05 5 .05" }]
 ];
+const RotateCcw = [
+  ["path", { d: "M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" }],
+  ["path", { d: "M3 3v5h5" }]
+];
 const RotateCw = [
   ["path", { d: "M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8" }],
   ["path", { d: "M21 3v5h-5" }]
@@ -4831,6 +5209,10 @@ const Scan = [
   ["path", { d: "M17 3h2a2 2 0 0 1 2 2v2" }],
   ["path", { d: "M21 17v2a2 2 0 0 1-2 2h-2" }],
   ["path", { d: "M7 21H5a2 2 0 0 1-2-2v-2" }]
+];
+const Search = [
+  ["path", { d: "m21 21-4.34-4.34" }],
+  ["circle", { cx: "11", cy: "11", r: "8" }]
 ];
 const Server = [
   ["rect", { width: "20", height: "8", x: "2", y: "2", rx: "2", ry: "2" }],
@@ -4919,6 +5301,11 @@ const Trash2 = [
   ["path", { d: "M3 6h18" }],
   ["path", { d: "M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" }]
 ];
+const Type = [
+  ["path", { d: "M12 4v16" }],
+  ["path", { d: "M4 7V5a1 1 0 0 1 1-1h14a1 1 0 0 1 1 1v2" }],
+  ["path", { d: "M9 20h6" }]
+];
 const Undo2 = [
   ["path", { d: "M9 14 4 9l5-5" }],
   ["path", { d: "M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5a5.5 5.5 0 0 1-5.5 5.5H11" }]
@@ -4940,6 +5327,14 @@ const Workflow = [
   ["rect", { width: "8", height: "8", x: "3", y: "3", rx: "2" }],
   ["path", { d: "M7 11v4a2 2 0 0 0 2 2h4" }],
   ["rect", { width: "8", height: "8", x: "13", y: "13", rx: "2" }]
+];
+const Wrench = [
+  [
+    "path",
+    {
+      d: "M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.106-3.105c.32-.322.863-.22.983.218a6 6 0 0 1-8.259 7.057l-7.91 7.91a1 1 0 0 1-2.999-3l7.91-7.91a6 6 0 0 1 7.057-8.259c.438.12.54.662.219.984z"
+    }
+  ]
 ];
 const X = [
   ["path", { d: "M18 6 6 18" }],
@@ -4964,6 +5359,7 @@ const ZoomOut = [
   ["line", { x1: "21", x2: "16.65", y1: "21", y2: "16.65" }],
   ["line", { x1: "8", x2: "14", y1: "11", y2: "11" }]
 ];
+const PILL$1 = [["rect", { x: 2, y: 7, width: 20, height: 10, rx: 5 }]];
 const ICONS = {
   select: MousePointer2,
   pan: Hand,
@@ -4979,6 +5375,7 @@ const ICONS = {
   zoomIn: ZoomIn,
   zoomOut: ZoomOut,
   fit: Scan,
+  focus: Focus,
   undo: Undo2,
   redo: Redo2,
   edit: Pencil,
@@ -4987,7 +5384,22 @@ const ICONS = {
   connect: MoveUpRight,
   open: SquareArrowOutUpRight,
   openBoard: ArrowUpRight,
+  reset: RotateCcw,
   chat: MessageSquareText,
+  toolReadBoard: Eye,
+  toolEditBoard: PencilLine,
+  toolViewBoard: Eye,
+  toolSkill: BookOpen,
+  toolCommand: SquareTerminal,
+  toolReadFile: FileText,
+  toolEditFile: FilePen,
+  toolSearch: Search,
+  toolWeb: Globe,
+  toolImage: Image,
+  toolPlan: ListTodo,
+  toolMemory: Brain,
+  toolDelegate: Bot,
+  toolOther: Wrench,
   closePanel: PanelRightClose,
   send: ArrowUp,
   close: X,
@@ -4996,6 +5408,7 @@ const ICONS = {
   next: ChevronRight,
   reload: RotateCw,
   taller: Maximize2,
+  theme: Palette,
   // Hermes verbs
   expand: ListPlus,
   split: Split,
@@ -5021,7 +5434,16 @@ const ICONS = {
   ellipse: Circle,
   dashed: SquareDashed,
   smooth: Spline,
-  ungroup: Ungroup
+  ungroup: Ungroup,
+  // layout
+  tidy: LayoutGrid,
+  snap: Magnet,
+  more: Ellipsis,
+  text: Type,
+  shapeRect: RectangleHorizontal,
+  shapeDiamond: Diamond,
+  shapePill: PILL$1,
+  shapeCircle: Circle
 };
 const LIVE_ICONS = {
   activity: Activity,
@@ -5106,18 +5528,18 @@ function modelFromSessionRow(row) {
   if (!row || typeof row !== "object") return NO_MODEL;
   const r = row;
   let effort = "";
-  let pending = true;
+  let pending2 = true;
   try {
     const cfg = typeof r.model_config === "string" ? JSON.parse(r.model_config) : r.model_config;
     const rc = cfg && typeof cfg === "object" ? cfg.reasoning_config : null;
     if (rc && typeof rc === "object") {
       const o = rc;
       effort = o.enabled === false ? "none" : str(o.effort);
-      pending = false;
+      pending2 = false;
     }
   } catch {
   }
-  return { ...NO_MODEL, model: str(r.model), provider: str(r.billing_provider), effort, effortPending: pending };
+  return { ...NO_MODEL, model: str(r.model), provider: str(r.billing_provider), effort, effortPending: pending2 };
 }
 function modelSwitchValue(model, provider) {
   const m = model.trim();
@@ -5411,6 +5833,20 @@ function SessionModelPill({ doc, t: t2, refreshKey }) {
   return /* @__PURE__ */ jsx("span", { className: "hb-model ro", "data-tip": `${title} — ${t2("board.chat.model.readonly")}`, "aria-label": title, children: label });
 }
 const CHAT_MAX_W = 640;
+function ToolLine({ acts, names, t: t2 }) {
+  if (!acts.length) return null;
+  const label = (a) => a.kind === "editBoard" && a.n ? t2("board.chat.tool.editBoardN", { n: a.n }) : t2(`board.chat.tool.${a.kind}`);
+  const ordered = [...acts].sort((a, b) => Number(b.kind === "editBoard") - Number(a.kind === "editBoard"));
+  const shown = ordered.slice(0, 2);
+  const rest = ordered.length - shown.length;
+  return /* @__PURE__ */ jsxs("div", { className: "ch-tool", "data-tip": names.join(" · "), children: [
+    /* @__PURE__ */ jsx(Icon, { name: `tool${ordered[0].kind[0].toUpperCase()}${ordered[0].kind.slice(1)}`, size: 12 }),
+    /* @__PURE__ */ jsxs("span", { className: "txt", children: [
+      shown.map(label).join(" · "),
+      rest > 0 ? ` ${t2("board.chat.more", { n: rest })}` : ""
+    ] })
+  ] });
+}
 function inline(text) {
   return text.split(/(\*\*[^*\n]+\*\*|`[^`\n]+`)/g).map((p, i) => {
     if (p.startsWith("**") && p.endsWith("**") && p.length > 4) return /* @__PURE__ */ jsx("b", { children: p.slice(2, -2) }, i);
@@ -5586,16 +6022,10 @@ function ChatPanel({ doc, t: t2, width, selected, sentAt, onWidth, onClose, onCo
           }
         ),
         /* @__PURE__ */ jsxs("header", { className: "ch-top", children: [
-          /* @__PURE__ */ jsxs("span", { className: "hd", children: [
-            /* @__PURE__ */ jsxs("span", { className: "who", children: [
-              /* @__PURE__ */ jsx(Cad, {}),
-              "hermes"
-            ] }),
-            sessionId && /* @__PURE__ */ jsxs("span", { className: "n", children: [
-              "#",
-              sessionId.slice(-4)
-            ] })
-          ] }),
+          /* @__PURE__ */ jsx("span", { className: "hd", "data-tip": sessionId ? t2("board.chat.sessionTip", { id: sessionId }) : void 0, children: /* @__PURE__ */ jsxs("span", { className: "who", children: [
+            /* @__PURE__ */ jsx(Cad, {}),
+            "hermes"
+          ] }) }),
           sessionId && /* @__PURE__ */ jsx(SessionModelPill, { doc, t: t2, refreshKey: mode === "live" ? 0 : sentAt }),
           /* @__PURE__ */ jsx("button", { className: "ib", "data-tip": t2("board.continue"), "data-kbd": `${modKey()}↵`, "aria-label": t2("board.continue"), onClick: onContinue, children: /* @__PURE__ */ jsx(Icon, { name: "open" }) }),
           /* @__PURE__ */ jsx("button", { className: "ib", "data-tip": t2("board.chat.close"), "data-kbd": "Esc", "aria-label": t2("board.chat.close"), onClick: onClose, children: /* @__PURE__ */ jsx(Icon, { name: "closePanel" }) })
@@ -5608,13 +6038,9 @@ function ChatPanel({ doc, t: t2, width, selected, sentAt, onWidth, onClose, onCo
             /* @__PURE__ */ jsx(Icon, { name: "chat", size: 18 }),
             /* @__PURE__ */ jsx("p", { children: failed ? t2("board.chat.unreadable") : !sessionId ? t2("board.chat.noSession") : rows ? t2("board.chat.emptySession") : t2("common.loading") })
           ] }),
-          shown.map((r) => r.role === "tool" ? /* @__PURE__ */ jsxs("div", { className: "ch-tool", children: [
-            /* @__PURE__ */ jsx("span", { className: "dot" }),
-            r.tools.slice(0, 4).join(" · "),
-            r.tools.length > 4 ? ` +${r.tools.length - 4}` : ""
-          ] }, r.key) : r.role === "user" ? /* @__PURE__ */ jsxs("div", { className: "ch-user", children: [
+          shown.map((r) => r.role === "tool" ? /* @__PURE__ */ jsx(ToolLine, { acts: r.acts ?? [], names: r.tools ?? [], t: t2 }, r.key) : r.role === "user" ? /* @__PURE__ */ jsxs("div", { className: "ch-user", children: [
             /* @__PURE__ */ jsx("div", { className: "bubble", children: r.text }),
-            r.t ? /* @__PURE__ */ jsx("time", { children: clock(r.t) }) : null
+            r.t ? /* @__PURE__ */ jsx("time", { children: clock$1(r.t) }) : null
           ] }, r.key) : /* @__PURE__ */ jsx("div", { className: "ch-asst", children: /* @__PURE__ */ jsx(Md, { text: r.text }) }, r.key)),
           pendingSince && /* @__PURE__ */ jsxs("div", { className: "ch-working", children: [
             /* @__PURE__ */ jsx(Cad, {}),
@@ -5755,6 +6181,21 @@ function samplePolyline(pts, step) {
   }
   return out;
 }
+function pointAtT(pts, t2) {
+  if (pts.length < 2) return pts[0] ?? [0, 0];
+  let total = 0;
+  for (let i = 1; i < pts.length; i++) total += Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]);
+  let want = Math.max(0, Math.min(1, t2)) * total;
+  for (let i = 1; i < pts.length; i++) {
+    const len = Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]);
+    if (want <= len || i === pts.length - 1) {
+      const u = len ? want / len : 0;
+      return [pts[i - 1][0] + (pts[i][0] - pts[i - 1][0]) * u, pts[i - 1][1] + (pts[i][1] - pts[i - 1][1]) * u];
+    }
+    want -= len;
+  }
+  return pts[pts.length - 1];
+}
 function boundsOf(rects) {
   if (!rects.length) return null;
   const x0 = Math.min(...rects.map((r) => r.x)), y0 = Math.min(...rects.map((r) => r.y));
@@ -5768,14 +6209,14 @@ function fitView(b, vp, pad2 = 60, maxZ = 1.25) {
 function intersects(a, b) {
   return a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
 }
-const RESIZE_H = /* @__PURE__ */ new Set(["frame", "box", "embed", "text"]);
+const RESIZE_H = /* @__PURE__ */ new Set(["frame", "box", "embed", "text", "shape"]);
 function resizePatch(kind, w, h) {
-  const p = { w: Math.round(Math.max(120, w)) };
+  const p = { w: Math.round(Math.max(kind === "shape" ? 40 : 120, w)) };
   if (RESIZE_H.has(kind)) p.h = Math.round(Math.max(40, h));
   return p;
 }
-const ZOOM_MIN = 0.2;
-const ZOOM_MAX = 2.4;
+const ZOOM_MIN$1 = 0.2;
+const ZOOM_MAX$1 = 2.4;
 function wheelIntent(e, trackpadRecent = false) {
   if (e.ctrlKey || e.metaKey) return "zoom";
   if (e.deltaMode !== 0) return "zoom";
@@ -5786,10 +6227,11 @@ function wheelIntent(e, trackpadRecent = false) {
 function wheelZoomFactor(e) {
   const unit = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? 800 : 1;
   const px = Math.max(-240, Math.min(240, e.deltaY * unit));
-  const k = e.ctrlKey || e.metaKey ? 0.01 : 15e-4;
+  const modNotch = (e.ctrlKey || e.metaKey) && e.deltaMode === 0 && e.deltaX === 0 && Number.isInteger(e.deltaY) && Math.abs(e.deltaY) >= 50;
+  const k = modNotch ? 25e-4 : e.ctrlKey || e.metaKey ? 0.01 : 15e-4;
   return Math.exp(-px * k);
 }
-function zoomView(v, f, sx, sy, min = ZOOM_MIN, max = ZOOM_MAX) {
+function zoomView$1(v, f, sx, sy, min = ZOOM_MIN$1, max = ZOOM_MAX$1) {
   const z = Math.min(max, Math.max(min, v.z * f));
   const wx = (sx - v.x) / v.z, wy = (sy - v.y) / v.z;
   return { z, x: sx - wx * z, y: sy - wy * z };
@@ -5914,12 +6356,12 @@ function catmullRom(pts, step) {
   return out;
 }
 const MAX_POINTS = 400;
-function finishStroke(pts, zoom, pointerType = "mouse", smooth = 1) {
+function finishStroke(pts, zoom, pointerType = "mouse", smooth2 = 1) {
   if (pts.length < 2) return pts.map(([x, y]) => [Math.round(x), Math.round(y)]);
   const z = Math.max(0.05, zoom);
-  const screenEps = smooth === 0 ? 0.6 : pointerType === "pen" ? 0.6 : pointerType === "touch" ? 1 : smooth === 2 ? 1.8 : 1.2;
+  const screenEps = smooth2 === 0 ? 0.6 : pointerType === "pen" ? 0.6 : pointerType === "touch" ? 1 : smooth2 === 2 ? 1.8 : 1.2;
   let pts1 = simplify(pts, screenEps / z);
-  if (smooth > 0 && pts1.length >= 3) pts1 = catmullRom(pts1, 5 / z);
+  if (smooth2 > 0 && pts1.length >= 3) pts1 = catmullRom(pts1, 5 / z);
   const ints = [];
   for (const [x, y] of pts1) {
     const p = [Math.round(x), Math.round(y)];
@@ -6123,9 +6565,9 @@ function inkGeometry(item, strokePath2) {
   } else {
     paths.push({ d: strokePath2(pts), fill: false, dashed });
   }
-  const xs = pts.map((p) => p[0]), ys = pts.map((p) => p[1]);
-  const x = Math.min(...xs) - pad2, y = Math.min(...ys) - pad2;
-  return { paths, box: { x, y, w: Math.max(...xs) - x + pad2, h: Math.max(...ys) - y + pad2 } };
+  const xs2 = pts.map((p) => p[0]), ys2 = pts.map((p) => p[1]);
+  const x = Math.min(...xs2) - pad2, y = Math.min(...ys2) - pad2;
+  return { paths, box: { x, y, w: Math.max(...xs2) - x + pad2, h: Math.max(...ys2) - y + pad2 } };
 }
 const TOOLS$1 = [
   { tool: "pen", icon: "pen", label: "board.ink.pen", kbd: "D" },
@@ -6236,7 +6678,7 @@ function InkBar({ ink: ink2, onChange, t: t2 }) {
 const MOVE_MS = 300;
 const DWELL_MS = 110;
 const TRAIL = 16;
-const ease = (t2) => t2 < 0.5 ? 4 * t2 * t2 * t2 : 1 - Math.pow(-2 * t2 + 2, 3) / 2;
+const ease$1 = (t2) => t2 < 0.5 ? 4 * t2 * t2 * t2 : 1 - Math.pow(-2 * t2 + 2, 3) / 2;
 const HermesCursor = forwardRef(
   function HermesCursor2({ reducedMotion, onActive }, ref) {
     const el = useRef(null);
@@ -6321,7 +6763,7 @@ const HermesCursor = forwardRef(
       const t0 = performance.now();
       const frame = (now) => {
         const k = Math.min(1, (now - t0) / MOVE_MS);
-        const e = ease(k);
+        const e = ease$1(k);
         paint2(from.x + (target.x - from.x) * e, from.y + (target.y - from.y) * e, next.act);
         if (k < 1) {
           s.raf = requestAnimationFrame(frame);
@@ -6366,6 +6808,272 @@ const HermesCursor = forwardRef(
     ] });
   }
 );
+const ZOOM_MIN = 0.2;
+const ZOOM_MAX = 2.4;
+function zoomView(v, f, sx, sy) {
+  const z = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, v.z * f));
+  const wx = (sx - v.x) / v.z, wy = (sy - v.y) / v.z;
+  return { z, x: sx - wx * z, y: sy - wy * z };
+}
+function cubicBezier(x1, y1, x2, y2) {
+  const cx2 = 3 * x1, bx = 3 * (x2 - x1) - cx2, ax = 1 - cx2 - bx;
+  const cy2 = 3 * y1, by = 3 * (y2 - y1) - cy2, ay = 1 - cy2 - by;
+  const X2 = (s) => ((ax * s + bx) * s + cx2) * s;
+  const Y = (s) => ((ay * s + by) * s + cy2) * s;
+  const dX = (s) => (3 * ax * s + 2 * bx) * s + cx2;
+  return (t2) => {
+    if (t2 <= 0) return 0;
+    if (t2 >= 1) return 1;
+    let s = t2;
+    for (let i = 0; i < 6; i++) {
+      const err = X2(s) - t2;
+      if (Math.abs(err) < 1e-6) return Y(s);
+      const d = dX(s);
+      if (Math.abs(d) < 1e-6) break;
+      s -= err / d;
+    }
+    let lo = 0, hi = 1;
+    s = t2;
+    for (let i = 0; i < 24; i++) {
+      const x = X2(s);
+      if (Math.abs(x - t2) < 1e-6) break;
+      if (x < t2) lo = s;
+      else hi = s;
+      s = (lo + hi) / 2;
+    }
+    return Y(s);
+  };
+}
+function springEase(omega = 9) {
+  const end = 1 - (1 + omega) * Math.exp(-omega);
+  return (t2) => t2 <= 0 ? 0 : t2 >= 1 ? 1 : (1 - (1 + omega * t2) * Math.exp(-omega * t2)) / end;
+}
+const EASES = {
+  out: cubicBezier(0.22, 1, 0.36, 1),
+  inOut: cubicBezier(0.65, 0, 0.35, 1),
+  in: cubicBezier(0.5, 0, 0.75, 0),
+  linear: (t2) => Math.min(1, Math.max(0, t2)),
+  spring: springEase()
+};
+function resolveEase(e, fallback = "inOut") {
+  if (typeof e === "function") return e;
+  if (Array.isArray(e)) return cubicBezier(e[0], e[1], e[2], e[3]);
+  return EASES[e ?? fallback] ?? EASES[fallback];
+}
+function viewForRect(r, vp, o = {}) {
+  const pad2 = o.pad ?? 60, minZ = o.minZ ?? ZOOM_MIN, maxZ = o.maxZ ?? ZOOM_MAX;
+  const z = Math.max(minZ, Math.min(maxZ, (vp.w - 2 * pad2) / Math.max(1, r.w), (vp.h - 2 * pad2) / Math.max(1, r.h)));
+  return { z, x: vp.w / 2 - (r.x + r.w / 2) * z, y: vp.h / 2 - (r.y + r.h / 2) * z };
+}
+function viewEquals(a, b, eps = 1e-3) {
+  return Math.abs(a.z - b.z) < eps * Math.max(a.z, b.z) && Math.abs(a.x - b.x) < 0.5 && Math.abs(a.y - b.y) < 0.5;
+}
+function mixView(a, b, u, vp) {
+  if (u <= 0) return { ...a };
+  if (u >= 1) return { ...b };
+  const z = a.z * Math.pow(b.z / a.z, u);
+  const cax = (vp.w / 2 - a.x) / a.z, cay = (vp.h / 2 - a.y) / a.z;
+  const cbx = (vp.w / 2 - b.x) / b.z, cby = (vp.h / 2 - b.y) / b.z;
+  const ia = 1 / a.z, ib = 1 / b.z;
+  const p = Math.abs(ia - ib) < 1e-9 ? u : (1 / z - ia) / (ib - ia);
+  const cx2 = cax + (cbx - cax) * p, cy2 = cay + (cby - cay) * p;
+  return { z, x: vp.w / 2 - cx2 * z, y: vp.h / 2 - cy2 * z };
+}
+function flightDuration(a, b, vp) {
+  const dz = Math.abs(Math.log2(b.z / a.z));
+  const cax = (vp.w / 2 - a.x) / a.z, cay = (vp.h / 2 - a.y) / a.z;
+  const cbx = (vp.w / 2 - b.x) / b.z, cby = (vp.h / 2 - b.y) / b.z;
+  const dist = Math.hypot(cbx - cax, cby - cay) * Math.min(a.z, b.z) / Math.max(1, Math.hypot(vp.w, vp.h));
+  return Math.round(Math.max(300, Math.min(650, 330 + 70 * dz + 220 * Math.min(1, dist))));
+}
+const realClock = {
+  now: () => typeof performance !== "undefined" ? performance.now() : Date.now(),
+  request: (cb) => requestAnimationFrame(cb),
+  cancel: (id) => cancelAnimationFrame(id)
+};
+class ManualClock {
+  t = 0;
+  id = 0;
+  queue = /* @__PURE__ */ new Map();
+  now() {
+    return this.t;
+  }
+  request(cb) {
+    const id = ++this.id;
+    this.queue.set(id, cb);
+    return id;
+  }
+  cancel(id) {
+    this.queue.delete(id);
+  }
+  /** Advance `ms` in frames of `step` ms (the last one may be shorter), running what each frame queued. */
+  advance(ms, step = 1e3 / 60) {
+    let left = ms, frames = 0;
+    while (left > 1e-9) {
+      const dt = Math.min(step, left);
+      left -= dt;
+      this.t += dt;
+      const run = [...this.queue.values()];
+      this.queue.clear();
+      for (const cb of run) cb(this.t);
+      frames++;
+    }
+    return frames;
+  }
+  pending() {
+    return this.queue.size;
+  }
+}
+let clock = realClock;
+const getCameraClock = () => clock;
+function setCameraClock(c) {
+  clock = c ?? realClock;
+}
+class Camera {
+  flight = null;
+  io;
+  constructor(io) {
+    this.io = io;
+  }
+  get moving() {
+    return this.flight !== null;
+  }
+  /** Where the running move ends (null at rest). */
+  get target() {
+    return this.flight ? { ...this.flight.to } : null;
+  }
+  /** Moves to `to`; resolves true when it arrives, false when something cut it short. */
+  flyTo(to, o = {}) {
+    this.stop(false);
+    const from = this.io.get();
+    const size = this.io.size();
+    const dur = this.io.reduced?.() ? 0 : o.duration ?? flightDuration(from, to, size);
+    if (dur <= 0 || viewEquals(from, to)) {
+      this.io.set({ ...to });
+      o.onFrame?.(1, to);
+      return Promise.resolve(true);
+    }
+    return new Promise((resolve2) => {
+      const c = getCameraClock();
+      const f = { from, to: { ...to }, t0: c.now(), dur, ease: resolveEase(o.ease), id: 0, done: resolve2, onFrame: o.onFrame, clock: c };
+      this.flight = f;
+      this.io.onMoving?.(true);
+      const step = (now) => {
+        if (this.flight !== f) return;
+        const u = Math.min(1, Math.max(0, (now - f.t0) / f.dur));
+        const e = f.ease(u);
+        const v = u >= 1 ? { ...f.to } : mixView(f.from, f.to, e, this.io.size());
+        this.io.set(v);
+        f.onFrame?.(e, v);
+        if (u >= 1) {
+          this.flight = null;
+          this.io.onMoving?.(false);
+          f.done(true);
+          return;
+        }
+        f.id = f.clock.request(step);
+      };
+      f.id = c.request(step);
+    });
+  }
+  /** Zoom by factor `f` around a screen point, building on the running move's target so
+   *  repeated presses accumulate. */
+  zoomBy(f, sx, sy, o = {}) {
+    const base = this.target ?? this.io.get();
+    return this.flyTo(zoomView(base, f, sx, sy), { duration: 220, ease: "out", ...o });
+  }
+  /** Cuts the running move where it is (user input wins). */
+  cancel() {
+    this.stop(true);
+  }
+  stop(notify) {
+    const f = this.flight;
+    if (!f) return;
+    this.flight = null;
+    f.clock.cancel(f.id);
+    if (notify) this.io.onMoving?.(false);
+    f.done(false);
+  }
+}
+let manual = null;
+const cameraClockApi = {
+  manual: (on) => {
+    if (on) {
+      manual = manual ?? new ManualClock();
+      setCameraClock(manual);
+    } else {
+      manual = null;
+      setCameraClock(null);
+    }
+  },
+  advance: (ms, step) => manual ? manual.advance(ms, step) : 0,
+  now: () => getCameraClock().now()
+};
+function installClockApi(win = window) {
+  win.__hbClock = cameraClockApi;
+}
+function installCameraApi(api2, win = window) {
+  win.__hbCamera = api2;
+  installClockApi(win);
+  const onReq = (e) => {
+    const d = e.detail ?? {};
+    void api2.flyTo(d).then((completed) => {
+      win.dispatchEvent?.(new CustomEvent("hb:camera:end", { detail: { id: d.id, completed, view: api2.getView() } }));
+    });
+  };
+  win.addEventListener?.("hb:camera", onReq);
+  return () => {
+    if (win.__hbCamera === api2) delete win.__hbCamera;
+    win.removeEventListener?.("hb:camera", onReq);
+  };
+}
+const LOD1_Z = 0.5;
+const LOD2_Z = 0.24;
+const GAP$1 = 0.04;
+function lodFor(z, prev = 0) {
+  const down1 = prev >= 1 ? LOD1_Z + GAP$1 : LOD1_Z;
+  const down2 = prev >= 2 ? LOD2_Z + GAP$1 * 0.5 : LOD2_Z;
+  if (z < down2) return 2;
+  if (z < down1) return 1;
+  return 0;
+}
+const LABELS$1 = {
+  /** frame labels, column and to-do headers */
+  f: { base: 10, floor: 11.5, cap: 4.5 },
+  /** section headings (text items, size h): capped lower, they are wide and sit side by side */
+  h: { base: 15, floor: 16, cap: 3.2 },
+  /** card and link titles */
+  c: { base: 14, floor: 11, cap: 3 },
+  /** diagram box titles */
+  b: { base: 14, floor: 11.5, cap: 3.2 },
+  /** connector and frame-corner strokes */
+  w: { base: 1.3, floor: 1.7, cap: 4.5 }
+};
+const Z_START = 0.62;
+const Z_END = 0.3;
+const smooth$1 = (t2) => t2 * t2 * (3 - 2 * t2);
+function labelScale(z, base, floor, cap = 4.5) {
+  if (z >= Z_START) return 1;
+  const t2 = Math.min(1, (Z_START - z) / (Z_START - Z_END));
+  const eff = base * Z_START + (floor - base * Z_START) * smooth$1(t2);
+  return Math.max(1, Math.min(cap, eff / (base * z)));
+}
+const r3 = (n) => Math.round(n * 1e3) / 1e3;
+function lodVars(z) {
+  const out = { "--iz": String(r3(1 / z)) };
+  for (const k of Object.keys(LABELS$1)) out[`--ls-${k}`] = String(r3(labelScale(z, LABELS$1[k].base, LABELS$1[k].floor, LABELS$1[k].cap)));
+  return out;
+}
+function applyLod(el, z) {
+  const prev = Number(el.dataset.lod) || 0;
+  const lod = lodFor(z, prev);
+  const key = String(r3(z));
+  if (el.__lodZ === key) return lod;
+  el.__lodZ = key;
+  for (const [k, v] of Object.entries(lodVars(z))) el.style.setProperty(k, v);
+  if (el.dataset.lod !== String(lod)) el.dataset.lod = String(lod);
+  return lod;
+}
 const clone = (v) => v === void 0 ? v : JSON.parse(JSON.stringify(v));
 function insertKid(items, col, id, at) {
   const c = items[col];
@@ -6447,6 +7155,24 @@ function applyOp(doc, op) {
       return;
   }
 }
+function normalizeDeletes(doc, ids) {
+  const want = [...new Set(ids)].filter((id) => doc.items[id]);
+  const set = new Set(want);
+  const gone = /* @__PURE__ */ new Set();
+  for (const id of want) {
+    const it = doc.items[id];
+    if (it.in && set.has(it.in)) gone.add(id);
+    if (it.k === "col") for (const kid of it.kids ?? []) gone.add(kid);
+  }
+  const removed = new Set([...set].filter((id) => !(doc.items[id].in && set.has(doc.items[id].in))));
+  for (const id of want) if (doc.items[id].k === "col") for (const kid of doc.items[id].kids ?? []) removed.add(kid);
+  return want.filter((id) => {
+    const it = doc.items[id];
+    if (gone.has(id)) return false;
+    if (it.k === "line") return ![it.a, it.b].some((e) => typeof e === "string" && removed.has(e));
+    return true;
+  });
+}
 function applyOps(doc, ops) {
   const next = clone(doc);
   for (const op of ops) applyOp(next, op);
@@ -6496,27 +7222,34 @@ const DEFAULT_SIZE = {
   box: [196, 62],
   text: [420, 40],
   draw: [120, 80],
-  live: [360, 300]
+  live: [400, 300],
+  shape: [160, 56]
 };
+function liveMetricRows(n, w) {
+  if (n <= 0) return 1;
+  const cols = w < 380 ? Math.min(n, 2) : n <= 4 ? n : n <= 6 ? 3 : 4;
+  return Math.ceil(n / cols);
+}
+const SHAPE_SIZE = { rect: [160, 56], diamond: [150, 100], pill: [150, 48], circle: [72, 72] };
 function liveHeight(item) {
-  const w = item.w ?? 360;
+  const w = item.w ?? 400;
   let h = 40;
   for (const b of item.blocks ?? []) {
-    h += { header: 60, progress: 46, metrics: 74, spark: 66, media: Math.round(w * 9 / 16) + 26, text: 22 + 16 * (b.t === "text" ? b.lines ?? 6 : 0), actions: 46 }[b.t] ?? 40;
+    h += { header: 60, progress: 46, metrics: 74 * (b.t === "metrics" ? liveMetricRows(b.items?.length ?? 0, w) : 1), spark: 66, media: Math.round(w * 9 / 16) + 26, text: 22 + 16 * (b.t === "text" ? b.lines ?? 6 : 0), actions: 46 }[b.t] ?? 40;
   }
   return h;
 }
 function approxRect(item) {
   if (item.k === "line" || item.in || item.x == null || item.y == null) return null;
-  const [dw, dh] = DEFAULT_SIZE[item.k] ?? [200, 100];
+  const [dw, dh] = (item.k === "shape" ? SHAPE_SIZE[item.sh ?? "rect"] : void 0) ?? DEFAULT_SIZE[item.k] ?? [200, 100];
   let h = item.h ?? dh;
   if (item.k === "col") h = 60 + 96 * (item.kids?.length ?? 0);
   if (item.k === "todo") h = 110 + 26 * (item.items?.length ?? 0);
   if (item.k === "live") h = item.h ?? liveHeight(item);
   if (item.k === "draw" && item.d) {
     const pts = item.d.split(" ").map((p) => p.split(",").map(Number));
-    const xs = pts.map((p) => p[0]), ys = pts.map((p) => p[1]);
-    return { x: item.x + Math.min(...xs), y: item.y + Math.min(...ys), w: Math.max(...xs) - Math.min(...xs) + 1, h: Math.max(...ys) - Math.min(...ys) + 1 };
+    const xs2 = pts.map((p) => p[0]), ys2 = pts.map((p) => p[1]);
+    return { x: item.x + Math.min(...xs2), y: item.y + Math.min(...ys2), w: Math.max(...xs2) - Math.min(...xs2) + 1, h: Math.max(...ys2) - Math.min(...ys2) + 1 };
   }
   return { x: item.x, y: item.y, w: item.w ?? dw, h };
 }
@@ -6527,6 +7260,12 @@ function previewRects(doc) {
     if (r) out.push({ r, h: it.by === "h", frame: it.k === "frame" || it.k === "text" });
   }
   return out;
+}
+function previewGeometry(doc, W, H, pad2 = 30) {
+  const rects = doc ? previewRects(doc) : [];
+  const b = boundsOf(rects.map((x) => x.r)) ?? { x: 0, y: 0, w: 1, h: 1 };
+  const s = Math.min(W / (b.w + pad2 * 2), H / (b.h + pad2 * 2));
+  return { s, ox: (W - b.w * s) / 2 - b.x * s, oy: (H - b.h * s) / 2 - b.y * s, b };
 }
 function drawPreview(canvas, doc, opts) {
   const dpr = Math.min(2, window.devicePixelRatio || 1);
@@ -6542,10 +7281,7 @@ function drawPreview(canvas, doc, opts) {
   ctx.clearRect(0, 0, W, H);
   const cell = opts.cell ?? 6;
   const rects = doc ? previewRects(doc) : [];
-  const b = boundsOf(rects.map((x) => x.r)) ?? { x: 0, y: 0, w: 1, h: 1 };
-  const pad2 = 30;
-  const s = Math.min(W / (b.w + pad2 * 2), H / (b.h + pad2 * 2));
-  const ox = (W - b.w * s) / 2 - b.x * s, oy = (H - b.h * s) / 2 - b.y * s;
+  const { s, ox, oy } = previewGeometry(doc, W, H);
   ctx.fillStyle = opts.accent;
   for (let y = cell / 2; y < H; y += cell) {
     for (let x = cell / 2; x < W; x += cell) {
@@ -6584,6 +7320,41 @@ function accentOf(el, fallback = "#ffe3c4") {
   const c = getComputedStyle(probe).color || fallback;
   probe.remove();
   return c;
+}
+const cache = /* @__PURE__ */ new Map();
+const THUMB_W = 240;
+function thumbUrl(src, width = THUMB_W) {
+  let p = cache.get(src);
+  if (!p) {
+    p = (async () => {
+      try {
+        const blob = await (await fetch(src)).blob();
+        const bmp = await createImageBitmap(blob);
+        if (bmp.width <= width) {
+          bmp.close();
+          return null;
+        }
+        const h = Math.max(1, Math.round(bmp.height * width / bmp.width));
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = h;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) {
+          bmp.close();
+          return null;
+        }
+        ctx.imageSmoothingQuality = "high";
+        ctx.drawImage(bmp, 0, 0, width, h);
+        bmp.close();
+        const out = await new Promise((res) => canvas.toBlob(res, "image/webp", 0.72));
+        return out ? URL.createObjectURL(out) : null;
+      } catch {
+        return null;
+      }
+    })();
+    cache.set(src, p);
+  }
+  return p;
 }
 const YT_ID = /^[A-Za-z0-9_-]{11}$/;
 const YT_HOSTS = /* @__PURE__ */ new Set([
@@ -6841,7 +7612,7 @@ function fmtDelta(v, fmt) {
   if (typeof v === "number") {
     if (!Number.isFinite(v)) return null;
     const dir = v > 0 ? "up" : v < 0 ? "down" : "flat";
-    const body = fmt === "pct" ? `${trimNum(Math.abs(v), 1)}` : fmt === "usd" ? `$${Math.abs(v).toFixed(2)}` : fmt === "dur" ? fmtDuration(Math.abs(v)) : trimNum(Math.abs(v), 2);
+    const body = fmt === "pct" ? `${trimNum(Math.abs(v), 1)} %` : fmt === "usd" ? `$${Math.abs(v).toFixed(2)}` : fmt === "dur" ? fmtDuration(Math.abs(v)) : trimNum(Math.abs(v), 2);
     return { text: `${v > 0 ? "+" : v < 0 ? "−" : "±"}${body}`, dir };
   }
   const s = String(v).trim();
@@ -7126,7 +7897,7 @@ function LiveView({ id, item, c }) {
         body.push(/* @__PURE__ */ jsx(Progress, { b, data, t: t2 }, i));
         break;
       case "metrics":
-        body.push(/* @__PURE__ */ jsx("div", { className: "lv-metrics", children: b.items.map((m, j) => /* @__PURE__ */ jsx(Metric, { m, data, t: t2 }, j)) }, i));
+        body.push(/* @__PURE__ */ jsx("div", { className: "lv-metrics", "data-n": b.items.length, children: b.items.map((m, j) => /* @__PURE__ */ jsx(Metric, { m, data, t: t2 }, j)) }, i));
         break;
       case "spark":
         body.push(/* @__PURE__ */ jsx(Spark, { b, data, t: t2 }, i));
@@ -7145,7 +7916,7 @@ function LiveView({ id, item, c }) {
     "div",
     {
       className: `hb-card hb-live${item.by === "h" ? " dm" : ""}${fresh.stale ? " stale" : ""}${status ? ` st-${status}` : ""}`,
-      style: { width: item.w ?? 360 },
+      style: { width: item.w ?? 400 },
       children: [
         !header && /* @__PURE__ */ jsx(Header, { b: { t: "header" }, data, status, stale: fresh.stale, t: t2, fallbackTitle: item.title ?? "" }),
         body,
@@ -7166,6 +7937,269 @@ function LiveView({ id, item, c }) {
     }
   );
 }
+const SIZE_MSG = "hermes:size";
+const THEME_MSG = "hermes:theme";
+const READY_MSG = "hermes:ready";
+function parseColor(input) {
+  const s = input.trim().toLowerCase();
+  let m = /^#([0-9a-f]{3,8})$/.exec(s);
+  if (m) {
+    let h = m[1];
+    if (h.length === 3 || h.length === 4) h = [...h].map((c) => c + c).join("");
+    if (h.length !== 6 && h.length !== 8) return null;
+    return {
+      r: parseInt(h.slice(0, 2), 16),
+      g: parseInt(h.slice(2, 4), 16),
+      b: parseInt(h.slice(4, 6), 16),
+      a: h.length === 8 ? parseInt(h.slice(6, 8), 16) / 255 : 1
+    };
+  }
+  m = /^rgba?\(([^)]+)\)$/.exec(s);
+  if (!m) return null;
+  const parts = m[1].split(/[\s,/]+/).filter(Boolean);
+  if (parts.length < 3) return null;
+  const n = parts.slice(0, 4).map((p) => p.endsWith("%") ? parseFloat(p) / 100 : parseFloat(p));
+  if (n.some((v) => Number.isNaN(v))) return null;
+  const ch = (i) => Math.max(0, Math.min(255, Math.round(parts[i].endsWith("%") ? n[i] * 255 : n[i])));
+  return { r: ch(0), g: ch(1), b: ch(2), a: n[3] === void 0 ? 1 : Math.max(0, Math.min(1, n[3])) };
+}
+function luminance(c) {
+  const f = (v) => {
+    const x = v / 255;
+    return x <= 0.03928 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4;
+  };
+  return 0.2126 * f(c.r) + 0.7152 * f(c.g) + 0.0722 * f(c.b);
+}
+function toHsl({ r, g, b }) {
+  const R = r / 255, G = g / 255, B = b / 255;
+  const mx = Math.max(R, G, B), mn = Math.min(R, G, B), d = mx - mn, l = (mx + mn) / 2;
+  if (d === 0) return [0, 0, l];
+  const s = d / (1 - Math.abs(2 * l - 1));
+  const h = mx === R ? (G - B) / d % 6 : mx === G ? (B - R) / d + 2 : (R - G) / d + 4;
+  return [(h * 60 + 360) % 360, s, l];
+}
+function fromHsl(h, s, l) {
+  const c = (1 - Math.abs(2 * l - 1)) * s, x = c * (1 - Math.abs(h / 60 % 2 - 1)), m = l - c / 2;
+  const [r, g, b] = h < 60 ? [c, x, 0] : h < 120 ? [x, c, 0] : h < 180 ? [0, c, x] : h < 240 ? [0, x, c] : h < 300 ? [x, 0, c] : [c, 0, x];
+  const hex = (v) => Math.round((v + m) * 255).toString(16).padStart(2, "0");
+  return `#${hex(r)}${hex(g)}${hex(b)}`;
+}
+function chartPalette(accent, scheme) {
+  const c = parseColor(accent) ?? { r: 255, g: 227, b: 196 };
+  const [h, s0, l0] = toHsl(c);
+  const lo = scheme === "dark" ? 0.58 : 0.38, hi = scheme === "dark" ? 0.72 : 0.5;
+  const s = Math.max(0.45, Math.min(0.8, s0));
+  const out = [`#${[c.r, c.g, c.b].map((v) => v.toString(16).padStart(2, "0")).join("")}`];
+  [[150, 0], [45, 0.03], [-70, -0.02], [215, 0.02]].forEach(([dh, dl]) => {
+    out.push(fromHsl((h + dh + 360) % 360, s, Math.max(lo, Math.min(hi, l0 + dl))));
+  });
+  return out;
+}
+function makeTheme(raw) {
+  const bg = parseColor(raw.background);
+  const scheme = bg && luminance(bg) > 0.5 ? "light" : "dark";
+  return { ...raw, scheme, chart: chartPalette(raw.accent, scheme) };
+}
+function themeVars(t2) {
+  const v = {
+    "--foreground": t2.foreground,
+    "--muted-foreground": t2.mutedForeground,
+    "--accent": t2.accent,
+    "--border": t2.border,
+    "--card": t2.card,
+    "--background": t2.background,
+    "--font-sans": t2.fontSans,
+    "--font-mono": t2.fontMono
+  };
+  t2.chart.forEach((c, i) => {
+    v[`--chart-${i + 1}`] = c;
+  });
+  return v;
+}
+function baseCss(t2) {
+  const vars = Object.entries(themeVars(t2)).map(([k, v]) => `${k}:${v.replace(/[<>{};]/g, "")}`).join(";");
+  return `:root{${vars};color-scheme:${t2.scheme}}*,*::before,*::after{box-sizing:border-box}html,body{width:100%;height:100%;margin:0;background:transparent;color:var(--foreground);font:13px/1.45 var(--font-sans);-webkit-font-smoothing:antialiased}img,video,canvas,svg{max-width:100%}code,pre,kbd,samp{font-family:var(--font-mono)}*{scrollbar-width:thin;scrollbar-color:var(--border) transparent}`;
+}
+const BRIDGE_JS = `(function(){
+var W=window,D=document,P=W.parent,H=W.hermes={size:{w:0,h:0,dpr:W.devicePixelRatio||1,zoom:1},theme:__HERMES_THEME__,_r:[],_t:[]};
+var VARS={foreground:'--foreground',mutedForeground:'--muted-foreground',accent:'--accent',border:'--border',card:'--card',background:'--background',fontSans:'--font-sans',fontMono:'--font-mono'};
+function sub(list,f){list.push(f);return function(){var i=list.indexOf(f);if(i>=0)list.splice(i,1)}}
+function call(list,v){list.slice().forEach(function(f){try{f(v)}catch(e){}})}
+H.onResize=function(f){var u=sub(H._r,f);if(H.size.w)try{f(H.size)}catch(e){}return u};
+H.onTheme=function(f){return sub(H._t,f)};
+H.alpha=function(c,a){var m=/^#([0-9a-f]{6})$/i.exec(c);if(!m)return c;var n=parseInt(m[1],16);return'rgba('+(n>>16)+','+((n>>8)&255)+','+(n&255)+','+a+')'};
+try{Object.defineProperty(W,'devicePixelRatio',{configurable:true,get:function(){return H.size.dpr}})}catch(e){}
+function paint(t){var s=D.documentElement.style;for(var k in VARS)if(t[k])s.setProperty(VARS[k],t[k]);
+(t.chart||[]).forEach(function(c,i){s.setProperty('--chart-'+(i+1),c)});s.colorScheme=t.scheme}
+function chartJs(C){try{var d=C.defaults,t=H.theme;d.color=t.mutedForeground;d.borderColor=t.border;d.font.family=t.fontMono;
+d.responsive=true;d.maintainAspectRatio=false;
+if(!C.__hermes&&C.register){C.__hermes=1;C.register({id:'hermesPalette',beforeUpdate:function(ch){
+var pal=H.theme.chart,type=ch.config.type,ds=ch.config.data.datasets||[];
+ds.forEach(function(s,i){var c=pal[i%pal.length],many=type==='pie'||type==='doughnut'||type==='polarArea';
+if(many){if(s.backgroundColor==null)s.backgroundColor=(s.data||[]).map(function(_,j){return pal[j%pal.length]});if(s.borderColor==null)s.borderColor='transparent'}
+else{if(s.borderColor==null)s.borderColor=c;if(s.backgroundColor==null)s.backgroundColor=type==='line'||type==='radar'?H.alpha(c,.18):H.alpha(c,.8)}})}})}}catch(e){}}
+function echarts(E){try{var t=H.theme,ax={axisLine:{lineStyle:{color:t.border}},axisTick:{lineStyle:{color:t.border}},splitLine:{lineStyle:{color:t.border}},axisLabel:{color:t.mutedForeground}};
+E.registerTheme('hermes',{color:t.chart,backgroundColor:'transparent',textStyle:{color:t.mutedForeground,fontFamily:t.fontMono},
+title:{textStyle:{color:t.foreground}},legend:{textStyle:{color:t.mutedForeground}},categoryAxis:ax,valueAxis:ax,logAxis:ax,timeAxis:ax,
+tooltip:{backgroundColor:t.card,borderColor:t.border,textStyle:{color:t.foreground}}});
+if(!E.__hermes){E.__hermes=1;var init=E.init;E.init=function(el,th,o){return init.call(E,el,th==null?'hermes':th,o)}}}catch(e){}}
+H.chartDefaults=chartJs;
+function trap(name,fn){var v;try{Object.defineProperty(W,name,{configurable:true,get:function(){return v},set:function(x){v=x;if(x)fn(x)}})}catch(e){}}
+trap('Chart',chartJs);trap('echarts',echarts);
+var raf=0;
+function fire(){raf=0;var s=H.size,st=D.documentElement.style;st.setProperty('--card-w',s.w+'px');st.setProperty('--card-h',s.h+'px');
+call(H._r,s);try{W.dispatchEvent(new Event('resize'))}catch(e){}}
+W.addEventListener('message',function(e){if(e.source!==P)return;var m=e.data;if(!m||typeof m!=='object')return;
+if(m.type==='${THEME_MSG}'&&m.theme){H.theme=m.theme;paint(m.theme);if(W.Chart&&W.Chart.defaults)chartJs(W.Chart);if(W.echarts)echarts(W.echarts);call(H._t,m.theme);
+try{W.dispatchEvent(new Event('hermes:theme'))}catch(x){}}
+else if(m.type==='${SIZE_MSG}'){H.size={w:m.w,h:m.h,dpr:m.dpr||1,zoom:m.zoom||1};if(!raf)raf=W.requestAnimationFrame(fire)}});
+try{P.postMessage({type:'${READY_MSG}'},'*')}catch(e){}
+})();`;
+function jsonForScript(v) {
+  return JSON.stringify(v).replace(/</g, "\\u003c").replace(/\u2028/g, "\\u2028").replace(/\u2029/g, "\\u2029");
+}
+function insertAtHead(html, block) {
+  const head = /<head(\s[^>]*)?>/i.exec(html);
+  if (head) return html.slice(0, head.index + head[0].length) + block + html.slice(head.index + head[0].length);
+  const root = /<html(\s[^>]*)?>/i.exec(html);
+  if (root) return html.slice(0, root.index + root[0].length) + `<head>${block}</head>` + html.slice(root.index + root[0].length);
+  const dt = /^\s*<!doctype[^>]*>/i.exec(html);
+  if (dt) return dt[0] + block + html.slice(dt[0].length);
+  return block + html;
+}
+const SCRIPT_OPEN = String.fromCharCode(60) + "script";
+const SCRIPT_CLOSE = String.fromCharCode(60) + "/script>";
+function embedDocument(html, themed, theme) {
+  if (!themed || !theme) return html;
+  const block = `<style id="hermes-base">${baseCss(theme)}</style>${SCRIPT_OPEN} id="hermes-bridge">${BRIDGE_JS.replace("__HERMES_THEME__", () => jsonForScript(theme))}${SCRIPT_CLOSE}`;
+  return insertAtHead(html, block);
+}
+function sizeMessage(w, h, devicePixelRatio, zoom) {
+  const z = Number.isFinite(zoom) && zoom > 0 ? zoom : 1;
+  const dpr = Math.min(4, Math.round(Math.max(1, devicePixelRatio || 1) * Math.max(1, z) * 100) / 100);
+  return { type: SIZE_MSG, w: Math.round(w), h: Math.round(h), dpr, zoom: Math.round(z * 100) / 100 };
+}
+function normalise(ctx, css, fallback) {
+  if (!ctx) return css || fallback;
+  ctx.clearRect(0, 0, 1, 1);
+  ctx.fillStyle = "#000";
+  ctx.fillStyle = css;
+  ctx.fillRect(0, 0, 1, 1);
+  const d = ctx.getImageData(0, 0, 1, 1).data;
+  return d[3] === 255 ? `rgb(${d[0]} ${d[1]} ${d[2]})` : `rgb(${d[0]} ${d[1]} ${d[2]} / ${Math.round(d[3] / 255 * 100) / 100})`;
+}
+function readTheme(at) {
+  const probe = document.createElement("span");
+  probe.style.cssText = "position:absolute;visibility:hidden;pointer-events:none";
+  at.appendChild(probe);
+  const cv = document.createElement("canvas");
+  cv.width = cv.height = 1;
+  const ctx = cv.getContext("2d", { willReadFrequently: true });
+  const colour = (value, fallback) => {
+    probe.style.color = "";
+    probe.style.color = value;
+    return normalise(ctx, getComputedStyle(probe).color, fallback);
+  };
+  const font = (value, fallback) => {
+    probe.style.fontFamily = value;
+    return getComputedStyle(probe).fontFamily || fallback;
+  };
+  const raw = {
+    foreground: colour("var(--ink)", "rgb(243 236 227)"),
+    mutedForeground: colour("var(--ink-3)", "rgb(160 155 150)"),
+    accent: colour("var(--accent)", "rgb(255 227 196)"),
+    border: colour("color-mix(in srgb, var(--ink) 14%, transparent)", "rgb(255 255 255 / 0.14)"),
+    card: colour("var(--sheet)", "rgb(20 30 30)"),
+    background: colour("var(--bg)", "rgb(3 25 25)"),
+    fontSans: font("var(--sans)", "system-ui, sans-serif"),
+    fontMono: font("var(--mono)", "ui-monospace, monospace")
+  };
+  probe.remove();
+  return makeTheme(raw);
+}
+function useEmbedBridge(box2, active, themed, key, onTheme) {
+  const theme = useRef(null);
+  useEffect(() => {
+    const el = box2.current;
+    if (!el || !active) return;
+    const win = () => el.querySelector("iframe")?.contentWindow ?? null;
+    const post = (m) => {
+      try {
+        win()?.postMessage(m, "*");
+      } catch {
+      }
+    };
+    let lastSize = "";
+    const size = (force = false) => {
+      const r = el.getBoundingClientRect();
+      const zoom = el.offsetWidth ? r.width / el.offsetWidth : 1;
+      const m = sizeMessage(el.clientWidth, el.clientHeight, window.devicePixelRatio, zoom);
+      const sig = `${m.w}x${m.h}@${m.dpr}`;
+      if (force || sig !== lastSize) {
+        lastSize = sig;
+        post(m);
+      }
+    };
+    const sendTheme = () => {
+      if (!themed) return;
+      const t2 = readTheme(el);
+      if (JSON.stringify(t2) === JSON.stringify(theme.current)) return;
+      theme.current = t2;
+      onTheme?.(t2);
+      post({ type: THEME_MSG, theme: t2 });
+    };
+    const onMessage = (e) => {
+      if (e.source !== win() || !e.data || e.data.type !== READY_MSG) return;
+      theme.current = null;
+      sendTheme();
+      size(true);
+    };
+    window.addEventListener("message", onMessage);
+    let frame = null;
+    const hook = () => {
+      const f = el.querySelector("iframe");
+      if (f && f !== frame) {
+        frame?.removeEventListener("load", onLoad);
+        frame = f;
+        f.addEventListener("load", onLoad);
+      }
+    };
+    const onLoad = () => size(true);
+    hook();
+    const RO = globalThis.ResizeObserver;
+    const ro = RO ? new RO(() => {
+      hook();
+      size();
+    }) : null;
+    ro?.observe(el);
+    let seen = "", settled = "", n = 0;
+    const tick = window.setInterval(() => {
+      hook();
+      const r = el.getBoundingClientRect();
+      const z = (el.offsetWidth ? r.width / el.offsetWidth : 1).toFixed(2);
+      if (z === seen && z !== settled) {
+        settled = z;
+        size();
+      }
+      seen = z;
+      if (++n % 4 === 0) sendTheme();
+    }, 450);
+    const mo = typeof MutationObserver === "function" ? new MutationObserver(sendTheme) : null;
+    mo?.observe(document.documentElement, { attributes: true, attributeFilter: ["class", "style", "data-theme"] });
+    const first = window.setTimeout(() => {
+      sendTheme();
+      size(true);
+    }, 120);
+    return () => {
+      window.removeEventListener("message", onMessage);
+      frame?.removeEventListener("load", onLoad);
+      ro?.disconnect();
+      mo?.disconnect();
+      window.clearInterval(tick);
+      window.clearTimeout(first);
+    };
+  }, [box2, active, themed, key]);
+}
 function useAsset(aid) {
   const [url, setUrl] = useState(null);
   useEffect(() => {
@@ -7178,14 +8212,37 @@ function useAsset(aid) {
   }, [aid]);
   return url;
 }
-function EditText({ value, onDone, placeholder, className, single }) {
+function fieldHint(c, id, field, dflt = false) {
+  const h = c.hint && c.hint.id === id ? c.hint : null;
+  const mine = h?.field ? h.field === field : dflt;
+  return { caret: mine ? h?.caret : void 0, seed: mine ? h?.seed : void 0, focus: mine };
+}
+function Pic({ src, alt = "" }) {
+  const [lo, setLo] = useState(null);
+  useEffect(() => {
+    let live = true;
+    setLo(null);
+    void thumbUrl(src).then((u) => {
+      if (live) setLo(u);
+    });
+    return () => {
+      live = false;
+    };
+  }, [src]);
+  return /* @__PURE__ */ jsxs(Fragment, { children: [
+    /* @__PURE__ */ jsx("img", { className: lo ? "full" : void 0, src, alt, draggable: false }),
+    lo && /* @__PURE__ */ jsx("img", { className: "lo", src: lo, alt: "", draggable: false })
+  ] });
+}
+function EditText({ value, onDone, placeholder, className, single, caret, seed, focus = true, onEnter }) {
   const ref = useRef(null);
-  const [v, setV] = useState(value);
+  const [v, setV] = useState(seed ? value + seed : value);
   useEffect(() => {
     const el = ref.current;
-    if (!el) return;
-    el.focus();
-    el.setSelectionRange(el.value.length, el.value.length);
+    if (!el || !focus) return;
+    el.focus({ preventScroll: true });
+    const at = seed ? el.value.length : Math.max(0, Math.min(el.value.length, caret ?? el.value.length));
+    el.setSelectionRange(at, at);
   }, []);
   useEffect(() => {
     const el = ref.current;
@@ -7204,12 +8261,23 @@ function EditText({ value, onDone, placeholder, className, single }) {
       placeholder,
       "data-nodrag": "",
       onChange: (e) => setV(single ? e.target.value.replace(/\n/g, " ") : e.target.value),
-      onBlur: () => onDone(v),
+      onBlur: (e) => {
+        const to = e.relatedTarget;
+        const card = e.currentTarget.closest("[data-iid], [data-kid]");
+        onDone(v, !(to && card?.contains(to)));
+      },
       onKeyDown: (e) => {
         e.stopPropagation();
-        if (e.key === "Escape" || e.key === "Enter" && (e.metaKey || e.ctrlKey || single)) {
+        if (e.nativeEvent.isComposing) return;
+        if (e.key === "Escape") {
           e.preventDefault();
           e.target.blur();
+          return;
+        }
+        if (e.key === "Enter" && !e.shiftKey) {
+          e.preventDefault();
+          if (onEnter && !e.metaKey && !e.ctrlKey) onEnter();
+          else e.target.blur();
         }
       }
     }
@@ -7231,6 +8299,7 @@ function CardView({ id, item, c }) {
   const text = item.text ?? "";
   const quote = !item.title && text.length > 0 && text.length <= 160 && !text.includes("\n");
   if (editing) {
+    const th = fieldHint(c, id, "title"), bh = fieldHint(c, id, "text", true);
     return /* @__PURE__ */ jsxs("div", { className: `hb-card hb-note${item.by === "h" ? " dm" : ""}`, children: [
       /* @__PURE__ */ jsx("h4", { children: /* @__PURE__ */ jsx(
         EditText,
@@ -7238,8 +8307,13 @@ function CardView({ id, item, c }) {
           single: true,
           value: item.title ?? "",
           placeholder: c.t("board.card.titlePh"),
-          onDone: (v) => {
+          caret: th.caret,
+          seed: th.seed,
+          focus: th.focus,
+          onEnter: () => document.querySelector(`[data-iid="${id}"] .body textarea, [data-kid="${id}"] .body textarea`)?.focus(),
+          onDone: (v, leaving) => {
             if (v !== (item.title ?? "")) c.update(id, { title: v.trim() || null });
+            if (leaving) c.setEditing(null);
           }
         }
       ) }),
@@ -7248,8 +8322,11 @@ function CardView({ id, item, c }) {
         {
           value: text,
           placeholder: c.t("board.card.textPh"),
-          onDone: (v) => {
-            c.setEditing(null);
+          caret: bh.caret,
+          seed: bh.seed,
+          focus: bh.focus,
+          onDone: (v, leaving) => {
+            if (leaving) c.setEditing(null);
             if (v !== text) c.update(id, { text: v || null });
           }
         }
@@ -7257,8 +8334,8 @@ function CardView({ id, item, c }) {
     ] });
   }
   return /* @__PURE__ */ jsxs("div", { className: `hb-card hb-note${quote ? " quote" : ""}${item.by === "h" ? " dm" : ""}`, children: [
-    item.title && /* @__PURE__ */ jsx("h4", { children: item.title }),
-    text ? /* @__PURE__ */ jsx("div", { className: "body", children: /* @__PURE__ */ jsx(RichText, { text }) }) : !item.title && /* @__PURE__ */ jsx("div", { className: "body", style: { opacity: 0.5 }, children: c.t("board.card.empty") }),
+    item.title && /* @__PURE__ */ jsx("h4", { "data-field": "title", children: item.title }),
+    text ? /* @__PURE__ */ jsx("div", { className: "body", "data-field": "text", children: /* @__PURE__ */ jsx(RichText, { text }) }) : !item.title && /* @__PURE__ */ jsx("div", { className: "body", style: { opacity: 0.5 }, children: c.t("board.card.empty") }),
     /* @__PURE__ */ jsx(Meta, { item, t: c.t })
   ] });
 }
@@ -7269,12 +8346,25 @@ function TodoView({ id, item, c }) {
   const [editRow, setEditRow] = useState(null);
   const [draft, setDraft] = useState("");
   const set = (next) => c.update(id, { items: next });
+  const rowHint = c.hint && c.hint.id === id && c.hint.field?.startsWith("row:") ? c.hint : null;
+  useEffect(() => {
+    if (rowHint && c.editing === id) setEditRow(Number(rowHint.field.slice(4)));
+  }, [rowHint, c.editing, id]);
   return /* @__PURE__ */ jsxs("div", { className: `hb-card hb-todo${item.by === "h" ? " dm" : ""}`, style: { width: item.w ?? 304 }, children: [
-    c.editing === id ? /* @__PURE__ */ jsx("div", { className: "hd", children: /* @__PURE__ */ jsx(EditText, { single: true, value: item.title ?? "", onDone: (v) => {
-      c.setEditing(null);
-      c.update(id, { title: v.trim() || null });
-    } }) }) : /* @__PURE__ */ jsxs("div", { className: "hd", children: [
-      item.title || c.t("board.todo.title"),
+    c.editing === id && !(c.hint?.id === id && c.hint.field?.startsWith("row:")) ? /* @__PURE__ */ jsx("div", { className: "hd", children: /* @__PURE__ */ jsx(
+      EditText,
+      {
+        single: true,
+        value: item.title ?? "",
+        caret: fieldHint(c, id, "title", true).caret,
+        seed: fieldHint(c, id, "title", true).seed,
+        onDone: (v) => {
+          c.setEditing(null);
+          c.update(id, { title: v.trim() || null });
+        }
+      }
+    ) }) : /* @__PURE__ */ jsxs("div", { className: "hd", children: [
+      /* @__PURE__ */ jsx("span", { className: "t", "data-field": "title", children: item.title || c.t("board.todo.title") }),
       /* @__PURE__ */ jsxs("span", { className: "n", children: [
         done,
         "/",
@@ -7301,14 +8391,12 @@ function TodoView({ id, item, c }) {
           }
         }
       ),
-      editRow === i ? /* @__PURE__ */ jsx("span", { className: "l", children: /* @__PURE__ */ jsx(EditText, { single: true, value: x.t, onDone: (v) => {
+      editRow === i ? /* @__PURE__ */ jsx("span", { className: "l", children: /* @__PURE__ */ jsx(EditText, { single: true, value: x.t, caret: rowHint?.field === `row:${i}` ? rowHint.caret : void 0, onDone: (v) => {
         setEditRow(null);
+        if (c.editing === id) c.setEditing(null);
         if (!v.trim()) set(items.filter((_, j) => j !== i));
         else if (v !== x.t) set(items.map((y, j) => j === i ? { ...y, t: v.trim() } : y));
-      } }) }) : /* @__PURE__ */ jsx("span", { className: "l", onDoubleClick: (e) => {
-        e.stopPropagation();
-        setEditRow(i);
-      }, children: x.t }),
+      } }) }) : /* @__PURE__ */ jsx("span", { className: "l", "data-field": `row:${i}`, children: x.t }),
       x.due ? /* @__PURE__ */ jsx("span", { className: `side${dueLabel(c.t, x.due).today ? " due" : ""}`, children: dueLabel(c.t, x.due).text }) : x.by === "h" ? /* @__PURE__ */ jsx("span", { className: "side sig", children: /* @__PURE__ */ jsx(Cad, {}) }) : null,
       /* @__PURE__ */ jsx(
         "button",
@@ -7345,11 +8433,20 @@ function TodoView({ id, item, c }) {
 function ColumnView({ id, item, c, dropIndex }) {
   const kids = item.kids ?? [];
   return /* @__PURE__ */ jsxs("div", { className: "hb-col", style: item.w ? { width: item.w } : void 0, children: [
-    c.editing === id ? /* @__PURE__ */ jsx("div", { className: "hd", children: /* @__PURE__ */ jsx(EditText, { single: true, value: item.title ?? "", onDone: (v) => {
-      c.setEditing(null);
-      c.update(id, { title: v.trim() || null });
-    } }) }) : /* @__PURE__ */ jsxs("div", { className: "hd", children: [
-      item.title || c.t("board.col.title"),
+    c.editing === id ? /* @__PURE__ */ jsx("div", { className: "hd", children: /* @__PURE__ */ jsx(
+      EditText,
+      {
+        single: true,
+        value: item.title ?? "",
+        caret: fieldHint(c, id, "title", true).caret,
+        seed: fieldHint(c, id, "title", true).seed,
+        onDone: (v) => {
+          c.setEditing(null);
+          c.update(id, { title: v.trim() || null });
+        }
+      }
+    ) }) : /* @__PURE__ */ jsxs("div", { className: "hd", children: [
+      /* @__PURE__ */ jsx("span", { className: "t", "data-field": "title", children: item.title || c.t("board.col.title") }),
       /* @__PURE__ */ jsx("span", { className: "n", children: kids.length }),
       item.by === "h" && /* @__PURE__ */ jsx("span", { className: "n sig", children: /* @__PURE__ */ jsx(Cad, {}) })
     ] }),
@@ -7357,7 +8454,7 @@ function ColumnView({ id, item, c, dropIndex }) {
       kids.map((k, i) => /* @__PURE__ */ jsxs("div", { style: { display: "contents" }, children: [
         dropIndex === i && /* @__PURE__ */ jsx("div", { className: "drop-line" }),
         c.renderKid(k)
-      ] }, k)),
+      ] }, c.keyOf(k))),
       dropIndex != null && dropIndex >= kids.length && /* @__PURE__ */ jsx("div", { className: "drop-line" })
     ] }),
     /* @__PURE__ */ jsxs("button", { className: "add", "data-nodrag": "", onClick: () => c.addToColumn(id), children: [
@@ -7390,7 +8487,7 @@ function VideoView({ id, item, c }) {
           referrerPolicy: "strict-origin-when-cross-origin"
         }
       ),
-      !playing && (poster ? /* @__PURE__ */ jsx("img", { src: poster, alt: "", draggable: false }) : /* @__PURE__ */ jsx("div", { className: "poster-empty", children: site })),
+      !playing && (poster ? /* @__PURE__ */ jsx(Pic, { src: poster }) : /* @__PURE__ */ jsx("div", { className: "poster-empty", children: site })),
       !playing && /* @__PURE__ */ jsxs("button", { className: "play", "data-nodrag": "", onClick: () => c.setPlaying(id), children: [
         PLAY,
         c.t("board.video.play")
@@ -7398,7 +8495,20 @@ function VideoView({ id, item, c }) {
     ] }) : /* @__PURE__ */ jsx(VideoStage, { playId: id, c, src: direct, asset, posterAsset: item.img, dur: item.dur, title }),
     /* @__PURE__ */ jsx("div", { className: "hb-link", children: /* @__PURE__ */ jsxs("div", { className: "body", children: [
       /* @__PURE__ */ jsx("div", { className: "dom", children: /* @__PURE__ */ jsx("span", { children: site }) }),
-      /* @__PURE__ */ jsx("h4", { children: item.url ? /* @__PURE__ */ jsx("a", { href: item.url, target: "_blank", rel: "noopener noreferrer", "data-nodrag": "", children: title }) : title }),
+      c.editing === id ? /* @__PURE__ */ jsx("h4", { children: /* @__PURE__ */ jsx(
+        EditText,
+        {
+          single: true,
+          value: item.title ?? "",
+          placeholder: title,
+          caret: fieldHint(c, id, "title", true).caret,
+          seed: fieldHint(c, id, "title", true).seed,
+          onDone: (v) => {
+            c.setEditing(null);
+            if (v !== (item.title ?? "")) c.update(id, { title: v.trim() || null });
+          }
+        }
+      ) }) : /* @__PURE__ */ jsx("h4", { "data-field": "title", children: item.url ? /* @__PURE__ */ jsx("a", { href: item.url, target: "_blank", rel: "noopener noreferrer", draggable: false, children: title }) : title }),
       item.desc && /* @__PURE__ */ jsx("p", { children: item.desc }),
       item.by === "h" && /* @__PURE__ */ jsxs("div", { className: "meta", style: { marginTop: 9 }, children: [
         /* @__PURE__ */ jsx("span", { className: "sp" }),
@@ -7415,7 +8525,7 @@ function LinkView({ id, item, c }) {
   const failed = item.st === "fail";
   const site = item.site || (item.url ? hostOf(item.url) : "");
   return /* @__PURE__ */ jsxs("div", { className: `hb-card hb-link${item.by === "h" ? " dm" : ""}`, children: [
-    (thumb || waiting) && /* @__PURE__ */ jsx("div", { className: `thumb${waiting ? " skel-thumb" : ""}`, children: thumb && /* @__PURE__ */ jsx("img", { src: thumb, alt: "", draggable: false }) }),
+    (thumb || waiting) && /* @__PURE__ */ jsx("div", { className: `thumb${waiting ? " skel-thumb" : ""}`, children: thumb && /* @__PURE__ */ jsx(Pic, { src: thumb }) }),
     /* @__PURE__ */ jsxs("div", { className: "body", children: [
       /* @__PURE__ */ jsxs("div", { className: "dom", children: [
         icon && /* @__PURE__ */ jsx("img", { src: icon, alt: "" }),
@@ -7426,7 +8536,20 @@ function LinkView({ id, item, c }) {
         /* @__PURE__ */ jsx("i", {}),
         /* @__PURE__ */ jsx("i", {})
       ] }) : /* @__PURE__ */ jsxs(Fragment, { children: [
-        /* @__PURE__ */ jsx("h4", { children: /* @__PURE__ */ jsx("a", { href: item.url, target: "_blank", rel: "noopener noreferrer", "data-nodrag": "", children: item.title || (failed ? site : item.url) }) }),
+        c.editing === id ? /* @__PURE__ */ jsx("h4", { children: /* @__PURE__ */ jsx(
+          EditText,
+          {
+            single: true,
+            value: item.title ?? "",
+            placeholder: failed ? site : item.url,
+            caret: fieldHint(c, id, "title", true).caret,
+            seed: fieldHint(c, id, "title", true).seed,
+            onDone: (v) => {
+              c.setEditing(null);
+              if (v !== (item.title ?? "")) c.update(id, { title: v.trim() || null });
+            }
+          }
+        ) }) : /* @__PURE__ */ jsx("h4", { "data-field": "title", children: /* @__PURE__ */ jsx("a", { href: item.url, target: "_blank", rel: "noopener noreferrer", draggable: false, children: item.title || (failed ? site : item.url) }) }),
         item.desc && /* @__PURE__ */ jsx("p", { children: item.desc }),
         (failed || !item.title) && item.url && /* @__PURE__ */ jsx("div", { className: "url", children: item.url })
       ] }),
@@ -7441,7 +8564,7 @@ function ImageView({ id, item, c }) {
   const url = useAsset(item.asset);
   const ratio = item.iw && item.ih ? item.ih / item.iw : 0.6;
   return /* @__PURE__ */ jsxs("div", { className: `hb-card hb-image${item.by === "h" ? " dm" : ""}`, style: { width: item.w ?? 372 }, children: [
-    /* @__PURE__ */ jsx("div", { className: "art", style: !url ? { aspectRatio: `${1 / ratio}` } : void 0, children: url && /* @__PURE__ */ jsx("img", { src: url, alt: item.cap ?? "", draggable: false }) }),
+    /* @__PURE__ */ jsx("div", { className: "art", style: !url ? { aspectRatio: `${1 / ratio}` } : void 0, children: url && /* @__PURE__ */ jsx(Pic, { src: url, alt: item.cap ?? "" }) }),
     /* @__PURE__ */ jsxs("div", { className: "cap", children: [
       c.editing === id ? /* @__PURE__ */ jsx("b", { style: { flex: 1 }, children: /* @__PURE__ */ jsx(
         EditText,
@@ -7449,12 +8572,13 @@ function ImageView({ id, item, c }) {
           single: true,
           value: item.cap ?? "",
           placeholder: c.t("board.image.capPh"),
+          caret: fieldHint(c, id, "cap", true).caret,
           onDone: (v) => {
             c.setEditing(null);
             c.update(id, { cap: v.trim() || null });
           }
         }
-      ) }) : /* @__PURE__ */ jsx("b", { children: item.cap || (item.url ? hostOf(item.url) : "") }),
+      ) }) : /* @__PURE__ */ jsx("b", { "data-field": "cap", children: item.cap || (item.url ? hostOf(item.url) : "") }),
       item.by === "h" && /* @__PURE__ */ jsx(Sig, {})
     ] })
   ] });
@@ -7469,6 +8593,9 @@ function EmbedView({ id, item, c }) {
   const [html, setHtml] = useState(null);
   const [nonce, setNonce] = useState(0);
   const [tall, setTall] = useState(false);
+  const [base, setBase] = useState(null);
+  const box2 = useRef(null);
+  const themed = item.theme === true;
   useEffect(() => {
     let live = true;
     if (item.asset) assetHtml(item.asset).then((h) => live && setHtml(h), () => live && setHtml(""));
@@ -7476,31 +8603,51 @@ function EmbedView({ id, item, c }) {
       live = false;
     };
   }, [item.asset]);
+  useLayoutEffect(() => {
+    if (themed && !base && box2.current) setBase(readTheme(box2.current));
+  }, [themed, base]);
+  const doc = useMemo(() => html == null ? null : embedDocument(html, themed, base), [html, themed, base]);
+  const [scheme, setScheme] = useState(void 0);
+  useEmbedBridge(box2, doc != null, themed, `${nonce}`, (t2) => setScheme(t2.scheme));
   const Frame = c.Frame;
   const active = c.playing === id;
   const height = tall ? 520 : item.h ? Math.max(120, item.h - 80) : 240;
+  const frameStyle = { height, ...themed ? { colorScheme: scheme ?? base?.scheme } : {} };
+  const waiting = doc == null || themed && !base;
   return /* @__PURE__ */ jsxs("div", { className: `hb-card hb-embed${item.by === "h" ? " dm" : ""}`, style: { width: item.w ?? 452 }, children: [
     /* @__PURE__ */ jsxs("div", { className: "bar-e", children: [
       /* @__PURE__ */ jsx("span", { className: "file", children: item.title || c.t("board.embed.title") }),
       /* @__PURE__ */ jsx("span", { className: "sb", children: c.t("board.embed.sandbox") }),
       /* @__PURE__ */ jsxs("span", { className: "tools", children: [
+        /* @__PURE__ */ jsx(
+          "button",
+          {
+            className: `kbtn${themed ? " on" : ""}`,
+            "data-nodrag": "",
+            "data-tip": c.t(themed ? "board.embed.themeOff" : "board.embed.themeOn"),
+            "aria-label": c.t(themed ? "board.embed.themeOff" : "board.embed.themeOn"),
+            "aria-pressed": themed,
+            onClick: () => c.update(id, { theme: themed ? null : true }),
+            children: /* @__PURE__ */ jsx(Icon, { name: "theme", size: 13 })
+          }
+        ),
         /* @__PURE__ */ jsx("button", { className: "kbtn", "data-nodrag": "", "data-tip": c.t("board.embed.reload"), "aria-label": c.t("board.embed.reload"), onClick: () => setNonce((n) => n + 1), children: /* @__PURE__ */ jsx(Icon, { name: "reload", size: 13 }) }),
         /* @__PURE__ */ jsx("button", { className: "kbtn", "data-nodrag": "", "data-tip": c.t("board.embed.taller"), "aria-label": c.t("board.embed.taller"), onClick: () => setTall((v) => !v), children: /* @__PURE__ */ jsx(Icon, { name: "taller", size: 13 }) })
       ] })
     ] }),
-    /* @__PURE__ */ jsxs("div", { "data-nodrag": "", style: { height, position: "relative" }, children: [
+    /* @__PURE__ */ jsxs("div", { ref: box2, "data-nodrag": "", style: { height, position: "relative" }, children: [
       !active && /* @__PURE__ */ jsx("button", { className: "shield", "aria-label": c.t("board.embed.activate"), onClick: () => c.setPlaying(id), children: /* @__PURE__ */ jsx("span", { children: c.t("board.embed.activate") }) }),
-      html == null ? /* @__PURE__ */ jsx("div", { className: "frame", style: { height } }) : Frame ? /* @__PURE__ */ jsx(Frame, { src: toDataUrl(html), title: item.title || "embed", className: "frame", style: { height } }, nonce) : /* @__PURE__ */ jsx(
+      waiting ? /* @__PURE__ */ jsx("div", { className: "frame", style: { height } }) : Frame ? /* @__PURE__ */ jsx(Frame, { src: toDataUrl(doc), title: item.title || "embed", className: themed ? "frame themed" : "frame", style: frameStyle }, `${nonce}${themed}`) : /* @__PURE__ */ jsx(
         "iframe",
         {
-          className: "frame",
-          style: { height },
+          className: themed ? "frame themed" : "frame",
+          style: frameStyle,
           sandbox: "allow-scripts",
-          srcDoc: html,
+          srcDoc: doc,
           title: item.title || "embed",
           referrerPolicy: "no-referrer"
         },
-        nonce
+        `${nonce}${themed}`
       )
     ] }),
     /* @__PURE__ */ jsxs("div", { className: "foot meta", children: [
@@ -7511,6 +8658,7 @@ function EmbedView({ id, item, c }) {
   ] });
 }
 const childCache = /* @__PURE__ */ new Map();
+const CHILD_POLL_MS = 5e3;
 function loadBoardDoc(bid, fresh = false) {
   let p = fresh ? void 0 : childCache.get(bid);
   if (!p) {
@@ -7536,10 +8684,36 @@ function BoardPreview({ doc, className }) {
 function BoardRefView({ item, c }) {
   const [child, setChild] = useState(null);
   useEffect(() => {
+    if (!item.ref) return;
+    const ref = item.ref;
     let live = true;
-    if (item.ref) loadBoardDoc(item.ref, true).then((d) => live && setChild(d));
+    let seq = -1;
+    const load = () => loadBoardDoc(ref, true).then((d) => {
+      if (live) {
+        seq = d?.seq ?? -1;
+        setChild(d);
+      }
+    });
+    void load();
+    const check = async () => {
+      if (document.hidden || seq < 0) return;
+      try {
+        const r = await boardsApi.since(ref, seq);
+        if (live && (r.entries?.length || r.doc)) await load();
+      } catch {
+      }
+    };
+    const i = window.setInterval(check, CHILD_POLL_MS);
+    const onVis = () => {
+      void check();
+    };
+    document.addEventListener("visibilitychange", onVis);
+    window.addEventListener("focus", onVis);
     return () => {
       live = false;
+      window.clearInterval(i);
+      document.removeEventListener("visibilitychange", onVis);
+      window.removeEventListener("focus", onVis);
     };
   }, [item.ref]);
   const count = child ? Object.values(child.items).filter((x) => x.k !== "line").length : 0;
@@ -7553,9 +8727,9 @@ function BoardRefView({ item, c }) {
         if (item.ref) c.openBoard(item.ref);
       },
       children: [
-        /* @__PURE__ */ jsx("div", { className: "pv", children: /* @__PURE__ */ jsx(BoardPreview, { doc: child }) }),
+        /* @__PURE__ */ jsx("div", { className: "pv", children: /* @__PURE__ */ jsx(MiniBoard, { doc: child, id: item.ref }) }),
         /* @__PURE__ */ jsxs("div", { className: "ttl", children: [
-          /* @__PURE__ */ jsx("b", { children: child?.name ?? item.title ?? c.t("board.ref.missing") }),
+          /* @__PURE__ */ jsx("b", { "data-tip": child?.name ?? item.title ?? void 0, children: child?.name ?? item.title ?? c.t("board.ref.missing") }),
           /* @__PURE__ */ jsx("span", { children: /* @__PURE__ */ jsx("button", { "data-nodrag": "", "data-tip": c.t("board.index.open"), "aria-label": c.t("board.index.open"), onClick: () => item.ref && c.openBoard(item.ref), children: /* @__PURE__ */ jsx(Icon, { name: "openBoard", size: 13 }) }) })
         ] }),
         /* @__PURE__ */ jsx("div", { className: "meta", children: /* @__PURE__ */ jsx("span", { children: c.t("board.ref.meta", { n: count, when: ago(c.t, child?.updated) }) }) })
@@ -7573,10 +8747,19 @@ function FrameView({ id, item, c }) {
     ] }),
     /* @__PURE__ */ jsxs("span", { className: "lbl", children: [
       item.by === "h" && /* @__PURE__ */ jsx(Cad, {}),
-      c.editing === id ? /* @__PURE__ */ jsx(EditText, { single: true, value: item.title ?? "", onDone: (v) => {
-        c.setEditing(null);
-        c.update(id, { title: v.trim() || null });
-      } }) : item.title || c.t("board.frame.title"),
+      /* @__PURE__ */ jsx("span", { className: "t", children: c.editing === id ? /* @__PURE__ */ jsx(
+        EditText,
+        {
+          single: true,
+          value: item.title ?? "",
+          caret: fieldHint(c, id, "title", true).caret,
+          seed: fieldHint(c, id, "title", true).seed,
+          onDone: (v) => {
+            c.setEditing(null);
+            c.update(id, { title: v.trim() || null });
+          }
+        }
+      ) : /* @__PURE__ */ jsx("span", { "data-field": "title", children: item.title || c.t("board.frame.title") }) }),
       item.note && /* @__PURE__ */ jsx("em", { children: item.note })
     ] })
   ] });
@@ -7585,10 +8768,19 @@ function BoxView({ id, item, c }) {
   return /* @__PURE__ */ jsxs("div", { className: "hb-box", children: [
     item.num && /* @__PURE__ */ jsx("span", { className: "num", children: item.num }),
     /* @__PURE__ */ jsxs("span", { style: { minWidth: 0 }, children: [
-      c.editing === id ? /* @__PURE__ */ jsx("b", { children: /* @__PURE__ */ jsx(EditText, { single: true, value: item.title ?? "", onDone: (v) => {
-        c.setEditing(null);
-        c.update(id, { title: v.trim() || null });
-      } }) }) : /* @__PURE__ */ jsx("b", { children: item.title || "…" }),
+      c.editing === id ? /* @__PURE__ */ jsx("b", { children: /* @__PURE__ */ jsx(
+        EditText,
+        {
+          single: true,
+          value: item.title ?? "",
+          caret: fieldHint(c, id, "title", true).caret,
+          seed: fieldHint(c, id, "title", true).seed,
+          onDone: (v) => {
+            c.setEditing(null);
+            c.update(id, { title: v.trim() || null });
+          }
+        }
+      ) }) : /* @__PURE__ */ jsx("b", { "data-field": "title", children: item.title || "…" }),
       item.sub && /* @__PURE__ */ jsx("small", { children: item.sub })
     ] })
   ] });
@@ -7596,11 +8788,14 @@ function BoxView({ id, item, c }) {
 function TextView({ id, item, c }) {
   const size = item.size === "h" || item.size === "s" ? item.size : "p";
   if (c.editing === id) {
+    const h = fieldHint(c, id, "text", true);
     return /* @__PURE__ */ jsx("div", { className: `hb-text ${size}`, children: /* @__PURE__ */ jsx(
       EditText,
       {
         single: size === "h",
         value: item.text ?? "",
+        caret: h.caret,
+        seed: h.seed,
         onDone: (v) => {
           c.setEditing(null);
           c.update(id, { text: v || null });
@@ -7608,22 +8803,61 @@ function TextView({ id, item, c }) {
       }
     ) });
   }
-  return /* @__PURE__ */ jsx("div", { className: `hb-text ${size}`, children: item.text || c.t("board.text.empty") });
+  return /* @__PURE__ */ jsx("div", { className: `hb-text ${size}`, "data-field": "text", children: item.text || c.t("board.text.empty") });
+}
+const SHAPE_DEFAULT = { rect: [160, 56], diamond: [150, 100], pill: [150, 48], circle: [72, 72] };
+function shapeOutline(sh, w, h) {
+  const x0 = 0.75, y0 = 0.75, x1 = w - 0.75, y1 = h - 0.75, mx = w / 2, my = h / 2;
+  if (sh === "diamond") return `M${mx} ${y0} L${x1} ${my} L${mx} ${y1} L${x0} ${my}Z`;
+  if (sh === "circle") return `M${x0} ${my} A${mx - 0.75} ${my - 0.75} 0 1 0 ${x1} ${my} A${mx - 0.75} ${my - 0.75} 0 1 0 ${x0} ${my}Z`;
+  const r = sh === "pill" ? Math.min(mx, my) - 0.75 : 5;
+  return `M${x0 + r} ${y0} H${x1 - r} A${r} ${r} 0 0 1 ${x1} ${y0 + r} V${y1 - r} A${r} ${r} 0 0 1 ${x1 - r} ${y1} H${x0 + r} A${r} ${r} 0 0 1 ${x0} ${y1 - r} V${y0 + r} A${r} ${r} 0 0 1 ${x0 + r} ${y0}Z`;
+}
+function ShapeView({ id, item, c }) {
+  const sh = item.sh ?? "rect";
+  const [dw, dh] = SHAPE_DEFAULT[sh] ?? SHAPE_DEFAULT.rect;
+  const ref = useRef(null);
+  const [box2, setBox] = useState({ w: item.w ?? dw, h: item.h ?? dh });
+  useEffect(() => {
+    const el = ref.current;
+    const RO = globalThis.ResizeObserver;
+    if (!el || !RO) return;
+    const ro = new RO(() => setBox((b) => b.w === el.offsetWidth && b.h === el.offsetHeight ? b : { w: el.offsetWidth || b.w, h: el.offsetHeight || b.h }));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  const hint = fieldHint(c, id, "title", true);
+  return /* @__PURE__ */ jsxs("div", { ref, className: `hb-shape ${sh}${item.by === "h" ? " by-h" : ""}`, children: [
+    /* @__PURE__ */ jsx("svg", { className: "o", width: box2.w, height: box2.h, viewBox: `0 0 ${box2.w} ${box2.h}`, "aria-hidden": "true", children: /* @__PURE__ */ jsx("path", { d: shapeOutline(sh, box2.w, box2.h) }) }),
+    /* @__PURE__ */ jsx("span", { className: "t", children: c.editing === id ? /* @__PURE__ */ jsx(
+      EditText,
+      {
+        value: item.title ?? "",
+        placeholder: c.t("board.shape.ph"),
+        caret: hint.caret,
+        seed: hint.seed,
+        onDone: (v) => {
+          c.setEditing(null);
+          if (v !== (item.title ?? "")) c.update(id, { title: v.trim() || null });
+        }
+      }
+    ) : /* @__PURE__ */ jsx("span", { "data-field": "title", children: item.title || "" }) })
+  ] });
 }
 function DrawView({ item, selected, erasing }) {
   const geo = inkGeometry(item, strokePath);
   if (!geo) return null;
-  const { box } = geo;
+  const { box: box2 } = geo;
   const sw = item.sw ?? 1.9;
   const cls = `hb-draw${selected ? " sel" : ""}${erasing ? " erasing" : ""}${item.tl === "hl" ? " hl" : ""}${item.c ? ` c-${item.c}` : ""}`;
   return /* @__PURE__ */ jsx(
     "svg",
     {
       className: cls,
-      width: box.w,
-      height: box.h,
-      viewBox: `${box.x} ${box.y} ${box.w} ${box.h}`,
-      style: { position: "absolute", left: box.x, top: box.y },
+      width: box2.w,
+      height: box2.h,
+      viewBox: `${box2.x} ${box2.y} ${box2.w} ${box2.h}`,
+      style: { position: "absolute", left: box2.x, top: box2.y },
       children: geo.paths.map((p, i) => /* @__PURE__ */ jsx(
         "path",
         {
@@ -7655,6 +8889,8 @@ function ItemBody({ id, item, c, dropIndex, selected }) {
       return /* @__PURE__ */ jsx(EmbedView, { id, item, c });
     case "board":
       return /* @__PURE__ */ jsx(BoardRefView, { item, c });
+    case "shape":
+      return /* @__PURE__ */ jsx(ShapeView, { id, item, c });
     case "frame":
       return /* @__PURE__ */ jsx(FrameView, { id, item, c });
     case "box":
@@ -7679,6 +8915,589 @@ function itemForUrl(url) {
     return { k: "link", url, video, w: k.vert ? 260 : 400 };
   }
   return { k: "link", url };
+}
+const DBL_MS = { mouse: 380, pen: 420, touch: 480 };
+const DBL_PX = { mouse: 6, pen: 10, touch: 28 };
+const TAP_SLOP = { mouse: 3, pen: 5, touch: 10 };
+const TAP_MS = 700;
+function pointerKind(type) {
+  return type === "touch" ? "touch" : type === "pen" ? "pen" : "mouse";
+}
+function isTap(down, up) {
+  return up.t - down.t < TAP_MS && Math.hypot(up.x - down.x, up.y - down.y) <= TAP_SLOP[down.type];
+}
+function nextTap(prev, cur) {
+  if (prev && prev.type === cur.type && cur.t - prev.t <= DBL_MS[cur.type] && Math.hypot(cur.x - prev.x, cur.y - prev.y) <= DBL_PX[cur.type]) {
+    return { double: true, last: null };
+  }
+  return { double: false, last: cur };
+}
+const EDITABLE = /* @__PURE__ */ new Set(["card", "todo", "col", "frame", "box", "text", "image", "link", "video", "shape"]);
+const TYPE_TO_EDIT = /* @__PURE__ */ new Set(["card", "text", "box", "shape"]);
+function dblAction(h) {
+  if (h.tool === "draw" || h.chrome) return "none";
+  if (h.wire) return "label";
+  if (!h.kind) return "new";
+  if (h.kind === "board") return "open";
+  return EDITABLE.has(h.kind) ? "edit" : "none";
+}
+function typeToEditChar(e, kind) {
+  if (!kind || !TYPE_TO_EDIT.has(kind)) return null;
+  if (e.ctrlKey || e.metaKey || e.altKey) return null;
+  const chars = [...e.key];
+  if (chars.length !== 1 || e.key === " " || e.key.trim() === "") return null;
+  return e.key;
+}
+function mapCaret(rendered, offset, source) {
+  const o = Math.max(0, Math.min(rendered.length, Math.round(offset)));
+  if (rendered === source) return o;
+  if (!source.length) return 0;
+  if (o >= rendered.length) return source.length;
+  if (o === 0) return 0;
+  for (const n of [14, 8, 4, 2]) {
+    const ctx = rendered.slice(Math.max(0, o - n), o);
+    if (ctx.length < Math.min(n, o)) continue;
+    const at = source.indexOf(ctx);
+    if (at >= 0 && source.indexOf(ctx, at + 1) < 0) return at + ctx.length;
+  }
+  return Math.round(o / rendered.length * source.length);
+}
+function endRect(end, getRect) {
+  if (end == null) return null;
+  if (Array.isArray(end)) return { x: end[0], y: end[1], w: 0, h: 0 };
+  return getRect(end);
+}
+const r1 = (n) => Math.round(n * 10) / 10;
+function build(id, it, getRect, fresh, prev) {
+  const a = endRect(it.a, getRect), b = endRect(it.b, getRect);
+  if (!a || !b) return null;
+  const hermes = it.by === "h";
+  const sig = `${r1(a.x)},${r1(a.y)},${r1(a.w)},${r1(a.h)}|${r1(b.x)},${r1(b.y)},${r1(b.w)},${r1(b.h)}|${it.label ?? ""}|${hermes ? 1 : 0}|${fresh ? 1 : 0}`;
+  if (prev && prev.sig === sig) return prev;
+  const r = route(a, b);
+  const pts = r.points.slice();
+  const end = pts[pts.length - 1];
+  const tip = [end[0] + { r: -2, l: 2, d: 0, u: 0 }[r.dir], end[1] + { r: 0, l: 0, d: -2, u: 2 }[r.dir]];
+  pts[pts.length - 1] = tip;
+  const mi = Math.floor(pts.length / 2);
+  const mid = pts.length === 2 ? [(pts[0][0] + tip[0]) / 2, (pts[0][1] + tip[1]) / 2] : [(pts[mi - 1][0] + pts[mi][0]) / 2, (pts[mi - 1][1] + pts[mi][1]) / 2];
+  return {
+    id,
+    hermes,
+    label: it.label,
+    mid,
+    fresh,
+    sig,
+    pts,
+    d: elbowPath(pts, 7),
+    dots: hermes ? samplePolyline(pts, 4).filter(([x, y]) => Math.hypot(x - tip[0], y - tip[1]) > 6) : null,
+    head: headPath(tip[0], tip[1], r.dir),
+    port: pts[0]
+  };
+}
+const WireView = memo(function WireView2({ w, selected, sole, showHandle, editing, insertLabel, onSelect, onLabel, onDouble, onInsert, onHover }) {
+  const lastTap = useRef(null);
+  const ink2 = w.hermes ? "var(--accent)" : "color-mix(in srgb, var(--ink) 55%, transparent)";
+  const plus = () => {
+    if (!w.label) return w.mid;
+    const total = w.pts.reduce((n, p, i) => i ? n + Math.hypot(p[0] - w.pts[i - 1][0], p[1] - w.pts[i - 1][1]) : 0, 0) || 1;
+    return pointAtT(w.pts, Math.min(0.92, 0.5 + (w.label.length * 3.3 + 26) / total));
+  };
+  const handleAt = showHandle?.id === w.id || sole ? plus() : null;
+  return /* @__PURE__ */ jsxs("g", { className: w.fresh ? "fresh" : void 0, children: [
+    /* @__PURE__ */ jsx(
+      "path",
+      {
+        className: "hit",
+        d: w.d,
+        stroke: "transparent",
+        strokeWidth: 12,
+        fill: "none",
+        "data-line": w.id,
+        style: { pointerEvents: "stroke" },
+        onPointerEnter: (e) => {
+          if (e.pointerType !== "touch") onHover({ id: w.id });
+        },
+        onPointerLeave: () => onHover(null, true),
+        onPointerDown: (e) => {
+          e.stopPropagation();
+          onSelect(w.id, e.shiftKey);
+          const r = nextTap(lastTap.current, { t: e.timeStamp, x: e.clientX, y: e.clientY, type: pointerKind(e.pointerType) });
+          lastTap.current = r.last;
+          if (r.double) window.setTimeout(() => onDouble(w.id), 0);
+        }
+      }
+    ),
+    selected && /* @__PURE__ */ jsx("path", { className: "line-sel", d: w.d }),
+    w.dots ? w.dots.map(([x, y], i) => /* @__PURE__ */ jsx(
+      "rect",
+      {
+        className: "d",
+        x: x - 1.15,
+        y: y - 1.15,
+        width: 2.3,
+        height: 2.3,
+        fill: ink2,
+        style: w.fresh ? { animationDelay: `${i * 14}ms` } : void 0
+      },
+      i
+    )) : /* @__PURE__ */ jsx("path", { d: w.d, fill: "none", stroke: ink2, strokeWidth: 1.3 }),
+    /* @__PURE__ */ jsx("rect", { x: w.port[0] - 2.5, y: w.port[1] - 2.5, width: 5, height: 5, fill: ink2 }),
+    /* @__PURE__ */ jsx(
+      "path",
+      {
+        d: w.head,
+        fill: w.hermes ? "var(--accent)" : "color-mix(in srgb, var(--ink) 72%, transparent)",
+        style: w.fresh && w.dots ? { animation: "hb-dot-in .2s both", animationDelay: `${w.dots.length * 14}ms` } : void 0
+      }
+    ),
+    editing && /* @__PURE__ */ jsx("foreignObject", { x: w.mid[0] - 70, y: w.mid[1] - 11, width: 140, height: 22, children: /* @__PURE__ */ jsx(
+      "input",
+      {
+        className: "hb-lbl-edit",
+        autoFocus: true,
+        defaultValue: w.label ?? "",
+        "data-nodrag": "",
+        maxLength: 200,
+        ref: (el) => {
+          if (el && document.activeElement !== el) {
+            el.focus({ preventScroll: true });
+            el.select();
+          }
+        },
+        onPointerDown: (e) => e.stopPropagation(),
+        onBlur: (e) => {
+          if (!e.currentTarget.dataset.cancel) onLabel(w.id, e.currentTarget.value);
+        },
+        onKeyDown: (e) => {
+          e.stopPropagation();
+          if (e.nativeEvent.isComposing) return;
+          if (e.key === "Enter") {
+            e.preventDefault();
+            e.currentTarget.blur();
+          }
+          if (e.key === "Escape") {
+            e.preventDefault();
+            e.currentTarget.dataset.cancel = "1";
+            onLabel(w.id, null);
+          }
+        }
+      }
+    ) }),
+    handleAt && !editing && /* @__PURE__ */ jsxs(
+      "g",
+      {
+        className: "hb-eplus",
+        "data-tip": insertLabel,
+        "aria-label": insertLabel,
+        role: "button",
+        style: { transform: `translate(${handleAt[0]}px, ${handleAt[1]}px) scale(var(--iz, 1))` },
+        onPointerEnter: () => onHover({ id: w.id }),
+        onPointerLeave: () => onHover(null, true),
+        onPointerDown: (e) => e.stopPropagation(),
+        onClick: (e) => {
+          e.stopPropagation();
+          onInsert(w.id, { x: e.clientX, y: e.clientY });
+        },
+        children: [
+          /* @__PURE__ */ jsx("circle", { r: 13, className: "pad" }),
+          /* @__PURE__ */ jsx("circle", { r: 9, className: "dot" }),
+          /* @__PURE__ */ jsx("path", { className: "pl", d: "M-4 0H4M0 -4V4" })
+        ]
+      }
+    )
+  ] });
+});
+const Wires = forwardRef(function Wires2(props, ref) {
+  const { doc, getRect, version, hidden, fresh, selected, draft, editLabel, insertLabel } = props;
+  const [wires, setWires] = useState([]);
+  const [hover, setHover] = useState(null);
+  const cache2 = useRef(/* @__PURE__ */ new Map());
+  const live = useRef(props);
+  live.current = props;
+  const raf = useRef(0);
+  const pending2 = useRef(null);
+  const hideTimer = useRef(0);
+  const compute = useCallback((only) => {
+    const { doc: d, getRect: gr, hidden: hid, fresh: fr } = live.current;
+    const next = [];
+    const keep = /* @__PURE__ */ new Map();
+    for (const [id, it] of Object.entries(d.items)) {
+      if (it.k !== "line" || hid.has(id)) continue;
+      if ([it.a, it.b].some((e) => typeof e === "string" && hid.has(e))) continue;
+      const prev = cache2.current.get(id);
+      const touched = !only || !prev || [it.a, it.b].some((e) => typeof e === "string" && only.has(e));
+      const w = touched ? build(id, it, gr, fr.has(id), prev) : prev ?? null;
+      if (w) {
+        next.push(w);
+        keep.set(id, w);
+      }
+    }
+    cache2.current = keep;
+    setWires((cur) => cur.length === next.length && cur.every((w, i) => w === next[i]) ? cur : next);
+  }, []);
+  useLayoutEffect(() => {
+    compute(null);
+  }, [doc, version, hidden, fresh, getRect, compute]);
+  useImperativeHandle(ref, () => ({
+    refresh: (ids) => {
+      if (!ids) pending2.current = "all";
+      else if (pending2.current !== "all") {
+        const set = pending2.current ?? (pending2.current = /* @__PURE__ */ new Set());
+        for (const id of ids) set.add(id);
+      }
+      if (raf.current) return;
+      raf.current = requestAnimationFrame(() => {
+        raf.current = 0;
+        const p = pending2.current;
+        pending2.current = null;
+        compute(p === "all" || !p ? null : p);
+      });
+    }
+  }), [compute]);
+  useLayoutEffect(() => () => {
+    cancelAnimationFrame(raf.current);
+    window.clearTimeout(hideTimer.current);
+  }, []);
+  const onHover = useCallback((h, soon) => {
+    window.clearTimeout(hideTimer.current);
+    if (h) {
+      setHover(h);
+      return;
+    }
+    if (soon) hideTimer.current = window.setTimeout(() => setHover(null), 260);
+    else setHover(null);
+  }, []);
+  const stable = useRef({
+    onSelect: (id, add) => live.current.onSelect(id, add),
+    onLabel: (id, v) => live.current.onLabel(id, v),
+    onDouble: (id) => live.current.onDouble(id),
+    onInsert: (id, at) => live.current.onInsert(id, at)
+  }).current;
+  return /* @__PURE__ */ jsxs(Fragment, { children: [
+    /* @__PURE__ */ jsxs("svg", { className: "hb-wires", width: "1", height: "1", children: [
+      wires.map((w) => /* @__PURE__ */ jsx(
+        WireView,
+        {
+          w,
+          selected: selected.has(w.id),
+          sole: selected.size === 1 && selected.has(w.id),
+          showHandle: hover?.id === w.id ? hover : null,
+          editing: editLabel === w.id,
+          insertLabel,
+          onSelect: stable.onSelect,
+          onLabel: stable.onLabel,
+          onDouble: stable.onDouble,
+          onInsert: stable.onInsert,
+          onHover
+        },
+        w.id
+      )),
+      draft && (() => {
+        const r = route(draft.from, { x: draft.to[0], y: draft.to[1], w: 0, h: 0 });
+        return /* @__PURE__ */ jsx("path", { className: "draft", d: elbowPath(r.points, 7) });
+      })()
+    ] }),
+    /* @__PURE__ */ jsx("svg", { className: "hb-wires hb-wire-labels", width: "1", height: "1", "aria-hidden": "true", children: wires.filter((w) => w.label && editLabel !== w.id).map((w) => /* @__PURE__ */ jsx("text", { className: "lbl", x: w.mid[0], y: w.mid[1] + 3.5, textAnchor: "middle", children: w.label }, w.id)) })
+  ] });
+});
+const fits = /* @__PURE__ */ new WeakMap();
+const miniFitOf = (el) => el ? fits.get(el) ?? null : null;
+const miniPad = (w, h) => Math.max(6, Math.min(22, Math.round(Math.min(w, h) * 0.09)));
+const NONE = /* @__PURE__ */ new Set();
+const noop = () => void 0;
+const layer = (it) => it.k === "frame" ? 0 : it.k === "draw" && it.tl === "hl" ? 1 : 2;
+function box(it) {
+  const [dw] = DEFAULT_SIZE[it.k] ?? [200, 100];
+  return {
+    x: it.x ?? 0,
+    y: it.y ?? 0,
+    width: it.k === "draw" ? void 0 : it.w ?? (it.k === "text" ? void 0 : dw),
+    height: RESIZE_H.has(it.k) ? it.h ?? (it.k === "frame" ? 320 : it.k === "box" ? 62 : void 0) : void 0
+  };
+}
+function MiniBoard({ doc, id, className }) {
+  const t2 = useT();
+  const rootRef = useRef(null);
+  const worldRef = useRef(null);
+  const els = useRef(/* @__PURE__ */ new Map());
+  const rects = useRef(/* @__PURE__ */ new Map());
+  const sig = useRef("");
+  const [ver, setVer] = useState(0);
+  const ctx = useMemo(() => {
+    if (!doc) return null;
+    const c = {
+      doc,
+      t: t2,
+      editing: null,
+      hint: null,
+      keyOf: (k) => k,
+      setEditing: noop,
+      update: noop,
+      commit: noop,
+      playing: null,
+      setPlaying: noop,
+      openBoard: noop,
+      addToColumn: noop,
+      liveActions: null,
+      liveActionsDown: false,
+      runLiveAction: async () => null,
+      renderKid: (kid) => {
+        const it = doc.items[kid];
+        return it ? /* @__PURE__ */ jsx("div", { className: "hb-kid", children: /* @__PURE__ */ jsx(MiniBody, { id: kid, item: it, c }) }, kid) : null;
+      }
+    };
+    return c;
+  }, [doc, t2]);
+  const items = useMemo(() => {
+    if (!doc) return [];
+    return Object.entries(doc.items).filter(([, it]) => !it.in && it.k !== "line").sort(([, a], [, b]) => layer(a) - layer(b));
+  }, [doc]);
+  const getRect = useCallback((rid) => {
+    const r = rects.current.get(rid);
+    if (r) return r;
+    const it = doc?.items[rid];
+    return it ? approxRect(it) : null;
+  }, [doc]);
+  const place = useCallback(() => {
+    const root = rootRef.current, world = worldRef.current;
+    if (!root || !world) return;
+    const w = root.clientWidth, h = root.clientHeight;
+    if (!w || !h) return;
+    const tops = [...rects.current.entries()].filter(([rid]) => doc?.items[rid] && !doc.items[rid].in && doc.items[rid].k !== "line").map(([, r]) => r);
+    if (!tops.length) {
+      world.style.transform = "none";
+      fits.delete(root);
+      return;
+    }
+    const x0 = Math.min(...tops.map((r) => r.x)), y0 = Math.min(...tops.map((r) => r.y));
+    const x1 = Math.max(...tops.map((r) => r.x + r.w)), y1 = Math.max(...tops.map((r) => r.y + r.h));
+    const b = { x: x0, y: y0, w: x1 - x0, h: y1 - y0 };
+    const view = fitView(b, { w, h }, miniPad(w, h), 1.1);
+    world.style.transform = `translate(${view.x}px, ${view.y}px) scale(${view.z})`;
+    applyLod(world, view.z);
+    fits.set(root, { view, w, h, b });
+  }, [doc]);
+  const measure = useCallback(() => {
+    const next = /* @__PURE__ */ new Map();
+    let s = "";
+    els.current.forEach((el, rid) => {
+      const r = { x: el.offsetLeft, y: el.offsetTop, w: el.offsetWidth, h: el.offsetHeight };
+      next.set(rid, r);
+      s += `${rid}:${r.x},${r.y},${r.w},${r.h};`;
+    });
+    rects.current = next;
+    place();
+    if (s !== sig.current) {
+      sig.current = s;
+      setVer((v) => v + 1);
+    }
+  }, [place]);
+  useLayoutEffect(() => {
+    measure();
+  }, [measure, doc, ctx]);
+  useLayoutEffect(() => {
+    const RO = globalThis.ResizeObserver;
+    const root = rootRef.current;
+    if (!RO || !root) return;
+    let raf = 0;
+    const schedule = () => {
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(measure);
+    };
+    const ro = new RO(schedule);
+    ro.observe(root);
+    els.current.forEach((el) => ro.observe(el));
+    return () => {
+      ro.disconnect();
+      cancelAnimationFrame(raf);
+    };
+  }, [measure, items]);
+  const reg = (rid) => (el) => {
+    if (el) els.current.set(rid, el);
+    else els.current.delete(rid);
+  };
+  return /* @__PURE__ */ jsx("div", { ref: rootRef, className: `hb hb-mini${className ? ` ${className}` : ""}`, "data-mini": id, "aria-hidden": "true", children: /* @__PURE__ */ jsxs("div", { className: "hb-world", ref: worldRef, children: [
+    doc && /* @__PURE__ */ jsx(
+      Wires,
+      {
+        doc,
+        getRect,
+        version: ver,
+        hidden: NONE,
+        fresh: NONE,
+        selected: NONE,
+        draft: null,
+        onSelect: noop,
+        editLabel: null,
+        insertLabel: "",
+        onLabel: noop,
+        onDouble: noop,
+        onInsert: noop
+      }
+    ),
+    ctx && items.map(([rid, it]) => {
+      const b = box(it);
+      return /* @__PURE__ */ jsx("div", { className: "hb-item", ref: reg(rid), style: { left: b.x, top: b.y, width: b.width, height: b.height, zIndex: layer(it) < 2 ? 0 : 1 }, children: /* @__PURE__ */ jsx(MiniBody, { id: rid, item: it, c: ctx }) }, rid);
+    })
+  ] }) });
+}
+function MiniBody({ id, item, c }) {
+  if (item.k === "embed") {
+    return /* @__PURE__ */ jsxs("div", { className: "hb-card hb-embed", style: { width: item.w ?? 452 }, children: [
+      /* @__PURE__ */ jsx("div", { className: "bar-e", children: /* @__PURE__ */ jsx("span", { className: "file", children: item.title || c.t("board.embed.title") }) }),
+      /* @__PURE__ */ jsx("div", { className: "frame", style: { height: item.h ? Math.max(120, item.h - 80) : 240 } })
+    ] });
+  }
+  if (item.k === "board") {
+    return /* @__PURE__ */ jsxs("div", { className: `hb-card hb-boardref${item.by === "h" ? " dm" : ""}`, style: { width: item.w ?? 212 }, children: [
+      /* @__PURE__ */ jsx("div", { className: "pv" }),
+      /* @__PURE__ */ jsx("div", { className: "ttl", children: /* @__PURE__ */ jsx("b", { children: item.title || itemLabel(item) }) }),
+      /* @__PURE__ */ jsx("div", { className: "meta", children: /* @__PURE__ */ jsx("span", { children: " " }) })
+    ] });
+  }
+  return /* @__PURE__ */ jsx(ItemBody, { id, item, c, dropIndex: null, selected: false });
+}
+function matchTransform(from, to) {
+  const k = to.z / from.z;
+  return { k, tx: to.x - k * from.x, ty: to.y - k * from.y };
+}
+const affineCss = (a) => `translate(${a.tx.toFixed(2)}px, ${a.ty.toFixed(2)}px) scale(${a.k.toFixed(5)})`;
+const toPage = (v, origin) => ({ z: v.z, x: v.x + origin.left, y: v.y + origin.top });
+const fromPage = (v, origin) => ({ z: v.z, x: v.x - origin.left, y: v.y - origin.top });
+const smooth = (a, b, u) => {
+  const t2 = Math.min(1, Math.max(0, (u - a) / (b - a)));
+  return t2 * t2 * (3 - 2 * t2);
+};
+const leavingOpacity = (u) => 1 - smooth(0.34, 0.94, u);
+const arrivingOpacity = (u) => smooth(0.1, 0.62, u);
+const ZOOM_IN_MS = 560;
+const ZOOM_OUT_MS = 480;
+const ZOOM_EASE = [0.62, 0, 0.18, 1];
+let pending = null;
+const reduced$1 = () => typeof window !== "undefined" && !!window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+function snapshot(root) {
+  const r = root.getBoundingClientRect();
+  const wrap = document.createElement("div");
+  wrap.className = "hb-xfade";
+  wrap.setAttribute("inert", "");
+  wrap.setAttribute("aria-hidden", "true");
+  wrap.style.cssText = `left:${r.left}px;top:${r.top}px;width:${r.width}px;height:${r.height}px`;
+  const clone2 = root.cloneNode(true);
+  clone2.style.width = `${r.width}px`;
+  clone2.style.height = `${r.height}px`;
+  clone2.style.margin = "0";
+  clone2.style.transformOrigin = "0 0";
+  const src = root.querySelectorAll("canvas"), dst = clone2.querySelectorAll("canvas");
+  src.forEach((c, i) => {
+    try {
+      dst[i]?.getContext("2d")?.drawImage(c, 0, 0);
+    } catch {
+    }
+  });
+  clone2.querySelectorAll("iframe").forEach((f) => {
+    const d = document.createElement("div");
+    d.className = f.className;
+    d.style.cssText = f.style.cssText;
+    f.replaceWith(d);
+  });
+  clone2.querySelectorAll("[id]").forEach((e) => e.removeAttribute("id"));
+  wrap.appendChild(clone2);
+  document.body.appendChild(wrap);
+  const a = [root, ...root.querySelectorAll("*")], b = [clone2, ...clone2.querySelectorAll("*")];
+  for (let i = 0; i < a.length; i++) if (a[i].scrollTop || a[i].scrollLeft) {
+    b[i].scrollTop = a[i].scrollTop;
+    b[i].scrollLeft = a[i].scrollLeft;
+  }
+  return wrap;
+}
+function disposeHandoff(h) {
+  window.clearTimeout(h.guard);
+  h.overlay.remove();
+  if (pending === h) pending = null;
+}
+function stash(h) {
+  if (pending) disposeHandoff(pending);
+  pending = h;
+  h.guard = window.setTimeout(() => disposeHandoff(h), 5e3);
+  return true;
+}
+function prepareZoomIn(to, root, source) {
+  if (reduced$1() || !root || !source) return false;
+  const fit = miniFitOf(source);
+  if (!fit) return false;
+  const r = source.getBoundingClientRect();
+  if (!r.width || !r.height) return false;
+  const from = toPage(fit.view, r);
+  return stash({ kind: "in", to, overlay: snapshot(root), from, at: performance.now(), guard: 0 });
+}
+function prepareZoomOut(parent, child, root, vp, cur) {
+  if (reduced$1() || !root || !vp) return false;
+  const r = vp.getBoundingClientRect();
+  return stash({ kind: "out", to: parent, child, overlay: snapshot(root), from: toPage(cur, r), at: performance.now(), guard: 0 });
+}
+function takeHandoff(bid) {
+  const h = pending;
+  if (!h) return null;
+  if (h.to !== bid || performance.now() - h.at > 5e3) return null;
+  pending = null;
+  window.clearTimeout(h.guard);
+  return h;
+}
+const setOverlay = (h, page, u) => {
+  const child = h.overlay.firstElementChild;
+  if (child) child.style.transform = affineCss(matchTransform(h.from, page));
+  h.overlay.style.opacity = String(leavingOpacity(u));
+};
+function arriveZoomIn(h, io, setStart) {
+  const o = io.vp.getBoundingClientRect();
+  const start = fromPage(h.from, o);
+  io.root.style.opacity = "0";
+  setStart(start);
+  setOverlay(h, h.from, 0);
+  return io.cam.flyTo(io.target, {
+    duration: ZOOM_IN_MS,
+    ease: ZOOM_EASE,
+    onFrame: (u, v) => {
+      setOverlay(h, toPage(v, io.vp.getBoundingClientRect()), u);
+      io.root.style.opacity = String(arrivingOpacity(u));
+    }
+  }).then((ok) => {
+    io.root.style.opacity = "";
+    disposeHandoff(h);
+    return ok;
+  });
+}
+async function arriveZoomOut(h, find, size) {
+  let source = null;
+  let fit = null;
+  for (let i = 0; i < 25 && !fit; i++) {
+    source = find();
+    fit = miniFitOf(source);
+    if (!fit) await new Promise((r2) => window.setTimeout(r2, 40));
+  }
+  const r = source?.getBoundingClientRect();
+  if (!fit || !r || !r.width || r.bottom < 0 || r.top > size.h || r.right < 0 || r.left > size.w) {
+    h.overlay.style.transition = "opacity .26s ease-out";
+    h.overlay.style.opacity = "0";
+    return new Promise((res) => window.setTimeout(() => {
+      disposeHandoff(h);
+      res(true);
+    }, 280));
+  }
+  const dest = toPage(fit.view, r);
+  let v = h.from;
+  const cam = new Camera({ get: () => v, set: (n) => {
+    v = n;
+  }, size: () => size });
+  return cam.flyTo(dest, {
+    duration: ZOOM_OUT_MS,
+    ease: ZOOM_EASE,
+    onFrame: (u, cur) => setOverlay(h, cur, u)
+  }).then((ok) => {
+    disposeHandoff(h);
+    return ok;
+  });
 }
 function BoardMenu({ at, entries, bounds, onClose }) {
   const ref = useRef(null);
@@ -7858,9 +9677,9 @@ function installTips(root) {
   };
 }
 const HERMES_ACTIVE_S = 30;
-function useBoard(bid, onHermesEntries) {
+function useBoard(bid, onHermesEntries, onRemap, onReject) {
   const [confirmed, setConfirmed] = useState(null);
-  const [pending, setPending] = useState([]);
+  const [pending2, setPending] = useState([]);
   const [error, setError] = useState(null);
   const [presence, setPresence] = useState(null);
   const [savedAt, setSavedAt] = useState(null);
@@ -7871,6 +9690,10 @@ function useBoard(bid, onHermesEntries) {
   const pulling = useRef(null);
   const hermesCb = useRef(onHermesEntries);
   hermesCb.current = onHermesEntries;
+  const remapCb = useRef(onRemap);
+  remapCb.current = onRemap;
+  const rejectCb = useRef(onReject);
+  rejectCb.current = onReject;
   const alive = useRef(true);
   const setDoc = (d) => {
     confirmedRef.current = d;
@@ -7920,6 +9743,7 @@ function useBoard(bid, onHermesEntries) {
       const res = await boardsApi.ops(bid, batch.ops, batch.note);
       if (!alive.current) return;
       const ids = res.entry.ids ?? {};
+      if (Object.keys(ids).length) remapCb.current?.(ids);
       const cur = confirmedRef.current;
       let q = pendingRef.current.map((p) => p === batch || p.confirmedAt ? p : { ...p, ops: remapIds(p.ops, ids) });
       if (res.entry.noop) {
@@ -7936,7 +9760,9 @@ function useBoard(bid, onHermesEntries) {
       if (batch.undoable && !res.entry.noop) setStacks((s) => ({ undo: [...s.undo.slice(-99), res.entry.s], redo: [] }));
     } catch (e) {
       if (!alive.current) return;
-      setError(String(e?.message ?? e));
+      const msg = String(e?.message ?? e);
+      setError(msg);
+      rejectCb.current?.(msg);
       setQueue(pendingRef.current.filter((p) => p !== batch));
       void pull();
     } finally {
@@ -8009,9 +9835,9 @@ function useBoard(bid, onHermesEntries) {
   presenceRef.current = presence;
   const doc = useMemo(() => {
     if (!confirmed) return null;
-    const ops = pending.flatMap((p) => p.ops);
+    const ops = pending2.flatMap((p) => p.ops);
     return ops.length ? applyOps(confirmed, ops) : confirmed;
-  }, [confirmed, pending]);
+  }, [confirmed, pending2]);
   return {
     doc,
     error,
@@ -8028,97 +9854,214 @@ function useBoard(bid, onHermesEntries) {
     }
   };
 }
-function endRect(end, getRect) {
-  if (end == null) return null;
-  if (Array.isArray(end)) return { x: end[0], y: end[1], w: 0, h: 0 };
-  return getRect(end);
-}
-function Wires({ doc, getRect, version, hidden, fresh, selected, draft, onSelect }) {
-  const [wires, setWires] = useState([]);
-  useLayoutEffect(() => {
-    const out = [];
-    for (const [id, it] of Object.entries(doc.items)) {
-      if (it.k !== "line" || hidden.has(id)) continue;
-      if ([it.a, it.b].some((e) => typeof e === "string" && hidden.has(e))) continue;
-      const a = endRect(it.a, getRect), b = endRect(it.b, getRect);
-      if (!a || !b) continue;
-      const r = route(a, b);
-      const pts = r.points.slice();
-      const end = pts[pts.length - 1];
-      const hermes = it.by === "h";
-      const tip = [end[0] + { r: -2, l: 2, d: 0, u: 0 }[r.dir], end[1] + { r: 0, l: 0, d: -2, u: 2 }[r.dir]];
-      pts[pts.length - 1] = tip;
-      const mi = Math.floor(pts.length / 2);
-      const mid = pts.length === 2 ? [(pts[0][0] + tip[0]) / 2, (pts[0][1] + tip[1]) / 2] : [(pts[mi - 1][0] + pts[mi][0]) / 2, (pts[mi - 1][1] + pts[mi][1]) / 2];
-      out.push({
-        id,
-        hermes,
-        label: it.label,
-        mid,
-        fresh: fresh.has(id),
-        d: elbowPath(pts, 7),
-        dots: hermes ? samplePolyline(pts, 4).filter(([x, y]) => Math.hypot(x - tip[0], y - tip[1]) > 6) : null,
-        head: headPath(tip[0], tip[1], r.dir),
-        port: pts[0]
-      });
+const GRID = 24;
+const TIDY_GAP = 24;
+const INSERT_GAP = 48;
+const round = (n) => Math.round(n) + 0;
+const snapTo = (n, g) => Math.round(n / g) * g;
+function tidyPlan(blocks, opts = {}) {
+  if (!blocks.length) return [];
+  const gap = opts.gap ?? TIDY_GAP, grid = opts.grid ?? GRID;
+  const x0 = Math.min(...blocks.map((b) => b.rect.x)), y0 = Math.min(...blocks.map((b) => b.rect.y));
+  const x1 = Math.max(...blocks.map((b) => b.rect.x + b.rect.w));
+  const maxW = opts.maxW ?? Math.min(2400, Math.max(640, x1 - x0));
+  const sorted = blocks.slice().sort((p, q) => p.rect.y - q.rect.y || p.rect.x - q.rect.x || (p.ids[0] < q.ids[0] ? -1 : 1));
+  const rows = [];
+  for (const b of sorted) {
+    const row = rows[rows.length - 1];
+    if (row) {
+      const overlap = Math.min(row.bottom, b.rect.y + b.rect.h) - Math.max(row.top, b.rect.y);
+      if (overlap >= 0.4 * Math.min(b.rect.h, row.bottom - row.top)) {
+        row.items.push(b);
+        row.top = Math.min(row.top, b.rect.y);
+        row.bottom = Math.max(row.bottom, b.rect.y + b.rect.h);
+        continue;
+      }
     }
-    setWires(out);
-  }, [doc, version, hidden, fresh, getRect]);
-  return /* @__PURE__ */ jsxs("svg", { className: "hb-wires", width: "1", height: "1", "aria-hidden": "true", children: [
-    wires.map((w) => {
-      const ink2 = w.hermes ? "var(--accent)" : "color-mix(in srgb, var(--ink) 55%, transparent)";
-      const sel = selected.has(w.id);
-      return /* @__PURE__ */ jsxs("g", { className: w.fresh ? "fresh" : void 0, children: [
+    rows.push({ top: b.rect.y, bottom: b.rect.y + b.rect.h, items: [b] });
+  }
+  const lines = [];
+  for (const row of rows) {
+    const items = row.items.slice().sort((p, q) => p.rect.x - q.rect.x || (p.ids[0] < q.ids[0] ? -1 : 1));
+    let cur = [], w = 0;
+    for (const b of items) {
+      if (cur.length && w + gap + b.rect.w > maxW) {
+        lines.push(cur);
+        cur = [];
+        w = 0;
+      }
+      w += (cur.length ? gap : 0) + b.rect.w;
+      cur.push(b);
+    }
+    if (cur.length) lines.push(cur);
+  }
+  const out = [];
+  let y = snapTo(y0, grid);
+  const left = snapTo(x0, grid);
+  for (const line2 of lines) {
+    let x = left;
+    for (const b of line2) {
+      out.push({ ids: b.ids, x: round(x), y: round(y) });
+      x += b.rect.w + gap;
+    }
+    y += Math.max(...line2.map((b) => b.rect.h)) + gap;
+  }
+  return out;
+}
+const xs = (r) => [r.x, r.x + r.w / 2, r.x + r.w];
+const ys = (r) => [r.y, r.y + r.h / 2, r.y + r.h];
+function bestAlign(mov, others, thr) {
+  let best = null;
+  for (const o of others) for (const oc of o) for (const mc of mov) {
+    const d = oc - mc;
+    if (Math.abs(d) <= thr && (best === null || Math.abs(d) < Math.abs(best))) best = d;
+  }
+  return best;
+}
+function snapMove(mov, others, o) {
+  const grid = o.grid ?? GRID;
+  let dx = bestAlign(xs(mov), others.map(xs), o.thr);
+  let dy = bestAlign(ys(mov), others.map(ys), o.thr);
+  if (dx === null) dx = o.toGrid === false ? 0 : snapTo(mov.x, grid) - mov.x;
+  if (dy === null) dy = o.toGrid === false ? 0 : snapTo(mov.y, grid) - mov.y;
+  const m = { x: mov.x + dx, y: mov.y + dy, w: mov.w, h: mov.h };
+  const guides = [];
+  const eq = (a, b) => Math.abs(a - b) < 0.5;
+  for (const r of others) {
+    const vx = xs(r).find((c) => xs(m).some((mc) => eq(c, mc)));
+    if (vx !== void 0) guides.push({ axis: "x", pos: vx, from: Math.min(m.y, r.y), to: Math.max(m.y + m.h, r.y + r.h) });
+    const vy = ys(r).find((c) => ys(m).some((mc) => eq(c, mc)));
+    if (vy !== void 0) guides.push({ axis: "y", pos: vy, from: Math.min(m.x, r.x), to: Math.max(m.x + m.w, r.x + r.w) });
+  }
+  return { dx, dy, guides };
+}
+function insertPlan(a, b, size, o = {}) {
+  const gap = o.gap ?? INSERT_GAP;
+  const hgap = Math.max(b.x - (a.x + a.w), a.x - (b.x + b.w));
+  const vgap = Math.max(b.y - (a.y + a.h), a.y - (b.y + b.h));
+  const horizontal = hgap > 0 && hgap >= vgap;
+  let shift = { dx: 0, dy: 0 };
+  let x, y;
+  if (horizontal) {
+    const fwd = b.x >= a.x + a.w;
+    const space = fwd ? b.x - (a.x + a.w) : a.x - (b.x + b.w);
+    const more = o.shiftB === false ? 0 : Math.max(0, size.w + 2 * gap - space);
+    shift = { dx: round((fwd ? 1 : -1) * more), dy: 0 };
+    const edgeA = fwd ? a.x + a.w : a.x;
+    const edgeB = fwd ? b.x + shift.dx : b.x + b.w + shift.dx;
+    x = (edgeA + edgeB) / 2 - size.w / 2;
+    y = (a.y + a.h / 2 + b.y + b.h / 2) / 2 - size.h / 2;
+  } else {
+    const fwd = b.y + b.h / 2 >= a.y + a.h / 2;
+    const space = fwd ? b.y - (a.y + a.h) : a.y - (b.y + b.h);
+    const more = o.shiftB === false ? 0 : Math.max(0, size.h + 2 * gap - space);
+    shift = { dx: 0, dy: round((fwd ? 1 : -1) * more) };
+    const edgeA = fwd ? a.y + a.h : a.y;
+    const edgeB = fwd ? b.y + shift.dy : b.y + b.h + shift.dy;
+    y = (edgeA + edgeB) / 2 - size.h / 2;
+    x = (a.x + a.w / 2 + b.x + b.w / 2) / 2 - size.w / 2;
+  }
+  return { x: round(x), y: round(y), shift };
+}
+function downstream(edges, start, stop) {
+  const next = /* @__PURE__ */ new Map();
+  for (const [a, b] of edges) next.set(a, [...next.get(a) ?? [], b]);
+  const seen = /* @__PURE__ */ new Set([start]);
+  const queue = [start];
+  while (queue.length) {
+    const cur = queue.shift();
+    for (const n of next.get(cur) ?? []) {
+      if (n === stop) return [start];
+      if (!seen.has(n)) {
+        seen.add(n);
+        queue.push(n);
+      }
+    }
+  }
+  return [...seen].sort();
+}
+function pickerEntries(t2) {
+  return {
+    main: [
+      { id: "rect", icon: "shapeRect", label: t2("board.shape.rect"), item: { k: "shape", sh: "rect" } },
+      { id: "diamond", icon: "shapeDiamond", label: t2("board.shape.diamond"), item: { k: "shape", sh: "diamond" } },
+      { id: "pill", icon: "shapePill", label: t2("board.shape.pill"), item: { k: "shape", sh: "pill" } },
+      { id: "circle", icon: "shapeCircle", label: t2("board.shape.circle"), item: { k: "shape", sh: "circle" } },
+      { id: "text", icon: "text", label: t2("board.shape.text"), item: { k: "text", size: "p" } },
+      { id: "note", icon: "note", label: t2("board.tool.note"), item: { k: "card", w: 256 } },
+      { id: "todo", icon: "todo", label: t2("board.tool.todo"), item: { k: "todo", title: t2("board.todo.title"), items: [] } }
+    ],
+    more: [
+      { id: "col", icon: "col", label: t2("board.tool.col"), item: { k: "col", title: t2("board.col.title") } },
+      { id: "link", icon: "link", label: t2("board.tool.link"), ask: "link" },
+      { id: "image", icon: "image", label: t2("board.tool.image"), ask: "image" },
+      { id: "board", icon: "board", label: t2("board.tool.board"), ask: "board" },
+      { id: "embed", icon: "embed", label: t2("board.tool.embed"), ask: "embed" }
+    ]
+  };
+}
+function EdgePicker({ at, bounds, t: t2, onPick, onClose }) {
+  const ref = useRef(null);
+  const [more, setMore] = useState(false);
+  const [pos, setPos] = useState({ x: at.x, y: at.y });
+  const { main, more: rest } = pickerEntries(t2);
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const w = el.offsetWidth, h = el.offsetHeight;
+    setPos({
+      x: Math.max(8, Math.min(bounds.w - w - 8, at.x - w / 2)),
+      y: Math.max(52, Math.min(bounds.h - h - 48, at.y + 18))
+    });
+  }, [at.x, at.y, bounds.w, bounds.h, more]);
+  useEffect(() => {
+    const down = (e) => {
+      if (!ref.current?.contains(e.target)) onClose();
+    };
+    const key = (e) => {
+      if (e.key === "Escape") {
+        e.stopPropagation();
+        onClose();
+      }
+    };
+    window.addEventListener("pointerdown", down, true);
+    window.addEventListener("keydown", key, true);
+    return () => {
+      window.removeEventListener("pointerdown", down, true);
+      window.removeEventListener("keydown", key, true);
+    };
+  }, [onClose]);
+  const btn = (s) => /* @__PURE__ */ jsx("button", { className: "ib", "data-tip": s.label, "aria-label": s.label, onClick: () => onPick(s), children: /* @__PURE__ */ jsx(Icon, { name: s.icon, size: 15 }) }, s.id);
+  return /* @__PURE__ */ jsxs(
+    "div",
+    {
+      ref,
+      className: "hb-epick",
+      role: "toolbar",
+      "aria-label": t2("board.insert.title"),
+      style: { left: pos.x, top: pos.y },
+      onPointerDown: (e) => e.stopPropagation(),
+      onContextMenu: (e) => e.preventDefault(),
+      children: [
+        /* @__PURE__ */ jsx("span", { className: "kind", children: t2("board.insert.title") }),
+        /* @__PURE__ */ jsx("i", { className: "sep" }),
+        main.map(btn),
+        /* @__PURE__ */ jsx("i", { className: "sep" }),
         /* @__PURE__ */ jsx(
-          "path",
+          "button",
           {
-            className: "hit",
-            d: w.d,
-            stroke: "transparent",
-            strokeWidth: 12,
-            fill: "none",
-            "data-line": w.id,
-            style: { pointerEvents: "stroke" },
-            onPointerDown: (e) => {
-              e.stopPropagation();
-              onSelect(w.id, e.shiftKey);
-            }
+            className: `ib${more ? " on" : ""}`,
+            "data-tip": t2("board.insert.more"),
+            "aria-label": t2("board.insert.more"),
+            "aria-expanded": more,
+            onClick: () => setMore((v) => !v),
+            children: /* @__PURE__ */ jsx(Icon, { name: "more", size: 15 })
           }
         ),
-        sel && /* @__PURE__ */ jsx("path", { className: "line-sel", d: w.d }),
-        w.dots ? w.dots.map(([x, y], i) => /* @__PURE__ */ jsx(
-          "rect",
-          {
-            className: "d",
-            x: x - 1.15,
-            y: y - 1.15,
-            width: 2.3,
-            height: 2.3,
-            fill: ink2,
-            style: w.fresh ? { animationDelay: `${i * 14}ms` } : void 0
-          },
-          i
-        )) : /* @__PURE__ */ jsx("path", { d: w.d, fill: "none", stroke: ink2, strokeWidth: 1.3 }),
-        /* @__PURE__ */ jsx("rect", { x: w.port[0] - 2.5, y: w.port[1] - 2.5, width: 5, height: 5, fill: ink2 }),
-        /* @__PURE__ */ jsx(
-          "path",
-          {
-            d: w.head,
-            fill: w.hermes ? "var(--accent)" : "color-mix(in srgb, var(--ink) 72%, transparent)",
-            style: w.fresh && w.dots ? { animation: "hb-dot-in .2s both", animationDelay: `${w.dots.length * 14}ms` } : void 0
-          }
-        ),
-        w.label && /* @__PURE__ */ jsxs("g", { children: [
-          /* @__PURE__ */ jsx("rect", { className: "lbl-bg", x: w.mid[0] - w.label.length * 3.3 - 6, y: w.mid[1] - 8, width: w.label.length * 6.6 + 12, height: 16 }),
-          /* @__PURE__ */ jsx("text", { className: "lbl", x: w.mid[0], y: w.mid[1] + 3.5, textAnchor: "middle", children: w.label })
-        ] })
-      ] }, w.id);
-    }),
-    draft && (() => {
-      const r = route(draft.from, { x: draft.to[0], y: draft.to[1], w: 0, h: 0 });
-      return /* @__PURE__ */ jsx("path", { className: "draft", d: elbowPath(r.points, 7) });
-    })()
-  ] });
+        more && /* @__PURE__ */ jsx("div", { className: "row2", children: rest.map(btn) })
+      ]
+    }
+  );
 }
 const TOOLS = [
   [{ tool: "select", key: "V", label: "board.tool.select", icon: "select" }, { tool: "pan", key: "H", label: "board.tool.pan", icon: "pan" }],
@@ -8169,7 +10112,10 @@ const writeLocal = (k, v) => {
 };
 const KEY_TOOL = Object.fromEntries(TOOLS.flat().map((x) => [x.key.toLowerCase(), x.tool]));
 const PLACE = ["note", "todo", "col", "link", "board", "embed", "image"];
-const EDITABLE = /* @__PURE__ */ new Set(["card", "todo", "col", "frame", "box", "text", "image"]);
+const SNAP_KEY = "hb.snap";
+const SNAP_PX = 6;
+const TIDY_MS = 260;
+const ease = (t2) => 1 - Math.pow(1 - t2, 3);
 const INTO_COLUMN = /* @__PURE__ */ new Set(["card", "todo", "link", "image", "video", "board"]);
 const INK_KEY = "hb.ink";
 const ERASER_R = 9;
@@ -8209,9 +10155,37 @@ function BoardView({ bid, onOpenBoard, onHome }) {
   const lastPoint = useRef(null);
   const fitted = useRef(false);
   const accentRef = useRef("");
+  const cam = useRef(null);
+  const mapViewRef = useRef(null);
+  const mapHermesRef = useRef(null);
+  const mapGeo = useRef(null);
+  const chromeRaf = useRef(0);
+  const gestureT = useRef(0);
+  const gridKey = useRef("");
+  const saveT = useRef(0);
+  const autoFit = useRef(false);
+  const autoFitUntil = useRef(0);
+  const handoffRef = useRef(null);
+  const [mapOff, setMapOff] = useState(() => readLocal("hb.map.off") === "1");
   const [tool, setTool] = useState("select");
   const [selected, setSelected] = useState(/* @__PURE__ */ new Set());
-  const [editing, setEditing] = useState(null);
+  const [editing, setEditingRaw] = useState(null);
+  const [editHint, setEditHint] = useState(null);
+  const [editLabel, setEditLabel] = useState(null);
+  const [edgePick, setEdgePick] = useState(null);
+  const [snapOn, setSnapOn] = useState(() => readLocal(SNAP_KEY) !== "0");
+  const snapRef = useRef(snapOn);
+  snapRef.current = snapOn;
+  const downAt = useRef(null);
+  const lastTap = useRef(null);
+  const wiresRef = useRef(null);
+  const guidesRef = useRef(null);
+  const liveRects = useRef(/* @__PURE__ */ new Map());
+  const flip = useRef(null);
+  const flipRaf = useRef(0);
+  const pendingEdge = useRef(null);
+  const selectedRef = useRef(selected);
+  selectedRef.current = selected;
   const [playing, setPlaying] = useState(null);
   const [delta, setDelta] = useState(null);
   const [resize, setResize] = useState(null);
@@ -8243,6 +10217,8 @@ function BoardView({ bid, onOpenBoard, onHome }) {
   const [ask, setAsk] = useState(null);
   const [askValue, setAskValue] = useState("");
   const [toast, setToast] = useState(null);
+  const flashRef = useRef(() => {
+  });
   const [chatOpen, setChatOpen] = useState(() => readLocal(CHAT_OPEN_KEY) === "1");
   const [chatW, setChatW] = useState(() => Math.min(CHAT_MAX_W, Math.max(CHAT_MIN_W, Number(readLocal(CHAT_W_KEY)) || 380)));
   const [chatSentAt, setChatSentAt] = useState(0);
@@ -8257,10 +10233,20 @@ function BoardView({ bid, onOpenBoard, onHome }) {
   const [liveActionsDown, setLiveActionsDown] = useState(false);
   const [confirmReq, setConfirmReq] = useState(null);
   const Frame = hostSandboxedFrame();
+  const setEditing = useCallback((id) => {
+    setEditingRaw(id);
+    if (!id) setEditHint(null);
+  }, []);
+  const startEdit = useCallback((id, hint2) => {
+    setEditHint(hint2 ? { id, ...hint2 } : null);
+    setEditingRaw(id);
+    setSelected(/* @__PURE__ */ new Set([id]));
+  }, []);
   const flash = useCallback((msg) => {
     setToast(msg);
     window.setTimeout(() => setToast((cur) => cur === msg ? null : cur), 3200);
   }, []);
+  flashRef.current = flash;
   const loadActions = useCallback(() => {
     boardsApi.liveActions().then((r) => {
       setLiveActions(Object.fromEntries(r.actions.map((a) => [a.id, a])));
@@ -8355,10 +10341,30 @@ function BoardView({ bid, onOpenBoard, onHome }) {
     if (hide2.size) setHidden((h) => /* @__PURE__ */ new Set([...h, ...hide2]));
     cursorRef.current?.enqueue(steps, t2("board.cursor.done", { n: changes }));
   }, [t2]);
-  const sync = useBoard(bid, onHermes);
+  const keyAlias = useRef(/* @__PURE__ */ new Map());
+  const keyOf = useCallback((id) => keyAlias.current.get(id) ?? id, []);
+  const onRemap = useCallback((ids) => {
+    for (const [ref, id] of Object.entries(ids)) keyAlias.current.set(id, keyAlias.current.get(ref) ?? ref);
+    const swap = (id) => ids[id] ?? id;
+    setSelected((s) => Object.keys(ids).some((r) => s.has(r)) ? new Set([...s].map(swap)) : s);
+    setEditingRaw((e) => e ? swap(e) : e);
+    setEditHint((h) => h && ids[h.id] ? { ...h, id: ids[h.id] } : h);
+    setEditLabel((l) => l ? swap(l) : l);
+  }, []);
+  const onReject = useCallback((msg) => flashRef.current(t2("board.toast.rejected", { error: msg })), [t2]);
+  const sync = useBoard(bid, onHermes, onRemap, onReject);
   const doc = sync.doc;
   const docRef = useRef(doc);
   docRef.current = doc;
+  const openChild = useCallback((child) => {
+    const card = vpRef.current?.querySelector(`[data-mini="${child}"]`);
+    prepareZoomIn(child, rootRef.current, card);
+    onOpenBoard(child);
+  }, [onOpenBoard]);
+  const closeToParent = useCallback((parent) => {
+    prepareZoomOut(parent, bid, rootRef.current, vpRef.current, view.current);
+    onOpenBoard(parent);
+  }, [bid, onOpenBoard]);
   const getRect = useCallback((id) => {
     const el = els.current.get(id);
     const world = worldRef.current;
@@ -8370,6 +10376,7 @@ function BoardView({ bid, onOpenBoard, onHome }) {
     const it = docRef.current?.items[id];
     return it ? approxRect(it) : null;
   }, []);
+  const getRectLive = useCallback((id) => liveRects.current.get(id) ?? getRect(id), [getRect]);
   function locateFor(id, fallback) {
     const known = fallback?.items[id];
     const r = getRect(id) ?? (known ? approxRect(known) : null);
@@ -8390,26 +10397,36 @@ function BoardView({ bid, onOpenBoard, onHome }) {
     return { x: (cx2 - rect.left - v.x) / v.z, y: (cy2 - rect.top - v.y) / v.z };
   }, []);
   const drawMap = useCallback(() => {
-    const canvas = mapRef.current, d = docRef.current, vp = vpRef.current;
-    if (!canvas || !d || !vp) return;
+    const d = docRef.current, vp = vpRef.current, el = mapViewRef.current, canvas = mapRef.current;
+    if (!d || !vp || !el || !canvas) return;
+    const g = mapGeo.current;
+    if (!g || g.W !== canvas.clientWidth || g.H !== canvas.clientHeight) {
+      drawMapLayerRef.current();
+      return;
+    }
     const v = view.current;
-    const visible = { x: -v.x / v.z, y: -v.y / v.z, w: vp.clientWidth / v.z, h: vp.clientHeight / v.z };
-    if (!accentRef.current) accentRef.current = accentColor(rootRef.current);
-    drawPreview(canvas, d, { accent: accentRef.current, cell: 4, hermesAt: cursorRef.current?.position() ?? null });
-    const ctx2 = canvas.getContext("2d");
-    const rects = Object.values(d.items).map(approxRect).filter(Boolean);
-    const b = boundsOf(rects) ?? visible;
-    const W = canvas.clientWidth, H = canvas.clientHeight, pad2 = 30;
-    const s = Math.min(W / (b.w + pad2 * 2), H / (b.h + pad2 * 2));
-    const ox = (W - b.w * s) / 2 - b.x * s, oy = (H - b.h * s) / 2 - b.y * s;
-    if (ctx2) {
-      ctx2.globalAlpha = 0.75;
-      ctx2.strokeStyle = accentRef.current;
-      ctx2.lineWidth = 1;
-      ctx2.strokeRect(Math.round(ox + visible.x * s) + 0.5, Math.round(oy + visible.y * s) + 0.5, visible.w * s, visible.h * s);
-      ctx2.globalAlpha = 1;
+    el.style.transform = `translate(${Math.round(g.ox + -v.x / v.z * g.s)}px, ${Math.round(g.oy + -v.y / v.z * g.s)}px)`;
+    el.style.width = `${Math.round(vp.clientWidth / v.z * g.s)}px`;
+    el.style.height = `${Math.round(vp.clientHeight / v.z * g.s)}px`;
+    const hm = mapHermesRef.current, pos = cursorRef.current?.position();
+    if (hm) {
+      if (pos) {
+        hm.style.display = "block";
+        hm.style.transform = `translate(${g.ox + pos.x * g.s}px, ${g.oy + pos.y * g.s}px)`;
+      } else hm.style.display = "none";
     }
   }, []);
+  const drawMapLayer = useCallback(() => {
+    const canvas = mapRef.current, d = docRef.current;
+    if (!canvas || !d) return;
+    if (!accentRef.current) accentRef.current = accentColor(rootRef.current);
+    drawPreview(canvas, d, { accent: accentRef.current, cell: 4 });
+    const W = canvas.clientWidth, H = canvas.clientHeight;
+    mapGeo.current = { ...previewGeometry(d, W, H), W, H };
+    drawMap();
+  }, [drawMap]);
+  const drawMapLayerRef = useRef(drawMapLayer);
+  drawMapLayerRef.current = drawMapLayer;
   const placeCtx = useCallback(() => {
     const el = ctxEl.current, vp = vpRef.current, r = selRef.current;
     if (!el || !vp) return;
@@ -8427,42 +10444,99 @@ function BoardView({ bid, onOpenBoard, onHome }) {
     el.style.transform = `translate(${p.x}px, ${p.y}px)`;
     el.dataset.below = p.below ? "1" : "0";
   }, []);
-  const applyView = useCallback(() => {
-    const v = view.current, world = worldRef.current, grid = gridRef.current;
-    if (!world || !grid) return;
-    world.style.transform = `translate(${v.x}px, ${v.y}px) scale(${v.z})`;
-    world.style.setProperty("--iz", String(1 / v.z));
-    const g = 24 * v.z, G = g * 5, c = 4.5;
-    if (!accentRef.current) accentRef.current = accentColor(rootRef.current);
-    const cross = withAlpha(accentRef.current, 0.16);
-    const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='${G}' height='${G}'><path d='M${-c} 0H${c}M0 ${-c}V${c}M${G - c} 0H${G + c}M${G} ${-c}V${c}M${-c} ${G}H${c}M0 ${G - c}V${G + c}M${G - c} ${G}H${G + c}M${G} ${G - c}V${G + c}' stroke='${cross}' stroke-width='1'/></svg>`;
-    grid.style.backgroundImage = `url("data:image/svg+xml,${encodeURIComponent(svg)}"), radial-gradient(circle, color-mix(in srgb, var(--accent) 8%, transparent) .9px, transparent 1.2px)`;
-    grid.style.backgroundSize = `${G}px ${G}px, ${g}px ${g}px`;
-    grid.style.backgroundPosition = `${v.x}px ${v.y}px, ${v.x}px ${v.y}px`;
-    if (pctRef.current) pctRef.current.textContent = `${Math.round(v.z * 100)}%`;
+  const applyChrome = useCallback(() => {
+    chromeRaf.current = 0;
+    const v = view.current, grid = gridRef.current;
+    if (!grid) return;
+    const g = 24 * v.z, G = g * 5;
+    const key = `${Math.round(v.z * 1e3)}`;
+    if (gridKey.current !== key) {
+      gridKey.current = key;
+      if (!accentRef.current) accentRef.current = accentColor(rootRef.current);
+      const cross = withAlpha(accentRef.current, 0.16), c = 4.5;
+      const arm = (dir) => `linear-gradient(${dir}, ${cross} 0 ${c}px, transparent ${c}px calc(100% - ${c}px), ${cross} calc(100% - ${c}px) 100%)`;
+      grid.style.backgroundImage = `${arm("90deg")}, ${arm("180deg")}, radial-gradient(circle, color-mix(in srgb, var(--accent) 8%, transparent) .9px, transparent 1.2px)`;
+      grid.style.backgroundSize = `${G}px 1px, 1px ${G}px, ${g}px ${g}px`;
+      grid.style.backgroundRepeat = "repeat-x, repeat-y, repeat";
+      grid.style.setProperty("--gp", `${G}px`);
+    }
+    grid.style.transform = `translate(${(v.x % G + G) % G}px, ${(v.y % G + G) % G}px)`;
+    if (pctRef.current) {
+      const txt = `${Math.round(v.z * 100)}%`;
+      if (pctRef.current.textContent !== txt) pctRef.current.textContent = txt;
+    }
     drawMap();
     placeCtx();
   }, [drawMap, placeCtx]);
-  const saveView = useCallback(() => {
+  const applyView = useCallback(() => {
+    const v = view.current, world = worldRef.current;
+    if (!world) return;
+    world.style.transform = `translate(${v.x}px, ${v.y}px) scale(${v.z})`;
+    applyLod(world, v.z);
+    const vp = vpRef.current;
+    if (vp) {
+      vp.classList.add("gesturing");
+      window.clearTimeout(gestureT.current);
+      gestureT.current = window.setTimeout(() => vp.classList.remove("gesturing"), 180);
+    }
+    if (!chromeRaf.current) chromeRaf.current = requestAnimationFrame(applyChrome);
+  }, [applyChrome]);
+  useEffect(() => () => {
+    cancelAnimationFrame(chromeRaf.current);
+    window.clearTimeout(gestureT.current);
+  }, []);
+  const saveNow = useCallback(() => {
+    window.clearTimeout(saveT.current);
     try {
       sessionStorage.setItem(`hb.view.${bid}`, JSON.stringify(view.current));
     } catch {
     }
   }, [bid]);
+  const saveView = useCallback(() => {
+    window.clearTimeout(saveT.current);
+    saveT.current = window.setTimeout(saveNow, 220);
+  }, [saveNow]);
+  useEffect(() => () => {
+    if (view.current) saveNow();
+  }, [saveNow]);
+  const applyViewRef = useRef(applyView);
+  applyViewRef.current = applyView;
+  const saveViewRef = useRef(saveView);
+  saveViewRef.current = saveView;
+  if (!cam.current) {
+    cam.current = new Camera({
+      get: () => view.current,
+      set: (v) => {
+        view.current = v;
+        applyViewRef.current();
+      },
+      size: () => ({ w: vpRef.current?.clientWidth ?? 1, h: vpRef.current?.clientHeight ?? 1 }),
+      reduced,
+      onMoving: (m) => {
+        if (!m) saveViewRef.current();
+      }
+    });
+  }
+  const stopCamera = useCallback(() => {
+    autoFit.current = false;
+    cam.current?.cancel();
+  }, []);
   const zoomAt = useCallback((f, sx, sy) => {
-    view.current = zoomView(view.current, f, sx, sy);
+    stopCamera();
+    view.current = zoomView$1(view.current, f, sx, sy);
     applyView();
     saveView();
-  }, [applyView, saveView]);
+  }, [applyView, saveView, stopCamera]);
   const zoomAnim = useRef(null);
   const zoomSmooth = useCallback((f, sx, sy) => {
+    stopCamera();
     if (reduced()) {
       zoomAt(f, sx, sy);
       return;
     }
     const a = zoomAnim.current;
     const base = a ? a.z : view.current.z;
-    const target = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, base * f));
+    const target = Math.min(ZOOM_MAX$1, Math.max(ZOOM_MIN$1, base * f));
     if (a) {
       cancelAnimationFrame(a.raf);
     }
@@ -8472,7 +10546,7 @@ function BoardView({ bid, onOpenBoard, onHome }) {
       const v = view.current;
       const next = v.z + (anim.z - v.z) * 0.38;
       const done = Math.abs(anim.z - next) < anim.z * 2e-3;
-      view.current = zoomView(v, (done ? anim.z : next) / v.z, anim.sx, anim.sy);
+      view.current = zoomView$1(v, (done ? anim.z : next) / v.z, anim.sx, anim.sy);
       applyView();
       if (done) {
         zoomAnim.current = null;
@@ -8482,7 +10556,7 @@ function BoardView({ bid, onOpenBoard, onHome }) {
       anim.raf = requestAnimationFrame(step);
     };
     anim.raf = requestAnimationFrame(step);
-  }, [applyView, saveView, zoomAt]);
+  }, [applyView, saveView, stopCamera, zoomAt]);
   useEffect(() => () => {
     if (zoomAnim.current) cancelAnimationFrame(zoomAnim.current.raf);
   }, []);
@@ -8492,13 +10566,35 @@ function BoardView({ bid, onOpenBoard, onHome }) {
     const rects = Object.entries(d.items).filter(([, it]) => !it.in && it.k !== "line").map(([id]) => getRect(id)).filter(Boolean);
     return boundsOf(rects);
   }, [getRect]);
-  const fit = useCallback(() => {
+  const fitTarget = useCallback(() => {
     const vp = vpRef.current, b = contentBounds();
-    if (!vp) return;
-    view.current = b ? fitView(b, { w: vp.clientWidth, h: vp.clientHeight }, 60, 1.1) : { x: vp.clientWidth / 2 - 200, y: vp.clientHeight / 2 - 120, z: 0.9 };
+    if (!vp) return null;
+    return b ? fitView(b, { w: vp.clientWidth, h: vp.clientHeight }, 60, 1.1) : { x: vp.clientWidth / 2 - 200, y: vp.clientHeight / 2 - 120, z: 0.9 };
+  }, [contentBounds]);
+  const fit = useCallback((animate = true, duration) => {
+    const target = fitTarget();
+    if (!target) return;
+    if (animate) {
+      autoFit.current = false;
+      void cam.current.flyTo(target, { duration, ease: "inOut" });
+      return;
+    }
+    cam.current?.cancel();
+    view.current = target;
     applyView();
     saveView();
-  }, [applyView, contentBounds, saveView]);
+  }, [applyView, fitTarget, saveView]);
+  const zoomToSelection = useCallback(() => {
+    const vp = vpRef.current;
+    const rects = [...selectedRef.current].map((id) => getRect(id)).filter(Boolean);
+    const b = boundsOf(rects);
+    if (!vp || !b) {
+      fit();
+      return;
+    }
+    autoFit.current = false;
+    void cam.current.flyTo(viewForRect(b, { w: vp.clientWidth, h: vp.clientHeight }, { pad: 90, maxZ: 1.5 }), { ease: "inOut" });
+  }, [fit, getRect]);
   useLayoutEffect(() => {
     if (!doc || fitted.current) return;
     fitted.current = true;
@@ -8511,7 +10607,27 @@ function BoardView({ bid, onOpenBoard, onHome }) {
     if (saved && Number.isFinite(saved.z)) {
       view.current = saved;
       applyView();
-    } else fit();
+    } else {
+      fit(false);
+      autoFit.current = true;
+      autoFitUntil.current = performance.now() + 3500;
+    }
+    const h = takeHandoff(bid);
+    const vp = vpRef.current, root = rootRef.current;
+    if (!h || !vp || !root) {
+      if (h) h.overlay.remove();
+      return;
+    }
+    handoffRef.current = h;
+    if (h.kind === "in") {
+      autoFit.current = false;
+      void arriveZoomIn(h, { cam: cam.current, vp, root, target: view.current }, (start) => {
+        view.current = start;
+        applyView();
+      });
+    } else {
+      void arriveZoomOut(h, () => h.child ? vp.querySelector(`[data-mini="${h.child}"]`) : null, { w: window.innerWidth, h: window.innerHeight });
+    }
   }, [doc, bid, applyView, fit]);
   useEffect(() => {
     fitted.current = false;
@@ -8522,6 +10638,20 @@ function BoardView({ bid, onOpenBoard, onHome }) {
   useEffect(() => {
     applyView();
   }, [applyView, doc, layoutV]);
+  useEffect(() => {
+    const h = window.setTimeout(() => drawMapLayerRef.current(), 90);
+    return () => window.clearTimeout(h);
+  }, [doc]);
+  useEffect(() => {
+    if (!autoFit.current || performance.now() > autoFitUntil.current) return;
+    const h = window.setTimeout(() => {
+      if (autoFit.current && !cam.current?.moving) {
+        fit(true, 280);
+        autoFit.current = true;
+      }
+    }, 260);
+    return () => window.clearTimeout(h);
+  }, [layoutV, fit]);
   useEffect(() => {
     const RO = globalThis.ResizeObserver;
     if (!RO || !worldRef.current) return;
@@ -8563,7 +10693,14 @@ function BoardView({ bid, onOpenBoard, onHome }) {
     const v = view.current;
     return { x: (vp.clientWidth / 2 - v.x) / v.z, y: (vp.clientHeight / 2 - v.y) / v.z };
   }, []);
+  const insertRef = useRef(() => null);
   const add = useCallback((item, at, edit = false) => {
+    if (pendingEdge.current) {
+      const edge = pendingEdge.current;
+      pendingEdge.current = null;
+      const made = insertRef.current(edge, item);
+      if (made) return made;
+    }
     const ref = newRef();
     const p = at ?? lastPoint.current ?? center();
     const placed = item.in ? item : { ...item, x: Math.round(p.x), y: Math.round(p.y) };
@@ -8572,6 +10709,212 @@ function BoardView({ bid, onOpenBoard, onHome }) {
     if (edit) setEditing(ref);
     return ref;
   }, [center, commit]);
+  const editHintAt = (target, x, y, it) => {
+    const fieldEl = target.closest("[data-field]");
+    if (!fieldEl) return void 0;
+    const field = fieldEl.dataset.field;
+    const dd = document;
+    let node2 = null, off = 0;
+    if (dd.caretPositionFromPoint) {
+      const c = dd.caretPositionFromPoint(x, y);
+      if (c) {
+        node2 = c.offsetNode;
+        off = c.offset;
+      }
+    } else if (dd.caretRangeFromPoint) {
+      const r = dd.caretRangeFromPoint(x, y);
+      if (r) {
+        node2 = r.startContainer;
+        off = r.startOffset;
+      }
+    }
+    if (!node2 || !fieldEl.contains(node2)) return { field };
+    const range = document.createRange();
+    range.selectNodeContents(fieldEl);
+    range.setEnd(node2, off);
+    const source = field === "title" ? it.title : field === "text" ? it.text : field === "cap" ? it.cap : field.startsWith("row:") ? it.items?.[Number(field.slice(4))]?.t : "";
+    return { field, caret: mapCaret(fieldEl.textContent ?? "", range.toString().length, source ?? "") };
+  };
+  const flipFrom = useCallback((from, ids) => {
+    flip.current = { from, ids };
+  }, []);
+  useLayoutEffect(() => {
+    const f = flip.current;
+    if (!f) return;
+    flip.current = null;
+    cancelAnimationFrame(flipRaf.current);
+    if (reduced()) return;
+    const d = docRef.current;
+    const moving = [];
+    for (const id of f.ids) {
+      const to = getRect(id), from = f.from.get(id);
+      if (!to || !from || !els.current.get(id)) continue;
+      const dx = from.x - to.x, dy = from.y - to.y;
+      if (Math.abs(dx) + Math.abs(dy) < 0.5) continue;
+      const kids = [];
+      for (const k of d?.items[id]?.k === "col" ? d.items[id].kids ?? [] : []) {
+        const kr = getRect(k);
+        if (kr) kids.push([k, kr, dx, dy]);
+      }
+      moving.push({ id, dx, dy, to, kids });
+    }
+    if (!moving.length) return;
+    const affected = /* @__PURE__ */ new Set();
+    for (const m of moving) {
+      affected.add(m.id);
+      m.kids.forEach((k) => affected.add(k[0]));
+    }
+    const t0 = performance.now();
+    const frame = (now) => {
+      const k = Math.min(1, (now - t0) / TIDY_MS);
+      const left = 1 - ease(k);
+      for (const m of moving) {
+        const el = els.current.get(m.id);
+        if (el) el.style.transform = k >= 1 ? "" : `translate(${m.dx * left}px, ${m.dy * left}px)`;
+        if (k >= 1) liveRects.current.delete(m.id);
+        else liveRects.current.set(m.id, { x: m.to.x + m.dx * left, y: m.to.y + m.dy * left, w: m.to.w, h: m.to.h });
+        for (const [kid, kr] of m.kids) {
+          if (k >= 1) liveRects.current.delete(kid);
+          else liveRects.current.set(kid, { x: kr.x + m.dx * left, y: kr.y + m.dy * left, w: kr.w, h: kr.h });
+        }
+      }
+      wiresRef.current?.refresh(affected);
+      if (k < 1) flipRaf.current = requestAnimationFrame(frame);
+    };
+    frame(t0);
+    flipRaf.current = requestAnimationFrame(frame);
+  }, [doc, getRect]);
+  useEffect(() => () => cancelAnimationFrame(flipRaf.current), []);
+  const tidy = useCallback(() => {
+    const d = docRef.current;
+    if (!d) return;
+    const sel = [...selected].filter((id) => d.items[id]);
+    const explicit = sel.length > 1;
+    const topOf = (id) => d.items[id]?.in ?? id;
+    const pool = [];
+    const wired = /* @__PURE__ */ new Set();
+    const frames = [];
+    if (explicit) pool.push(...expandGroups(d.items, sel));
+    else {
+      for (const [id, it] of Object.entries(d.items)) {
+        if (it.k === "line") {
+          for (const e of [it.a, it.b]) if (typeof e === "string" && d.items[e]) wired.add(topOf(e));
+        } else if (it.k === "frame") {
+          const r = getRect(id);
+          if (r) frames.push(r);
+        } else if (!it.in) pool.push(id);
+      }
+    }
+    const groups = /* @__PURE__ */ new Map();
+    const blocks = [];
+    const rectOf = (ids) => boundsOf(ids.map((i) => getRect(i)).filter(Boolean));
+    for (const id of pool) {
+      const it = d.items[id];
+      if (!it || it.in || it.k === "line" || it.k === "frame") continue;
+      if (!explicit) {
+        if (wired.has(id)) continue;
+        const r = getRect(id);
+        if (r && frames.some((f) => r.x + r.w / 2 >= f.x && r.x + r.w / 2 <= f.x + f.w && r.y + r.h / 2 >= f.y && r.y + r.h / 2 <= f.y + f.h)) continue;
+      }
+      if (it.k === "draw" && it.g) {
+        groups.set(it.g, [...groups.get(it.g) ?? [], id]);
+        continue;
+      }
+      if (it.k === "draw" && !explicit) continue;
+      const rect = rectOf([id]);
+      if (rect) blocks.push({ ids: [id], rect });
+    }
+    for (const ids of groups.values()) {
+      const rect = rectOf(ids);
+      if (rect) blocks.push({ ids: ids.sort(), rect });
+    }
+    const ops = [];
+    const from = /* @__PURE__ */ new Map();
+    const moved = [];
+    for (const p of tidyPlan(blocks)) {
+      const b = blocks.find((x) => x.ids[0] === p.ids[0]);
+      const dx = p.x - b.rect.x, dy = p.y - b.rect.y;
+      if (Math.abs(dx) < 0.5 && Math.abs(dy) < 0.5) continue;
+      for (const id of p.ids) {
+        const it = d.items[id];
+        ops.push({ op: "set", id, p: { x: Math.round((it.x ?? 0) + dx), y: Math.round((it.y ?? 0) + dy) } });
+        const r = getRect(id);
+        if (r) {
+          from.set(id, r);
+          moved.push(id);
+        }
+      }
+    }
+    if (!ops.length) {
+      flash(t2("board.tidy.none"));
+      return;
+    }
+    flipFrom(from, moved);
+    commit(ops);
+  }, [commit, flash, flipFrom, getRect, selected, t2]);
+  const insertOnEdge = useCallback((edgeId, item) => {
+    const d = docRef.current;
+    const line2 = d?.items[edgeId];
+    if (!d || !line2 || line2.k !== "line" || line2.a == null || line2.b == null) return null;
+    const topOf = (id) => d.items[id]?.in ?? id;
+    const rectOf = (end) => Array.isArray(end) ? { x: end[0], y: end[1], w: 0, h: 0 } : getRect(topOf(end));
+    const ra = rectOf(line2.a), rb = rectOf(line2.b);
+    if (!ra || !rb) return null;
+    const [dw, dh] = (item.k === "shape" ? SHAPE_SIZE[item.sh ?? "rect"] : void 0) ?? DEFAULT_SIZE[item.k] ?? [200, 100];
+    const bTop = typeof line2.b === "string" && !d.items[line2.b]?.in ? line2.b : null;
+    const plan = insertPlan(ra, rb, { w: item.w ?? dw, h: item.h ?? dh }, { shiftB: !!bTop });
+    const ref = newRef();
+    const ops = [
+      { op: "add", ref, item: { ...item, x: plan.x, y: plan.y } },
+      { op: "set", id: edgeId, p: { b: ref } },
+      { op: "add", ref: newRef(), item: { k: "line", a: ref, b: line2.b } }
+    ];
+    const from = /* @__PURE__ */ new Map();
+    const moved = [];
+    if (bTop && (plan.shift.dx || plan.shift.dy)) {
+      const edges = Object.entries(d.items).filter(([k, v]) => v.k === "line" && k !== edgeId && typeof v.a === "string" && typeof v.b === "string").map(([, v]) => [topOf(v.a), topOf(v.b)]);
+      const stop = typeof line2.a === "string" ? topOf(line2.a) : "";
+      for (const id of downstream(edges, bTop, stop)) {
+        const it = d.items[id];
+        if (!it || it.k === "line" || it.x == null || it.y == null) continue;
+        ops.push({ op: "set", id, p: { x: Math.round(it.x + plan.shift.dx), y: Math.round(it.y + plan.shift.dy) } });
+        const r = getRect(id);
+        if (r) {
+          from.set(id, r);
+          moved.push(id);
+        }
+      }
+    }
+    if (moved.length) flipFrom(from, moved);
+    commit(ops);
+    if (EDITABLE.has(item.k) && item.k !== "image" && item.k !== "link" && item.k !== "video") startEdit(ref);
+    else setSelected(/* @__PURE__ */ new Set([ref]));
+    return ref;
+  }, [commit, flipFrom, getRect, startEdit]);
+  insertRef.current = insertOnEdge;
+  const pickForEdge = (spec) => {
+    const pick = edgePick;
+    setEdgePick(null);
+    if (!pick) return;
+    if (spec.item) {
+      insertOnEdge(pick.id, spec.item);
+      return;
+    }
+    const mid = center();
+    if (spec.ask === "link" || spec.ask === "embed") {
+      setAskValue("");
+      setAsk({ kind: spec.ask, at: mid, edge: pick.id });
+      return;
+    }
+    if (spec.ask === "image") {
+      pendingEdge.current = pick.id;
+      fileRef.current?.click();
+      return;
+    }
+    if (spec.ask === "board") {
+      void boardsApi.create(t2("board.untitled"), bid).then((child) => insertOnEdge(pick.id, { k: "board", ref: child.id })).catch((e) => flash(String(e?.message ?? e)));
+    }
+  };
   const addImageFiles = useCallback(async (files, at) => {
     let p = at ?? center();
     for (const f of files.slice(0, 8)) {
@@ -8618,8 +10961,8 @@ function BoardView({ bid, onOpenBoard, onHome }) {
   const deleteSelection = useCallback(() => {
     const d = docRef.current;
     if (!d || !selected.size) return;
-    const ops = [...selected].filter((id) => d.items[id]).map((id) => ({ op: "del", id }));
-    commit(ops);
+    const ops = normalizeDeletes(d, selected).map((id) => ({ op: "del", id }));
+    if (ops.length) commit(ops);
     setSelected(/* @__PURE__ */ new Set());
   }, [commit, selected]);
   const duplicate = useCallback(() => {
@@ -8717,7 +11060,7 @@ function BoardView({ bid, onOpenBoard, onHome }) {
     }
     const k = inkRef.current;
     const sw = inkWidth(k, s.tool);
-    const r1 = (v) => Math.round(v * 10) / 10;
+    const r12 = (v) => Math.round(v * 10) / 10;
     const fill = s.tool === "pen" && k.sm > 0 && !k.ds;
     svg.setAttribute("class", `hb-draw hb-live${s.tool === "lasso" ? " lasso" : ""}${s.tool === "hl" ? " hl" : ""}${k.c !== "ink" && s.tool !== "lasso" ? ` c-${k.c}` : ""}`);
     path.setAttribute("class", fill ? "fill" : "");
@@ -8727,7 +11070,7 @@ function BoardView({ bid, onOpenBoard, onHome }) {
     else path.removeAttribute("stroke-dasharray");
     head.setAttribute("stroke-width", String(sw));
     if (s.tool === "lasso") {
-      path.setAttribute("d", s.loop.length > 1 ? `M${s.loop.map(([x, y]) => `${r1(x)} ${r1(y)}`).join(" L")} Z` : "");
+      path.setAttribute("d", s.loop.length > 1 ? `M${s.loop.map(([x, y]) => `${r12(x)} ${r12(y)}`).join(" L")} Z` : "");
       head.setAttribute("d", "");
       return;
     }
@@ -8748,7 +11091,7 @@ function BoardView({ bid, onOpenBoard, onHome }) {
       const pen = s.pointerType === "pen" && Math.max(...prs) - Math.min(...prs) > 0.05;
       path.setAttribute("d", outlinePath(freehandOutline(pts, sw * 1.35, pen ? prs : void 0)));
     } else {
-      path.setAttribute("d", strokePath(pts.map(([x, y]) => [r1(x), r1(y)])));
+      path.setAttribute("d", strokePath(pts.map(([x, y]) => [r12(x), r12(y)])));
     }
   }, []);
   const scheduleLive = useCallback(() => {
@@ -8854,7 +11197,10 @@ function BoardView({ bid, onOpenBoard, onHome }) {
     const d = docRef.current;
     if (!d || e.button === 2) return;
     const target = e.target;
-    if (target.closest("[data-nodrag], .hb-ctx, input, textarea, a, iframe, video")) return;
+    pendingEdge.current = null;
+    if (target.closest("[data-nodrag], .hb-ctx, .hb-epick, input, textarea, iframe, video")) return;
+    downAt.current = { t: e.timeStamp, x: e.clientX, y: e.clientY, type: pointerKind(e.pointerType) };
+    stopCamera();
     if (connectFrom) {
       const hit = target.closest("[data-kid], [data-iid]");
       const to = hit?.dataset.kid ?? hit?.dataset.iid;
@@ -8862,7 +11208,15 @@ function BoardView({ bid, onOpenBoard, onHome }) {
       setConnectFrom(null);
       return;
     }
-    if (editing && !target.closest(`[data-iid="${editing}"]`)) setEditing(null);
+    if (editing && !target.closest(`[data-iid="${editing}"], [data-kid="${editing}"]`)) {
+      document.activeElement?.blur?.();
+      setEditing(null);
+    }
+    if (editLabel) {
+      document.activeElement?.blur?.();
+      setEditLabel(null);
+    }
+    if (edgePick) setEdgePick(null);
     if (playing && d.items[playing]?.k === "embed" && !target.closest(`[data-iid="${playing}"], [data-kid="${playing}"]`)) setPlaying(null);
     const w = toWorld(e.clientX, e.clientY);
     lastPoint.current = w;
@@ -8956,6 +11310,68 @@ function BoardView({ bid, onOpenBoard, onHome }) {
       drag.current = { ...base, kind: "pan", view: { ...view.current } };
     }
   };
+  const startFlight = (ids) => {
+    const d = docRef.current;
+    const base = /* @__PURE__ */ new Map(), kids = /* @__PURE__ */ new Map(), affected = /* @__PURE__ */ new Set();
+    for (const id of ids) {
+      const r = getRect(id);
+      if (!r) continue;
+      base.set(id, r);
+      affected.add(id);
+      const ks = d.items[id]?.k === "col" ? d.items[id].kids ?? [] : [];
+      if (ks.length) {
+        kids.set(id, ks);
+        for (const k of ks) {
+          const kr = getRect(k);
+          if (kr) base.set(k, kr);
+          affected.add(k);
+        }
+      }
+    }
+    const moved = new Set(ids);
+    const others = [];
+    for (const [id, it] of Object.entries(d.items)) {
+      if (moved.has(id) || it.in || it.k === "line" || it.k === "draw") continue;
+      const r = getRect(id);
+      if (r) others.push(r);
+    }
+    const rects = ids.map((id) => base.get(id)).filter(Boolean);
+    return { ids, base, kids, affected, union: boundsOf(rects) ?? { x: 0, y: 0, w: 0, h: 0 }, others };
+  };
+  const offsetFlight = (fl, dx, dy) => {
+    for (const id of fl.ids) {
+      const el = els.current.get(id);
+      if (el) el.style.transform = `translate(${dx}px, ${dy}px)`;
+    }
+    for (const [id, r] of fl.base) liveRects.current.set(id, { x: r.x + dx, y: r.y + dy, w: r.w, h: r.h });
+    wiresRef.current?.refresh(fl.affected);
+  };
+  const endFlight = (fl) => {
+    for (const id of fl.ids) {
+      const el = els.current.get(id);
+      if (el) el.style.transform = "";
+    }
+    for (const id of fl.base.keys()) liveRects.current.delete(id);
+    wiresRef.current?.refresh(fl.affected);
+  };
+  const paintGuides = (guides) => {
+    const el = guidesRef.current;
+    if (!el) return;
+    el.replaceChildren(...guides.slice(0, 16).map((g) => {
+      const i = document.createElement("i");
+      i.className = `hb-guide ${g.axis}`;
+      if (g.axis === "x") {
+        i.style.left = `${g.pos}px`;
+        i.style.top = `${g.from}px`;
+        i.style.height = `${g.to - g.from}px`;
+      } else {
+        i.style.top = `${g.pos}px`;
+        i.style.left = `${g.from}px`;
+        i.style.width = `${g.to - g.from}px`;
+      }
+      return i;
+    }));
+  };
   const columnUnder = (cx2, cy2, skip) => {
     const d = docRef.current;
     for (const el of document.elementsFromPoint(cx2, cy2)) {
@@ -8993,11 +11409,27 @@ function BoardView({ bid, onOpenBoard, onHome }) {
         view.current = { ...view.current, x: g.view.x + dx, y: g.view.y + dy };
         applyView();
         break;
-      case "move":
-        setDelta({ dx: dx / z, dy: dy / z });
+      case "move": {
+        if (!g.fl) {
+          g.fl = startFlight(g.ids ?? []);
+          setDelta({ dx: 0, dy: 0 });
+        }
+        let mx = dx / z, my = dy / z;
+        let guides = [];
+        if (snapRef.current && !(e.metaKey || e.ctrlKey) && g.fl.ids.length) {
+          const u = g.fl.union;
+          const s = snapMove({ x: u.x + mx, y: u.y + my, w: u.w, h: u.h }, g.fl.others, { thr: SNAP_PX / z });
+          mx += s.dx;
+          my += s.dy;
+          guides = s.guides;
+        }
+        g.dd = { dx: mx, dy: my };
+        offsetFlight(g.fl, mx, my);
+        paintGuides(guides);
         break;
+      }
       case "resize":
-        setResize({ id: g.id, w: Math.max(120, g.w0 + dx / z), h: Math.max(40, g.h0 + dy / z) });
+        setResize({ id: g.id, w: Math.max(docRef.current?.items[g.id]?.k === "shape" ? 40 : 120, g.w0 + dx / z), h: Math.max(40, g.h0 + dy / z) });
         break;
       case "marquee": {
         const s = toWorld(g.sx, g.sy);
@@ -9018,6 +11450,33 @@ function BoardView({ bid, onOpenBoard, onHome }) {
   };
   const onPointerUp = (e) => {
     const g = drag.current;
+    const down = downAt.current;
+    const up = { t: e.timeStamp, x: e.clientX, y: e.clientY, type: pointerKind(e.pointerType) };
+    const tapped = !!g && !!down && e.type === "pointerup" && tool === "select" && (g.kind === "pan" || g.kind === "move" || g.kind === "kid") && isTap(down, up);
+    finishPointer(e);
+    downAt.current = null;
+    if (!tapped) {
+      lastTap.current = null;
+      return;
+    }
+    const under = document.elementFromPoint(e.clientX, e.clientY);
+    const link = under?.closest?.("a[href]");
+    if (link && (e.metaKey || e.ctrlKey)) {
+      window.open(link.href, "_blank", "noopener,noreferrer");
+      lastTap.current = null;
+      return;
+    }
+    const r = nextTap(lastTap.current, up);
+    lastTap.current = r.last;
+    if (!r.double) return;
+    const fire = () => (under?.isConnected ? under : vpRef.current)?.dispatchEvent(
+      new MouseEvent("dblclick", { bubbles: true, cancelable: true, clientX: up.x, clientY: up.y, view: window, detail: 2 })
+    );
+    if (up.type === "mouse") fire();
+    else window.setTimeout(fire, 90);
+  };
+  const finishPointer = (e) => {
+    const g = drag.current;
     drag.current = null;
     vpRef.current?.classList.remove("panning");
     const d = docRef.current;
@@ -9036,7 +11495,9 @@ function BoardView({ bid, onOpenBoard, onHome }) {
       return;
     }
     if (g.kind === "move") {
-      const dd = delta;
+      const dd = g.dd;
+      if (g.fl) endFlight(g.fl);
+      paintGuides([]);
       setDelta(null);
       if (!g.moved || !dd || !g.ids?.length) return;
       if (g.ids.length === 1 && INTO_COLUMN.has(d.items[g.ids[0]].k)) {
@@ -9082,7 +11543,7 @@ function BoardView({ bid, onOpenBoard, onHome }) {
         eraser.current.sweep = false;
         eraser.current.trail = [];
       }
-      const ids = [...erasingRef.current].filter((id) => d.items[id]);
+      const ids = normalizeDeletes(d, erasingRef.current);
       erasingRef.current = /* @__PURE__ */ new Set();
       setErasing(/* @__PURE__ */ new Set());
       if (ids.length) commit(ids.map((id) => ({ op: "del", id })));
@@ -9145,6 +11606,7 @@ function BoardView({ bid, onOpenBoard, onHome }) {
     if (ta && ta.scrollHeight > ta.clientHeight + 1 && !e.ctrlKey && !e.metaKey) return;
     if (target.tagName === "IFRAME" || target.tagName === "VIDEO") return;
     e.preventDefault();
+    stopCamera();
     const rect = vpRef.current.getBoundingClientRect();
     const sx = e.clientX - rect.left, sy = e.clientY - rect.top;
     const now = performance.now();
@@ -9160,7 +11622,7 @@ function BoardView({ bid, onOpenBoard, onHome }) {
     view.current = { ...view.current, x: view.current.x - dx, y: view.current.y - dy };
     applyView();
     saveView();
-  }, [applyView, saveView, zoomAt, zoomSmooth]);
+  }, [applyView, saveView, stopCamera, zoomAt, zoomSmooth]);
   const hasDoc = !!doc;
   useEffect(() => {
     const vp = vpRef.current;
@@ -9168,6 +11630,59 @@ function BoardView({ bid, onOpenBoard, onHome }) {
     vp.addEventListener("wheel", onWheel, { passive: false });
     return () => vp.removeEventListener("wheel", onWheel);
   }, [onWheel, hasDoc]);
+  useEffect(() => {
+    if (!hasDoc) return;
+    const size = () => ({ w: vpRef.current?.clientWidth ?? 1, h: vpRef.current?.clientHeight ?? 1 });
+    const rectFor = (ids) => boundsOf(ids.map((id) => getRect(id)).filter(Boolean));
+    const api2 = {
+      version: 1,
+      board: bid,
+      flyTo: (req) => {
+        autoFit.current = false;
+        let target = null;
+        if (req.view) target = req.view;
+        else if (req.fit) target = fitTarget();
+        else {
+          const b = req.rect ?? (req.item ? rectFor([req.item]) : req.items ? rectFor(req.items) : req.selection ? rectFor([...selectedRef.current]) : null);
+          if (b) target = viewForRect(b, size(), { pad: req.pad ?? 80, maxZ: req.maxZ ?? 1.5, minZ: req.minZ ?? 0.05 });
+        }
+        if (!target) return Promise.resolve(false);
+        return cam.current.flyTo(target, { duration: req.duration, ease: req.ease });
+      },
+      fit: (o) => {
+        const t22 = fitTarget();
+        return t22 ? cam.current.flyTo(t22, o) : Promise.resolve(false);
+      },
+      getView: () => ({ ...view.current }),
+      setView: (v) => {
+        stopCamera();
+        view.current = { ...v };
+        applyView();
+        saveView();
+      },
+      itemRect: (id) => getRect(id),
+      cancel: stopCamera,
+      moving: () => !!cam.current?.moving,
+      minimap: (on) => {
+        writeLocal("hb.map.off", on ? "0" : "1");
+        setMapOff(!on);
+      },
+      clock: cameraClockApi
+    };
+    return installCameraApi(api2);
+  }, [hasDoc, bid, applyView, fitTarget, getRect, saveView, stopCamera]);
+  const zoomStep = useCallback((f) => {
+    const vp = vpRef.current;
+    if (!vp) return;
+    autoFit.current = false;
+    zoomAnim.current && cancelAnimationFrame(zoomAnim.current.raf);
+    zoomAnim.current = null;
+    void cam.current.zoomBy(f, vp.clientWidth / 2, vp.clientHeight / 2);
+  }, []);
+  const toggleMap = useCallback(() => setMapOff((o) => {
+    writeLocal("hb.map.off", o ? "0" : "1");
+    return !o;
+  }), []);
   useEffect(() => {
     const onKey = (e) => {
       if (!rootRef.current?.isConnected || ask || confirmReq) return;
@@ -9218,6 +11733,11 @@ function BoardView({ bid, onOpenBoard, onHome }) {
         void continueInSession();
         return;
       }
+      if (mod2 && e.shiftKey && e.key.toLowerCase() === "o") {
+        e.preventDefault();
+        tidy();
+        return;
+      }
       if (mod2 || e.altKey) return;
       if (e.key === "Delete" || e.key === "Backspace") {
         e.preventDefault();
@@ -9238,16 +11758,27 @@ function BoardView({ bid, onOpenBoard, onHome }) {
         setSelected(/* @__PURE__ */ new Set());
         setTool("select");
         setEditing(null);
+        setEdgePick(null);
+        setEditLabel(null);
         return;
       }
-      if (e.key === "Enter" && selected.size === 1) {
+      if ((e.key === "Enter" || e.key === "F2") && selected.size === 1) {
         const id = [...selected][0];
         const it = docRef.current?.items[id];
         if (it && EDITABLE.has(it.k)) {
           e.preventDefault();
-          setEditing(id);
+          startEdit(id);
         }
         return;
+      }
+      if (selected.size === 1 && tool === "select" && !connectFrom) {
+        const id = [...selected][0];
+        const ch = typeToEditChar(e, docRef.current?.items[id]?.k);
+        if (ch) {
+          e.preventDefault();
+          startEdit(id, { seed: ch });
+          return;
+        }
       }
       if (e.key === "/") {
         e.preventDefault();
@@ -9258,14 +11789,20 @@ function BoardView({ bid, onOpenBoard, onHome }) {
         fit();
         return;
       }
+      if (e.key === "z" || e.key === "Z") {
+        zoomToSelection();
+        return;
+      }
+      if (e.key === "m" || e.key === "M") {
+        toggleMap();
+        return;
+      }
       if (e.key === "+" || e.key === "=") {
-        const vp = vpRef.current;
-        zoomAt(1.2, vp.clientWidth / 2, vp.clientHeight / 2);
+        zoomStep(1.2);
         return;
       }
       if (e.key === "-") {
-        const vp = vpRef.current;
-        zoomAt(1 / 1.2, vp.clientWidth / 2, vp.clientHeight / 2);
+        zoomStep(1 / 1.2);
         return;
       }
       if (e.key.startsWith("Arrow") && selected.size) {
@@ -9320,7 +11857,7 @@ function BoardView({ bid, onOpenBoard, onHome }) {
       window.removeEventListener("keydown", onKey);
       window.removeEventListener("keyup", onKey);
     };
-  }, [ask, center, commit, confirmReq, connectFrom, continueInSession, deleteSelection, duplicate, fit, openChat, scheduleLive, selected, setInk, sync, tool, toggleGroup, zoomAt]);
+  }, [ask, center, commit, confirmReq, connectFrom, continueInSession, deleteSelection, duplicate, fit, openChat, scheduleLive, selected, setInk, startEdit, sync, tidy, tool, toggleGroup, toggleMap, zoomStep, zoomToSelection]);
   useEffect(() => {
     const onPaste = (e) => {
       if (!rootRef.current?.isConnected || isTyping(e.target) || ask) return;
@@ -9369,15 +11906,24 @@ function BoardView({ bid, onOpenBoard, onHome }) {
     }) : null;
     return frame?.title || (on ? itemLabel(on).slice(0, 28) : "") || doc.name;
   })();
-  const regEl = useCallback((id) => (el) => {
-    if (el) els.current.set(id, el);
-    else els.current.delete(id);
+  const regCache = useRef(/* @__PURE__ */ new Map());
+  const regEl = useCallback((id) => {
+    let f = regCache.current.get(id);
+    if (!f) {
+      f = (el) => {
+        if (el) els.current.set(id, el);
+        else els.current.delete(id);
+      };
+      regCache.current.set(id, f);
+    }
+    return f;
   }, []);
   const ctx = useMemo(() => doc ? {
     doc,
     t: t2,
     editing,
     setEditing,
+    hint: editHint,
     update,
     commit,
     playing,
@@ -9387,7 +11933,8 @@ function BoardView({ bid, onOpenBoard, onHome }) {
     liveActionsDown,
     runLiveAction,
     erasing,
-    openBoard: (id) => onOpenBoard(id),
+    keyOf,
+    openBoard: (id) => openChild(id),
     addToColumn: (col) => {
       const ref = newRef();
       commit([{ op: "add", ref, item: { k: "card", in: col } }]);
@@ -9398,22 +11945,9 @@ function BoardView({ bid, onOpenBoard, onHome }) {
       const it = doc.items[id];
       if (!it) return null;
       const cls = `hb-kid${selected.has(id) ? " sel" : ""}${kidDrag?.id === id ? " ghost" : ""}${hidden.has(id) ? " reveal-wait" : ""}`;
-      return /* @__PURE__ */ jsx(
-        "div",
-        {
-          className: cls,
-          "data-kid": id,
-          ref: regEl(id),
-          onDoubleClick: (e) => {
-            e.stopPropagation();
-            if (EDITABLE.has(it.k)) setEditing(id);
-          },
-          children: /* @__PURE__ */ jsx(ItemBody, { id, item: it, c: ctxRef.current, dropIndex: null, selected: selected.has(id) })
-        },
-        id
-      );
+      return /* @__PURE__ */ jsx("div", { className: cls, "data-kid": id, ref: regEl(id), children: /* @__PURE__ */ jsx(ItemBody, { id, item: it, c: ctxRef.current, dropIndex: null, selected: selected.has(id) }) }, keyOf(id));
     }
-  } : null, [Frame, commit, doc, editing, erasing, hidden, kidDrag, liveActions, liveActionsDown, onOpenBoard, playing, regEl, runLiveAction, selected, t2, update]);
+  } : null, [Frame, commit, doc, editing, editHint, erasing, hidden, kidDrag, liveActions, liveActionsDown, keyOf, onOpenBoard, playing, regEl, runLiveAction, selected, setEditing, t2, update]);
   const ctxRef = useRef(ctx);
   ctxRef.current = ctx;
   const selBounds = useMemo(() => {
@@ -9460,7 +11994,7 @@ function BoardView({ bid, onOpenBoard, onHome }) {
   const mod = modKey();
   const runOpen = () => {
     if (!openTarget) return;
-    if ("board" in openTarget) onOpenBoard(openTarget.board);
+    if ("board" in openTarget) openChild(openTarget.board);
     else window.open(openTarget.url, "_blank", "noopener,noreferrer");
   };
   const startConnect = () => {
@@ -9506,8 +12040,11 @@ function BoardView({ bid, onOpenBoard, onHome }) {
       }
       if (canEdit) out2.push({ id: "edit", label: t2("board.ctx.edit"), icon: "edit", kbd: "↵", run: () => setEditing(selIds[0]) });
       if (openTarget) out2.push({ id: "open", label: t2("board.ctx.open"), icon: "board" in openTarget ? "openBoard" : "open", run: runOpen });
+      if (single?.k === "embed") out2.push({ id: "theme", label: t2(single.theme ? "board.embed.themeOff" : "board.embed.themeOn"), icon: "theme", run: () => update(selIds[0], { theme: single.theme ? null : true }) });
+      out2.push({ id: "zoomto", label: t2("board.ctx.zoomTo"), icon: "focus", kbd: "Z", run: zoomToSelection });
       if (canConnect) out2.push({ id: "connect", label: t2("board.ctx.connect"), icon: "connect", run: startConnect });
       if (canDuplicate) out2.push({ id: "dup", label: t2("board.ctx.duplicate"), icon: "duplicate", kbd: `${mod}D`, run: duplicate });
+      if (selIds.length > 1) out2.push({ id: "tidy", label: t2("board.tidy.selection"), icon: "tidy", kbd: `${mod}⇧O`, run: tidy });
       if (canGroup) out2.push({ id: "grp", label: t2(isGrouped ? "board.ctx.ungroup" : "board.ctx.group"), icon: isGrouped ? "ungroup" : "group", kbd: `${mod}G`, run: toggleGroup });
       out2.push({ sep: true });
       out2.push({ id: "del", label: t2("board.ctx.delete"), icon: "delete", kbd: "Del", danger: true, run: deleteSelection });
@@ -9529,7 +12066,8 @@ function BoardView({ bid, onOpenBoard, onHome }) {
     for (const x of TOOLS[1]) out.push({ id: x.tool, label: t2(x.label), icon: x.icon, kbd: x.key, run: place(x.tool) });
     out.push({ sep: true });
     out.push({ id: "all", label: t2("board.menu.selectAll"), icon: "selectAll", kbd: `${mod}A`, run: () => setSelected(new Set(Object.keys(docRef.current?.items ?? {}).filter((k) => !docRef.current.items[k].in))) });
-    out.push({ id: "fit", label: t2("board.fit"), icon: "fit", kbd: "F", run: fit });
+    out.push({ id: "tidy", label: t2("board.tidy.all"), icon: "tidy", kbd: `${mod}⇧O`, run: tidy });
+    out.push({ id: "fit", label: t2("board.fit"), icon: "fit", kbd: "F", run: () => fit() });
     out.push({ id: "chat", label: chatOpen ? t2("board.chat.close") : t2("board.chat.open"), icon: chatOpen ? "closePanel" : "chat", kbd: "/", run: () => chatOpen ? closeChat() : openChat(true) });
     return out;
   };
@@ -9552,16 +12090,13 @@ function BoardView({ bid, onOpenBoard, onHome }) {
     ] });
   }
   const items = Object.entries(doc.items).filter(([, it]) => !it.in && it.k !== "line");
-  const layer = (it) => it.k === "frame" ? 0 : it.k === "draw" && it.tl === "hl" ? 1 : 2;
-  items.sort(([, a], [, b]) => layer(a) - layer(b));
+  const layer2 = (it) => it.k === "frame" ? 0 : it.k === "draw" && it.tl === "hl" ? 1 : 2;
+  items.sort(([, a], [, b]) => layer2(a) - layer2(b));
   const sessionShort = doc.session?.id ? doc.session.id.slice(-4) : null;
   const savedTs = sync.savedAt ? sync.savedAt / 1e3 : doc.updated;
   const vpCls = `hb-viewport${tool === "pan" ? " tool-pan" : ""}${tool === "draw" ? ` tool-draw ink-${ink2.tool}` : ""}${tool === "arrow" || connectFrom ? " tool-arrow" : ""}${PLACE.includes(tool) ? " tool-place" : ""}`;
   const hint = connectFrom ? t2("board.hint.connect") : tool === "draw" ? t2(INK_HINT[ink2.tool]) : TOOL_HINT[tool] ? t2(TOOL_HINT[tool]) : "";
-  const zoomBy = (f) => {
-    const vp = vpRef.current;
-    zoomAt(f, vp.clientWidth / 2, vp.clientHeight / 2);
-  };
+  const zoomBy = (f) => zoomStep(f);
   return /* @__PURE__ */ jsxs("div", { ref: rootRef, className: rootCls, style: { ["--chat-w"]: `${chatWidth}px` }, children: [
     /* @__PURE__ */ jsxs(
       "div",
@@ -9572,40 +12107,58 @@ function BoardView({ bid, onOpenBoard, onHome }) {
         onPointerDown,
         onPointerMove,
         onPointerUp,
-        onPointerCancel: onPointerUp,
+        onPointerCancel: finishPointer,
         onContextMenu,
         onDoubleClick: (e) => {
-          if (tool === "draw") return;
+          if (e.nativeEvent.isTrusted) return;
+          const d = docRef.current;
+          if (!d) return;
           const target = e.target;
-          const iid = target.closest("[data-iid]")?.dataset.iid;
-          if (iid) {
-            const it = doc.items[iid];
-            if (it && EDITABLE.has(it.k)) setEditing(iid);
-            return;
-          }
-          if (target.closest("[data-nodrag], .hb-ctx")) return;
-          add({ k: "card", w: 256 }, toWorld(e.clientX, e.clientY), true);
+          const hit = target.closest("[data-kid], [data-iid]");
+          const id = hit?.dataset.kid ?? hit?.dataset.iid;
+          const it = id ? d.items[id] : void 0;
+          const act = dblAction({ kind: it?.k ?? null, tool, chrome: !!target.closest("[data-nodrag], .hb-ctx, .hb-epick, .hb-ask") });
+          if (act === "new") add({ k: "card", w: 256 }, toWorld(e.clientX, e.clientY), true);
+          else if (act === "open" && it?.ref) onOpenBoard(it.ref);
+          else if (act === "edit" && id && it) startEdit(id, editHintAt(target, e.clientX, e.clientY, it));
         },
         onDragOver: (e) => e.preventDefault(),
         onDrop,
         children: [
           /* @__PURE__ */ jsx("div", { className: "hb-grid", ref: gridRef }),
-          /* @__PURE__ */ jsxs("div", { className: "hb-world", ref: worldRef, children: [
+          /* @__PURE__ */ jsxs("div", { className: `hb-world${items.length > 60 ? " crowd" : ""}`, ref: worldRef, children: [
             /* @__PURE__ */ jsx(
               Wires,
               {
+                ref: wiresRef,
                 doc,
-                getRect,
+                getRect: getRectLive,
                 version: layoutV + (delta ? 1 : 0),
                 hidden,
                 fresh,
                 selected,
                 draft,
+                editLabel,
+                insertLabel: t2("board.insert.hint"),
                 onSelect: (id, additive) => setSelected((s) => {
                   const n = additive ? new Set(s) : /* @__PURE__ */ new Set();
                   n.add(id);
                   return n;
-                })
+                }),
+                onDouble: (id) => {
+                  setSelected(/* @__PURE__ */ new Set([id]));
+                  setEditLabel(id);
+                },
+                onLabel: (id, v) => {
+                  setEditLabel(null);
+                  if (v === null) return;
+                  const next = v.trim();
+                  if (next !== (docRef.current?.items[id]?.label ?? "")) update(id, { label: next || null });
+                },
+                onInsert: (id, at) => {
+                  const rr = rootRef.current?.getBoundingClientRect();
+                  if (rr) setEdgePick({ id, x: at.x - rr.left, y: at.y - rr.top });
+                }
               }
             ),
             items.map(([id, it]) => {
@@ -9614,9 +12167,9 @@ function BoardView({ bid, onOpenBoard, onHome }) {
               const x = (it.x ?? 0) + (moving ? delta.dx : 0);
               const y = (it.y ?? 0) + (moving ? delta.dy : 0);
               const rs = resize?.id === id ? resize : null;
-              const [dw] = DEFAULT_SIZE[it.k] ?? [200, 100];
+              const [dw, dh] = (it.k === "shape" ? SHAPE_SIZE[it.sh ?? "rect"] : void 0) ?? DEFAULT_SIZE[it.k] ?? [200, 100];
               const width = it.k === "draw" ? void 0 : rs?.w ?? it.w ?? (it.k === "text" ? void 0 : dw);
-              const height = RESIZE_H.has(it.k) ? rs?.h ?? it.h ?? (it.k === "frame" ? 320 : it.k === "box" ? 62 : void 0) : void 0;
+              const height = RESIZE_H.has(it.k) ? rs?.h ?? it.h ?? (it.k === "frame" ? 320 : it.k === "box" ? 62 : it.k === "shape" ? dh : void 0) : void 0;
               const cls = `hb-item${sel ? " sel" : ""}${moving ? " dragging" : ""}${hidden.has(id) ? " reveal-wait" : ""}${fresh.has(id) && !reduced() ? " just-placed" : ""}${connectFrom === id ? " connect-from" : ""}`;
               const dropIndex = kidDrag?.col === id ? kidDrag.index : null;
               return /* @__PURE__ */ jsxs(
@@ -9625,7 +12178,7 @@ function BoardView({ bid, onOpenBoard, onHome }) {
                   className: cls,
                   "data-iid": id,
                   ref: regEl(id),
-                  style: { left: x, top: y, width, height, zIndex: layer(it) < 2 ? 0 : sel ? 3 : 1 },
+                  style: { left: x, top: y, width, height, zIndex: layer2(it) < 2 ? 0 : sel ? 3 : 1 },
                   children: [
                     /* @__PURE__ */ jsx(ItemBody, { id, item: it, c: ctx, dropIndex, selected: sel }),
                     sel && it.k !== "draw" && selected.size === 1 && /* @__PURE__ */ jsxs(Fragment, { children: [
@@ -9636,10 +12189,11 @@ function BoardView({ bid, onOpenBoard, onHome }) {
                     ] })
                   ]
                 },
-                id
+                keyOf(id)
               );
             }),
             kidDrag && doc.items[kidDrag.id] && /* @__PURE__ */ jsx("div", { className: "hb-ghost", style: { left: kidDrag.x - 20, top: kidDrag.y - 12, width: 264 }, children: /* @__PURE__ */ jsx(ItemBody, { id: kidDrag.id, item: doc.items[kidDrag.id], c: ctx, dropIndex: null, selected: true }) }),
+            /* @__PURE__ */ jsx("div", { className: "hb-guides", ref: guidesRef }),
             tool === "draw" && /* @__PURE__ */ jsxs("svg", { ref: liveSvgRef, className: "hb-draw hb-live", style: { position: "absolute", left: 0, top: 0, overflow: "visible" }, width: "1", height: "1", children: [
               /* @__PURE__ */ jsx("path", { ref: livePathRef, d: "" }),
               /* @__PURE__ */ jsx("path", { ref: liveHeadRef, d: "" })
@@ -9679,8 +12233,10 @@ function BoardView({ bid, onOpenBoard, onHome }) {
           /* @__PURE__ */ jsx("i", { className: "sep" }),
           canEdit && /* @__PURE__ */ jsx("button", { className: "ib", "data-tip": t2("board.ctx.edit"), "data-kbd": "↵", "aria-label": t2("board.ctx.edit"), onClick: () => setEditing(selIds[0]), children: /* @__PURE__ */ jsx(Icon, { name: "edit" }) }),
           openTarget && /* @__PURE__ */ jsx("button", { className: "ib", "data-tip": t2("board.ctx.open"), "aria-label": t2("board.ctx.open"), onClick: runOpen, children: /* @__PURE__ */ jsx(Icon, { name: "board" in openTarget ? "openBoard" : "open" }) }),
+          /* @__PURE__ */ jsx("button", { className: "ib", "data-tip": t2("board.ctx.zoomTo"), "data-kbd": "Z", "aria-label": t2("board.ctx.zoomTo"), onClick: zoomToSelection, children: /* @__PURE__ */ jsx(Icon, { name: "focus" }) }),
           canConnect && /* @__PURE__ */ jsx("button", { className: "ib", "data-tip": t2("board.ctx.connect"), "aria-label": t2("board.ctx.connect"), onClick: startConnect, children: /* @__PURE__ */ jsx(Icon, { name: "connect" }) }),
           canDuplicate && /* @__PURE__ */ jsx("button", { className: "ib", "data-tip": t2("board.ctx.duplicate"), "data-kbd": `${mod}D`, "aria-label": t2("board.ctx.duplicate"), onClick: duplicate, children: /* @__PURE__ */ jsx(Icon, { name: "duplicate" }) }),
+          selIds.length > 1 && /* @__PURE__ */ jsx("button", { className: "ib", "data-tip": t2("board.tidy.selection"), "data-kbd": `${mod}⇧O`, "aria-label": t2("board.tidy.selection"), onClick: tidy, children: /* @__PURE__ */ jsx(Icon, { name: "tidy" }) }),
           canGroup && /* @__PURE__ */ jsx("button", { className: "ib", "data-tip": t2(isGrouped ? "board.ctx.ungroup" : "board.ctx.group"), "data-kbd": `${mod}G`, "aria-label": t2(isGrouped ? "board.ctx.ungroup" : "board.ctx.group"), onClick: toggleGroup, children: /* @__PURE__ */ jsx(Icon, { name: isGrouped ? "ungroup" : "group" }) }),
           /* @__PURE__ */ jsx("button", { className: "ib danger", "data-tip": t2("board.ctx.delete"), "data-kbd": "Del", "aria-label": t2("board.ctx.delete"), onClick: deleteSelection, children: /* @__PURE__ */ jsx(Icon, { name: "delete" }) })
         ]
@@ -9694,7 +12250,7 @@ function BoardView({ bid, onOpenBoard, onHome }) {
         /* @__PURE__ */ jsx("button", { onClick: () => onOpenBoard(null), children: t2("board.path.boards") }),
         /* @__PURE__ */ jsx("span", { className: "sl", children: "/" }),
         doc.parent && /* @__PURE__ */ jsxs(Fragment, { children: [
-          /* @__PURE__ */ jsx("button", { onClick: () => onOpenBoard(doc.parent), children: t2("board.path.parent") }),
+          /* @__PURE__ */ jsx("button", { onClick: () => closeToParent(doc.parent), children: t2("board.path.parent") }),
           /* @__PURE__ */ jsx("span", { className: "sl", children: "/" })
         ] })
       ] }),
@@ -9727,15 +12283,8 @@ function BoardView({ bid, onOpenBoard, onHome }) {
       ] }),
       /* @__PURE__ */ jsx("span", { className: "spacer" }),
       /* @__PURE__ */ jsxs("span", { className: "hb-state", children: [
-        /* @__PURE__ */ jsx("span", { children: t2("board.state.saved", { time: clock(savedTs) }) }),
-        /* @__PURE__ */ jsx("span", { className: "sess", children: sessionShort ? /* @__PURE__ */ jsxs(Fragment, { children: [
-          t2("board.state.session"),
-          " ",
-          /* @__PURE__ */ jsxs("b", { children: [
-            "#",
-            sessionShort
-          ] })
-        ] }) : t2("board.state.noSession") })
+        /* @__PURE__ */ jsx("span", { children: t2("board.state.saved", { time: clock$1(savedTs) }) }),
+        /* @__PURE__ */ jsx("span", { className: "sess", "data-tip": doc.session?.id ? t2("board.chat.sessionTip", { id: doc.session.id }) : void 0, children: sessionShort ? t2("board.state.session") : t2("board.state.noSession") })
       ] }),
       /* @__PURE__ */ jsx(
         "button",
@@ -9783,6 +12332,33 @@ function BoardView({ bid, onOpenBoard, onHome }) {
       )) }, gi)),
       /* @__PURE__ */ jsx("span", { className: "hint", "aria-live": "polite", children: hint }),
       /* @__PURE__ */ jsxs("div", { className: "seg", children: [
+        /* @__PURE__ */ jsx(
+          "button",
+          {
+            className: "tool",
+            "aria-label": selIds.length > 1 ? t2("board.tidy.selection") : t2("board.tidy.all"),
+            "data-tip": selIds.length > 1 ? t2("board.tidy.selection") : t2("board.tidy.all"),
+            "data-kbd": `${mod}⇧O`,
+            onClick: tidy,
+            children: /* @__PURE__ */ jsx(Icon, { name: "tidy", size: 15 })
+          }
+        ),
+        /* @__PURE__ */ jsx(
+          "button",
+          {
+            className: `tool${snapOn ? " on" : ""}`,
+            "aria-pressed": snapOn,
+            "aria-label": t2("board.snap"),
+            "data-tip": `${t2("board.snap")} · ${t2("board.snap.hold", { mod })}`,
+            onClick: () => {
+              setSnapOn(!snapOn);
+              writeLocal(SNAP_KEY, snapOn ? "0" : "1");
+            },
+            children: /* @__PURE__ */ jsx(Icon, { name: "snap", size: 15 })
+          }
+        )
+      ] }),
+      /* @__PURE__ */ jsxs("div", { className: "seg", children: [
         /* @__PURE__ */ jsx("button", { className: "tool", disabled: !sync.canUndo, "aria-label": t2("board.undo"), "data-tip": t2("board.undo"), "data-kbd": `${mod}Z`, onClick: sync.undo, children: /* @__PURE__ */ jsx(Icon, { name: "undo", size: 15 }) }),
         /* @__PURE__ */ jsx("button", { className: "tool", disabled: !sync.canRedo, "aria-label": t2("board.redo"), "data-tip": t2("board.redo"), "data-kbd": `${mod}⇧Z`, onClick: sync.redo, children: /* @__PURE__ */ jsx(Icon, { name: "redo", size: 15 }) })
       ] }),
@@ -9793,26 +12369,26 @@ function BoardView({ bid, onOpenBoard, onHome }) {
           "%"
         ] }),
         /* @__PURE__ */ jsx("button", { className: "tool", "aria-label": t2("board.zoomIn"), "data-tip": t2("board.zoomIn"), "data-kbd": "+", onClick: () => zoomBy(1.2), children: /* @__PURE__ */ jsx(Icon, { name: "zoomIn", size: 15 }) }),
-        /* @__PURE__ */ jsx("button", { className: "tool", "aria-label": t2("board.fit"), "data-tip": t2("board.fit"), "data-kbd": "F", onClick: fit, children: /* @__PURE__ */ jsx(Icon, { name: "fit", size: 15 }) })
+        /* @__PURE__ */ jsx("button", { className: "tool", "aria-label": t2("board.fit"), "data-tip": t2("board.fit"), "data-kbd": "F", onClick: () => fit(), children: /* @__PURE__ */ jsx(Icon, { name: "fit", size: 15 }) })
       ] })
     ] }),
-    /* @__PURE__ */ jsx("div", { className: `hb-map${items.length ? "" : " off"}`, "data-tip": t2("board.map"), onClick: (e) => {
-      const b = contentBounds();
-      const canvas = mapRef.current, vp = vpRef.current;
-      if (!b || !canvas || !vp) return;
+    /* @__PURE__ */ jsx("div", { className: `hb-map${items.length && !mapOff ? "" : " off"}`, "data-tip": t2("board.map"), onClick: (e) => {
+      const canvas = mapRef.current, vp = vpRef.current, g = mapGeo.current;
+      if (!canvas || !vp || !g) return;
       const r = canvas.getBoundingClientRect();
-      const pad2 = 30, s = Math.min(r.width / (b.w + pad2 * 2), r.height / (b.h + pad2 * 2));
-      const ox = (r.width - b.w * s) / 2 - b.x * s, oy = (r.height - b.h * s) / 2 - b.y * s;
-      const wx = (e.clientX - r.left - ox) / s, wy = (e.clientY - r.top - oy) / s;
+      const wx = (e.clientX - r.left - g.ox) / g.s, wy = (e.clientY - r.top - g.oy) / g.s;
       const v = view.current;
-      view.current = { ...v, x: vp.clientWidth / 2 - wx * v.z, y: vp.clientHeight / 2 - wy * v.z };
-      applyView();
-      saveView();
-    }, children: /* @__PURE__ */ jsx("canvas", { ref: mapRef, width: 384, height: 208 }) }),
+      autoFit.current = false;
+      void cam.current.flyTo({ ...v, x: vp.clientWidth / 2 - wx * v.z, y: vp.clientHeight / 2 - wy * v.z }, { duration: 340, ease: "out" });
+    }, children: /* @__PURE__ */ jsxs("div", { className: "hb-map-wrap", children: [
+      /* @__PURE__ */ jsx("canvas", { ref: mapRef, width: 384, height: 208 }),
+      /* @__PURE__ */ jsx("i", { className: "hb-map-view", ref: mapViewRef }),
+      /* @__PURE__ */ jsx("i", { className: "hb-map-hermes", ref: mapHermesRef })
+    ] }) }),
     /* @__PURE__ */ jsxs("div", { className: `hb-log${logOn && log.length ? "" : " off"}`, role: "log", children: [
       /* @__PURE__ */ jsx("button", { className: "x ib", "aria-label": t2("board.log.close"), "data-tip": t2("board.log.close"), onClick: () => setLogOn(false), children: /* @__PURE__ */ jsx(Icon, { name: "close", size: 13 }) }),
       log.filter((l) => l.who === "hermes").slice(-2).map((l) => /* @__PURE__ */ jsxs("div", { className: "row", children: [
-        /* @__PURE__ */ jsx("span", { className: "t", children: clock(l.t) }),
+        /* @__PURE__ */ jsx("span", { className: "t", children: clock$1(l.t) }),
         /* @__PURE__ */ jsxs("span", { className: "who", children: [
           /* @__PURE__ */ jsx(Cad, {}),
           "hermes"
@@ -9843,6 +12419,16 @@ function BoardView({ bid, onOpenBoard, onHome }) {
         onClose: closeChat,
         onContinue: () => void continueInSession(),
         onSent: onChatSent
+      }
+    ),
+    edgePick && rootRef.current && /* @__PURE__ */ jsx(
+      EdgePicker,
+      {
+        at: { x: edgePick.x, y: edgePick.y },
+        t: t2,
+        bounds: { w: rootRef.current.clientWidth, h: rootRef.current.clientHeight },
+        onPick: pickForEdge,
+        onClose: () => setEdgePick(null)
       }
     ),
     menu && rootRef.current && /* @__PURE__ */ jsx(
@@ -9955,17 +12541,24 @@ function BoardView({ bid, onOpenBoard, onHome }) {
     const v = askValue.trim();
     if (ask.kind === "link") {
       const url = extractUrl(v) ?? extractUrl(`https://${v}`);
-      if (!url || !addUrl(url, ask.at)) {
+      const item = url ? itemForUrl(url) : null;
+      if (!url || !item) {
         flash(t2("board.toast.badUrl"));
         return;
       }
+      if (ask.edge) insertOnEdge(ask.edge, item);
+      else addUrl(url, ask.at);
       setAsk(null);
       return;
     }
     if (!v) return;
-    const at = ask.at;
+    const at = ask.at, edge = ask.edge;
     setAsk(null);
-    void boardsApi.uploadHtml(v).then((r) => add({ k: "embed", asset: r.asset, title: t2("board.embed.title") }, at)).catch((e) => flash(String(e?.message ?? e)));
+    void boardsApi.uploadHtml(v).then((r) => {
+      const item = { k: "embed", asset: r.asset, title: t2("board.embed.title") };
+      if (edge) insertOnEdge(edge, item);
+      else add(item, at);
+    }).catch((e) => flash(String(e?.message ?? e)));
   }
 }
 function withAlpha(color, a) {
@@ -10131,6 +12724,7 @@ function BoardWidget({ widgetProps, onWidgetPropsChange, editing }) {
   const seq = useRef(-1);
   const tipRoot = useRef(null);
   useEffect(() => tipRoot.current ? installTips(tipRoot.current) : void 0, [rows === null || !rows.length]);
+  useEffect(() => installClockApi(), []);
   const pinned = typeof widgetProps.board === "string" ? widgetProps.board : null;
   const bid = pinned && rows?.some((r) => r.id === pinned) ? pinned : rows?.find((r) => !r.parent)?.id ?? null;
   useEffect(() => {
@@ -10206,9 +12800,12 @@ function BoardWidget({ widgetProps, onWidgetPropsChange, editing }) {
   const list = (rows ?? []).filter((r) => !r.parent);
   return /* @__PURE__ */ jsxs("div", { className: "hb-widget", ref: tipRoot, onClick: (e) => {
     e.stopPropagation();
-    if (!editing && bid) goBoard(bid);
+    if (editing || !bid) return;
+    const here = e.currentTarget;
+    prepareZoomIn(bid, here.closest(".home-root"), here.querySelector(".hb-mini"));
+    goBoard(bid);
   }, children: [
-    /* @__PURE__ */ jsx("div", { className: "pvw", children: /* @__PURE__ */ jsx(BoardPreview, { doc }) }),
+    /* @__PURE__ */ jsx("div", { className: "pvw", children: /* @__PURE__ */ jsx(MiniBoard, { doc, id: bid ?? void 0 }) }),
     /* @__PURE__ */ jsxs("div", { className: "foot", children: [
       /* @__PURE__ */ jsx("b", { children: doc?.name ?? "…" }),
       active ? /* @__PURE__ */ jsxs("span", { className: "tagh", children: [
@@ -10304,8 +12901,11 @@ const WIDGET_REGISTRY = {
     ),
     defaultSize: { gw: 5, gh: 4 },
     minSize: { gw: 3, gh: 3 },
+    // Not gated on the shared 1-day poll: the widget fetches its own range (with retries) and shows
+    // its own loading/unavailable state. Gating it hid the widget behind "loading…" for as long as
+    // the shared analytics call was slow or failing, even when its own data was already in.
     navigateTo: null,
-    dataSource: "analytics"
+    dataSource: null
   },
   host: {
     titleKey: "widget.host",
@@ -10498,9 +13098,10 @@ function widgetState(source, data) {
   return data.errors.has("status") && data.status == null ? "offline" : "unavailable";
 }
 const CELL_H = 44;
+const MAX_STRETCH = 1.6;
 const GAP = 10;
 const PAD = 12;
-const GridCanvas = forwardRef(function GridCanvas2({ layout, editing, data, onLayoutChange, onRemove, onWidgetPropsChange, trashRef, onTrashActive }, ref) {
+const GridCanvas = forwardRef(function GridCanvas2({ layout, editing, data, onLayoutChange, onRemove, onWidgetPropsChange, fitHeight, trashRef, onTrashActive }, ref) {
   const stageRef = useRef(null);
   const t2 = useT();
   const [stageW, setStageW] = useState(0);
@@ -10516,12 +13117,14 @@ const GridCanvas = forwardRef(function GridCanvas2({ layout, editing, data, onLa
     setStageW(el.clientWidth);
     return () => ro.disconnect();
   }, []);
+  const layoutRows = layout.widgets.reduce((m, w) => Math.max(m, w.gy + w.gh), 0);
+  const cellH = fitCellHeight(fitHeight ?? 0, layoutRows, { base: CELL_H, gap: GAP, pad: PAD, maxStretch: MAX_STRETCH });
   const colW = stageW > 0 ? (stageW - PAD * 2 - GAP * (GRID_COLS - 1)) / GRID_COLS : 0;
-  const toPx = (box) => ({
-    left: PAD + box.gx * (colW + GAP),
-    top: PAD + box.gy * (CELL_H + GAP),
-    width: box.gw * colW + (box.gw - 1) * GAP,
-    height: box.gh * CELL_H + (box.gh - 1) * GAP
+  const toPx = (box2) => ({
+    left: PAD + box2.gx * (colW + GAP),
+    top: PAD + box2.gy * (cellH + GAP),
+    width: box2.gw * colW + (box2.gw - 1) * GAP,
+    height: box2.gh * cellH + (box2.gh - 1) * GAP
   });
   const pointerOverTrash = (x, y) => {
     const el = trashRef.current;
@@ -10565,7 +13168,7 @@ const GridCanvas = forwardRef(function GridCanvas2({ layout, editing, data, onLa
         ));
         const gh = Math.max(
           minH,
-          Math.round((startPx.height + dy + GAP) / (CELL_H + GAP))
+          Math.round((startPx.height + dy + GAP) / (cellH + GAP))
         );
         const candidate = { gx: item.gx, gy: item.gy, gw, gh };
         next = {
@@ -10574,7 +13177,7 @@ const GridCanvas = forwardRef(function GridCanvas2({ layout, editing, data, onLa
           px: {
             ...startPx,
             width: Math.max(70, startPx.width + dx),
-            height: Math.max(CELL_H, startPx.height + dy)
+            height: Math.max(cellH, startPx.height + dy)
           },
           swapWith: null,
           moved: reflow({ ...candidate }, others),
@@ -10583,13 +13186,13 @@ const GridCanvas = forwardRef(function GridCanvas2({ layout, editing, data, onLa
       } else {
         const pos = clampPosition(
           item.gx + dx / (colW + GAP),
-          item.gy + dy / (CELL_H + GAP),
+          item.gy + dy / (cellH + GAP),
           item.gw,
           item.gh
         );
         const candidate = { ...pos, gw: item.gw, gh: item.gh };
         const pgx = (ev.clientX - stageRect.left - PAD) / (colW + GAP);
-        const pgy = (ev.clientY - stageRect.top - PAD) / (CELL_H + GAP);
+        const pgy = (ev.clientY - stageRect.top - PAD) / (cellH + GAP);
         const twin = overTrash ? null : findSwapTarget(pgx, pgy, item, others);
         next = {
           ...dragRef.current,
@@ -10653,7 +13256,7 @@ const GridCanvas = forwardRef(function GridCanvas2({ layout, editing, data, onLa
         }
         const pos = clampPosition(
           (x - stageRect.left - PAD) / (colW + GAP),
-          (y - stageRect.top - PAD) / (CELL_H + GAP),
+          (y - stageRect.top - PAD) / (cellH + GAP),
           gw
         );
         return { ...pos, gw, gh };
@@ -10710,7 +13313,8 @@ const GridCanvas = forwardRef(function GridCanvas2({ layout, editing, data, onLa
     0
   );
   const addRow = adding?.candidate ? adding.candidate.gy + adding.candidate.gh : 0;
-  const stageH = PAD * 2 + Math.max(maxRow, addRow) * (CELL_H + GAP) - GAP;
+  const rows = Math.max(maxRow, addRow);
+  const stageH = PAD * 2 + rows * (cellH + GAP) - GAP;
   const ghostBox = drag ? drag.overTrash ? null : drag.swapWith ? { ...layout.widgets.find((w) => w.id === drag.swapWith), gw: drag.candidate.gw, gh: drag.candidate.gh } : drag.candidate : adding?.candidate ?? null;
   const addDef = adding ? WIDGET_REGISTRY[adding.id] : null;
   return /* @__PURE__ */ jsxs("div", { ref: stageRef, className: "home-stage", style: { height: Math.max(stageH, 200) }, children: [
@@ -10726,17 +13330,17 @@ const GridCanvas = forwardRef(function GridCanvas2({ layout, editing, data, onLa
       if (!def) return null;
       const isDragged = drag?.id === item.id;
       const isTwinTarget = drag?.swapWith === item.id;
-      let box = item;
+      let box2 = item;
       if (!isDragged) {
         if (isTwinTarget && drag) {
           const origin = layout.widgets.find((w) => w.id === drag.id);
-          box = { ...item, gx: origin.gx, gy: origin.gy };
+          box2 = { ...item, gx: origin.gx, gy: origin.gy };
         } else {
           const gy = previewMoved?.get(item.id);
-          if (gy !== void 0) box = { ...item, gy };
+          if (gy !== void 0) box2 = { ...item, gy };
         }
       }
-      const style = isDragged && drag ? drag.px : toPx(box);
+      const style = isDragged && drag ? drag.px : toPx(box2);
       const Component = def.component;
       return /* @__PURE__ */ jsx(
         WidgetShell,
@@ -10759,7 +13363,7 @@ const GridCanvas = forwardRef(function GridCanvas2({ layout, editing, data, onLa
               widgetProps: item.props ?? {},
               onWidgetPropsChange: (p) => onWidgetPropsChange(item.id, p),
               editing,
-              gridSize: { gw: box.gw, gh: box.gh }
+              gridSize: { gw: box2.gw, gh: box2.gh }
             }
           )
         },
@@ -10800,6 +13404,7 @@ function WidgetCatalog({ layout, onChipPointerDown }) {
   ] }) });
 }
 const POLL_MS = 1e4;
+const REQUEST_TIMEOUT_MS = 15e3;
 const SOURCES = {
   status: () => api.getStatus(),
   system: () => api.getSystemStats(),
@@ -10821,27 +13426,34 @@ function useHomeData() {
   const timer = useRef(null);
   useEffect(() => {
     let cancelled = false;
-    async function poll() {
-      if (document.hidden) return;
-      const keys = Object.keys(SOURCES);
-      const results = await Promise.allSettled(keys.map((k) => SOURCES[k]()));
-      if (cancelled) return;
-      setData((prev) => {
-        const next = { ...prev, errors: new Set(prev.errors) };
-        keys.forEach((key, i) => {
-          const r = results[i];
-          if (r.status === "fulfilled") {
-            next[key] = r.value;
-            next.errors.delete(key);
-          } else {
-            next.errors.add(key);
-          }
-        });
-        return next;
-      });
-    }
-    poll();
-    timer.current = setInterval(poll, POLL_MS);
+    const inflight = /* @__PURE__ */ new Set();
+    const keys = Object.keys(SOURCES);
+    const fetchOne = (key) => {
+      if (inflight.has(key)) return;
+      inflight.add(key);
+      withTimeout(() => SOURCES[key](), REQUEST_TIMEOUT_MS).then(
+        (value) => {
+          inflight.delete(key);
+          if (cancelled) return;
+          setData((prev) => {
+            const errors = new Set(prev.errors);
+            errors.delete(key);
+            return { ...prev, [key]: value, errors };
+          });
+        },
+        () => {
+          inflight.delete(key);
+          if (cancelled) return;
+          setData((prev) => prev.errors.has(key) ? prev : { ...prev, errors: new Set(prev.errors).add(key) });
+        }
+      );
+    };
+    const poll = (first = false) => {
+      if (document.hidden && !first) return;
+      keys.forEach(fetchOne);
+    };
+    poll(true);
+    timer.current = setInterval(() => poll(), POLL_MS);
     const onVis = () => {
       if (!document.hidden) poll();
     };
@@ -10893,6 +13505,7 @@ function parseLayout(raw, known) {
   return { version: LAYOUT_VERSION, widgets };
 }
 const KNOWN_WIDGETS = new Set(Object.keys(WIDGET_REGISTRY));
+const EDITBAR_RESERVE = 100;
 const LAYOUT_URL = "/api/plugins/home-dashboard/layout";
 function loadLayout() {
   return fetchJSON(LAYOUT_URL).then((r) => r.layout == null ? DEFAULT_LAYOUT : parseLayout(r.layout, KNOWN_WIDGETS)).catch(() => DEFAULT_LAYOUT);
@@ -10906,6 +13519,10 @@ function saveLayout(layout) {
 }
 function HomePage() {
   const boardRoute = useBoardRoute();
+  const dashboardLocale = useDashboardLocale();
+  useEffect(() => {
+    if (dashboardLocale !== null) setHostLanguage(dashboardLocale);
+  }, [dashboardLocale]);
   if (boardRoute !== void 0) {
     return /* @__PURE__ */ jsx("div", { className: "home-board-page", children: /* @__PURE__ */ jsx(BoardApp, { route: boardRoute, onHome: () => {
       window.history.pushState(null, "", window.location.pathname + window.location.search);
@@ -10936,6 +13553,17 @@ function HomeGrid() {
     if (toastTimer.current) clearTimeout(toastTimer.current);
     toastTimer.current = setTimeout(() => setToast(null), 4e3);
   }, []);
+  const [viewH, setViewH] = useState(0);
+  useEffect(() => {
+    const el = rootRef.current;
+    if (!el) return;
+    const measure = () => setViewH(Math.max(0, el.clientHeight - EDITBAR_RESERVE));
+    measure();
+    const RO = globalThis.ResizeObserver;
+    const ro = RO ? new RO(measure) : null;
+    ro?.observe(el);
+    return () => ro?.disconnect();
+  }, [layout !== null]);
   const recomputeShowEdit = useCallback(() => {
     const el = rootRef.current;
     if (!el) return;
@@ -11032,6 +13660,7 @@ function HomeGrid() {
             onLayoutChange: update,
             onRemove: (id) => update({ ...layout, widgets: layout.widgets.filter((w) => w.id !== id) }),
             onWidgetPropsChange: updateWidgetProps,
+            fitHeight: viewH,
             trashRef: catalogRef,
             onTrashActive: setOverTrash
           }
@@ -11044,7 +13673,7 @@ function HomeGrid() {
               onClick: () => update(DEFAULT_LAYOUT),
               title: t2("home.restoreDefault"),
               "aria-label": t2("home.restoreDefault"),
-              children: /* @__PURE__ */ jsx("span", { className: "home-fab-spin", children: "↺" })
+              children: /* @__PURE__ */ jsx("span", { className: "home-fab-spin", children: /* @__PURE__ */ jsx(Icon, { name: "reset", size: 16 }) })
             }
           ),
           /* @__PURE__ */ jsxs(
@@ -11055,8 +13684,8 @@ function HomeGrid() {
               title: editing ? t2("home.doneEditing") : t2("home.editLayout"),
               "aria-label": editing ? t2("home.doneEditing") : t2("home.editLayout"),
               children: [
-                /* @__PURE__ */ jsx("span", { className: "home-fab-ico ico-edit", "aria-hidden": "true", children: "✎" }),
-                /* @__PURE__ */ jsx("span", { className: "home-fab-ico ico-done", "aria-hidden": "true", children: "✓" })
+                /* @__PURE__ */ jsx("span", { className: "home-fab-ico ico-edit", "aria-hidden": "true", children: /* @__PURE__ */ jsx(Icon, { name: "edit", size: 16 }) }),
+                /* @__PURE__ */ jsx("span", { className: "home-fab-ico ico-done", "aria-hidden": "true", children: /* @__PURE__ */ jsx(Icon, { name: "check", size: 16 }) })
               ]
             }
           )
@@ -11073,7 +13702,127 @@ const boardCss = `/* Board — "Mesa de despacho" (hd-canvas-plan/mockup-v2). Ev
  * mono for structure (headers, counts, keys, data). No embedded fonts.
  * Radii: flush chrome 0 · cards & buttons 3 · panels 4 · floating menus 6 · checkboxes 2.
  * Motion: 120-200 ms ease-out, none under prefers-reduced-motion. */
-
+/* Board camera, zoom level of detail, minimap view frame, miniature boards, page transitions.
+ * Kept apart from board.css (imported at its top); every selector is specific enough to win
+ * wherever it sits. LOD variables (--iz, --ls-*) and data-lod are set on a world element by
+ * lod.ts; the numbers in the comments are CSS px at 100 % zoom. */
+/* ── camera ─────────────────────────────────────────────────────────────── */
+/* compositor hints only while the camera is moving: a permanent will-change keeps the
+ * layer rasterised at its first scale (soft text after a zoom) */
+.hb-viewport > .hb-world { will-change: auto; }
+.hb-viewport.gesturing > .hb-world, .hb-viewport.gesturing > .hb-grid { will-change: transform; }
+/* the grid is one oversized layer, one tile larger on every side; panning only translates it */
+.hb-viewport > .hb-grid {
+  left: calc(var(--gp, 0px) * -1); top: calc(var(--gp, 0px) * -1);
+  right: calc(var(--gp, 0px) * -1); bottom: calc(var(--gp, 0px) * -1);
+  background-position: 0 0, 0 0;
+}
+/* ── zoom level of detail ───────────────────────────────────────────────── */
+/* titles keep a legible on-screen size: scaled by --ls-*, never shrinking with the board */
+.hb-world[data-lod] .hb-frame .lbl { transform: scale(var(--ls-f, 1)); transform-origin: 0 50%; }
+.hb-world[data-lod] .hb-text.h { transform: scale(var(--ls-h, 1)); transform-origin: 0 50%; }
+.hb-world[data-lod] .hb-col > .hd, .hb-world[data-lod] .hb-todo > .hd {
+  width: calc(100% / var(--ls-f, 1)); transform: scale(var(--ls-f, 1)); transform-origin: 0 0; overflow: hidden; }
+.hb-world[data-lod] .hb-col > .hd::before, .hb-world[data-lod] .hb-col > .hd::after,
+.hb-world[data-lod] .hb-todo > .hd::before, .hb-world[data-lod] .hb-todo > .hd::after { display: none; }
+.hb-world[data-lod] .hb-col .track { transform: translateY(calc(11px * (var(--ls-f, 1) - 1))); }
+.hb-world[data-lod] .hb-wires g > path:not(.hit):not(.line-sel)[fill]:not([fill="none"]),
+.hb-world[data-lod] .hb-wires g > rect:not(.lbl-bg), .hb-world[data-lod] .hb-wires .lbl-bg {
+  transform-box: fill-box; transform-origin: center; transform: scale(var(--ls-w, 1)); }
+.hb-world[data-lod] .hb-wires .lbl-bg { transform: scale(var(--ls-f, 1)); }
+.hb-world[data-lod] .hb-wires .lbl { font-size: calc(10.5px * var(--ls-f, 1)); }
+.hb-world[data-lod="1"] .hb-wires g > path:not(.hit):not(.line-sel):not([fill]),
+.hb-world[data-lod="2"] .hb-wires g > path:not(.hit):not(.line-sel):not([fill]) { stroke-width: calc(1.3px * var(--ls-w, 1)); }
+/* map view (below 50 %): small text becomes skeleton lines, pictures become thumbnails */
+.hb-world[data-lod="1"] .hb-card, .hb-world[data-lod="2"] .hb-card {
+  background: color-mix(in oklab, var(--bg) 87%, var(--ink)); box-shadow: 0 0 0 calc(1px * var(--ls-w, 1)) var(--rule-2); }
+.hb-world[data-lod="1"] .hb-card::after, .hb-world[data-lod="2"] .hb-card::after { display: none; }
+.hb-world[data-lod="1"] .hb-note, .hb-world[data-lod="2"] .hb-note { overflow: clip; }
+.hb-world[data-lod="1"] .hb-note h4, .hb-world[data-lod="2"] .hb-note h4,
+.hb-world[data-lod="1"] .hb-link h4, .hb-world[data-lod="2"] .hb-link h4,
+.hb-world[data-lod="1"] .hb-boardref .ttl b, .hb-world[data-lod="2"] .hb-boardref .ttl b {
+  width: calc(100% / var(--ls-c, 1)); padding-right: 0; transform: scale(var(--ls-c, 1)); transform-origin: 0 0;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }
+.hb-world[data-lod="1"] .hb-link h4 a, .hb-world[data-lod="2"] .hb-link h4 a { pointer-events: none; }
+.hb-world[data-lod="1"] .hb-note .body, .hb-world[data-lod="2"] .hb-note .body,
+.hb-world[data-lod="1"] .hb-link p, .hb-world[data-lod="2"] .hb-link p,
+.hb-world[data-lod="1"] .hb-link .url, .hb-world[data-lod="2"] .hb-link .url,
+.hb-world[data-lod="1"] .hb-todo li .l, .hb-world[data-lod="2"] .hb-todo li .l {
+  -webkit-text-fill-color: transparent; color: transparent; text-decoration: none;
+  background: repeating-linear-gradient(to bottom, color-mix(in srgb, var(--ink) 15%, transparent) 0 5px, transparent 5px 18px);
+  user-select: none; }
+.hb-world[data-lod="1"] .hb-note .body, .hb-world[data-lod="2"] .hb-note .body {
+  transform: translateY(calc(18.5px * (var(--ls-c, 1) - 1))); }
+.hb-world[data-lod="1"] .hb-note.quote .body, .hb-world[data-lod="2"] .hb-note.quote .body {
+  -webkit-text-fill-color: currentColor; color: var(--ink); background: none; transform: scale(var(--ls-c, 1)); transform-origin: 0 0;
+  width: calc(100% / var(--ls-c, 1)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-right: 0; }
+.hb-world[data-lod="1"] .hb-note .meta, .hb-world[data-lod="2"] .hb-note .meta,
+.hb-world[data-lod="1"] .hb-link .dom, .hb-world[data-lod="2"] .hb-link .dom,
+.hb-world[data-lod="1"] .hb-todo .addrow, .hb-world[data-lod="2"] .hb-todo .addrow,
+.hb-world[data-lod="1"] .hb-todo li .rm, .hb-world[data-lod="2"] .hb-todo li .rm,
+.hb-world[data-lod="1"] .hb-todo li .side, .hb-world[data-lod="2"] .hb-todo li .side,
+.hb-world[data-lod="1"] .hb-boardref .meta, .hb-world[data-lod="2"] .hb-boardref .meta { opacity: 0; }
+/* free text, embeds, live cards */
+.hb-world[data-lod="1"] .hb-text.p, .hb-world[data-lod="2"] .hb-text.p {
+  -webkit-text-fill-color: transparent; color: transparent; user-select: none;
+  background: repeating-linear-gradient(to bottom, color-mix(in srgb, var(--ink) 15%, transparent) 0 4px, transparent 4px 17.5px); }
+.hb-world[data-lod="1"] .hb-text.s, .hb-world[data-lod="2"] .hb-text.s { transform: scale(var(--ls-c, 1)); transform-origin: 0 0; }
+.hb-world[data-lod="1"] .hb-embed .file, .hb-world[data-lod="2"] .hb-embed .file {
+  display: block; max-width: calc(100% / var(--ls-c, 1)); transform: scale(var(--ls-c, 1)); transform-origin: 0 50%; }
+.hb-world[data-lod="1"] .hb-embed .sb, .hb-world[data-lod="2"] .hb-embed .sb,
+.hb-world[data-lod="1"] .hb-embed .tools, .hb-world[data-lod="2"] .hb-embed .tools,
+.hb-world[data-lod="1"] .hb-embed .foot, .hb-world[data-lod="2"] .hb-embed .foot { opacity: 0; }
+.hb-world[data-lod="1"] .hb-live .lv-head b, .hb-world[data-lod="2"] .hb-live .lv-head b {
+  width: calc(100% / var(--ls-c, 1)); transform: scale(var(--ls-c, 1)); transform-origin: 0 0; }
+.hb-world[data-lod="1"] .hb-live .lv-head small, .hb-world[data-lod="2"] .hb-live .lv-head small,
+.hb-world[data-lod="1"] .hb-live .lv-metrics .k, .hb-world[data-lod="2"] .hb-live .lv-metrics .k,
+.hb-world[data-lod="1"] .hb-live .lv-metrics .d, .hb-world[data-lod="2"] .hb-live .lv-metrics .d,
+.hb-world[data-lod="1"] .hb-live .lv-prog .lb, .hb-world[data-lod="2"] .hb-live .lv-prog .lb,
+.hb-world[data-lod="1"] .hb-live .lv-prog .eta, .hb-world[data-lod="2"] .hb-live .lv-prog .eta { opacity: 0; }
+/* diagram boxes: number and title scale up, the subtitle drops out */
+.hb-world[data-lod="1"] .hb-box, .hb-world[data-lod="2"] .hb-box {
+  background: color-mix(in oklab, var(--bg) 84%, var(--ink)); box-shadow: 0 0 0 calc(1px * var(--ls-w, 1)) var(--rule-3); }
+.hb-world[data-lod="1"] .hb-box .num, .hb-world[data-lod="2"] .hb-box .num {
+  position: absolute; left: 14px; top: 11px; transform: scale(var(--ls-b, 1)); transform-origin: 0 0; }
+.hb-world[data-lod="1"] .hb-box > span:not(.num), .hb-world[data-lod="2"] .hb-box > span:not(.num) { padding-left: calc(14px * var(--ls-b, 1)); width: 100%; }
+.hb-world[data-lod="1"] .hb-box b, .hb-world[data-lod="2"] .hb-box b {
+  width: calc(100% / var(--ls-b, 1)); transform: scale(var(--ls-b, 1)); transform-origin: 0 0; }
+.hb-world[data-lod="1"] .hb-box small, .hb-world[data-lod="2"] .hb-box small { opacity: 0; }
+/* frame corner marks keep a visible weight */
+.hb-world[data-lod] .hb-frame > i { width: calc(16px * var(--ls-w, 1)); height: calc(16px * var(--ls-w, 1)); }
+.hb-world[data-lod] .hb-frame > i:nth-of-type(1) { border-width: calc(1px * var(--ls-w, 1)) 0 0 calc(1px * var(--ls-w, 1)); }
+.hb-world[data-lod] .hb-frame > i:nth-of-type(2) { border-width: calc(1px * var(--ls-w, 1)) calc(1px * var(--ls-w, 1)) 0 0; }
+.hb-world[data-lod] .hb-frame > i:nth-of-type(3) { border-width: 0 0 calc(1px * var(--ls-w, 1)) calc(1px * var(--ls-w, 1)); }
+.hb-world[data-lod] .hb-frame > i:nth-of-type(4) { border-width: 0 calc(1px * var(--ls-w, 1)) calc(1px * var(--ls-w, 1)) 0; }
+/* pictures: a thumbnail stands in below 50 % (decoding a full-size photo to paint 80 px is waste) */
+.hb img.lo { display: none; }
+.hb-world[data-lod="1"] img.lo, .hb-world[data-lod="2"] img.lo { display: block; }
+.hb-world[data-lod="1"] img.full, .hb-world[data-lod="2"] img.full { display: none; }
+.hb-world[data-lod="1"] .hb-embed .frame, .hb-world[data-lod="2"] .hb-embed .frame { visibility: hidden; }
+.hb-world[data-lod="1"] .hb-video .play, .hb-world[data-lod="2"] .hb-video .play { display: none; }
+/* ── minimap: a static layer, and a frame that only moves ───────────────── */
+.hb-map { overflow: hidden; }
+.hb-map .hb-map-view { position: absolute; left: 0; top: 0; pointer-events: none; border: 1px solid var(--accent); opacity: .75; }
+.hb-map .hb-map-hermes { position: absolute; left: 0; top: 0; width: 8px; height: 8px; margin: -4px 0 0 -4px; pointer-events: none; background: var(--accent);
+  box-shadow: inset 0 0 0 2.5px var(--bg); display: none; }
+.hb-map-wrap { position: relative; width: 184px; height: 100px; }
+/* ── miniature boards (Home widget, nested-board cards) ─────────────────── */
+.hb.hb-mini { position: absolute; inset: 0; height: auto; min-height: 0; background: transparent; pointer-events: none; overflow: hidden; }
+.hb.hb-mini * { pointer-events: none !important; }
+.hb-mini .hb-world { position: absolute; left: 0; top: 0; transform-origin: 0 0; will-change: auto; }
+.hb-mini .hb-item { position: absolute; }
+.hb-mini .hb-wires .hit { display: none; }
+.hb-mini .hb-card, .hb-mini .hb-box { transition: none; }
+.hb-mini .hb-boardref .pv { pointer-events: none; }
+.hb-mini .hb-embed .frame { background: var(--well); }
+/* ── page transitions ───────────────────────────────────────────────────── */
+/* a snapshot of the page we are leaving, flown over the one we arrive at */
+.hb-xfade { position: fixed; z-index: 9999; overflow: hidden; pointer-events: none; contain: layout paint style; }
+.hb-xfade > * { position: absolute; left: 0; top: 0; transform-origin: 0 0; pointer-events: none !important; }
+.hb-xfade * { pointer-events: none !important; }
+@media (prefers-reduced-motion: reduce) {
+  .hb-xfade { display: none; }
+}
 .hb {
   --accent: var(--color-primary, var(--ui-accent, #ffe3c4));
   --accent-soft: color-mix(in srgb, var(--accent) 82%, #9aa3b5);
@@ -11119,13 +13868,14 @@ const boardCss = `/* Board — "Mesa de despacho" (hd-canvas-plan/mockup-v2). Ev
 .hb svg.px { width: 9px; height: 11px; fill: currentColor; flex: none; shape-rendering: crispEdges; }
 .hb input, .hb textarea { font: inherit; color: inherit; background: none; border: 0; outline: 0; resize: none; }
 .hb ::selection { background: color-mix(in srgb, var(--accent) 35%, transparent); }
-
 /* ── the Home header: lead rule · TITLE · count · fading hairline ── */
 .hb .hd { display: flex; align-items: center; gap: 10px; font: 700 10px/1 var(--mono); letter-spacing: .18em; text-transform: uppercase; color: var(--accent-soft); white-space: nowrap; }
 .hb .hd::before { content: ""; width: 12px; height: 1px; background: currentColor; opacity: .5; flex: none; }
 .hb .hd::after { content: ""; flex: 1; height: 1px; background: linear-gradient(to right, currentColor, transparent 92%); opacity: .28; }
-.hb .hd .n { order: 3; font-weight: 400; letter-spacing: .06em; color: var(--ink-3); }
-
+/* a long title shrinks to an ellipsis instead of running over its card */
+.hb .hd .t { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.hb-todo .hd, .hb-col > .hd { min-width: 0; }
+.hb .hd .n { order: 3; flex: none; font-weight: 400; letter-spacing: .06em; color: var(--ink-3); }
 /* ── table ── */
 .hb-viewport { position: absolute; inset: 44px 0 40px 0; overflow: clip; background: var(--bg); touch-action: none; outline: none; }
 .hb-viewport.panning { cursor: grabbing; }
@@ -11137,20 +13887,17 @@ const boardCss = `/* Board — "Mesa de despacho" (hd-canvas-plan/mockup-v2). Ev
 .hb-wires { position: absolute; left: 0; top: 0; overflow: visible; pointer-events: none; }
 .hb-wires .hit { pointer-events: stroke; cursor: pointer; }
 .hb-marquee { position: absolute; border: 1px dashed var(--rule-3); background: color-mix(in srgb, var(--accent) 5%, transparent); pointer-events: none; }
-
 /* ── items ── */
 .hb-item { position: absolute; }
 .hb-item.dragging { z-index: 40; }
 .hb-item.dragging > .hb-card, .hb-item.dragging > .hb-box { box-shadow: var(--lift); border-color: var(--rule-3); }
 .hb-item.just-placed { animation: hb-settle .42s var(--settle); }
 @keyframes hb-settle { from { transform: scale(.96); opacity: 0; } to { transform: none; opacity: 1; } }
-
 .hb-card { position: relative; border-radius: var(--r-card); background: var(--sheet); border: 1px solid var(--rule); transition: border-color .16s; }
 .hb-item:hover > .hb-card { border-color: var(--rule-2); }
 .hb-card::after { content: ""; position: absolute; right: 3px; bottom: 3px; width: 9px; height: 9px; border-right: 1.5px solid var(--rule-3); border-bottom: 1.5px solid var(--rule-3); opacity: 0; transition: opacity .16s; pointer-events: none; }
 .hb-item:hover > .hb-card::after { opacity: 1; }
 .hb-item.sel > .hb-card::after { opacity: 0; }
-
 /* Hermes' material: dot-matrix frame, 2px dots every 4px (1px gradients keep it crisp) */
 .hb .dm { border-color: transparent !important;
   background-image:
@@ -11162,18 +13909,19 @@ const boardCss = `/* Board — "Mesa de despacho" (hd-canvas-plan/mockup-v2). Ev
   background-origin: border-box; }
 .hb-card.dm { background-color: var(--sheet); }
 .hb .dm.soft { --dm: color-mix(in srgb, var(--accent) 55%, transparent); }
-
 .hb .sig { display: inline-flex; align-items: center; gap: 5px; font: 400 11px/1 var(--mono); letter-spacing: .04em; color: var(--accent); text-transform: lowercase; }
 .hb .meta { display: flex; align-items: center; gap: 10px; font: 400 10.5px/1 var(--mono); color: var(--ink-3); letter-spacing: .02em; min-width: 0; }
 .hb .meta .sp { flex: 1; }
+/* tags, due date and signature wrap onto a second line in a narrow card rather than breaking mid-word */
+.hb .meta { flex-wrap: wrap; row-gap: 5px; }
+.hb .meta > span { white-space: nowrap; }
+.hb .meta .sp { min-width: 0; }
 .hb .tag { color: var(--ink-2); }
 .hb .tag::before { content: "#"; color: var(--ink-3); }
 .hb .due { color: var(--warn); }
-
 .hb-more { position: absolute; top: 8px; right: 8px; width: 22px; height: 20px; border-radius: var(--r-ctl); font: 700 12px/20px var(--mono) !important; letter-spacing: .05em; color: var(--ink-3) !important; opacity: 0; transition: opacity .12s; z-index: 2; }
 .hb-item:hover .hb-more, .hb-kid:hover .hb-more { opacity: 1; }
 .hb-more:hover { color: var(--ink) !important; background: var(--tint) !important; }
-
 /* card (note) */
 .hb-note { padding: 14px 16px 12px; }
 .hb-note h4 { margin: 0; font: 600 14px/1.32 var(--sans); letter-spacing: .003em; color: var(--ink); padding-right: 20px; }
@@ -11183,12 +13931,10 @@ const boardCss = `/* Board — "Mesa de despacho" (hd-canvas-plan/mockup-v2). Ev
 .hb-note .meta { margin-top: 12px; }
 .hb-note .edit { display: block; width: 100%; min-height: 1.4em; overflow: hidden; }
 .hb-note h4 .edit { font: inherit; }
-
 /* segmented progress: one cell per real item */
 .hb .cells { display: flex; gap: 3px; margin-top: 11px; }
 .hb .cells i { flex: 1; height: 4px; background: color-mix(in srgb, var(--accent) 12%, transparent); }
 .hb .cells i.on { background: var(--accent); }
-
 /* to-do */
 .hb-todo { padding: 14px 16px 10px; }
 .hb-todo .sum { margin-top: 12px; font: 400 12.5px/1.3 var(--sans); color: var(--ink-2); }
@@ -11208,7 +13954,6 @@ const boardCss = `/* Board — "Mesa de despacho" (hd-canvas-plan/mockup-v2). Ev
 .hb-todo .addrow { display: flex; align-items: center; gap: 10px; padding: 6px; margin: 2px -6px 0; font: 400 12.5px/1 var(--sans); color: var(--ink-3); }
 .hb-todo .addrow b { display: grid; place-items: center; color: var(--accent-soft); width: 13px; }
 .hb-todo .addrow input { flex: 1; min-width: 0; }
-
 /* columns: a faint track, no box around the box */
 .hb-col { width: 276px; padding: 0 0 10px; }
 .hb-col > .hd { padding: 0 2px 12px; cursor: grab; }
@@ -11221,7 +13966,6 @@ const boardCss = `/* Board — "Mesa de despacho" (hd-canvas-plan/mockup-v2). Ev
 .hb-col .add { width: 100%; margin-top: 8px; height: 28px; padding: 0 6px; display: flex; align-items: center; gap: 8px; font: 500 12px/1 var(--sans); color: var(--ink-3); border-radius: var(--r-ctl); transition: color .12s, background .12s; }
 .hb-col .add .ic { color: var(--accent-soft); }
 .hb-col .add:hover { color: var(--ink); background: color-mix(in srgb, var(--accent) 5%, transparent); }
-
 /* link card */
 .hb-link { overflow: hidden; cursor: default; }
 .hb-link .thumb { height: 128px; border-bottom: 1px solid var(--rule); background: var(--well); overflow: hidden; display: block; }
@@ -11238,11 +13982,12 @@ const boardCss = `/* Board — "Mesa de despacho" (hd-canvas-plan/mockup-v2). Ev
 /* skeleton: rule lines, no shimmer */
 .hb-link .skel { display: grid; gap: 7px; margin-top: 10px; }
 .hb-link .skel i { height: 6px; background: color-mix(in srgb, var(--accent) 9%, transparent); }
-.hb-link .skel i:nth-child(1) { width: 78%; } .hb-link .skel i:nth-child(2) { width: 92%; } .hb-link .skel i:nth-child(3) { width: 54%; }
+.hb-link .skel i:nth-child(1) { width: 78%; }
+.hb-link .skel i:nth-child(2) { width: 92%; }
+.hb-link .skel i:nth-child(3) { width: 54%; }
 .hb-link .thumb.skel-thumb { background:
   repeating-linear-gradient(90deg, color-mix(in srgb, var(--accent) 7%, transparent) 0 1px, transparent 1px 24px),
   repeating-linear-gradient(0deg, color-mix(in srgb, var(--accent) 7%, transparent) 0 1px, transparent 1px 24px), var(--well); }
-
 /* video card: poster first, the player mounts on click */
 .hb-video { overflow: hidden; }
 .hb-video .stage { position: relative; aspect-ratio: 16 / 9; background: #000; overflow: hidden; border-bottom: 1px solid var(--rule); }
@@ -11256,29 +14001,30 @@ const boardCss = `/* Board — "Mesa de despacho" (hd-canvas-plan/mockup-v2). Ev
 .hb-video .dur { position: absolute; right: 10px; top: 10px; font: 400 10.5px/1 var(--mono); color: var(--ink-2); background: rgb(0 0 0 / .55); padding: 3px 5px; }
 .hb-video .poster-empty { position: absolute; inset: 0; display: grid; place-items: center; font: 400 11px/1 var(--mono); color: var(--ink-3);
   background: repeating-linear-gradient(90deg, color-mix(in srgb, var(--accent) 6%, transparent) 0 1px, transparent 1px 24px), var(--well); }
-
 /* image card */
 .hb-image { padding: 6px 6px 0; overflow: hidden; }
 .hb-image .art { line-height: 0; background: var(--well); min-height: 60px; }
 .hb-image .art img { width: 100%; height: auto; display: block; }
 .hb-image .cap { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 6px 11px; min-height: 12px; }
 .hb-image .cap b { font: 600 13px/1.2 var(--sans); }
-
 /* embed: a window */
 .hb-embed { padding: 0; overflow: hidden; }
 .hb-embed .bar-e { height: 34px; display: flex; align-items: center; gap: 10px; padding: 0 6px 0 12px; border-bottom: 1px solid var(--rule); font: 400 11px/1 var(--mono); white-space: nowrap; overflow: hidden; }
 .hb-embed .file { color: var(--ink); overflow: hidden; text-overflow: ellipsis; }
 .hb-embed .sb { color: var(--ink-3); overflow: hidden; text-overflow: ellipsis; }
+.hb-embed { container-type: inline-size; }
+@container (max-width: 330px) { .hb-embed .sb { display: none; } }
 .hb-embed .tools { margin-left: auto; display: flex; gap: 2px; }
 .hb-embed .frame { display: block; width: 100%; height: 240px; border: 0; background: var(--well); }
+.hb-embed .frame.themed { background: transparent; }
 .hb-embed .shield { position: absolute; inset: 0; z-index: 1; display: flex; align-items: flex-end; justify-content: flex-end; padding: 8px; cursor: pointer; }
 .hb-embed .shield span { font: 400 10.5px/1 var(--mono); color: var(--ink-2); padding: 4px 6px; border-radius: var(--r-ctl); background: var(--float-bg); border: 1px solid var(--float-line);
   opacity: 0; transition: opacity .14s var(--out); }
 .hb-embed .shield:hover span, .hb-embed .shield:focus-visible span { opacity: 1; }
 .hb-embed .foot { display: flex; justify-content: space-between; align-items: center; padding: 8px 12px 9px; border-top: 1px solid var(--rule); }
 .hb .kbtn { height: 24px; width: 24px; display: inline-grid; place-items: center; border-radius: var(--r-ctl); color: var(--ink-3); transition: color .14s var(--out), background-color .14s var(--out); }
+.hb .kbtn.on { color: var(--accent); }
 .hb .kbtn:hover { background: color-mix(in srgb, var(--accent) 7%, transparent); color: var(--ink); }
-
 /* nested board */
 .hb-boardref { padding: 6px; cursor: pointer; }
 .hb-boardref .pv { height: 110px; background: var(--well); position: relative; overflow: hidden; border: 1px solid var(--rule); }
@@ -11286,13 +14032,12 @@ const boardCss = `/* Board — "Mesa de despacho" (hd-canvas-plan/mockup-v2). Ev
 .hb-boardref .pv i.c { background: color-mix(in srgb, var(--accent) 24%, transparent); }
 .hb-boardref .pv i.h { background: none; outline: 1px dotted color-mix(in srgb, var(--accent) 60%, transparent); outline-offset: -1px; }
 .hb-boardref .ttl { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; padding: 10px 4px 3px; }
-.hb-boardref .ttl b { font: 600 14px/1.2 var(--sans); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hb-boardref .ttl b { font: 600 14px/1.25 var(--sans); min-width: 0; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow-wrap: anywhere; }
 .hb-boardref .ttl span { display: grid; place-items: center; color: var(--accent); opacity: 0; transition: opacity .16s var(--out); white-space: nowrap; }
 .hb-boardref .ttl button { display: grid; place-items: center; width: 22px; height: 22px; border-radius: var(--r-ctl); }
 .hb-boardref .ttl button:hover { background: var(--hover); }
 .hb-item:hover .hb-boardref .ttl span { opacity: 1; }
 .hb-boardref .meta { padding: 3px 4px 4px; }
-
 /* frames: corner marks, not boxes */
 .hb-frame { position: relative; width: 100%; height: 100%; }
 .hb-frame > i { position: absolute; width: 16px; height: 16px; border: 0 solid var(--rule-3); pointer-events: none; }
@@ -11300,11 +14045,11 @@ const boardCss = `/* Board — "Mesa de despacho" (hd-canvas-plan/mockup-v2). Ev
 .hb-frame > i:nth-of-type(2) { right: 0; top: 0; border-width: 1px 1px 0 0; }
 .hb-frame > i:nth-of-type(3) { left: 0; bottom: 0; border-width: 0 0 1px 1px; }
 .hb-frame > i:nth-of-type(4) { right: 0; bottom: 0; border-width: 0 1px 1px 0; }
-.hb-frame .lbl { position: absolute; left: 24px; top: -6px; display: flex; align-items: center; gap: 10px; padding: 0 6px; background: var(--bg); font: 700 10px/12px var(--mono); letter-spacing: .16em; text-transform: uppercase; color: var(--ink-2); white-space: nowrap; cursor: grab; }
-.hb-frame .lbl em { font: 400 10.5px/12px var(--mono); letter-spacing: .02em; text-transform: none; font-style: normal; color: var(--ink-3); }
+.hb-frame .lbl { position: absolute; left: 24px; top: -6px; display: flex; align-items: center; gap: 10px; padding: 0 6px; background: var(--bg); font: 700 10px/12px var(--mono); letter-spacing: .16em; text-transform: uppercase; color: var(--ink-2); white-space: nowrap; cursor: grab; max-width: calc(100% - 36px); }
+.hb-frame .lbl .t { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.hb-frame .lbl em { min-width: 0; overflow: hidden; text-overflow: ellipsis; font: 400 10.5px/12px var(--mono); letter-spacing: .02em; text-transform: none; font-style: normal; color: var(--ink-3); }
 .hb-frame.dm { background-color: transparent; }
 .hb-frame.dm .lbl { color: var(--accent); }
-
 /* diagram node */
 .hb-box { position: relative; width: 100%; height: 100%; border-radius: var(--r-card); padding: 11px 14px; display: flex; gap: 12px; align-items: flex-start;
   background: var(--sheet-2); border: 1px solid var(--rule-2); transition: border-color .16s; overflow: hidden; }
@@ -11312,16 +14057,14 @@ const boardCss = `/* Board — "Mesa de despacho" (hd-canvas-plan/mockup-v2). Ev
 .hb-box .num { font: 700 11px/18px var(--mono); color: var(--accent); flex: none; }
 .hb-box b { display: block; font: 600 14px/18px var(--sans); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .hb-box small { display: block; margin-top: 3px; font: 400 10.5px/1.2 var(--mono); color: var(--ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-
 /* text on the table (section headings) */
-.hb-text { width: max-content; max-width: 560px; }
-.hb-text.h { font: 700 15px/1 var(--mono); letter-spacing: .2em; text-transform: uppercase; color: var(--accent); display: flex; align-items: center; gap: 10px; white-space: nowrap; }
+.hb-text { width: max-content; max-width: min(560px, 100%); }
+.hb-text.h { font: 700 15px/1 var(--mono); letter-spacing: .2em; text-transform: uppercase; color: var(--accent); display: flex; align-items: center; gap: 10px; white-space: nowrap; overflow: hidden; max-width: 100%; }
 .hb-text.h::before { content: ""; width: 22px; height: 1px; background: currentColor; opacity: .5; flex: none; }
 .hb-text.h::after { content: ""; flex: 1; height: 1px; background: linear-gradient(to right, currentColor, transparent 92%); opacity: .28; }
 .hb-text.p { font: 400 13px/1.35 var(--sans); color: var(--ink-2); white-space: pre-wrap; }
 /* sketch labels: the UI sans in italic, Alberto's voice without a third family */
 .hb-text.s { font: italic 400 17px/1.25 var(--sans); color: var(--ink); opacity: .92; white-space: pre-wrap; }
-
 /* freehand and shapes. A restrained palette: the theme's ink and accent plus four muted
  * mid-tones that read on dark and light themes alike. */
 .hb {
@@ -11346,7 +14089,6 @@ const boardCss = `/* Board — "Mesa de despacho" (hd-canvas-plan/mockup-v2). Ev
 .hb-viewport.ink-eraser { cursor: none; }
 .hb-eraser { position: absolute; left: 0; top: 0; margin: calc(var(--r, 9px) * -1) 0 0 calc(var(--r, 9px) * -1); border-radius: 50%;
   border: 1.5px solid var(--ink-2); box-shadow: 0 0 0 1px color-mix(in srgb, var(--bg) 70%, transparent); pointer-events: none; z-index: 5; }
-
 /* the Draw tool's sub-toolbar: status-bar chrome, floating just above it */
 .hb-inkbar { position: absolute; left: 8px; bottom: 48px; z-index: 21; display: flex; flex-wrap: wrap; align-items: center;
   max-width: calc(100% - 16px); padding: 0 2px; border-radius: var(--r-float); background: var(--float-bg);
@@ -11368,7 +14110,6 @@ const boardCss = `/* Board — "Mesa de despacho" (hd-canvas-plan/mockup-v2). Ev
 .hb-inkbar .tool.sw-c.on { background: var(--hover); box-shadow: inset 0 0 0 1px var(--rule-3); }
 .hb-inkbar .tool.smooth { position: relative; }
 .hb-inkbar .tool.smooth b { position: absolute; right: 3px; bottom: 2px; font: 700 8px/1 var(--mono); }
-
 /* selection: accent hairline + print crop marks (the resize handles) */
 .hb-item.sel > .hb-card, .hb-item.sel > .hb-box { border-color: var(--accent) !important; }
 .hb-crop { position: absolute; width: 10px; height: 10px; border: 0 solid var(--accent); z-index: 5; }
@@ -11377,7 +14118,6 @@ const boardCss = `/* Board — "Mesa de despacho" (hd-canvas-plan/mockup-v2). Ev
 .hb-crop.bl { left: -6px; bottom: -6px; border-width: 0 0 1.5px 1.5px; }
 .hb-crop.br { right: -6px; bottom: -6px; border-width: 0 1.5px 1.5px 0; cursor: nwse-resize; }
 .hb-crop.br::before { content: ""; position: absolute; inset: -8px; }
-
 /* shared controls: icons, icon buttons, separators */
 .hb .ic { display: block; flex: none; }
 .hb .ib { width: 28px; height: 28px; display: inline-grid; place-items: center; flex: none; border-radius: var(--r-ctl); color: var(--ink-2);
@@ -11388,7 +14128,6 @@ const boardCss = `/* Board — "Mesa de despacho" (hd-canvas-plan/mockup-v2). Ev
 .hb .ib.danger:hover { color: var(--danger); background: color-mix(in srgb, var(--danger) 12%, transparent); }
 .hb .ib.lg { width: 30px; height: 30px; }
 .hb button:disabled { opacity: .38; cursor: default; pointer-events: none; }
-
 /* selection bar: screen space, fixed size at every zoom, never off the view */
 .hb-ctx { position: absolute; left: 0; top: 0; z-index: 30; display: flex; align-items: center; gap: 2px; height: 36px; padding: 0 4px;
   border-radius: var(--r-float); background: var(--float-bg); border: 1px solid var(--float-line); box-shadow: var(--lift);
@@ -11402,10 +14141,8 @@ const boardCss = `/* Board — "Mesa de despacho" (hd-canvas-plan/mockup-v2). Ev
 .hb-ctx .act:hover { background: color-mix(in srgb, var(--accent) 10%, transparent); }
 @keyframes hb-pop { from { opacity: 0; } to { opacity: 1; } }
 .hb-item.connect-from > .hb-card, .hb-item.connect-from > .hb-box { border-color: var(--accent) !important; border-style: dashed !important; }
-
 /* connector being drawn / hover hit */
 .hb-wires .draft { stroke: var(--accent); stroke-width: 1.3; fill: none; stroke-dasharray: 4 3; }
-
 /* ── Hermes cursor (world layer, counter-scaled) ── */
 .hb-hcur { position: absolute; left: 0; top: 0; pointer-events: none; z-index: 60; transform-origin: 0 0; transition: opacity .4s; }
 .hb-hcur.idle { opacity: 0; }
@@ -11417,7 +14154,6 @@ const boardCss = `/* Board — "Mesa de despacho" (hd-canvas-plan/mockup-v2). Ev
 .hb-hcur .caret { display: inline-block; width: 6px; height: 12px; margin-left: 3px; background: var(--accent); animation: hb-caret 1.06s steps(1) infinite; }
 @keyframes hb-caret { 50% { opacity: 0; } }
 .hb-trail { position: absolute; left: 0; top: 0; overflow: visible; pointer-events: none; z-index: 59; }
-
 /* ── chrome: flush strips, like a terminal's title and status lines ── */
 .hb-top { position: absolute; left: 0; right: 0; top: 0; height: 44px; display: flex; align-items: center; gap: 14px; padding: 0 10px 0 16px; z-index: 20;
   background: var(--chrome); border-bottom: 1px solid var(--rule); min-width: 0; }
@@ -11432,7 +14168,8 @@ const boardCss = `/* Board — "Mesa de despacho" (hd-canvas-plan/mockup-v2). Ev
 .hb .vsep { width: 1px; height: 20px; background: var(--rule); flex: none; }
 .hb-presence { display: flex; align-items: center; gap: 8px; white-space: nowrap; font: 400 11px/1 var(--mono); color: var(--ink-3); min-width: 0; overflow: hidden; }
 .hb-presence b { font-weight: 400; color: var(--ink); overflow: hidden; text-overflow: ellipsis; }
-.hb .tagh svg { width: 8px; height: 10px; }
+.hb .tagh { display: inline-flex; flex: none; align-items: center; gap: 5px; height: 16px; padding: 0 6px; background: var(--accent); color: var(--on-accent); font: 700 9.5px/1 var(--mono); letter-spacing: .14em; white-space: nowrap; }
+.hb .tagh svg { width: 8px; height: 10px; flex: none; }
 .hb .spacer { flex: 1; min-width: 0; }
 .hb-state { display: flex; align-items: center; gap: 14px; font: 400 11px/1 var(--mono); color: var(--ink-3); white-space: nowrap; }
 .hb-state b { font-weight: 400; color: var(--ink-2); }
@@ -11443,7 +14180,6 @@ const boardCss = `/* Board — "Mesa de despacho" (hd-canvas-plan/mockup-v2). Ev
 .hb .btn.primary { background: var(--accent); color: var(--on-accent); padding: 0 12px 0 10px; }
 .hb .btn.primary:hover { background: color-mix(in srgb, var(--accent) 86%, #fff); }
 .hb .btn.primary:active { transform: translateY(1px); }
-
 .hb-status { position: absolute; left: 0; right: 0; bottom: 0; height: 40px; display: flex; align-items: center; z-index: 20;
   background: var(--chrome); border-top: 1px solid var(--rule); color: var(--ink-2); }
 .hb-status .seg { display: flex; align-items: center; gap: 2px; height: 100%; padding: 0 6px; border-right: 1px solid var(--rule); flex: none; }
@@ -11457,7 +14193,6 @@ const boardCss = `/* Board — "Mesa de despacho" (hd-canvas-plan/mockup-v2). Ev
 .hb-status .pct { min-width: 44px; text-align: center; font: 400 11px/1 var(--mono); color: var(--ink); font-variant-numeric: tabular-nums; }
 .hb.narrow .hb-state .sess { display: none; }
 .hb.tiny .hb-state, .hb.tiny .hb-status .hint { display: none; }
-
 /* chat docked on the right: the table, the status line and the map make room */
 .hb.chat-open .hb-viewport, .hb.chat-open .hb-status { right: var(--chat-w, 380px); }
 .hb.chat-open .hb-map { right: calc(var(--chat-w, 380px) + 12px); }
@@ -11506,8 +14241,9 @@ const boardCss = `/* Board — "Mesa de despacho" (hd-canvas-plan/mockup-v2). Ev
 .hb-chat .ch-asst b { font-weight: 650; }
 .hb-chat .ch-asst code { font: 400 12px/1 var(--mono); padding: 1px 4px; border-radius: 3px; background: var(--hover); }
 .hb-chat .ch-asst pre { margin: 0 0 8px; padding: 8px 10px; border-radius: 6px; background: var(--well); border: 1px solid var(--rule); font: 400 11.5px/1.5 var(--mono); white-space: pre-wrap; overflow-wrap: anywhere; }
-.hb-chat .ch-tool { display: flex; align-items: center; gap: 8px; font: 400 10.5px/1.3 var(--mono); color: var(--ink-3); }
-.hb-chat .ch-tool .dot { width: 4px; height: 4px; background: var(--rule-3); flex: none; }
+.hb-chat .ch-tool { display: flex; align-items: center; gap: 8px; font: 400 10.5px/1.3 var(--mono); color: var(--ink-3); min-width: 0; }
+.hb-chat .ch-tool svg { flex: none; color: var(--ink-3); }
+.hb-chat .ch-tool .txt { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .hb-chat .ch-working { display: flex; align-items: center; gap: 7px; font: 400 11px/1 var(--mono); color: var(--ink-3); }
 .hb-chat .ch-working svg { width: 8px; height: 10px; color: var(--accent); }
 .hb-chat .ch-working .caret { display: inline-block; width: 6px; height: 11px; background: var(--accent); animation: hb-caret 1.06s steps(1) infinite; }
@@ -11525,7 +14261,6 @@ const boardCss = `/* Board — "Mesa de despacho" (hd-canvas-plan/mockup-v2). Ev
   transition: background-color .14s var(--out), opacity .14s var(--out); }
 .hb-chat .send:hover { background: color-mix(in srgb, var(--accent) 86%, #fff); }
 .hb-chat .send:disabled { opacity: .3; }
-
 /* right-click menu */
 .hb-menu { position: absolute; z-index: 45; min-width: 208px; max-width: 280px; padding: 4px; border-radius: var(--r-float); background: var(--float-bg);
   border: 1px solid var(--float-line); box-shadow: var(--lift); font: 400 12.5px/1 var(--sans); color: var(--ink); animation: hb-pop .12s var(--out); }
@@ -11541,7 +14276,6 @@ const boardCss = `/* Board — "Mesa de despacho" (hd-canvas-plan/mockup-v2). Ev
 .hb-menu button.danger .ico { color: var(--danger); }
 .hb-menu button.danger:hover, .hb-menu button.danger:focus-visible { background: color-mix(in srgb, var(--danger) 12%, transparent); }
 .hb-menu .sep { height: 1px; margin: 4px 6px; background: var(--float-line); }
-
 /* map: the board as a dot matrix (LIFE widget idiom) */
 .hb-map { position: absolute; right: 12px; bottom: 52px; width: 196px; z-index: 19; padding: 6px; border-radius: var(--r-panel); background: var(--chrome); border: 1px solid var(--rule);
   cursor: pointer; transition: border-color .16s var(--out), opacity .2s var(--out); }
@@ -11549,7 +14283,6 @@ const boardCss = `/* Board — "Mesa de despacho" (hd-canvas-plan/mockup-v2). Ev
 .hb-map.off { opacity: 0; pointer-events: none; }
 .hb-map canvas { display: block; width: 184px; height: 100px; }
 .hb.narrow .hb-map { display: none; }
-
 /* log: Hermes reports what he changed, in the Home's LOGS voice */
 .hb-log { position: absolute; left: 12px; bottom: 52px; z-index: 19; width: min(500px, calc(100% - 260px)); border-radius: var(--r-panel); background: var(--chrome); border: 1px solid var(--rule-2); padding: 10px 36px 10px 12px;
   box-shadow: var(--lift); transition: opacity .2s var(--out), transform .2s var(--out); }
@@ -11566,7 +14299,6 @@ const boardCss = `/* Board — "Mesa de despacho" (hd-canvas-plan/mockup-v2). Ev
 .hb-log .acts button .ic { color: var(--ink-3); }
 .hb-log .acts button:hover { background: var(--hover); color: var(--ink); }
 .hb-log .x { position: absolute; right: 6px; top: 6px; width: 24px; height: 24px; }
-
 /* inline dialogs (link / embed input), Home-log voice, no glass */
 .hb-ask { position: absolute; left: 50%; top: 64px; transform: translateX(-50%); z-index: 40; width: min(560px, calc(100% - 40px)); background: var(--float-bg); border: 1px solid var(--float-line); border-radius: var(--r-float); box-shadow: var(--lift); padding: 14px; animation: hb-pop .14s var(--out); }
 .hb-ask .hd { margin-bottom: 10px; }
@@ -11576,13 +14308,11 @@ const boardCss = `/* Board — "Mesa de despacho" (hd-canvas-plan/mockup-v2). Ev
 .hb-ask .row { display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px; align-items: center; }
 .hb-ask .row .hint { margin-right: auto; font: 400 11.5px/1.35 var(--sans); color: var(--ink-3); }
 .hb-toast { position: absolute; left: 50%; bottom: 56px; transform: translateX(-50%); z-index: 41; background: var(--float-bg); border: 1px solid var(--float-line); border-radius: var(--r-float); padding: 8px 12px; font: 500 12px/1.3 var(--sans); color: var(--ink); max-width: 80%; box-shadow: var(--lift); animation: hb-pop .14s var(--out); }
-
 /* empty board: icon, title, one line */
 .hb-empty { position: absolute; left: 50%; top: 42%; transform: translate(-50%, -50%); display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center; width: min(380px, 80%); pointer-events: none; }
 .hb-empty .ico { width: 36px; height: 36px; display: grid; place-items: center; border-radius: 8px; border: 1px solid var(--rule-2); color: var(--accent-soft); }
 .hb-empty .hd::before, .hb-empty .hd::after { display: none; }
 .hb-empty p { margin: 0; font: 400 13px/1.5 var(--sans); color: var(--ink-3); }
-
 /* ── boards index ── */
 .hb-index { position: absolute; inset: 44px 0 0 0; overflow: auto; padding: 36px 40px 60px; user-select: none; }
 .hb-index > .hd { font-size: 15px; letter-spacing: .2em; color: var(--accent); max-width: 1180px; }
@@ -11600,7 +14330,6 @@ const boardCss = `/* Board — "Mesa de despacho" (hd-canvas-plan/mockup-v2). Ev
 .hb-index .new small { font: 400 10.5px/1.3 var(--mono); color: var(--ink-3); }
 .hb-index .hb-boardref .del { width: 24px; height: 24px; opacity: 0; }
 .hb-index .hb-boardref:hover .del, .hb-index .hb-boardref .del:focus-visible { opacity: 1; }
-
 /* ── Home widget ── */
 .hb-widget { display: flex; flex-direction: column; gap: 8px; height: calc(100% - 22px); min-height: 0; cursor: pointer; }
 .hb-widget .pvw { position: relative; flex: 1; min-height: 40px; border: 1px solid var(--home-border, rgb(255 227 196 / .13)); border-radius: 3px; overflow: hidden; background: rgb(0 0 0 / .18); transition: border-color .16s ease-out; }
@@ -11618,7 +14347,6 @@ const boardCss = `/* Board — "Mesa de despacho" (hd-canvas-plan/mockup-v2). Ev
   transition: color .14s ease-out, background-color .14s ease-out; }
 .hb-wctl .hv-ic:hover { color: var(--color-foreground, #e8e3dc); background: color-mix(in srgb, var(--home-accent, #ffe3c4) 10%, transparent); }
 .hb-wctl .hv-ic svg { display: block; }
-
 /* tooltip: one node on <body>, styled like Desktop's (inverted, small, name + key) */
 .hb-tip { position: fixed; left: 0; top: 0; z-index: 2147483000; display: none; align-items: center; gap: 8px; max-width: 280px; padding: 5px 8px;
   border-radius: 4px; background: var(--color-foreground, #ece6dd); color: var(--color-background, #111);
@@ -11631,7 +14359,6 @@ const boardCss = `/* Board — "Mesa de despacho" (hd-canvas-plan/mockup-v2). Ev
   background: color-mix(in srgb, var(--color-background, #111) 10%, transparent); border: 1px solid color-mix(in srgb, var(--color-background, #111) 18%, transparent); }
 .hb-tip kbd + kbd { margin-left: -4px; }
 @media (prefers-reduced-motion: reduce) { .hb-tip { transition: none; transform: none; } }
-
 /* ── live card: a terminal status panel, one accent, data in mono ── */
 .hb-live { overflow: hidden; container-type: inline-size; cursor: default; }
 .hb-live > * + * { border-top: 1px solid var(--rule); }
@@ -11650,7 +14377,6 @@ const boardCss = `/* Board — "Mesa de despacho" (hd-canvas-plan/mockup-v2). Ev
 .hb .lv-pill.error { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 60%, transparent); background: color-mix(in srgb, var(--danger) 10%, transparent); }
 .hb .lv-pill.idle { color: var(--ink-3); border-color: var(--rule-2); }
 .hb .lv-pill.stale { color: var(--warn); border-color: color-mix(in srgb, var(--warn) 55%, transparent); background: color-mix(in srgb, var(--warn) 8%, transparent); }
-
 .hb-live .lv-prog { padding: 11px 14px 12px; }
 .hb-live .lv-prog .row { display: flex; align-items: baseline; gap: 10px; min-width: 0; }
 .hb-live .lv-prog .lb { flex: 1; min-width: 0; font: 400 12.5px/1.2 var(--sans); color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -11658,19 +14384,18 @@ const boardCss = `/* Board — "Mesa de despacho" (hd-canvas-plan/mockup-v2). Ev
 .hb-live .lv-prog .eta { font: 400 10.5px/1 var(--mono); color: var(--ink-3); white-space: nowrap; }
 .hb-live .lv-prog .cells { margin-top: 9px; gap: 2px; }
 .hb-live .lv-prog .cells i { height: 5px; }
-
-.hb-live .lv-metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(84px, 1fr)); }
+.hb-live .lv-metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(112px, 1fr)); }
 .hb-live .lv-metrics .m { display: flex; flex-direction: column; gap: 5px; padding: 10px 14px 11px; min-width: 0; box-shadow: inset -1px 0 0 var(--rule), inset 0 -1px 0 var(--rule); margin: 0 -1px -1px 0; }
-.hb-live .lv-metrics .k { font: 700 9px/1 var(--mono); letter-spacing: .15em; text-transform: uppercase; color: var(--ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.hb-live .lv-metrics .v { font: 600 18px/1.05 var(--mono); color: var(--ink); font-variant-numeric: tabular-nums; letter-spacing: -.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* line-height + block padding leave room for the accent of an uppercase É/Í/Ó; overflow:hidden clips at the line box */
+.hb-live .lv-metrics .k { font: 700 9px/1.5 var(--mono); padding-block: 3px 1px; margin-block: -3px -1px; letter-spacing: .15em; text-transform: uppercase; color: var(--ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hb-live .lv-metrics .v { font: 600 18px/1.15 var(--mono); color: var(--ink); font-variant-numeric: tabular-nums; letter-spacing: -.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .hb-live .lv-metrics .v em { font: 400 11px/1 var(--mono); font-style: normal; color: var(--ink-3); margin-left: 3px; }
 .hb-live .lv-metrics .d { font: 400 10.5px/1 var(--mono); color: var(--ink-3); font-variant-numeric: tabular-nums; }
 .hb-live .lv-metrics .d.good { color: var(--accent); }
 .hb-live .lv-metrics .d.bad { color: var(--warn); }
-
 .hb-live .lv-spark { padding: 10px 14px 12px; }
 .hb-live .lv-spark .row { display: flex; align-items: baseline; gap: 10px; min-width: 0; }
-.hb-live .lv-spark .k { font: 700 9px/1 var(--mono); letter-spacing: .15em; text-transform: uppercase; color: var(--ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hb-live .lv-spark .k { font: 700 9px/1.5 var(--mono); padding-block: 3px 1px; margin-block: -3px -1px; letter-spacing: .15em; text-transform: uppercase; color: var(--ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .hb-live .lv-spark .sp { flex: 1; }
 .hb-live .lv-spark .rng { font: 400 10px/1 var(--mono); color: var(--ink-3); white-space: nowrap; font-variant-numeric: tabular-nums; }
 .hb-live .lv-spark b { font: 600 12px/1 var(--mono); color: var(--ink); font-variant-numeric: tabular-nums; }
@@ -11679,18 +14404,15 @@ const boardCss = `/* Board — "Mesa de despacho" (hd-canvas-plan/mockup-v2). Ev
 .hb-live .lv-spark svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
 .hb-live .lv-spark .line { fill: none; stroke: currentColor; stroke-width: 1.4; stroke-linejoin: round; stroke-linecap: round; }
 .hb-live .lv-spark .dot { position: absolute; width: 7px; height: 7px; margin: -3.5px 0 0 -3.5px; background: var(--accent); box-shadow: 0 0 0 2px var(--sheet); }
-
 .hb-live .lv-media .stage, .hb-live .lv-media .still { position: relative; aspect-ratio: 16 / 9; background: #000; overflow: hidden; }
 .hb-live .lv-media .still img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .hb-live .lv-media .cap { padding: 8px 14px 9px; font: 400 10.5px/1.35 var(--mono); color: var(--ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; border-top: 1px solid var(--rule); }
-
 .hb-live .lv-log { position: relative; padding: 9px 14px 10px; background: var(--well); }
-.hb-live .lv-log .k { display: block; margin-bottom: 6px; font: 700 9px/1 var(--mono); letter-spacing: .15em; text-transform: uppercase; color: var(--ink-3); }
+.hb-live .lv-log .k { display: block; margin-bottom: 6px; font: 700 9px/1.5 var(--mono); letter-spacing: .15em; text-transform: uppercase; color: var(--ink-3); }
 .hb-live .lv-log pre { margin: 0; font: 400 10.5px/1.6 var(--mono); color: var(--ink-3); white-space: pre-wrap; overflow-wrap: anywhere;
   -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 14px); mask-image: linear-gradient(to bottom, transparent 0, #000 14px); user-select: text; }
 .hb-live .lv-log pre .last { color: var(--ink-2); }
 .hb-live .lv-log.prose pre { font: 400 12px/1.5 var(--sans); -webkit-mask-image: none; mask-image: none; }
-
 .hb-live .lv-foot { display: flex; align-items: center; gap: 6px; min-height: 40px; padding: 6px 8px 6px 14px; flex-wrap: wrap; }
 .hb-live .lv-foot .fr { display: inline-flex; align-items: center; gap: 7px; font: 400 10.5px/1 var(--mono); color: var(--ink-3); white-space: nowrap; font-variant-numeric: tabular-nums; }
 .hb-live .lv-foot .fr i { width: 6px; height: 6px; background: var(--accent); flex: none; transition: box-shadow .5s var(--out); }
@@ -11710,13 +14432,11 @@ const boardCss = `/* Board — "Mesa de despacho" (hd-canvas-plan/mockup-v2). Ev
 .hb-live .lv-btn:disabled { opacity: .45; }
 .hb-live .lv-btn .spin { width: 12px; height: 12px; border: 1.5px solid var(--rule-3); border-top-color: var(--accent); border-radius: 50%; animation: hb-spin .8s linear infinite; }
 @keyframes hb-spin { to { transform: rotate(360deg); } }
-
 /* stale: the numbers fade back, the pill and the footer say why */
 .hb-live.stale .lv-metrics .v, .hb-live.stale .lv-prog .pc, .hb-live.stale .lv-spark b { color: var(--ink-2); }
 .hb-live.stale .lv-prog .cells i.on, .hb-live.stale .lv-spark .dot { background: color-mix(in srgb, var(--accent) 45%, transparent); }
 .hb-live.stale .lv-spark .plot { color: color-mix(in srgb, var(--accent) 50%, transparent); }
 .hb-live.st-error .lv-head .ico { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 45%, transparent); }
-
 /* result toast on the card itself */
 .hb-live .lv-toast { position: absolute; left: 10px; right: 10px; bottom: 46px; z-index: 3; display: flex; align-items: flex-start; gap: 8px; padding: 9px 11px;
   border-radius: var(--r-float); background: var(--float-bg); border: 1px solid var(--float-line); box-shadow: var(--lift); font: 500 12px/1.35 var(--sans); color: var(--ink);
@@ -11725,10 +14445,24 @@ const boardCss = `/* Board — "Mesa de despacho" (hd-canvas-plan/mockup-v2). Ev
 .hb-live .lv-toast.err { border-color: color-mix(in srgb, var(--danger) 45%, transparent); }
 .hb-live .lv-toast.err .ic { color: var(--danger); }
 @keyframes hb-toast-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
-
-/* sizes: narrow cards stack metrics in pairs, wide ones get room to breathe */
+/* sizes: narrow cards stack metrics in pairs, wide ones get room to breathe.
+   Columns follow the metric count (data-n) so four values share one row at the default width
+   instead of ellipsizing; below 380px they pair up, and 4+ values shrink to 16px under 480px. */
+.hb-live .lv-metrics[data-n="1"] { grid-template-columns: 1fr; }
+.hb-live .lv-metrics[data-n="2"] { grid-template-columns: 1fr 1fr; }
+.hb-live .lv-metrics[data-n="3"] { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.hb-live .lv-metrics[data-n="4"] { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.hb-live .lv-metrics[data-n="5"], .hb-live .lv-metrics[data-n="6"] { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.hb-live .lv-metrics[data-n="7"], .hb-live .lv-metrics[data-n="8"] { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+@container (max-width: 479px) {
+  .hb-live .lv-metrics[data-n="4"] .v, .hb-live .lv-metrics[data-n="7"] .v, .hb-live .lv-metrics[data-n="8"] .v { font-size: 16px; }
+}
+@container (max-width: 379px) {
+  .hb-live .lv-metrics[data-n="3"], .hb-live .lv-metrics[data-n="4"], .hb-live .lv-metrics[data-n="5"], .hb-live .lv-metrics[data-n="6"], .hb-live .lv-metrics[data-n="7"], .hb-live .lv-metrics[data-n="8"] { grid-template-columns: 1fr 1fr; }
+  .hb-live .lv-metrics .v { font-size: 18px !important; }
+}
 @container (max-width: 280px) {
-  .hb-live .lv-metrics { grid-template-columns: 1fr 1fr; }
+  .hb-live .lv-metrics[data-n] { grid-template-columns: 1fr 1fr; }
   .hb-live .lv-head { grid-template-columns: minmax(0, 1fr) auto; gap: 9px; padding: 11px 12px 10px; }
   .hb-live .lv-head .ico { display: none; }
   .hb-live .lv-spark .rng { display: none; }
@@ -11742,7 +14476,6 @@ const boardCss = `/* Board — "Mesa de despacho" (hd-canvas-plan/mockup-v2). Ev
   .hb-live .lv-metrics .m { padding: 12px 16px 13px; }
   .hb-live .lv-spark .plot { height: 58px; }
 }
-
 /* video: duration badge, the paused-element fallback */
 .hb-video .stage video.still, .hb-live .stage video.still { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; pointer-events: none; opacity: .86; }
 .hb .stage .dur { position: absolute; right: 10px; top: 10px; font: 500 10.5px/1 var(--mono); color: #f3ece3; background: rgb(0 0 0 / .62); padding: 4px 6px; border-radius: 2px; letter-spacing: .02em; font-variant-numeric: tabular-nums; pointer-events: none; }
@@ -11753,7 +14486,6 @@ const boardCss = `/* Board — "Mesa de despacho" (hd-canvas-plan/mockup-v2). Ev
 .hb-live .stage .play svg { width: 9px; height: 11px; fill: currentColor; }
 .hb-live .stage .poster-empty { position: absolute; inset: 0; display: grid; place-items: center; font: 400 11px/1 var(--mono); color: var(--ink-3);
   background: repeating-linear-gradient(90deg, color-mix(in srgb, var(--accent) 6%, transparent) 0 1px, transparent 1px 24px), var(--well); }
-
 /* confirm dialog for destructive actions: modal, Cancel focused, Esc cancels */
 .hb-scrim { position: absolute; inset: 0; z-index: 50; background: rgb(0 0 0 / .42); display: grid; place-items: center; animation: hb-pop .14s var(--out); }
 .hb-confirm { width: min(440px, calc(100% - 40px)); padding: 16px 16px 14px; border-radius: var(--r-float); background: var(--float-bg); border: 1px solid var(--float-line); box-shadow: var(--lift); }
@@ -11766,18 +14498,57 @@ const boardCss = `/* Board — "Mesa de despacho" (hd-canvas-plan/mockup-v2). Ev
 .hb-confirm .row { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
 .hb .btn.danger { background: var(--danger); color: #fff; padding: 0 12px 0 10px; }
 .hb .btn.danger:hover { background: color-mix(in srgb, var(--danger) 86%, #fff); }
-
 @media (prefers-reduced-motion: reduce) {
   .hb *, .hb *::before, .hb *::after { animation: none !important; transition: none !important; }
 }
-
 @keyframes hb-dot-in { from { opacity: 0; } }
 .hb-wires .fresh rect.d { animation: hb-dot-in .2s both; }
 .hb-item.reveal-wait { visibility: hidden; }
-.hb-wires .lbl-bg { fill: var(--bg); }
-.hb-wires .lbl { font: 400 10.5px var(--mono); fill: var(--ink-3); }
+.hb-wire-labels { z-index: 4; }
+.hb-wires .lbl { font: 400 10.5px var(--mono); fill: var(--ink-2); paint-order: stroke; stroke: var(--bg); stroke-width: 7px; stroke-linejoin: round; }
 .hb-wires .line-sel { stroke: var(--accent); stroke-width: 1.5; fill: none; stroke-dasharray: 3 3; }
 .hb-ghost { position: absolute; pointer-events: none; z-index: 50; opacity: .92; box-shadow: var(--lift); }
+/* ── direct manipulation (1.9.3) ──
+ * Cursors: the arrow over cards, a move cursor once selected, an I-beam where text is being
+ * edited. Text inside an editing card is selectable and never starts a pan or a drag. */
+.hb-item { cursor: default; }
+.hb-item.sel { cursor: move; }
+.hb-item.sel .hb-crop.br { cursor: nwse-resize; }
+.hb .edit, .hb .hb-lbl-edit { cursor: text; user-select: text; -webkit-user-select: text; }
+.hb-link h4 a, .hb-video h4 a { cursor: inherit; text-decoration: none; }
+.hb-item .hb-link h4 a:hover, .hb-item .hb-video h4 a:hover { text-decoration: underline; text-decoration-color: color-mix(in srgb, var(--accent) 55%, transparent); text-underline-offset: 3px; }
+/* ── snap guides: 1px at every zoom, the accent, only while dragging ── */
+.hb-guides { position: absolute; left: 0; top: 0; width: 0; height: 0; pointer-events: none; z-index: 60; }
+.hb-guide { position: absolute; background: var(--accent); opacity: .8; pointer-events: none; }
+.hb-guide.x { width: calc(1px * var(--iz, 1)); }
+.hb-guide.y { height: calc(1px * var(--iz, 1)); }
+/* ── flowchart shapes: the box's hairline, in any outline ── */
+.hb-shape { position: relative; width: 100%; height: 100%; display: grid; place-items: center; color: var(--ink); }
+.hb-shape .o { position: absolute; inset: 0; overflow: visible; pointer-events: none; }
+.hb-shape .o path { fill: var(--sheet-2); stroke: var(--rule-2); stroke-width: 1; transition: stroke .16s; }
+.hb-item:hover > .hb-shape .o path { stroke: var(--rule-3); }
+.hb-item.sel > .hb-shape .o path { stroke: var(--accent); }
+.hb-shape .t { position: relative; max-width: 100%; padding: 6px 12px; text-align: center; font: 600 13px/1.25 var(--sans); overflow-wrap: anywhere; }
+.hb-shape .t .edit { text-align: center; font: inherit; }
+.hb-shape.diamond .t { max-width: 66%; padding: 4px 0; }
+.hb-shape.circle .t { max-width: 80%; padding: 2px 0; font-size: 12px; }
+/* Hermes' material: the outline in dots, same 2px / 4px rhythm as his cards */
+.hb-shape.by-h .o path { stroke: var(--accent); stroke-width: 2; stroke-linecap: butt; stroke-dasharray: 2 2; fill: var(--sheet); }
+.hb-item.sel > .hb-shape.by-h .o path { stroke: var(--accent); }
+/* ── connector: label field and the "+" insert handle ── */
+.hb-wires .hb-lbl-edit { width: 100%; height: 22px; padding: 0 6px; text-align: center; border-radius: var(--r-ctl); background: var(--bg);
+  border: 1px solid var(--accent); font: 400 10.5px var(--mono); color: var(--ink); }
+.hb-wires .hb-eplus { cursor: pointer; pointer-events: all; animation: hb-pop .12s var(--out); }
+.hb-wires .hb-eplus .pad { fill: transparent; }
+.hb-wires .hb-eplus .dot { fill: var(--float-bg, var(--bg)); stroke: var(--accent); stroke-width: 1.25; transition: fill .14s var(--out); }
+.hb-wires .hb-eplus .pl { stroke: var(--accent); stroke-width: 1.6; stroke-linecap: round; fill: none; }
+.hb-wires .hb-eplus:hover .dot { fill: color-mix(in srgb, var(--accent) 22%, var(--bg)); }
+/* ── insert picker: same family as the selection bar ── */
+.hb-epick { position: absolute; z-index: 40; display: flex; flex-wrap: wrap; align-items: center; gap: 2px; max-width: 380px; padding: 3px 4px;
+  border-radius: var(--r-float); background: var(--float-bg); border: 1px solid var(--float-line); box-shadow: var(--lift); animation: hb-pop .14s var(--out); }
+.hb-epick .kind { padding: 0 8px 0 6px; font: 400 10.5px/1 var(--mono); letter-spacing: .04em; color: var(--ink-3); text-transform: lowercase; }
+.hb-epick .sep { width: 1px; height: 18px; margin: 0 4px; background: var(--float-line); flex: none; }
+.hb-epick .row2 { flex-basis: 100%; display: flex; align-items: center; gap: 2px; padding-top: 3px; margin-top: 3px; border-top: 1px solid var(--float-line); }
 `;
 const HOME_DESKTOP_PATH = "/home";
 const BOARDS_DESKTOP_PATH = "/boards";
