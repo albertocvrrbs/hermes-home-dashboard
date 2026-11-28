@@ -94,6 +94,9 @@ def _rect(it: Dict[str, Any], items: Dict[str, Dict[str, Any]]) -> Optional[Tupl
         return it["x"], it["y"], w, bulk._media_h(it["k"], w, it["iw"], it["ih"])  # same height the board gives it
     if it.get("h") is None and it["k"] == "card":
         return it["x"], it["y"], w, bulk._card_h(it, w)
+    if not it.get("h") and it["k"] == "board":
+        from .engine import board_card_h
+        return it["x"], it["y"], w, board_card_h(w)
     return it["x"], it["y"], w, it.get("h") or dh
 
 

@@ -3,7 +3,7 @@
 // cards, so zooming from either into the full page is one continuous picture.
 import { useCallback, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useT } from "../home/i18n";
-import { fitView, RESIZE_H, type Rect, type View } from "./geometry";
+import { boardPreviewH, fitView, RESIZE_H, type Rect, type View } from "./geometry";
 import { ItemBody, type ItemCtx } from "./items";
 import { approxRect, DEFAULT_SIZE, itemLabel, type BoardDoc, type Item } from "./model";
 import { Wires } from "./Wires";
@@ -153,8 +153,8 @@ function MiniBody({ id, item, c }: { id: string; item: Item; c: ItemCtx }): Reac
   if (item.k === "video" && item.sync) return <ItemBody id={id} item={{ ...item, sync: undefined }} c={c} dropIndex={null} selected={false} />;
   if (item.k === "board") {
     return (
-      <div className={`hb-card hb-boardref${item.by === "h" ? " dm" : ""}`} style={{ width: item.w ?? 212 }}>
-        <div className="pv" />
+      <div className={`hb-card hb-boardref${item.by === "h" ? " dm" : ""}${item.h ? " fill" : ""}`} style={{ width: item.w ?? 212 }}>
+        <div className="pv" style={item.h ? undefined : { height: boardPreviewH(item.w) }} />
         <div className="ttl"><b>{item.title || itemLabel(item)}</b></div>
         <div className="meta"><span>&nbsp;</span></div>
       </div>

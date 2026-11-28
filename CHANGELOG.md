@@ -76,6 +76,12 @@ Found while building the launch board with real Hermes, by chat only.
   they have seen three times, so Hermes was copying the PNG around). Free text gets a height
   estimate from its lines for layout.
 
+- **Sub-board cards grow.** A board card takes a height (resize it, or Hermes sets `h`) and its
+  live preview fills the card; without a height the preview keeps the card's proportions. It used to
+  stay a 110 px strip however wide the card was, so the Training Room card left a big hole in its zone.
+  The board's size guesses (fit, minimap, layout on the server) follow the same rules for images,
+  videos and board cards.
+
 ## 1.10.0 — video parity
 
 Everything the launch video shows now works for real, with real Hermes, from one chat

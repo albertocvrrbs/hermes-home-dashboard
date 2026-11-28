@@ -33,7 +33,11 @@ test("the board's size guess for a picture follows its aspect ratio (fit / minim
   assert.equal(wide.w, 320);
   assert.ok(tall.h > wide.h);
   assert.ok(Math.abs(wide.h - Math.round(306 * 0.5625 + 56)) <= 1);
-  assert.equal(approxRect({ k: "image", x: 0, y: 0, h: 200, iw: 10, ih: 10 }).h, 200, "an explicit h wins");
+  // the image card ignores h (it is as tall as its picture), so the guess does too
+  assert.equal(approxRect({ k: "image", x: 0, y: 0, h: 200, iw: 10, ih: 10 }).h, 372 - 14 + 56);
+  const vid = approxRect({ k: "video", x: 0, y: 0, w: 680, h: 383, iw: 960, ih: 540 });
+  assert.equal(vid.h, Math.round(678 * 0.5625 + 84));
+  assert.equal(approxRect({ k: "board", x: 0, y: 0, w: 1200 }).h, 624 + 62);
 });
 
 test("every string the stamps and file buttons show exists in both languages", () => {

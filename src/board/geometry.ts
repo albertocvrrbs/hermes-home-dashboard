@@ -161,7 +161,12 @@ export function intersects(a: Rect, b: Rect): boolean {
 
 /** Kinds whose height is set by hand; everything else sizes its own height
  *  (video stages keep 16:9 or 9:16 via CSS aspect-ratio, images keep theirs). */
-export const RESIZE_H = new Set(["frame", "box", "embed", "comp", "text", "shape"]);
+export const RESIZE_H = new Set(["frame", "box", "embed", "comp", "text", "shape", "board"]);
+
+/** Height of a sub-board card's preview: it grows with the card (a 1200 px card used to keep a 110 px strip). */
+export function boardPreviewH(w: number | undefined): number {
+  return Math.round(Math.max(110, (w ?? 212) * 0.52));
+}
 
 /** The patch a resize-handle drag commits: width always, height only for free-height kinds. */
 export function resizePatch(kind: string, w: number, h: number): { w: number; h?: number } {

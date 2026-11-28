@@ -73,6 +73,11 @@ INK_TOOLS = ("hl", "line", "arrow", "rect", "ellipse")
 INK_COLORS = ("accent", "sage", "clay", "slate", "sand")
 
 
+def board_card_h(w: float) -> int:
+    """A sub-board card with no height: its preview grows with the width (src/board/geometry.ts)."""
+    return int(round(max(110, w * 0.52))) + 62
+
+
 class OpError(ValueError):
     """A batch that cannot be applied. Nothing was changed."""
 
@@ -633,6 +638,8 @@ class _Batch:
         if k in ("image", "video") and it.get("iw") and it.get("ih"):
             from .bulk import _media_h  # the board sizes pictures from their aspect and ignores h
             h = _media_h(k, w, it["iw"], it["ih"])
+        elif k == "board" and not it.get("h"):
+            h = board_card_h(w)
         if k == "col":
             h = 60 + 96 * len(it.get("kids") or [])
         elif k == "todo":

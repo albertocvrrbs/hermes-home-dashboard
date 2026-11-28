@@ -6,7 +6,7 @@ import type { SandboxedFrameComponent } from "../sdk";
 import { assetHtml, assetUrl, boardsApi, openAsset, type ActionResult } from "./api";
 import type { LiveActionInfo, LiveActionRef } from "./live";
 import { Cad, RichText, Sig, ago, dueLabel } from "./bits";
-import { strokePath } from "./geometry";
+import { boardPreviewH, strokePath } from "./geometry";
 import { inkGeometry } from "./ink";
 import { Icon } from "./icons";
 import { drawPreview, accentOf } from "./preview";
@@ -484,9 +484,9 @@ export function BoardRefView({ item, c }: { item: Item; c: ItemCtx }) {
   }, [item.ref]);
   const count = child ? Object.values(child.items).filter((x) => x.k !== "line").length : 0;
   return (
-    <div className={`hb-card hb-boardref${item.by === "h" ? " dm" : ""}`} style={{ width: item.w ?? 212 }}
+    <div className={`hb-card hb-boardref${item.by === "h" ? " dm" : ""}${item.h ? " fill" : ""}`} style={{ width: item.w ?? 212 }}
       onDoubleClick={(e) => { e.stopPropagation(); if (item.ref) c.openBoard(item.ref); }}>
-      <div className="pv"><MiniBoard doc={child} id={item.ref} /></div>
+      <div className="pv" style={item.h ? undefined : { height: boardPreviewH(item.w) }}><MiniBoard doc={child} id={item.ref} /></div>
       <div className="ttl">
         <b data-tip={child?.name ?? item.title ?? undefined}>{child?.name ?? item.title ?? c.t("board.ref.missing")}</b>
         <span><button data-nodrag="" data-tip={c.t("board.index.open")} aria-label={c.t("board.index.open")} onClick={() => item.ref && c.openBoard(item.ref)}><Icon name="openBoard" size={13} /></button></span>
