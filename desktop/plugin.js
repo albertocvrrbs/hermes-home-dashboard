@@ -723,6 +723,10 @@ const en = {
   "board.tidy.selection": "Arrange selection",
   "board.tidy.all": "Arrange whole board",
   "board.tidy.none": "Already arranged",
+  "board.resolve": "Resolve overlaps",
+  "board.resolve.selection": "Resolve overlaps in selection",
+  "board.resolve.none": "Nothing overlaps",
+  "board.push": "Make room",
   "board.snap": "Snap to grid and neighbours",
   "board.snap.hold": "Hold {mod} to place freely",
   "board.kind.shape": "shape",
@@ -1274,6 +1278,10 @@ const es = {
   "board.tidy.selection": "Ordenar selección",
   "board.tidy.all": "Ordenar todo el pizarrón",
   "board.tidy.none": "Ya está ordenado",
+  "board.resolve": "Separar lo encimado",
+  "board.resolve.selection": "Separar lo encimado en la selección",
+  "board.resolve.none": "Nada está encimado",
+  "board.push": "Hacer espacio",
   "board.snap": "Imán a la retícula y a los vecinos",
   "board.snap.hold": "Mantén {mod} para colocar libre",
   "board.kind.shape": "forma",
@@ -1784,11 +1792,11 @@ function bayerDither(lum, cols, rows) {
 }
 const BRAILLE_DOTS = [[0, 0], [0, 1], [0, 2], [1, 0], [1, 1], [1, 2], [0, 3], [1, 3]];
 function brailleToBits(art) {
-  const lines = art.split("\n");
-  const width = Math.max(0, ...lines.map((l) => [...l].length));
-  const cols = width * 2, rows = lines.length * 4;
+  const lines2 = art.split("\n");
+  const width = Math.max(0, ...lines2.map((l) => [...l].length));
+  const cols = width * 2, rows = lines2.length * 4;
   const bits = new Uint8Array(cols * rows);
-  lines.forEach((line2, ly) => {
+  lines2.forEach((line2, ly) => {
     [...line2].forEach((ch, lx) => {
       const code = ch.codePointAt(0) - 10240;
       if (code <= 0 || code > 255) return;
@@ -3381,9 +3389,9 @@ function levelClass(level) {
   if (level === "WARNING" || level === "WARN") return "lvl-warn";
   return "lvl-info";
 }
-function parseRecords(lines) {
+function parseRecords(lines2) {
   const out = [];
-  for (const line2 of lines) {
+  for (const line2 of lines2) {
     const raw = line2.replace(/[\r\n]+$/, "");
     const m = HEAD_RE.exec(raw);
     if (m) {
@@ -5683,6 +5691,20 @@ const SquareTerminal = [
   ["rect", { width: "18", height: "18", x: "3", y: "3", rx: "2", ry: "2" }]
 ];
 const Square = [["rect", { width: "18", height: "18", x: "3", y: "3", rx: "2" }]];
+const SquaresExclude = [
+  [
+    "path",
+    {
+      d: "M16 12v2a2 2 0 0 1-2 2H9a1 1 0 0 0-1 1v3a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V10a2 2 0 0 0-2-2h0"
+    }
+  ],
+  [
+    "path",
+    {
+      d: "M4 16a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v3a1 1 0 0 1-1 1h-5a2 2 0 0 0-2 2v2"
+    }
+  ]
+];
 const StickyNote = [
   [
     "path",
@@ -5858,6 +5880,7 @@ const ICONS = {
   ungroup: Ungroup,
   // layout
   tidy: LayoutGrid,
+  unoverlap: SquaresExclude,
   snap: Magnet,
   more: Ellipsis,
   text: Type,
@@ -6286,14 +6309,14 @@ function inline(text) {
 }
 function Md({ text }) {
   const blocks = [];
-  const lines = text.replace(/\r/g, "").split("\n");
+  const lines2 = text.replace(/\r/g, "").split("\n");
   let i = 0;
-  while (i < lines.length) {
-    const line2 = lines[i];
+  while (i < lines2.length) {
+    const line2 = lines2[i];
     if (line2.startsWith("```")) {
       const code = [];
       i++;
-      while (i < lines.length && !lines[i].startsWith("```")) code.push(lines[i++]);
+      while (i < lines2.length && !lines2[i].startsWith("```")) code.push(lines2[i++]);
       i++;
       blocks.push(/* @__PURE__ */ jsx("pre", { children: code.join("\n") }, blocks.length));
       continue;
@@ -6301,7 +6324,7 @@ function Md({ text }) {
     if (/^\s*([-*•]|\d+[.)])\s+/.test(line2)) {
       const items = [];
       const ordered = /^\s*\d/.test(line2);
-      while (i < lines.length && /^\s*([-*•]|\d+[.)])\s+/.test(lines[i])) items.push(lines[i++].replace(/^\s*([-*•]|\d+[.)])\s+/, ""));
+      while (i < lines2.length && /^\s*([-*•]|\d+[.)])\s+/.test(lines2[i])) items.push(lines2[i++].replace(/^\s*([-*•]|\d+[.)])\s+/, ""));
       const L = ordered ? "ol" : "ul";
       blocks.push(/* @__PURE__ */ jsx(L, { children: items.map((x, j) => /* @__PURE__ */ jsx("li", { children: inline(x) }, j)) }, blocks.length));
       continue;
@@ -6311,7 +6334,7 @@ function Md({ text }) {
       continue;
     }
     const para = [];
-    while (i < lines.length && lines[i].trim() && !lines[i].startsWith("```") && !/^\s*([-*•]|\d+[.)])\s+/.test(lines[i])) para.push(lines[i++]);
+    while (i < lines2.length && lines2[i].trim() && !lines2[i].startsWith("```") && !/^\s*([-*•]|\d+[.)])\s+/.test(lines2[i])) para.push(lines2[i++]);
     const h = /^#{1,4}\s+(.*)$/.exec(para[0]);
     if (h && para.length === 1) blocks.push(/* @__PURE__ */ jsx("p", { className: "h", children: inline(h[1]) }, blocks.length));
     else blocks.push(/* @__PURE__ */ jsx("p", { children: para.map((p, j) => /* @__PURE__ */ jsxs("span", { children: [
@@ -6691,13 +6714,13 @@ function simplify(pts, eps) {
   }
   return pts.filter((_, i) => keep[i]);
 }
-const SHAPES = ["line", "arrow", "rect", "ellipse"];
-const isShape = (t2) => !!t2 && SHAPES.includes(t2);
+const SHAPES$1 = ["line", "arrow", "rect", "ellipse"];
+const isShape = (t2) => !!t2 && SHAPES$1.includes(t2);
 const INK_COLORS = ["ink", "accent", "sage", "clay", "slate", "sand"];
 const PEN_WIDTHS = [1.9, 3.5, 6];
 const HL_WIDTHS = [10, 16, 24];
 const DEFAULT_INK = { tool: "pen", w: { pen: 0, hl: 1 }, c: "ink" };
-const TOOLS$2 = ["pen", "hl", "eraser", "lasso", ...SHAPES];
+const TOOLS$2 = ["pen", "hl", "eraser", "lasso", ...SHAPES$1];
 const idx = (v, d) => typeof v === "number" && Number.isInteger(v) && v >= 0 && v <= 2 ? v : d;
 function parseInk(raw) {
   let o = {};
@@ -7456,53 +7479,6 @@ function installCameraApi(api2, win = window) {
     if (win.__hbCamera === api2) delete win.__hbCamera;
     win.removeEventListener?.("hb:camera", onReq);
   };
-}
-const LOD1_Z = 0.5;
-const LOD2_Z = 0.24;
-const GAP$1 = 0.04;
-function lodFor(z, prev = 0) {
-  const down1 = prev >= 1 ? LOD1_Z + GAP$1 : LOD1_Z;
-  const down2 = prev >= 2 ? LOD2_Z + GAP$1 * 0.5 : LOD2_Z;
-  if (z < down2) return 2;
-  if (z < down1) return 1;
-  return 0;
-}
-const LABELS$1 = {
-  /** frame labels, column and to-do headers */
-  f: { base: 10, floor: 11.5, cap: 4.5 },
-  /** section headings (text items, size h): capped lower, they are wide and sit side by side */
-  h: { base: 15, floor: 16, cap: 3.2 },
-  /** card and link titles */
-  c: { base: 14, floor: 11, cap: 3 },
-  /** diagram box titles */
-  b: { base: 14, floor: 11.5, cap: 3.2 },
-  /** connector and frame-corner strokes */
-  w: { base: 1.3, floor: 1.7, cap: 4.5 }
-};
-const Z_START = 0.62;
-const Z_END = 0.3;
-const smooth$1 = (t2) => t2 * t2 * (3 - 2 * t2);
-function labelScale(z, base, floor, cap = 4.5) {
-  if (z >= Z_START) return 1;
-  const t2 = Math.min(1, (Z_START - z) / (Z_START - Z_END));
-  const eff = base * Z_START + (floor - base * Z_START) * smooth$1(t2);
-  return Math.max(1, Math.min(cap, eff / (base * z)));
-}
-const r3 = (n) => Math.round(n * 1e3) / 1e3;
-function lodVars(z) {
-  const out = { "--iz": String(r3(1 / z)) };
-  for (const k of Object.keys(LABELS$1)) out[`--ls-${k}`] = String(r3(labelScale(z, LABELS$1[k].base, LABELS$1[k].floor, LABELS$1[k].cap)));
-  return out;
-}
-function applyLod(el, z) {
-  const prev = Number(el.dataset.lod) || 0;
-  const lod = lodFor(z, prev);
-  const key = String(r3(z));
-  if (el.__lodZ === key) return lod;
-  el.__lodZ = key;
-  for (const [k, v] of Object.entries(lodVars(z))) el.style.setProperty(k, v);
-  if (el.dataset.lod !== String(lod)) el.dataset.lod = String(lod);
-  return lod;
 }
 const IDLE_MS = 2600;
 function PresenterHud({ p, t: t2, board }) {
@@ -8303,41 +8279,6 @@ function accentOf(el, fallback = "#ffe3c4") {
   probe.remove();
   return c;
 }
-const cache = /* @__PURE__ */ new Map();
-const THUMB_W$1 = 240;
-function thumbUrl(src, width = THUMB_W$1) {
-  let p = cache.get(src);
-  if (!p) {
-    p = (async () => {
-      try {
-        const blob = await (await fetch(src)).blob();
-        const bmp = await createImageBitmap(blob);
-        if (bmp.width <= width) {
-          bmp.close();
-          return null;
-        }
-        const h = Math.max(1, Math.round(bmp.height * width / bmp.width));
-        const canvas = document.createElement("canvas");
-        canvas.width = width;
-        canvas.height = h;
-        const ctx = canvas.getContext("2d");
-        if (!ctx) {
-          bmp.close();
-          return null;
-        }
-        ctx.imageSmoothingQuality = "high";
-        ctx.drawImage(bmp, 0, 0, width, h);
-        bmp.close();
-        const out = await new Promise((res) => canvas.toBlob(res, "image/webp", 0.72));
-        return out ? URL.createObjectURL(out) : null;
-      } catch {
-        return null;
-      }
-    })();
-    cache.set(src, p);
-  }
-  return p;
-}
 const YT_ID = /^[A-Za-z0-9_-]{11}$/;
 const YT_HOSTS = /* @__PURE__ */ new Set([
   "youtube.com",
@@ -8471,7 +8412,7 @@ function useVideoPoster(src, asset, posterAsset, posterUrl, knownDur) {
   }, [src, asset, posterAsset, posterUrl, knownDur]);
   return { ...st, setDur: (d) => setSt((s) => s.dur ? s : { ...s, dur: d }) };
 }
-function VideoStage({ playId, c, src, asset, posterAsset, posterUrl, dur, title, vert, syncGroup }) {
+function VideoStage({ playId, c, src, asset, posterAsset, posterUrl, dur, title, vert, syncGroup, style }) {
   const poster = useVideoPoster(src, asset, posterAsset, posterUrl, dur);
   const synced = !!syncGroup && !!(src || asset);
   const playing = c.playing === playId || synced;
@@ -8497,7 +8438,7 @@ function VideoStage({ playId, c, src, asset, posterAsset, posterUrl, dur, title,
   const playable = src || asset;
   const length = clockDuration(poster.dur);
   const url = asset ? blob : src;
-  return /* @__PURE__ */ jsxs("div", { className: `stage${vert ? " vert" : ""}`, children: [
+  return /* @__PURE__ */ jsxs("div", { className: `stage${vert ? " vert" : ""}`, style, children: [
     playing && url && /* @__PURE__ */ jsx("video", { ref: setVel, src: url, controls: true, autoPlay: !synced, preload: "metadata", "data-nodrag": "", title, poster: synced ? poster.url ?? void 0 : void 0 }),
     synced && /* @__PURE__ */ jsxs("span", { className: "sync-chip over", "data-tip": c.t("board.comp.syncTip", { group: syncGroup }), children: [
       /* @__PURE__ */ jsx(Icon, { name: "sync", size: 12 }),
@@ -8635,8 +8576,8 @@ function sparkPaths(series, w, h, lo, hi, pad2 = 3) {
   return { line: line2, area, last: xy[n - 1], min: lo ?? Math.min(...pts), max: hi ?? Math.max(...pts) };
 }
 function tailLines(v, n) {
-  const lines = Array.isArray(v) ? v.map(String) : typeof v === "string" ? v.replace(/\s+$/, "").split("\n") : [];
-  return lines.slice(-Math.max(1, n));
+  const lines2 = Array.isArray(v) ? v.map(String) : typeof v === "string" ? v.replace(/\s+$/, "").split("\n") : [];
+  return lines2.slice(-Math.max(1, n));
 }
 function mediaRef(v) {
   if (typeof v !== "string") return null;
@@ -8795,11 +8736,11 @@ function Media({ id, b, data, c }) {
   ] });
 }
 function Log({ b, data, t: t2 }) {
-  const lines = tailLines(resolve(b.value, data), b.lines ?? 6);
-  if (!lines.length || lines.length === 1 && !lines[0].trim()) return null;
+  const lines2 = tailLines(resolve(b.value, data), b.lines ?? 6);
+  if (!lines2.length || lines2.length === 1 && !lines2[0].trim()) return null;
   return /* @__PURE__ */ jsxs("div", { className: `lv-log${b.mono === false ? " prose" : ""}`, children: [
     b.label && /* @__PURE__ */ jsx("span", { className: "k", children: lbl(t2, resolve(b.label, data)) }),
-    /* @__PURE__ */ jsx("pre", { children: lines.map((l, i) => /* @__PURE__ */ jsxs("span", { className: i === lines.length - 1 ? "last" : void 0, children: [
+    /* @__PURE__ */ jsx("pre", { children: lines2.map((l, i) => /* @__PURE__ */ jsxs("span", { className: i === lines2.length - 1 ? "last" : void 0, children: [
       l,
       "\n"
     ] }, i)) })
@@ -9535,6 +9476,203 @@ function CompView({ id, item, c }) {
     ] })
   ] });
 }
+const SIZES = {
+  card: [256, 120],
+  todo: [304, 240],
+  col: [276, 320],
+  link: [276, 250],
+  image: [372, 260],
+  embed: [452, 320],
+  video: [400, 260],
+  board: [212, 170],
+  frame: [480, 320],
+  box: [196, 62],
+  text: [420, 40],
+  draw: [120, 80],
+  live: [400, 300],
+  shape: [160, 56],
+  comp: [480, 320]
+};
+const SHAPES = { rect: [160, 56], diamond: [150, 100], pill: [150, 48], circle: [72, 72] };
+const PLACE_GAP = 24;
+const MOVABLE = /* @__PURE__ */ new Set(["card", "todo", "col", "link", "image", "embed", "video", "board", "live", "comp"]);
+const round$1 = (n) => Math.round(n) + 0;
+function aspectOf(item) {
+  const { iw, ih } = item;
+  return iw && ih && iw > 0 && ih > 0 ? iw / ih : null;
+}
+function stageRatio(item) {
+  if (item.video) return item.video.vert ? 9 / 16 : 16 / 9;
+  const r = aspectOf(item);
+  return r === null ? 16 / 9 : Math.min(2.4, Math.max(0.5, r));
+}
+function stageAspect(item) {
+  if (item.video || aspectOf(item) === null) return void 0;
+  return { aspectRatio: `${stageRatio(item)}` };
+}
+const THUMB_MIN = 96, THUMB_MAX = 200, THUMB_DEFAULT = 128;
+function thumbAspect(item) {
+  const r = aspectOf(item);
+  return r === null ? void 0 : { aspectRatio: `${item.iw} / ${item.ih}` };
+}
+const lines = (chars, perLine) => Math.max(1, Math.ceil(chars / Math.max(1, perLine)));
+const IMAGE_CHROME = 2 + 6, CAP_LINE = 15.6;
+function estimateSize(item) {
+  const k = item.k;
+  const [dw, dh] = (k === "shape" ? SHAPES[item.sh ?? "rect"] : void 0) ?? SIZES[k] ?? [200, 100];
+  const w = item.w ?? dw;
+  switch (k) {
+    case "image": {
+      const r = aspectOf(item) ?? 4 / 3;
+      const art = Math.max(aspectOf(item) === null ? 60 : 0, (w - 14) / r);
+      const cap = item.cap ?? "";
+      const capLines = cap ? lines(cap.length * 7.4, w - 24) : 0;
+      return { w, h: round$1(IMAGE_CHROME + art + 21 + CAP_LINE * capLines) };
+    }
+    case "video": {
+      const stage = (w - 2) / stageRatio(item);
+      const title = item.title || "";
+      const body = 24 + 10.5 + 7 + 18.85 * lines(title.length * 7.6, w - 28) + (item.desc ? 4 + 17.75 * Math.min(3, lines(item.desc.length * 6.4, w - 28)) : 0) + (item.by === "h" ? 29 : 0);
+      return { w, h: round$1(2 + stage + 1 + body) };
+    }
+    case "link": {
+      const r = aspectOf(item);
+      const thumb = item.st === "wait" || item.img ? (r === null ? THUMB_DEFAULT : Math.min(THUMB_MAX, Math.max(THUMB_MIN, (w - 2) / r))) + 1 : 0;
+      const dom = 10.5;
+      let body;
+      if (item.st === "wait") body = 112;
+      else {
+        const title = item.title || (item.st === "fail" ? item.site || "" : item.url || "");
+        body = 24 + dom + 7 + 18.85 * lines(title.length * 7.6, w - 28);
+        if (item.desc) body += 4 + 17.75 * Math.min(3, lines(item.desc.length * 6.4, w - 28));
+        if ((item.st === "fail" || !item.title) && item.url) body += 6 + 14 * lines(item.url.length * 6.3, w - 28);
+        if (item.by === "h") body += 29;
+      }
+      return { w, h: round$1(2 + thumb + body) };
+    }
+    case "card": {
+      const text = item.text ?? "";
+      const quote = !item.title && text.length > 0 && text.length <= 160 && !text.includes("\n");
+      let h = 28;
+      if (item.title) h += 18.5 * lines(item.title.length * 7.6, w - 54);
+      if (text) {
+        const per = quote ? 8.6 : 6.5, inner = quote ? w - 48 : w - 34;
+        const rows = text.split("\n").reduce((n, ln) => n + lines(ln.length * per, inner), 0);
+        h += (quote ? 22.7 : 18.1) * rows + (item.title ? 4 : 0);
+      }
+      if (item.by === "h") h += 23;
+      if (item.tags?.length || item.due) h += 24;
+      return { w, h: round$1(Math.max(h, 40)) };
+    }
+    case "col":
+      return { w, h: 60 + 96 * (item.kids?.length ?? 0) };
+    case "todo":
+      return { w, h: 110 + 26 * (item.items?.length ?? 0) };
+    case "live":
+      return { w, h: item.h ?? dh };
+    default:
+      return { w, h: item.h ?? dh };
+  }
+}
+function collides(a, b, gap = 0) {
+  return a.x < b.x + b.w + gap && a.x + a.w + gap > b.x && a.y < b.y + b.h + gap && a.y + a.h + gap > b.y;
+}
+function overlaps(a, b, tol = 1) {
+  return Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x) > tol && Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y) > tol;
+}
+const NEAR = 100, UP = 3;
+function freePlace(want, size, obstacles, opts = {}) {
+  const gap = opts.gap ?? PLACE_GAP;
+  const wx = round$1(want.x), wy = round$1(want.y);
+  let order = obstacles;
+  const free = (x, y) => !order.some((o) => collides({ x, y, w: size.w, h: size.h }, o, gap));
+  const inside = (x, y) => !opts.within || x >= opts.within.x && y >= opts.within.y && x + size.w <= opts.within.x + opts.within.w && y + size.h <= opts.within.y + opts.within.h;
+  if (free(wx, wy) && inside(wx, wy)) return { x: wx, y: wy };
+  const cx2 = wx + size.w / 2, cy2 = wy + size.h / 2;
+  const near = obstacles.map((o) => ({ o, d: (o.x + o.w / 2 - cx2) ** 2 + (o.y + o.h / 2 - cy2) ** 2 })).sort((p, q) => p.d - q.d || p.o.y - q.o.y || p.o.x - q.o.x).slice(0, NEAR).map((p) => p.o);
+  const nearSet = new Set(near);
+  order = [...near, ...obstacles.filter((o) => !nearSet.has(o))];
+  const xs2 = /* @__PURE__ */ new Set([wx]), ys2 = /* @__PURE__ */ new Set([wy]);
+  for (const o of near) {
+    xs2.add(round$1(o.x + o.w + gap));
+    xs2.add(round$1(o.x - size.w - gap));
+    xs2.add(round$1(o.x));
+    ys2.add(round$1(o.y + o.h + gap));
+    ys2.add(round$1(o.y - size.h - gap));
+    ys2.add(round$1(o.y));
+  }
+  const cands = [];
+  for (const x of xs2) for (const y of ys2) cands.push({ x, y, d: (UP * Math.min(0, x - wx) + Math.max(0, x - wx)) ** 2 + (UP * Math.min(0, y - wy) + Math.max(0, y - wy)) ** 2 });
+  cands.sort((p, q) => p.d - q.d || p.y - q.y || p.x - q.x);
+  if (opts.within) {
+    const hit2 = cands.find((c) => inside(c.x, c.y) && free(c.x, c.y));
+    if (hit2) return { x: hit2.x, y: hit2.y };
+  }
+  const hit = cands.find((c) => free(c.x, c.y));
+  if (hit) return { x: hit.x, y: hit.y };
+  const bottom = Math.max(wy, ...obstacles.map((o) => o.y + o.h));
+  return { x: wx, y: round$1(bottom + gap) };
+}
+function resolvePlan(entries, opts = {}) {
+  const gap = opts.gap ?? PLACE_GAP, tol = opts.tol ?? 1;
+  const settled = entries.filter((e) => e.anchored).map((e) => e.rect);
+  const order = entries.filter((e) => !e.anchored).sort((p, q) => p.rect.y - q.rect.y || p.rect.x - q.rect.x || (p.id < q.id ? -1 : p.id > q.id ? 1 : 0));
+  const pending2 = new Map(order.map((e) => [e.id, e.rect]));
+  const out = [];
+  for (const e of order) {
+    pending2.delete(e.id);
+    const hit = settled.some((s) => overlaps(e.rect, s, tol));
+    let rect = e.rect;
+    if (hit) {
+      const others = [...settled, ...pending2.values()];
+      const p = freePlace({ x: e.rect.x, y: e.rect.y }, e.rect, others, { gap, within: e.within });
+      rect = { x: p.x, y: p.y, w: e.rect.w, h: e.rect.h };
+      out.push({ id: e.id, x: p.x, y: p.y });
+    }
+    settled.push(rect);
+  }
+  return out;
+}
+function pushPlan(entries, grown, opts = {}) {
+  const gap = opts.gap ?? PLACE_GAP, tol = opts.tol ?? 1;
+  const rects = new Map(entries.map((e) => [e.id, { ...e.rect }]));
+  const anchored = new Set(entries.filter((e) => e.anchored).map((e) => e.id));
+  const origin = new Map(entries.map((e) => [e.id, { x: e.rect.x, y: e.rect.y }]));
+  const order = entries.map((e) => e.id).sort();
+  const blocked = /* @__PURE__ */ new Set();
+  const queue = [grown];
+  const seen = /* @__PURE__ */ new Set([grown]);
+  for (let guard = 0; queue.length && guard < 400; guard++) {
+    const sid = queue.shift();
+    const s = rects.get(sid);
+    if (!s) continue;
+    for (const id of order) {
+      if (id === sid || id === grown && sid !== grown) continue;
+      const m = rects.get(id);
+      if (!overlaps(s, m, tol)) continue;
+      if (anchored.has(id)) {
+        blocked.add(id);
+        continue;
+      }
+      const below = m.y + m.h / 2 >= s.y + s.h / 2, right = m.x + m.w / 2 >= s.x + s.w / 2;
+      const dy = below ? s.y + s.h + gap - m.y : m.y + m.h + gap - s.y;
+      const dx = right ? s.x + s.w + gap - m.x : m.x + m.w + gap - s.x;
+      if (dy <= dx * 1.6) m.y = round$1(below ? m.y + dy : m.y - dy);
+      else m.x = round$1(right ? m.x + dx : m.x - dx);
+      if (!seen.has(id)) {
+        seen.add(id);
+      }
+      queue.push(id);
+    }
+  }
+  const moves = [];
+  for (const id of order) {
+    if (id === grown) continue;
+    const r = rects.get(id), o = origin.get(id);
+    if (r.x !== o.x || r.y !== o.y) moves.push({ id, x: r.x, y: r.y });
+  }
+  return { moves, blocked: [...blocked].sort() };
+}
 function useAsset(aid) {
   const [url, setUrl] = useState(null);
   useEffect(() => {
@@ -9553,21 +9691,7 @@ function fieldHint(c, id, field, dflt = false) {
   return { caret: mine ? h?.caret : void 0, seed: mine ? h?.seed : void 0, focus: mine };
 }
 function Pic({ src, alt = "" }) {
-  const [lo, setLo] = useState(null);
-  useEffect(() => {
-    let live = true;
-    setLo(null);
-    void thumbUrl(src).then((u) => {
-      if (live) setLo(u);
-    });
-    return () => {
-      live = false;
-    };
-  }, [src]);
-  return /* @__PURE__ */ jsxs(Fragment, { children: [
-    /* @__PURE__ */ jsx("img", { className: lo ? "full" : void 0, src, alt, draggable: false }),
-    lo && /* @__PURE__ */ jsx("img", { className: "lo", src: lo, alt: "", draggable: false })
-  ] });
+  return /* @__PURE__ */ jsx("img", { src, alt, draggable: false });
 }
 function EditText({ value, onDone, placeholder, className, single, caret, seed, focus = true, onEnter }) {
   const ref = useRef(null);
@@ -9806,10 +9930,11 @@ function VideoView({ id, item, c }) {
   const asset = item.k === "video" ? item.asset : void 0;
   const player = item.video ? playerUrl(item.video) : null;
   const vert = !!item.video?.vert;
+  const stageStyle = stageAspect(item);
   const site = item.site || (item.url ? hostOf(item.url) : direct ? hostOf(direct) : asset ? c.t("board.video.uploaded") : "");
   const title = item.title || (direct ? direct.split("/").pop() : "") || c.t("board.video.untitled");
   return /* @__PURE__ */ jsxs("div", { className: `hb-card hb-video${vert ? " vert" : ""}${item.by === "h" ? " dm" : ""}`, children: [
-    player ? /* @__PURE__ */ jsxs("div", { className: "stage", children: [
+    player ? /* @__PURE__ */ jsxs("div", { className: "stage", style: stageStyle, children: [
       playing && /* @__PURE__ */ jsx(
         "iframe",
         {
@@ -9827,7 +9952,7 @@ function VideoView({ id, item, c }) {
         PLAY,
         c.t("board.video.play")
       ] })
-    ] }) : /* @__PURE__ */ jsx(VideoStage, { playId: id, c, src: direct, asset, posterAsset: item.img, dur: item.dur, title, syncGroup: item.sync }),
+    ] }) : /* @__PURE__ */ jsx(VideoStage, { playId: id, c, src: direct, asset, posterAsset: item.img, dur: item.dur, title, syncGroup: item.sync, style: stageStyle }),
     /* @__PURE__ */ jsx("div", { className: "hb-link", children: /* @__PURE__ */ jsxs("div", { className: "body", children: [
       /* @__PURE__ */ jsx("div", { className: "dom", children: /* @__PURE__ */ jsx("span", { children: site }) }),
       c.editing === id ? /* @__PURE__ */ jsx("h4", { children: /* @__PURE__ */ jsx(
@@ -9860,8 +9985,8 @@ function LinkView({ id, item, c }) {
   const failed = item.st === "fail";
   const site = item.site || (item.url ? hostOf(item.url) : "");
   return /* @__PURE__ */ jsxs("div", { className: `hb-card hb-link${item.by === "h" ? " dm" : ""}`, children: [
-    (thumb || waiting) && /* @__PURE__ */ jsx("div", { className: `thumb${waiting ? " skel-thumb" : ""}`, children: thumb && /* @__PURE__ */ jsx(Pic, { src: thumb }) }),
-    /* @__PURE__ */ jsxs("div", { className: "body", children: [
+    (thumb || waiting || item.img) && /* @__PURE__ */ jsx("div", { className: `thumb${waiting ? " skel-thumb" : ""}`, style: thumbAspect(item), children: thumb && /* @__PURE__ */ jsx(Pic, { src: thumb }) }),
+    /* @__PURE__ */ jsxs("div", { className: `body${waiting ? " wait" : ""}`, children: [
       /* @__PURE__ */ jsxs("div", { className: "dom", children: [
         icon && /* @__PURE__ */ jsx("img", { src: icon, alt: "" }),
         /* @__PURE__ */ jsx("span", { children: item.url ? hostOf(item.url) : site })
@@ -9898,7 +10023,7 @@ function LinkView({ id, item, c }) {
 const FILE_LABEL = { pdf: "PDF", stl: "STL", obj: "OBJ", "3mf": "3MF" };
 function ImageView({ id, item, c }) {
   const url = useAsset(item.asset);
-  const ratio = item.iw && item.ih ? item.ih / item.iw : 0.6;
+  const ratio = aspectOf(item);
   const fk = item.file ? item.fk ?? "pdf" : null;
   const isPdf = fk === "pdf";
   const [busy, setBusy] = useState(false);
@@ -9908,7 +10033,7 @@ function ImageView({ id, item, c }) {
     openAsset(item.file, item.cap || "model").catch(() => void 0).finally(() => setBusy(false));
   };
   return /* @__PURE__ */ jsxs("div", { className: `hb-card hb-image${fk ? " has-file" : ""}${item.by === "h" ? " dm" : ""}`, style: { width: item.w ?? 372 }, children: [
-    /* @__PURE__ */ jsxs("div", { className: "art", style: !url ? { aspectRatio: `${1 / ratio}` } : void 0, children: [
+    /* @__PURE__ */ jsxs("div", { className: `art${ratio ? " fit" : ""}`, style: ratio ? { aspectRatio: `${ratio}` } : !url ? { aspectRatio: "4 / 3" } : void 0, children: [
       url ? /* @__PURE__ */ jsx(Pic, { src: url, alt: item.cap ?? "" }) : fk && /* @__PURE__ */ jsx("span", { className: "file-ph", children: /* @__PURE__ */ jsx(Icon, { name: isPdf ? "fileDoc" : "model3d", size: 34 }) }),
       fk && /* @__PURE__ */ jsxs("span", { className: "fbadge", children: [
         FILE_LABEL[fk],
@@ -10488,7 +10613,7 @@ const Wires = forwardRef(function Wires2(props, ref) {
   const { doc, getRect, version, hidden, fresh, selected, draft, editLabel, insertLabel } = props;
   const [wires, setWires] = useState([]);
   const [hover, setHover] = useState(null);
-  const cache2 = useRef(/* @__PURE__ */ new Map());
+  const cache = useRef(/* @__PURE__ */ new Map());
   const live = useRef(props);
   live.current = props;
   const raf = useRef(0);
@@ -10501,7 +10626,7 @@ const Wires = forwardRef(function Wires2(props, ref) {
     for (const [id, it] of Object.entries(d.items)) {
       if (it.k !== "line" || hid.has(id)) continue;
       if ([it.a, it.b].some((e) => typeof e === "string" && hid.has(e))) continue;
-      const prev = cache2.current.get(id);
+      const prev = cache.current.get(id);
       const touched = !only || !prev || [it.a, it.b].some((e) => typeof e === "string" && only.has(e));
       const w = touched ? build(id, it, gr, fr.has(id), prev) : prev ?? null;
       if (w) {
@@ -10509,7 +10634,7 @@ const Wires = forwardRef(function Wires2(props, ref) {
         keep.set(id, w);
       }
     }
-    cache2.current = keep;
+    cache.current = keep;
     setWires((cur) => cur.length === next.length && cur.every((w, i) => w === next[i]) ? cur : next);
   }, []);
   useLayoutEffect(() => {
@@ -11082,7 +11207,6 @@ function MiniBoard({ doc, id, className }) {
     const b = { x: x0, y: y0, w: x1 - x0, h: y1 - y0 };
     const view = fitView(b, { w, h }, miniPad(w, h), 1.1);
     world.style.transform = `translate(${view.x}px, ${view.y}px) scale(${view.z})`;
-    applyLod(world, view.z);
     fits.set(root, { view, w, h, b });
   }, [doc]);
   const measure = useCallback(() => {
@@ -11694,25 +11818,25 @@ function tidyPlan(blocks, opts = {}) {
     }
     rows.push({ top: b.rect.y, bottom: b.rect.y + b.rect.h, items: [b] });
   }
-  const lines = [];
+  const lines2 = [];
   for (const row of rows) {
     const items = row.items.slice().sort((p, q) => p.rect.x - q.rect.x || (p.ids[0] < q.ids[0] ? -1 : 1));
     let cur = [], w = 0;
     for (const b of items) {
       if (cur.length && w + gap + b.rect.w > maxW) {
-        lines.push(cur);
+        lines2.push(cur);
         cur = [];
         w = 0;
       }
       w += (cur.length ? gap : 0) + b.rect.w;
       cur.push(b);
     }
-    if (cur.length) lines.push(cur);
+    if (cur.length) lines2.push(cur);
   }
   const out = [];
   let y = snapTo(y0, grid);
   const left = snapTo(x0, grid);
-  for (const line2 of lines) {
+  for (const line2 of lines2) {
     let x = left;
     for (const b of line2) {
       out.push({ ids: b.ids, x: round(x), y: round(y) });
@@ -12084,6 +12208,7 @@ const writeLocal = (k, v) => {
 };
 const KEY_TOOL = Object.fromEntries(TOOLS.flat().map((x) => [x.key.toLowerCase(), x.tool]));
 const PLACE = ["note", "todo", "col", "link", "board", "embed", "image"];
+const GROW_MIN = 6, PUSH_WAIT = 320;
 const SNAP_KEY = "hb.snap";
 const SNAP_PX = 6;
 const TIDY_MS = 260;
@@ -12459,7 +12584,7 @@ function BoardView({ bid, onOpenBoard, onHome }) {
     const v = view.current, world = worldRef.current;
     if (!world) return;
     world.style.transform = `translate(${v.x}px, ${v.y}px) scale(${v.z})`;
-    applyLod(world, v.z);
+    world.style.setProperty("--iz", String(Math.round(1e3 / v.z) / 1e3));
     const vp = vpRef.current;
     if (vp) {
       vp.classList.add("gesturing");
@@ -12639,11 +12764,86 @@ function BoardView({ bid, onOpenBoard, onHome }) {
     }, 260);
     return () => window.clearTimeout(h);
   }, [layoutV, fit]);
+  const seenSize = useRef(/* @__PURE__ */ new Map());
+  const grown = useRef(/* @__PURE__ */ new Map());
+  const pushT = useRef(0);
+  const editingNow = useRef(null);
+  editingNow.current = editing;
+  const pushNow = useRef(() => void 0);
+  const schedulePush = useRef(() => void 0);
+  schedulePush.current = () => {
+    window.clearTimeout(pushT.current);
+    pushT.current = window.setTimeout(() => pushNow.current(), PUSH_WAIT);
+  };
+  pushNow.current = () => {
+    const d = docRef.current;
+    if (!d) return;
+    if (drag.current || cam.current?.moving) {
+      schedulePush.current();
+      return;
+    }
+    const ids = [...grown.current.keys()].filter((id) => id !== editingNow.current);
+    if (!ids.length) {
+      if (grown.current.size) schedulePush.current();
+      return;
+    }
+    const wired = wiredIds(d);
+    const rects = contentRects();
+    const moves = /* @__PURE__ */ new Map();
+    for (const g of ids) {
+      const before = grown.current.get(g);
+      grown.current.delete(g);
+      const it = d.items[g], r = rects.get(g);
+      if (!it || !r) continue;
+      const was = { x: r.x, y: r.y, w: before.w, h: before.h };
+      const entries = [...rects].map(([id, rect]) => ({
+        id,
+        rect,
+        anchored: id !== g && (wired.has(id) || !MOVABLE.has(d.items[id].k) || id.startsWith("$") || overlaps(was, rect))
+      }));
+      const plan = pushPlan(entries, g);
+      for (const m of plan.moves) {
+        const o = rects.get(m.id);
+        rects.set(m.id, { ...o, x: m.x, y: m.y });
+        moves.set(m.id, m);
+      }
+    }
+    if (!moves.size) return;
+    const ops = [];
+    const from = /* @__PURE__ */ new Map();
+    for (const [id, m] of moves) {
+      const it = d.items[id], r = getRect(id);
+      if (!it || !r) continue;
+      ops.push({ op: "set", id, p: { x: Math.round((it.x ?? r.x) + m.x - r.x), y: Math.round((it.y ?? r.y) + m.y - r.y) } });
+      from.set(id, r);
+    }
+    if (!ops.length) return;
+    flipFrom(from, [...from.keys()]);
+    commit(ops, t2("board.push"));
+  };
+  useEffect(() => () => window.clearTimeout(pushT.current), []);
+  useEffect(() => {
+    seenSize.current.clear();
+    grown.current.clear();
+  }, [bid]);
+  useEffect(() => {
+    if (!editing && grown.current.size) schedulePush.current();
+  }, [editing]);
   useEffect(() => {
     const RO = globalThis.ResizeObserver;
     if (!RO || !worldRef.current) return;
     let raf = 0;
-    const ro = new RO(() => {
+    const ro = new RO((entries) => {
+      for (const en2 of entries) {
+        const el = en2.target, id = el.dataset.iid;
+        if (!id) continue;
+        const w = el.offsetWidth, h = el.offsetHeight;
+        if (!w && !h) continue;
+        const prev = seenSize.current.get(id);
+        seenSize.current.set(id, { w, h });
+        if (prev && (h > prev.h + GROW_MIN || w > prev.w + GROW_MIN) && !grown.current.has(id)) grown.current.set(id, prev);
+      }
+      if (grown.current.size) schedulePush.current();
       cancelAnimationFrame(raf);
       raf = requestAnimationFrame(() => setLayoutV((v) => v + 1));
     });
@@ -12680,6 +12880,55 @@ function BoardView({ bid, onOpenBoard, onHome }) {
     const v = view.current;
     return { x: (vp.clientWidth / 2 - v.x) / v.z, y: (vp.clientHeight / 2 - v.y) / v.z };
   }, []);
+  const reserved = useRef([]);
+  const contentRects = useCallback((skip) => {
+    const d = docRef.current;
+    const out = /* @__PURE__ */ new Map();
+    if (!d) return out;
+    for (const [id, it] of Object.entries(d.items)) {
+      if (it.in || it.k === "line" || it.k === "draw" || it.k === "frame" || skip?.has(id)) continue;
+      const r = getRectLive(id);
+      if (r) out.set(id, r);
+    }
+    return out;
+  }, [getRectLive]);
+  const frameAround = useCallback((p) => {
+    const d = docRef.current;
+    let best;
+    for (const [id, it] of Object.entries(d?.items ?? {})) {
+      if (it.k !== "frame") continue;
+      const r = getRect(id);
+      if (r && p.x >= r.x && p.y >= r.y && p.x <= r.x + r.w && p.y <= r.y + r.h && (!best || r.w * r.h < best.w * best.h)) best = r;
+    }
+    return best;
+  }, [getRect]);
+  const spotFor = useCallback((item, want) => {
+    const now = performance.now();
+    reserved.current = reserved.current.filter((x) => now - x.t < 4e3);
+    const size = estimateSize(item);
+    const obstacles = [...contentRects().values(), ...reserved.current.map((x) => x.rect)];
+    const p = freePlace(want, size, obstacles, { within: frameAround(want) });
+    reserved.current.push({ rect: { ...p, ...size }, t: now });
+    return p;
+  }, [contentRects, frameAround]);
+  const wiredIds = useCallback((d) => {
+    const topOf = (id) => d.items[id]?.in ?? id;
+    const out = /* @__PURE__ */ new Set();
+    for (const it of Object.values(d.items)) {
+      if (it.k === "line") {
+        for (const e of [it.a, it.b]) if (typeof e === "string" && d.items[e]) out.add(topOf(e));
+      }
+    }
+    return out;
+  }, []);
+  const clearAround = useCallback((d, changed) => {
+    const wired = wiredIds(d);
+    const rects = contentRects();
+    for (const [id, r] of changed) rects.set(id, r);
+    const hit = new Set([...rects].filter(([id, r]) => !changed.has(id) && !wired.has(id) && MOVABLE.has(d.items[id]?.k ?? "") && !id.startsWith("$") && [...changed.values()].some((c) => overlaps(r, c))).map(([id]) => id));
+    if (!hit.size) return [];
+    return resolvePlan([...rects].map(([id, rect]) => ({ id, rect, anchored: !hit.has(id) })));
+  }, [contentRects, wiredIds]);
   const insertRef = useRef(() => null);
   const add = useCallback((item, at, edit = false) => {
     if (pendingEdge.current) {
@@ -12690,12 +12939,13 @@ function BoardView({ bid, onOpenBoard, onHome }) {
     }
     const ref = newRef();
     const p = at ?? lastPoint.current ?? center();
-    const placed = item.in ? item : { ...item, x: Math.round(p.x), y: Math.round(p.y) };
-    commit([{ op: "add", ref, item: placed }]);
+    const q = item.in ? null : MOVABLE.has(item.k) ? spotFor(item, p) : { x: Math.round(p.x), y: Math.round(p.y) };
+    const placed = q ? { ...item, x: q.x, y: q.y } : item;
+    commit([{ op: "add", ref, item: placed, exact: true }]);
     setSelected(/* @__PURE__ */ new Set([ref]));
     if (edit) setEditing(ref);
     return ref;
-  }, [center, commit]);
+  }, [center, commit, spotFor]);
   const editHintAt = (target, x, y, it) => {
     const fieldEl = target.closest("[data-field]");
     if (!fieldEl) return void 0;
@@ -12846,6 +13096,34 @@ function BoardView({ bid, onOpenBoard, onHome }) {
     flipFrom(from, moved);
     commit(ops);
   }, [commit, flash, flipFrom, getRect, selected, t2]);
+  const resolveOverlaps = useCallback(() => {
+    const d = docRef.current;
+    if (!d) return;
+    const sel = selected.size > 1 ? new Set([...selected].map((id) => d.items[id]?.in ?? id)) : null;
+    const wired = wiredIds(d);
+    const frames = Object.entries(d.items).filter(([, it]) => it.k === "frame").map(([id]) => getRect(id)).filter(Boolean);
+    const entries = [];
+    for (const [id, rect] of contentRects()) {
+      const k = d.items[id].k;
+      const cx2 = rect.x + rect.w / 2, cy2 = rect.y + rect.h / 2;
+      const inside = frames.filter((f) => cx2 >= f.x && cx2 <= f.x + f.w && cy2 >= f.y && cy2 <= f.y + f.h).sort((a, b) => a.w * a.h - b.w * b.h);
+      entries.push({ id, rect, anchored: wired.has(id) || !MOVABLE.has(k) || id.startsWith("$") || sel !== null && !sel.has(id), within: inside[0] });
+    }
+    const plan = resolvePlan(entries);
+    if (!plan.length) {
+      flash(t2("board.resolve.none"));
+      return;
+    }
+    const ops = [];
+    const from = /* @__PURE__ */ new Map();
+    for (const m of plan) {
+      const it = d.items[m.id], r = entries.find((e) => e.id === m.id).rect;
+      ops.push({ op: "set", id: m.id, p: { x: Math.round((it.x ?? r.x) + m.x - r.x), y: Math.round((it.y ?? r.y) + m.y - r.y) } });
+      from.set(m.id, r);
+    }
+    flipFrom(from, [...from.keys()]);
+    commit(ops, t2("board.resolve"));
+  }, [commit, contentRects, flash, flipFrom, getRect, selected, t2, wiredIds]);
   const insertOnEdge = useCallback((edgeId, item) => {
     const d = docRef.current;
     const line2 = d?.items[edgeId];
@@ -12859,7 +13137,7 @@ function BoardView({ bid, onOpenBoard, onHome }) {
     const plan = insertPlan(ra, rb, { w: item.w ?? dw, h: item.h ?? dh }, { shiftB: !!bTop });
     const ref = newRef();
     const ops = [
-      { op: "add", ref, item: { ...item, x: plan.x, y: plan.y } },
+      { op: "add", ref, item: { ...item, x: plan.x, y: plan.y }, exact: true },
       { op: "set", id: edgeId, p: { b: ref } },
       { op: "add", ref: newRef(), item: { k: "line", a: ref, b: line2.b } }
     ];
@@ -12879,12 +13157,26 @@ function BoardView({ bid, onOpenBoard, onHome }) {
         }
       }
     }
+    const est = estimateSize({ ...item, w: item.w ?? dw });
+    const changed = /* @__PURE__ */ new Map([[ref, { x: plan.x, y: plan.y, w: est.w, h: Math.max(est.h, item.h ?? dh) }]]);
+    for (const o of ops) {
+      if (o.op !== "set" || o.id === edgeId || typeof o.p.x !== "number") continue;
+      const r = getRect(o.id);
+      if (r) changed.set(o.id, { ...r, x: r.x + plan.shift.dx, y: r.y + plan.shift.dy });
+    }
+    for (const m of clearAround(d, changed)) {
+      const it = d.items[m.id], r = getRect(m.id);
+      if (!it || !r) continue;
+      ops.push({ op: "set", id: m.id, p: { x: Math.round((it.x ?? r.x) + m.x - r.x), y: Math.round((it.y ?? r.y) + m.y - r.y) } });
+      from.set(m.id, r);
+      moved.push(m.id);
+    }
     if (moved.length) flipFrom(from, moved);
     commit(ops);
     if (EDITABLE.has(item.k) && item.k !== "image" && item.k !== "link" && item.k !== "video") startEdit(ref);
     else setSelected(/* @__PURE__ */ new Set([ref]));
     return ref;
-  }, [commit, flipFrom, getRect, startEdit]);
+  }, [clearAround, commit, flipFrom, getRect, startEdit]);
   insertRef.current = insertOnEdge;
   const pickForEdge = (spec) => {
     const pick = edgePick;
@@ -12910,7 +13202,7 @@ function BoardView({ bid, onOpenBoard, onHome }) {
     }
   };
   const addImageFiles = useCallback(async (files, at) => {
-    let p = at ?? center();
+    const p = at ?? center();
     for (const f of files.slice(0, 8)) {
       if (VIDEO_TYPES.test(f.type)) {
         try {
@@ -12925,7 +13217,6 @@ function BoardView({ bid, onOpenBoard, onHome }) {
             item.ih = res.ih;
           }
           add(item, p);
-          p = { x: p.x + 24, y: p.y + 24 };
           setToast(null);
         } catch (e) {
           flash(t2("board.toast.videoFailed", { error: String(e?.message ?? e) }));
@@ -12939,7 +13230,6 @@ function BoardView({ bid, onOpenBoard, onHome }) {
         const res = await boardsApi.uploadImage(img.data);
         const w = Math.min(372, Math.max(160, img.w));
         add({ k: "image", asset: res.asset, iw: res.iw ?? img.w, ih: res.ih ?? img.h, w }, p);
-        p = { x: p.x + 24, y: p.y + 24 };
         setToast(null);
       } catch (e) {
         flash(t2("board.toast.imageFailed", { error: String(e?.message ?? e) }));
@@ -12965,6 +13255,7 @@ function BoardView({ bid, onOpenBoard, onHome }) {
     const ops = [];
     const next = /* @__PURE__ */ new Set();
     const regroup = /* @__PURE__ */ new Map();
+    const copied = [];
     for (const id of selected) {
       const it = d.items[id];
       if (!it || it.k === "line" || it.k === "col") continue;
@@ -12976,13 +13267,24 @@ function BoardView({ bid, onOpenBoard, onHome }) {
       const ref = newRef();
       next.add(ref);
       const r = getRect(id);
-      ops.push({ op: "add", ref, item: inCol ? { ...rest, in: inCol } : { ...rest, x: (it.x ?? r?.x ?? 0) + 24, y: (it.y ?? r?.y ?? 0) + 24 } });
+      ops.push({ op: "add", ref, item: inCol ? { ...rest, in: inCol } : { ...rest, x: (it.x ?? r?.x ?? 0) + 24, y: (it.y ?? r?.y ?? 0) + 24 }, exact: true });
+      if (!inCol && r) copied.push(r);
+    }
+    const box2 = copied.length ? boundsOf(copied) : null;
+    if (box2 && ops.some((o) => o.op === "add" && !o.item.in && MOVABLE.has(o.item.k))) {
+      const now = performance.now();
+      reserved.current = reserved.current.filter((x) => now - x.t < 4e3);
+      const want = { x: box2.x + 24, y: box2.y + 24 };
+      const spot = freePlace(want, { w: box2.w, h: box2.h }, [...contentRects().values(), ...reserved.current.map((x) => x.rect)]);
+      const dx = spot.x - want.x, dy = spot.y - want.y;
+      for (const o of ops) if (o.op === "add" && !o.item.in) o.item = { ...o.item, x: Math.round((o.item.x ?? 0) + dx), y: Math.round((o.item.y ?? 0) + dy) };
+      reserved.current.push({ rect: { x: spot.x, y: spot.y, w: box2.w, h: box2.h }, t: now });
     }
     if (ops.length) {
       commit(ops);
       setSelected(next);
     }
-  }, [commit, getRect, selected]);
+  }, [commit, contentRects, getRect, selected]);
   const toggleGroup = useCallback(() => {
     const d = docRef.current;
     if (!d) return;
@@ -14128,6 +14430,7 @@ function BoardView({ bid, onOpenBoard, onHome }) {
       if (canConnect) out2.push({ id: "connect", label: t2("board.ctx.connect"), icon: "connect", run: startConnect });
       if (canDuplicate) out2.push({ id: "dup", label: t2("board.ctx.duplicate"), icon: "duplicate", kbd: `${mod}D`, run: duplicate });
       if (selIds.length > 1) out2.push({ id: "tidy", label: t2("board.tidy.selection"), icon: "tidy", kbd: `${mod}⇧O`, run: tidy });
+      if (selIds.length > 1) out2.push({ id: "unoverlap", label: t2("board.resolve.selection"), icon: "unoverlap", run: resolveOverlaps });
       if (canGroup) out2.push({ id: "grp", label: t2(isGrouped ? "board.ctx.ungroup" : "board.ctx.group"), icon: isGrouped ? "ungroup" : "group", kbd: `${mod}G`, run: toggleGroup });
       out2.push({ sep: true });
       out2.push({ id: "del", label: t2("board.ctx.delete"), icon: "delete", kbd: "Del", danger: true, run: deleteSelection });
@@ -14151,6 +14454,7 @@ function BoardView({ bid, onOpenBoard, onHome }) {
     out.push({ id: "comps", label: t2("board.comp.gallery"), icon: "components", run: () => setGalleryOpen(true) });
     out.push({ id: "all", label: t2("board.menu.selectAll"), icon: "selectAll", kbd: `${mod}A`, run: () => setSelected(new Set(Object.keys(docRef.current?.items ?? {}).filter((k) => !docRef.current.items[k].in))) });
     out.push({ id: "tidy", label: t2("board.tidy.all"), icon: "tidy", kbd: `${mod}⇧O`, run: tidy });
+    out.push({ id: "unoverlap", label: t2("board.resolve"), icon: "unoverlap", run: resolveOverlaps });
     out.push({ id: "fit", label: t2("board.fit"), icon: "fit", kbd: "F", run: () => fit() });
     out.push({ sep: true });
     out.push({ id: "present", label: t2("board.present.start"), icon: "present", kbd: "P", run: startPresenting });
@@ -14459,6 +14763,16 @@ function BoardView({ bid, onOpenBoard, onHome }) {
             "data-kbd": `${mod}⇧O`,
             onClick: tidy,
             children: /* @__PURE__ */ jsx(Icon, { name: "tidy", size: 15 })
+          }
+        ),
+        /* @__PURE__ */ jsx(
+          "button",
+          {
+            className: "tool",
+            "aria-label": selIds.length > 1 ? t2("board.resolve.selection") : t2("board.resolve"),
+            "data-tip": selIds.length > 1 ? t2("board.resolve.selection") : t2("board.resolve"),
+            onClick: resolveOverlaps,
+            children: /* @__PURE__ */ jsx(Icon, { name: "unoverlap", size: 15 })
           }
         ),
         /* @__PURE__ */ jsx(
@@ -15823,10 +16137,9 @@ const boardCss = `/* Board — "Mesa de despacho" (hd-canvas-plan/mockup-v2). Ev
  * mono for structure (headers, counts, keys, data). No embedded fonts.
  * Radii: flush chrome 0 · cards & buttons 3 · panels 4 · floating menus 6 · checkboxes 2.
  * Motion: 120-200 ms ease-out, none under prefers-reduced-motion. */
-/* Board camera, zoom level of detail, minimap view frame, miniature boards, page transitions.
+/* Board camera, minimap view frame, miniature boards, page transitions.
  * Kept apart from board.css (imported at its top); every selector is specific enough to win
- * wherever it sits. LOD variables (--iz, --ls-*) and data-lod are set on a world element by
- * lod.ts; the numbers in the comments are CSS px at 100 % zoom. */
+ * wherever it sits. --iz (1 / zoom) is set on the world by BoardView so overlays can keep their size. */
 /* ── camera ─────────────────────────────────────────────────────────────── */
 /* compositor hints only while the camera is moving: a permanent will-change keeps the
  * layer rasterised at its first scale (soft text after a zoom) */
@@ -15838,90 +16151,6 @@ const boardCss = `/* Board — "Mesa de despacho" (hd-canvas-plan/mockup-v2). Ev
   right: calc(var(--gp, 0px) * -1); bottom: calc(var(--gp, 0px) * -1);
   background-position: 0 0, 0 0;
 }
-/* ── zoom level of detail ───────────────────────────────────────────────── */
-/* titles keep a legible on-screen size: scaled by --ls-*, never shrinking with the board */
-.hb-world[data-lod] .hb-frame .lbl { transform: scale(var(--ls-f, 1)); transform-origin: 0 50%; }
-.hb-world[data-lod] .hb-text.h { transform: scale(var(--ls-h, 1)); transform-origin: 0 50%; }
-.hb-world[data-lod] .hb-col > .hd, .hb-world[data-lod] .hb-todo > .hd {
-  width: calc(100% / var(--ls-f, 1)); transform: scale(var(--ls-f, 1)); transform-origin: 0 0; overflow: hidden; }
-.hb-world[data-lod] .hb-col > .hd::before, .hb-world[data-lod] .hb-col > .hd::after,
-.hb-world[data-lod] .hb-todo > .hd::before, .hb-world[data-lod] .hb-todo > .hd::after { display: none; }
-.hb-world[data-lod] .hb-col .track { transform: translateY(calc(11px * (var(--ls-f, 1) - 1))); }
-.hb-world[data-lod] .hb-wires g > path:not(.hit):not(.line-sel)[fill]:not([fill="none"]),
-.hb-world[data-lod] .hb-wires g > rect:not(.lbl-bg), .hb-world[data-lod] .hb-wires .lbl-bg {
-  transform-box: fill-box; transform-origin: center; transform: scale(var(--ls-w, 1)); }
-.hb-world[data-lod] .hb-wires .lbl-bg { transform: scale(var(--ls-f, 1)); }
-.hb-world[data-lod] .hb-wires .lbl { font-size: calc(10.5px * var(--ls-f, 1)); }
-.hb-world[data-lod="1"] .hb-wires g > path:not(.hit):not(.line-sel):not([fill]),
-.hb-world[data-lod="2"] .hb-wires g > path:not(.hit):not(.line-sel):not([fill]) { stroke-width: calc(1.3px * var(--ls-w, 1)); }
-/* map view (below 50 %): small text becomes skeleton lines, pictures become thumbnails */
-.hb-world[data-lod="1"] .hb-card, .hb-world[data-lod="2"] .hb-card {
-  background: color-mix(in oklab, var(--bg) 87%, var(--ink)); box-shadow: 0 0 0 calc(1px * var(--ls-w, 1)) var(--rule-2); }
-.hb-world[data-lod="1"] .hb-card::after, .hb-world[data-lod="2"] .hb-card::after { display: none; }
-.hb-world[data-lod="1"] .hb-note, .hb-world[data-lod="2"] .hb-note { overflow: clip; }
-.hb-world[data-lod="1"] .hb-note h4, .hb-world[data-lod="2"] .hb-note h4,
-.hb-world[data-lod="1"] .hb-link h4, .hb-world[data-lod="2"] .hb-link h4,
-.hb-world[data-lod="1"] .hb-boardref .ttl b, .hb-world[data-lod="2"] .hb-boardref .ttl b {
-  width: calc(100% / var(--ls-c, 1)); padding-right: 0; transform: scale(var(--ls-c, 1)); transform-origin: 0 0;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }
-.hb-world[data-lod="1"] .hb-link h4 a, .hb-world[data-lod="2"] .hb-link h4 a { pointer-events: none; }
-.hb-world[data-lod="1"] .hb-note .body, .hb-world[data-lod="2"] .hb-note .body,
-.hb-world[data-lod="1"] .hb-link p, .hb-world[data-lod="2"] .hb-link p,
-.hb-world[data-lod="1"] .hb-link .url, .hb-world[data-lod="2"] .hb-link .url,
-.hb-world[data-lod="1"] .hb-todo li .l, .hb-world[data-lod="2"] .hb-todo li .l {
-  -webkit-text-fill-color: transparent; color: transparent; text-decoration: none;
-  background: repeating-linear-gradient(to bottom, color-mix(in srgb, var(--ink) 15%, transparent) 0 5px, transparent 5px 18px);
-  user-select: none; }
-.hb-world[data-lod="1"] .hb-note .body, .hb-world[data-lod="2"] .hb-note .body {
-  transform: translateY(calc(18.5px * (var(--ls-c, 1) - 1))); }
-.hb-world[data-lod="1"] .hb-note.quote .body, .hb-world[data-lod="2"] .hb-note.quote .body {
-  -webkit-text-fill-color: currentColor; color: var(--ink); background: none; transform: scale(var(--ls-c, 1)); transform-origin: 0 0;
-  width: calc(100% / var(--ls-c, 1)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-right: 0; }
-.hb-world[data-lod="1"] .hb-note .meta, .hb-world[data-lod="2"] .hb-note .meta,
-.hb-world[data-lod="1"] .hb-link .dom, .hb-world[data-lod="2"] .hb-link .dom,
-.hb-world[data-lod="1"] .hb-todo .addrow, .hb-world[data-lod="2"] .hb-todo .addrow,
-.hb-world[data-lod="1"] .hb-todo li .rm, .hb-world[data-lod="2"] .hb-todo li .rm,
-.hb-world[data-lod="1"] .hb-todo li .side, .hb-world[data-lod="2"] .hb-todo li .side,
-.hb-world[data-lod="1"] .hb-boardref .meta, .hb-world[data-lod="2"] .hb-boardref .meta { opacity: 0; }
-/* free text, embeds, live cards */
-.hb-world[data-lod="1"] .hb-text.p, .hb-world[data-lod="2"] .hb-text.p {
-  -webkit-text-fill-color: transparent; color: transparent; user-select: none;
-  background: repeating-linear-gradient(to bottom, color-mix(in srgb, var(--ink) 15%, transparent) 0 4px, transparent 4px 17.5px); }
-.hb-world[data-lod="1"] .hb-text.s, .hb-world[data-lod="2"] .hb-text.s { transform: scale(var(--ls-c, 1)); transform-origin: 0 0; }
-.hb-world[data-lod="1"] .hb-embed .file, .hb-world[data-lod="2"] .hb-embed .file {
-  display: block; max-width: calc(100% / var(--ls-c, 1)); transform: scale(var(--ls-c, 1)); transform-origin: 0 50%; }
-.hb-world[data-lod="1"] .hb-embed .sb, .hb-world[data-lod="2"] .hb-embed .sb,
-.hb-world[data-lod="1"] .hb-embed .tools, .hb-world[data-lod="2"] .hb-embed .tools,
-.hb-world[data-lod="1"] .hb-embed .foot, .hb-world[data-lod="2"] .hb-embed .foot { opacity: 0; }
-.hb-world[data-lod="1"] .hb-live .lv-head b, .hb-world[data-lod="2"] .hb-live .lv-head b {
-  width: calc(100% / var(--ls-c, 1)); transform: scale(var(--ls-c, 1)); transform-origin: 0 0; }
-.hb-world[data-lod="1"] .hb-live .lv-head small, .hb-world[data-lod="2"] .hb-live .lv-head small,
-.hb-world[data-lod="1"] .hb-live .lv-metrics .k, .hb-world[data-lod="2"] .hb-live .lv-metrics .k,
-.hb-world[data-lod="1"] .hb-live .lv-metrics .d, .hb-world[data-lod="2"] .hb-live .lv-metrics .d,
-.hb-world[data-lod="1"] .hb-live .lv-prog .lb, .hb-world[data-lod="2"] .hb-live .lv-prog .lb,
-.hb-world[data-lod="1"] .hb-live .lv-prog .eta, .hb-world[data-lod="2"] .hb-live .lv-prog .eta { opacity: 0; }
-/* diagram boxes: number and title scale up, the subtitle drops out */
-.hb-world[data-lod="1"] .hb-box, .hb-world[data-lod="2"] .hb-box {
-  background: color-mix(in oklab, var(--bg) 84%, var(--ink)); box-shadow: 0 0 0 calc(1px * var(--ls-w, 1)) var(--rule-3); }
-.hb-world[data-lod="1"] .hb-box .num, .hb-world[data-lod="2"] .hb-box .num {
-  position: absolute; left: 14px; top: 11px; transform: scale(var(--ls-b, 1)); transform-origin: 0 0; }
-.hb-world[data-lod="1"] .hb-box > span:not(.num), .hb-world[data-lod="2"] .hb-box > span:not(.num) { padding-left: calc(14px * var(--ls-b, 1)); width: 100%; }
-.hb-world[data-lod="1"] .hb-box b, .hb-world[data-lod="2"] .hb-box b {
-  width: calc(100% / var(--ls-b, 1)); transform: scale(var(--ls-b, 1)); transform-origin: 0 0; }
-.hb-world[data-lod="1"] .hb-box small, .hb-world[data-lod="2"] .hb-box small { opacity: 0; }
-/* frame corner marks keep a visible weight */
-.hb-world[data-lod] .hb-frame > i { width: calc(16px * var(--ls-w, 1)); height: calc(16px * var(--ls-w, 1)); }
-.hb-world[data-lod] .hb-frame > i:nth-of-type(1) { border-width: calc(1px * var(--ls-w, 1)) 0 0 calc(1px * var(--ls-w, 1)); }
-.hb-world[data-lod] .hb-frame > i:nth-of-type(2) { border-width: calc(1px * var(--ls-w, 1)) calc(1px * var(--ls-w, 1)) 0 0; }
-.hb-world[data-lod] .hb-frame > i:nth-of-type(3) { border-width: 0 0 calc(1px * var(--ls-w, 1)) calc(1px * var(--ls-w, 1)); }
-.hb-world[data-lod] .hb-frame > i:nth-of-type(4) { border-width: 0 calc(1px * var(--ls-w, 1)) calc(1px * var(--ls-w, 1)) 0; }
-/* pictures: a thumbnail stands in below 50 % (decoding a full-size photo to paint 80 px is waste) */
-.hb .hb-world img.lo { display: none; }
-/* specific enough to beat \`.hb-image .art img { display: block }\` */
-.hb-world[data-lod="1"] img.lo, .hb-world[data-lod="2"] img.lo { display: block; }
-.hb-world[data-lod="1"] img.full, .hb-world[data-lod="2"] img.full { display: none; }
-.hb-world[data-lod="1"] .hb-embed .frame, .hb-world[data-lod="2"] .hb-embed .frame { visibility: hidden; }
-.hb-world[data-lod="1"] .hb-video .play, .hb-world[data-lod="2"] .hb-video .play { display: none; }
 /* ── minimap: a static layer, and a frame that only moves ───────────────── */
 .hb-map { overflow: hidden; }
 .hb-map .hb-map-view { position: absolute; left: 0; top: 0; pointer-events: none; border: 1px solid var(--accent); opacity: .75; }
@@ -16178,6 +16407,8 @@ const boardCss = `/* Board — "Mesa de despacho" (hd-canvas-plan/mockup-v2). Ev
 /* link card */
 .hb-link { overflow: hidden; cursor: default; }
 .hb-link .thumb { height: 128px; border-bottom: 1px solid var(--rule); background: var(--well); overflow: hidden; display: block; }
+/* a thumbnail with a known size takes its own shape (clamped), not a fixed crop */
+.hb-link .thumb[style*="aspect-ratio"] { height: auto; min-height: 96px; max-height: 200px; }
 .hb-link .thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .hb-link .body { padding: 11px 14px 13px; }
 .hb-link .dom { display: flex; align-items: center; gap: 7px; font: 400 10.5px/1 var(--mono); color: var(--ink-3); min-width: 0; }
@@ -16189,6 +16420,7 @@ const boardCss = `/* Board — "Mesa de despacho" (hd-canvas-plan/mockup-v2). Ev
 .hb-link p { margin: 4px 0 0; font: 400 12.5px/1.42 var(--sans); color: var(--ink-2); display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
 .hb-link .url { margin-top: 6px; font: 400 10.5px/1.35 var(--mono); color: var(--ink-3); overflow-wrap: anywhere; }
 /* skeleton: rule lines, no shimmer */
+.hb-link .body.wait { min-height: 112px; box-sizing: border-box; }
 .hb-link .skel { display: grid; gap: 7px; margin-top: 10px; }
 .hb-link .skel i { height: 6px; background: color-mix(in srgb, var(--accent) 9%, transparent); }
 .hb-link .skel i:nth-child(1) { width: 78%; }
@@ -16203,6 +16435,8 @@ const boardCss = `/* Board — "Mesa de despacho" (hd-canvas-plan/mockup-v2). Ev
 .hb-video.vert .stage { aspect-ratio: 9 / 16; }
 .hb-video .stage img { width: 100%; height: 100%; object-fit: cover; display: block; opacity: .86; transition: opacity .16s; }
 .hb-video .stage:hover img { opacity: 1; }
+/* a clip with a known size has a stage of its own shape: show all of it */
+.hb-video .stage[style*="aspect-ratio"] img, .hb-video .stage[style*="aspect-ratio"] video.still { object-fit: contain; }
 .hb-video .stage iframe, .hb-video .stage video { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; display: block; background: #000; }
 .hb-video .play { position: absolute; left: 14px; bottom: 14px; display: inline-flex; align-items: center; gap: 8px; height: 30px; padding: 0 12px 0 10px; border-radius: var(--r-ctl); background: var(--accent); color: var(--on-accent) !important; font: 600 13px/1 var(--sans) !important; }
 .hb-video .play svg { width: 10px; height: 12px; fill: currentColor; }
@@ -16214,6 +16448,9 @@ const boardCss = `/* Board — "Mesa de despacho" (hd-canvas-plan/mockup-v2). Ev
 .hb-image { padding: 6px 6px 0; overflow: hidden; }
 .hb-image .art { line-height: 0; background: var(--well); min-height: 60px; }
 .hb-image .art img { width: 100%; height: auto; display: block; }
+/* the frame already has the picture's shape: the picture fills it, never taller, never doubled */
+.hb-image .art.fit { min-height: 0; position: relative; overflow: hidden; }
+.hb-image .art.fit img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
 .hb-image .cap { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 6px 11px; min-height: 12px; }
 .hb-image .cap b { font: 600 13px/1.2 var(--sans); }
 /* imported file (pdf / 3D model): original kept beside its thumbnail */

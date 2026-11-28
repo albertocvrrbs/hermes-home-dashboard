@@ -20,6 +20,21 @@ clone, they never build).
 
 ---
 
+## 1.10.1 — the board stays readable, nothing overlaps
+
+- **Zoom level of detail removed.** Zooming out no longer swaps text for
+  skeleton lines or photos for thumbnails: the board scales like a plain
+  canvas and every card keeps its real content at any zoom.
+- **No overlaps.** Pasting, dropping, uploading, adding from the menu,
+  duplicating, inserting on a connector and everything Hermes adds or
+  imports lands in the nearest free spot, sized from the media's real
+  dimensions (EXIF-rotated photos, rotated phone video, link thumbnails).
+- **Cards that grow push their neighbours** out of the way (animated, one
+  undo step; connected flows stay put).
+- **Separate overlaps** — new action in the toolbar and context menus, and
+  `resolve_overlaps` for Hermes, to clean up existing boards in one step.
+- Fixed photos that could show twice, one under the other, when zooming in.
+
 ## 1.10.0 — video parity
 
 Everything the launch video shows now works for real, with real Hermes, from one chat
