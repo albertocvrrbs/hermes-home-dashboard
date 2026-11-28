@@ -1,7 +1,7 @@
 // The shared transport of a board: one row per sync group, with play/pause, a scrubber, the time
 // and the rate. Any card in the group (the video's own controls, a component's hb.clock) moves the
 // same clock, so this is just one more view of it.
-import { useEffect, useReducer } from "react";
+import { useEffect, useState } from "react";
 import type { MessageKey } from "../home/i18n";
 import { Icon } from "./icons";
 import { RATES, formatClock, type GroupClock, type SyncHub } from "./syncClock";
@@ -9,7 +9,8 @@ import { RATES, formatClock, type GroupClock, type SyncHub } from "./syncClock";
 type T = (key: MessageKey, vars?: Record<string, string | number>) => string;
 
 function Row({ clock, t }: { clock: GroupClock; t: T }) {
-  const [, bump] = useReducer((n: number) => n + 1, 0);
+  const [, setTick] = useState(0);
+  const bump = () => setTick((n) => n + 1);
   useEffect(() => {
     let raf = 0;
     const off = clock.subscribe(() => { if (!raf) raf = requestAnimationFrame(() => { raf = 0; bump(); }); });
