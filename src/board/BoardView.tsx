@@ -1516,7 +1516,7 @@ export function BoardView({ bid, onOpenBoard, onHome }: BoardViewProps) {
 
   // Tour authoring by hand (Hermes does the same with one `tour` op)
   const startPresenting = useCallback(() => {
-    if (!show.stops.length) { flash(t("board.present.empty")); return; }
+    if (!show.count()) { flash(t("board.present.empty")); return; }
     setSelected(new Set()); setMenu(null);
     void show.start({ fullscreen: false });
   }, [flash, show, t]);

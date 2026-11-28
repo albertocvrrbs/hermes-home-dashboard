@@ -46,6 +46,8 @@ export interface Presentation {
   depth: number;
   title: string;
   note: string;
+  /** how many stops would play right now (measured fresh) */
+  count: () => number;
   start: (o?: StartOptions) => Promise<boolean>;
   stop: () => void;
   next: () => void;
@@ -292,6 +294,7 @@ export function usePresentation(d: PresentationDeps): Presentation {
     presenting, ps, hud, stops, tour, stored, depth,
     title: cur ? stopTitle(cur, doc, ps.i + 1) : "",
     note: cur ? stopNote(cur, doc) : "",
+    count: () => stopsNow().length,
     start, stop, next, prev, toggleAuto,
   };
 }
